@@ -23,7 +23,8 @@ convertLegacy(path: string, signal?: AbortSignal): Promise<string>
 ## Postconditions
 
 - `read` returns the detected `format`, a `UnitSnapshot`, and every detected `unsupported` feature. It never mutates the source file.
-- `write` never drops content it does not explicitly change. If `unsupported` is non-empty for the source, the provider refuses and raises `unsupported-feature` instead of writing.
+- `write` never drops content it does not explicitly change. If `unsupported` is non-empty for the source, the provider refuses and raises `unsupported-feature` instead of writing. A save path that skips this check is non-conforming.
+- A successful write is the only point that advances the document's persisted version; in-memory commands do not.
 - `write` output is a complete, valid file of the requested format.
 - `convertLegacy` leaves the source untouched and returns the path of a converted editable file.
 

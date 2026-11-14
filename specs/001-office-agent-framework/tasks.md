@@ -62,7 +62,9 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 
 > Technical selections (2026-11-14, recorded in spec/plan/research/data-model/contracts): agent tools stay Host-owned and send correlated gateway commands to the single live unit (R15); runtime undo is the editor's native stack (R16); explicit save plus periodic drafts (R17); adapter-mock component tests plus a browser smoke (R18); additive operation union (R19); legacy files open as a converted copy in a new tab (R20).
 >
-> Progress (2026-11-14): Phase 2 complete plus US1 host prerequisites: T064 `officeDocument` Remote (version-guarded save), T066 fs `writeBytes` across local/sandbox/ssh, T067 Cordis catalog classification + subsystem page, T068 workspace-scoped legacy conversion. Verified: 343 tests across fs-local/fs-sandbox/office-exchange (office-exchange 105), 7-project tsc, oxlint, frozen install, cordis/module/config catalogs, product-use, JSDoc. **Remaining US1**: T021–T028, T052–T055, T065, T070, T072, T073 (client editor + tests).
+> Consistency pass (2026-11-14): save is the only version bump; an accepted agent tool call persists immediately and refuses mixed-actor saves (`pending-edits`); save-time unsupported refusal added as T074; T025/T065 merged; T056/T057 split into audit helper vs client native undo; T040/T070 split into Host draft storage vs client capture; `Document Draft` added to the spec entities; "same file" clarified for legacy sources; SC-003 timing moved to the client suite.
+>
+> Progress (2026-11-14): Phase 2 complete plus US1 host prerequisites: T064 `officeDocument` Remote (version-guarded save), T066 fs `writeBytes` across local/sandbox/ssh, T067 Cordis catalog classification + subsystem page, T068 workspace-scoped legacy conversion. Verified: 343 tests across fs-local/fs-sandbox/office-exchange (office-exchange 105), 7-project tsc, oxlint, frozen install, cordis/module/config catalogs, product-use, JSDoc. **Remaining US1**: T021–T028, T052–T055, T065, T070, T072, T074 (client editor + tests).
 
 ---
 
@@ -81,12 +83,13 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [ ] T022 [US1] Register the `office` tab kind and file patterns in `packages/client/ui-office-editor/src/client/index.ts`.
 - [ ] T023 [P] [US1] Embed the Univer Sheets preset in `packages/client/ui-office-editor/src/client/SheetsEditor.tsx`.
 - [ ] T024 [P] [US1] Embed the Univer Docs preset in `packages/client/ui-office-editor/src/client/DocsEditor.tsx`.
-- [ ] T025 [US1] Load and save through `ctx.officeExchange` in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`.
+- [ ] T025 [US1] Implement `useOfficeDocument` against the `officeDocument` Remote (read/save/detect/convert) in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`.
 - [x] T064 [US1] Expose a session-scoped `officeDocument` Client Remote (`read`, `save`, `detectUnsupported`, `convertLegacy`) in `packages/document/office-exchange/src/remote.ts`, persisting saves through the filesystem seam with a version guard; tests in `packages/document/office-exchange/tests/remote.spec.ts`. **Blocked on T066.**
 - [x] T066 [US1] Add a version-guarded binary write to the filesystem seam and all providers: `packages/fs/fs/src/` (Service Definition), `packages/fs/fs-local/`, `packages/fs/fs-sandbox/`, `packages/fs/fs-ssh/`, reusing `FsWriteIntent` and the existing atomic-write/lock path; tests per provider. Required by T064 because OOXML is binary.
-- [ ] T065 [US1] Replace direct service access with the `officeDocument` Remote in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`.
+- [ ] T065 [US1] Verify the client imports no Host service directly: assert only the `officeDocument` Remote is used in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`; test in `packages/client/ui-office-editor/tests/remote-only.spec.tsx`.
 - [ ] T026 [US1] Handle external change reload and unsaved-close warning in `packages/client/ui-office-editor/src/client/changes.ts`.
-- [ ] T070 [US1] Implement explicit save plus periodic local drafts for crash recovery (idle-debounced, version-bound, cleared on save) in `packages/client/ui-office-editor/src/client/drafts.ts`; tests in `packages/client/ui-office-editor/tests/drafts.spec.ts`.
+- [ ] T070 [US1] Implement client-side draft capture (idle-debounced, version-bound) and its `officeDocument` Remote call in `packages/client/ui-office-editor/src/client/drafts.ts`; tests in `packages/client/ui-office-editor/tests/drafts.spec.ts`.
+- [ ] T074 [US1] Refuse a save when the open document carries unsupported features: re-check the read result/detection in the save hook and show the named feature in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`; test in `packages/client/ui-office-editor/tests/save-refusal.spec.tsx`.
 - [ ] T027 [US1] Render the open-document panel in `packages/client/ui-office-editor/src/client/DocumentPanel.tsx`.
 - [ ] T028 [US1] Verify: `corepack pnpm run test:gui`; `DSH_SNAPSHOT=replay corepack pnpm run test:web` if assembled output changed.
 - [ ] T052 [US1] Exclude `.pptx` from the editable tab and assert it stays preview-only (FR-011) in `packages/client/ui-office-editor/tests/patterns.spec.ts`
@@ -111,15 +114,15 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [ ] T029 [P] [US2] Register `document_read`, `document_edit_cells`, `document_edit_paragraph`, `document_convert` with model-visible schemas in `packages/document/tool-office/src/index.ts`.
 - [ ] T071 [US2] Extend the `document/edit` operation union with row/column/formula/style kinds and record the same-version persistence acknowledgement in `packages/core/session/src/document-events.ts` and `docs/persistence-changes/`
 - [ ] T030 [US2] Implement `document_read` in `packages/document/tool-office/src/read.ts` per `contracts/tool-office.contract.md`.
-- [ ] T031 [US2] Implement `document_edit_cells` in `packages/document/tool-office/src/edit-cells.ts` with `fromVersion` conflict rejection.
-- [ ] T032 [P] [US2] Implement `document_edit_paragraph` in `packages/document/tool-office/src/edit-paragraph.ts`.
+- [ ] T031 [US2] Implement `document_edit_cells` in `packages/document/tool-office/src/edit-cells.ts`: apply to the live unit, persist with one immediate version-guarded save, and reject stale versions and `pending-edits`.
+- [ ] T032 [P] [US2] Implement `document_edit_paragraph` in `packages/document/tool-office/src/edit-paragraph.ts` with the same live-unit apply, immediate save, and `pending-edits` rule.
 - [ ] T033 [P] [US2] Implement `document_convert` in `packages/document/tool-office/src/convert.ts`.
-- [ ] T034 [US2] Return structured `conflict`, `unsupported-feature`, `out-of-scope`, `document-missing`, `document-not-open`, `bound-exceeded` failures in `packages/document/tool-office/src/errors.ts`.
+- [ ] T034 [US2] Return structured `conflict`, `unsupported-feature`, `out-of-scope`, `document-missing`, `document-not-open`, `pending-edits`, `bound-exceeded` failures in `packages/document/tool-office/src/errors.ts`.
 - [ ] T035 [US2] Verify: session snapshots for tool output plus `corepack pnpm run test:coverage` for the tool package.
-- [ ] T062 [US2] Implement the Host→renderer command bridge: the Host tool sends a correlated gateway command, the renderer applies it to the live unit and returns the correlated result, with timeouts and `document-not-open` in `packages/client/ui-office-editor/src/client/command-bridge.ts`; test in `packages/client/ui-office-editor/tests/command-bridge.spec.tsx`.
-- [ ] T056 [US2] Implement runtime document undo/redo on the editor's native undo stack; keep `ChangeRecord.inverse` for audit and recovery in `packages/session/session-document/src/undo.ts`
-- [ ] T057 [P] [US2] Test undoing an agent edit through the native undo stack (SC-012) in `packages/session/session-document/tests/undo.spec.ts`
-- [ ] T058 [P] [US2] Add a timed agent-edit visibility test for SC-003 in `packages/document/tool-office/tests/performance.spec.ts`
+- [ ] T062 [US2] Implement the Host→renderer command bridge: the Host tool sends a correlated gateway command (local IPC on desktop, no document bytes off-device), the renderer applies it to the live unit and returns the correlated result, with timeouts and `document-not-open` in `packages/client/ui-office-editor/src/client/command-bridge.ts`; test in `packages/client/ui-office-editor/tests/command-bridge.spec.tsx`.
+- [ ] T056 [US2] Expose `ChangeRecord` inverse/audit helpers only; runtime undo/redo is the editor's native stack bound in T054, in `packages/session/session-document/src/undo.ts`
+- [ ] T057 [P] [US2] Test undoing an agent edit through the native undo stack (SC-012) in `packages/client/ui-office-editor/tests/undo.spec.tsx`
+- [ ] T058 [P] [US2] Add a timed agent-edit visibility test for SC-003 in `packages/client/ui-office-editor/tests/performance.spec.tsx`
 
 **Checkpoint**: US1 and US2 work; agent and user converge and conflicts are visible.
 
@@ -135,7 +138,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [ ] T037 [US3] Implement the `document` projection and open-document system-prompt injection in `packages/session/session-document/src/document-projection.ts`; tests in `packages/session/session-document/tests/document-projection.spec.ts`.
 - [ ] T038 [US3] Implement restore-after-restart of the open-document set in `packages/session/session-document/src/document-restore.ts`.
 - [ ] T039 [P] [US3] Implement rename/move rebind and missing reporting in `packages/session/session-document/src/document-identity.ts`.
-- [ ] T040 [P] [US3] Implement crash-recovery draft in `packages/session/session-document/src/document-draft.ts`.
+- [ ] T040 [P] [US3] Implement Host-side draft persistence and recovery storage in `packages/session/session-document/src/document-draft.ts` (location, version binding, cleanup); the client capture/debounce is T070.
 - [ ] T041 [US3] Verify: session migration test, `corepack pnpm run test:snapshot`, and the TypeScript and Python SDK expected-output updates.
 
 **Checkpoint**: Documents are durable, restorable, and cross-turn referenceable.

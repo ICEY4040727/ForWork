@@ -24,7 +24,7 @@ Fork the MIT-licensed harness into an independently branded Windows/macOS deskto
 
 **Performance Goals**: Editor open under 30 s for ordinary files; agent edit visible under 2 s; conversion off the main thread
 
-**Constraints**: Offline editing and saving; no Linux document server or cloud account; bounded conversion memory and time; lossless-by-default saves; writes confined to permitted roots; agent tools dispatch correlated commands over the gateway; runtime undo is the editor's native stack; saves are explicit with periodic local drafts
+**Constraints**: Offline editing and saving; no Linux document server or cloud account; bounded conversion memory and time; lossless-by-default saves; writes confined to permitted roots; agent tools dispatch correlated commands over local IPC (no document bytes off-device); runtime undo is the editor's native stack; user saves are explicit with periodic local drafts, while an accepted agent tool call persists with one immediate save
 
 **Scale/Scope**: v1 edits `.docx` and `.xlsx`; `.pptx` read-only; legacy conversion; one local user plus the agent; documents persist and restore per session
 

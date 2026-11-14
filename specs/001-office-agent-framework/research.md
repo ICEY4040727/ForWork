@@ -97,7 +97,7 @@ This file records the technical decisions that resolve the plan's open questions
 - **Decision**: Keep document tools Host-owned. The tool validates session, roots, and version, then sends a correlated command over the gateway; the renderer applies it to the live unit and returns a correlated result. A missing live instance yields `document-not-open`; a timeout fails the tool without a write.
 - **Rationale**: Tool policy, logging, and model-visible results stay in one trusted place, satisfying model-visible ⟺ logged. Client-side tool execution would still need Host validation, producing two owners.
 - **Alternatives**: Client-registered tools (framework support unproven; split authority); Host headless writes (loses shared undo).
-- **Consequence**: The renderer needs a command executor keyed by correlation id; the Host tool owns timeouts and the audit event.
+- **Consequence**: The renderer needs a command executor keyed by correlation id; the Host tool owns timeouts and the audit event. On desktop the bridge is local IPC and carries no document bytes off-device.
 
 ## R16. Undo source of truth (accepted 2026-11-14)
 
@@ -107,9 +107,9 @@ This file records the technical decisions that resolve the plan's open questions
 
 ## R17. Save and draft policy (accepted 2026-11-14)
 
-- **Decision**: Explicit save writes the original through the version-guarded binary path. A periodic local draft (idle-debounced) supports crash recovery; drafts never overwrite the original and are cleared after a successful save.
-- **Rationale**: Satisfies FR-016 without silent writes; matches user expectations for office files.
-- **Alternatives**: Continuous autosave to the original (surprising, hard to undo); explicit-only (no recovery).
+- **Decision**: User edits persist only on an explicit save; an accepted agent tool call applies its command and persists with one immediate version-guarded save. An agent save refuses with `pending-edits` when unsaved user edits exist, so one save never mixes actors. A periodic local draft (idle-debounced) supports crash recovery; drafts never overwrite the original and are cleared after a successful save. `contentVersion` advances only on an accepted save.
+- **Rationale**: Satisfies FR-016 without silent writes, keeps attribution exact per save, and preserves SC-003 visibility through the live unit.
+- **Alternatives**: Continuous autosave to the original (surprising, hard to undo); explicit-only (no recovery); mixed-actor saves (ambiguous attribution).
 
 ## R18. Editor test harness (accepted 2026-11-14)
 

@@ -17,7 +17,7 @@ An open office file and its editable state.
 | `sessionId` | string | Authorizing session; a document never crosses sessions |
 | `path` | absolute path | Current locator; may be rebound; never used as identity |
 | `format` | `docx`/`xlsx`/`pptx` | Editable or read-only per v1 scope (FR-011) |
-| `contentVersion` | monotonic version | Bumped on every accepted write; guards conflicts (FR-005) |
+| `contentVersion` | monotonic version | Bumped only by an accepted save; guards conflicts (FR-005) |
 | `status` | enum | See state transitions |
 | `unsupportedFeatures` | list | Non-empty blocks a lossy save (FR-008) |
 | `dirty` | boolean | True when in-memory differs from `contentVersion` |
@@ -54,7 +54,7 @@ An attributable, reversible edit (FR-014).
 | `inverse` | structured edit | Reverses `operation`; required for undo |
 | `at` | timestamp | Logged |
 
-**Validation**: a Change Record is accepted only if `fromVersion` matches the current version; otherwise it is rejected as a conflict (FR-005). The inverse must restore the prior content exactly.
+**Validation**: a Change Record is accepted only if `fromVersion` matches the current version; otherwise it is rejected as a conflict (FR-005). The inverse must restore the prior content exactly. A Change Record is created when a save is accepted; in-memory commands become facts only at that point. An agent save never includes unsaved user edits (it fails with `pending-edits` instead).
 
 ## Unit Snapshot
 

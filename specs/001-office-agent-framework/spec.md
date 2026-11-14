@@ -16,10 +16,12 @@
 - Q: Should the editor and the agent act on one live document instance or on separate instances? → A: One live instance: the editor owns the unit and agent document tools dispatch operations to it through a renderer-side command bridge, sharing one undo stack and state.
 - Q: How do agent document operations reach the live instance? → A: Host-owned tools dispatch correlated commands over the gateway; the renderer executes them against the live unit and returns a correlated result.
 - Q: What is the source of truth for document undo and redo? → A: The editor's native undo stack, shared by user and agent commands; change records retain inverses for audit and recovery, not for runtime undo.
-- Q: What is the default save behavior? → A: Explicit save to the file plus periodic local drafts for crash recovery; the original is never written silently.
+- Q: What is the default save behavior? → A: User edits save explicitly, with periodic local drafts for crash recovery; an accepted agent tool call persists immediately. The original is never written silently.
 - Q: How are browser-only editor dependencies tested? → A: The editor adapter is mocked in component tests, and real behavior is verified in a browser smoke.
 - Q: How is the change-operation vocabulary extended? → A: Operation kinds are added additively (rows, columns, formulas, styles) with a same-version persistence acknowledgement.
 - Q: How are legacy `.doc/.xls/.ppt` files opened? → A: Convert into the workspace and open the converted copy in a new tab with a visible notice; the source stays unchanged.
+- Q: When does an agent document edit become durable? → A: Each accepted agent tool call applies to the live unit and persists with one immediate version-guarded save; if unsaved user edits exist, the call is refused (`pending-edits`) so attribution stays exact.
+- Q: What does "the same file" mean for a legacy source? → A: The file currently open in the editor; for `.doc/.xls/.ppt` that is the converted copy, and the legacy source is never modified.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -82,7 +84,7 @@ The user opens several documents across a session. The agent can refer to them a
 ### Functional Requirements
 
 - **FR-001**: The product MUST open `.xlsx` and `.docx` files in an editable sidebar surface.
-- **FR-002**: The product MUST save edits back to the same file without modifying content the user did not change.
+- **FR-002**: The product MUST save edits back to the file currently open in the editor (for a legacy source, the converted copy) without modifying content the user did not change.
 - **FR-003**: The product MUST convert legacy `.doc/.xls/.ppt` to a modern editable format on open without altering the source.
 - **FR-004**: The product MUST expose document structure and content to the agent as structured operations, not raw bytes.
 - **FR-005**: Agent edits and user edits MUST converge on one document state, with version-guarded writes and a visible conflict report.
@@ -105,8 +107,9 @@ The user opens several documents across a session. The agent can refer to them a
 ### Key Entities *(include if feature involves data)*
 
 - **Document**: an opened office file; identity is a stable document id scoped to the authorizing session, with the current absolute path as a rebindable locator; carries a content version and a rendered/serialized state.
-- **Document Session Fact**: a logged open/edit/close event tied to a document, turn, and content version.
+- **Document Session Fact**: a logged open/edit/rebind/missing/close fact tied to a document, turn, and content version.
 - **Change Record**: an attributable, reversible edit applied by the user or the agent, tied to a document version.
+- **Document Draft**: a local, version-bound snapshot of unsaved edits used for crash recovery; it never overwrites the open file and is cleared after a successful save.
 - **Unit Snapshot**: the editable state of a workbook or text document, held directly in the editor core's native workbook/document snapshot model so the editor and the agent share one model; the session log persists attributable change operations rather than raw snapshots.
 - **Conversion Record**: the mapping result between an OOXML file and a unit snapshot, including any unsupported features detected.
 
