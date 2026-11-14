@@ -60,7 +60,9 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 
 **Checkpoint**: Provider, events, identity, changes, write authority, credentials, and privacy harness are ready.
 
-> Progress (2026-11-14): Phase 2 complete plus US1 host prerequisites: T064 `officeDocument` Remote (version-guarded save), T066 fs `writeBytes` across local/sandbox/ssh, T067 Cordis catalog classification + subsystem page, T068 workspace-scoped legacy conversion. Verified: 343 tests across fs-local/fs-sandbox/office-exchange (office-exchange 105), 7-project tsc, oxlint, frozen install, cordis/module/config catalogs, product-use, JSDoc. **Remaining US1**: T021–T028, T052–T055, T065 (client editor + tests).
+> Technical selections (2026-11-14, recorded in spec/plan/research/data-model/contracts): agent tools stay Host-owned and send correlated gateway commands to the single live unit (R15); runtime undo is the editor's native stack (R16); explicit save plus periodic drafts (R17); adapter-mock component tests plus a browser smoke (R18); additive operation union (R19); legacy files open as a converted copy in a new tab (R20).
+>
+> Progress (2026-11-14): Phase 2 complete plus US1 host prerequisites: T064 `officeDocument` Remote (version-guarded save), T066 fs `writeBytes` across local/sandbox/ssh, T067 Cordis catalog classification + subsystem page, T068 workspace-scoped legacy conversion. Verified: 343 tests across fs-local/fs-sandbox/office-exchange (office-exchange 105), 7-project tsc, oxlint, frozen install, cordis/module/config catalogs, product-use, JSDoc. **Remaining US1**: T021–T028, T052–T055, T065, T070, T072, T073 (client editor + tests).
 
 ---
 
@@ -84,10 +86,13 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [x] T066 [US1] Add a version-guarded binary write to the filesystem seam and all providers: `packages/fs/fs/src/` (Service Definition), `packages/fs/fs-local/`, `packages/fs/fs-sandbox/`, `packages/fs/fs-ssh/`, reusing `FsWriteIntent` and the existing atomic-write/lock path; tests per provider. Required by T064 because OOXML is binary.
 - [ ] T065 [US1] Replace direct service access with the `officeDocument` Remote in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`.
 - [ ] T026 [US1] Handle external change reload and unsaved-close warning in `packages/client/ui-office-editor/src/client/changes.ts`.
+- [ ] T070 [US1] Implement explicit save plus periodic local drafts for crash recovery (idle-debounced, version-bound, cleared on save) in `packages/client/ui-office-editor/src/client/drafts.ts`; tests in `packages/client/ui-office-editor/tests/drafts.spec.ts`.
 - [ ] T027 [US1] Render the open-document panel in `packages/client/ui-office-editor/src/client/DocumentPanel.tsx`.
 - [ ] T028 [US1] Verify: `corepack pnpm run test:gui`; `DSH_SNAPSHOT=replay corepack pnpm run test:web` if assembled output changed.
 - [ ] T052 [US1] Exclude `.pptx` from the editable tab and assert it stays preview-only (FR-011) in `packages/client/ui-office-editor/tests/patterns.spec.ts`
 - [ ] T053 [US1] Wire legacy conversion on open by calling `convertLegacy` in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`; test in `packages/client/ui-office-editor/tests/legacy-open.spec.tsx`
+- [ ] T073 [US1] Open legacy conversions in a new tab with a visible "editing converted copy" notice in `packages/client/ui-office-editor/src/client/DocumentPanel.tsx`; test in `packages/client/ui-office-editor/tests/legacy-notice.spec.tsx`
+- [ ] T072 [US1] Isolate Univer behind an adapter seam and mock it in component tests; add the browser smoke for real editor behavior in `packages/client/ui-office-editor/src/client/adapter.ts` and `packages/client/ui-office-editor/tests/adapter.spec.ts`
 - [x] T067 [US1] Classify `officeExchange`/`officeDocument` in the Cordis catalog (`SERVICE_PAGE`, `LINK_MAP`, and a new `docs/subsystems/office-exchange.md` + `.zh.md` `cordis-surface` page) so `gen-cordis-catalog --check` passes.
 - [x] T068 [US1] Make `convertLegacy` write into a workspace-scoped temp directory inside the permitted roots so the converted file is readable through the Remote; update the provider, Remote, and tests.
 - [ ] T054 [US1] Bind undo/redo to the editor's standard undo surface in `packages/client/ui-office-editor/src/client/undo.ts`
@@ -104,15 +109,16 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 **Independent Test**: Quickstart S3–S5 and S8.
 
 - [ ] T029 [P] [US2] Register `document_read`, `document_edit_cells`, `document_edit_paragraph`, `document_convert` with model-visible schemas in `packages/document/tool-office/src/index.ts`.
+- [ ] T071 [US2] Extend the `document/edit` operation union with row/column/formula/style kinds and record the same-version persistence acknowledgement in `packages/core/session/src/document-events.ts` and `docs/persistence-changes/`
 - [ ] T030 [US2] Implement `document_read` in `packages/document/tool-office/src/read.ts` per `contracts/tool-office.contract.md`.
 - [ ] T031 [US2] Implement `document_edit_cells` in `packages/document/tool-office/src/edit-cells.ts` with `fromVersion` conflict rejection.
 - [ ] T032 [P] [US2] Implement `document_edit_paragraph` in `packages/document/tool-office/src/edit-paragraph.ts`.
 - [ ] T033 [P] [US2] Implement `document_convert` in `packages/document/tool-office/src/convert.ts`.
 - [ ] T034 [US2] Return structured `conflict`, `unsupported-feature`, `out-of-scope`, `document-missing`, `document-not-open`, `bound-exceeded` failures in `packages/document/tool-office/src/errors.ts`.
 - [ ] T035 [US2] Verify: session snapshots for tool output plus `corepack pnpm run test:coverage` for the tool package.
-- [ ] T062 [US2] Implement the renderer-side command bridge that applies agent operations to the live editor unit and shares its undo stack in `packages/client/ui-office-editor/src/client/command-bridge.ts`; test in `packages/client/ui-office-editor/tests/command-bridge.spec.tsx`.
-- [ ] T056 [US2] Implement document undo/redo that applies `ChangeRecord.inverse` in `packages/session/session-document/src/undo.ts`
-- [ ] T057 [P] [US2] Test undoing an agent edit at the document level (SC-012) in `packages/session/session-document/tests/undo.spec.ts`
+- [ ] T062 [US2] Implement the Host→renderer command bridge: the Host tool sends a correlated gateway command, the renderer applies it to the live unit and returns the correlated result, with timeouts and `document-not-open` in `packages/client/ui-office-editor/src/client/command-bridge.ts`; test in `packages/client/ui-office-editor/tests/command-bridge.spec.tsx`.
+- [ ] T056 [US2] Implement runtime document undo/redo on the editor's native undo stack; keep `ChangeRecord.inverse` for audit and recovery in `packages/session/session-document/src/undo.ts`
+- [ ] T057 [P] [US2] Test undoing an agent edit through the native undo stack (SC-012) in `packages/session/session-document/tests/undo.spec.ts`
 - [ ] T058 [P] [US2] Add a timed agent-edit visibility test for SC-003 in `packages/document/tool-office/tests/performance.spec.ts`
 
 **Checkpoint**: US1 and US2 work; agent and user converge and conflicts are visible.

@@ -24,7 +24,7 @@ Fork the MIT-licensed harness into an independently branded Windows/macOS deskto
 
 **Performance Goals**: Editor open under 30 s for ordinary files; agent edit visible under 2 s; conversion off the main thread
 
-**Constraints**: Offline editing and saving; no Linux document server or cloud account; bounded conversion memory and time; lossless-by-default saves; writes confined to permitted roots
+**Constraints**: Offline editing and saving; no Linux document server or cloud account; bounded conversion memory and time; lossless-by-default saves; writes confined to permitted roots; agent tools dispatch correlated commands over the gateway; runtime undo is the editor's native stack; saves are explicit with periodic local drafts
 
 **Scale/Scope**: v1 edits `.docx` and `.xlsx`; `.pptx` read-only; legacy conversion; one local user plus the agent; documents persist and restore per session
 
@@ -85,7 +85,7 @@ packages/test-support/tool-testkit/    # CHANGED: egress assertion helpers
 apps/desktop/            # CHANGED: branding + signing identity (final phase)
 ```
 
-**Structure Decision**: Follow the existing package-group layout. The Exchange layer is a Host service seam; the editor is a Client plugin package registered into the existing right-sidebar tab system and owns the single live unit per open document; agent tools are a Host tool package that dispatch operations into the editor's live unit through a renderer-side command bridge, so both actors share one state, version, and undo stack; session changes extend the core event map; privacy, write authority, and credentials reuse existing seams rather than new subsystems. Legacy conversion uses `@deepseek-ai/libreoffice-kit` directly; `office-to-pdf` only renders PDF and is not the conversion path.
+**Structure Decision**: Follow the existing package-group layout. The Exchange layer is a Host service seam; the editor is a Client plugin package registered into the existing right-sidebar tab system and owns the single live unit per open document; agent tools are a Host tool package that dispatch correlated commands over the gateway into the editor's live unit (falling back to `document-not-open` when no renderer is attached); session changes extend the core event map; privacy, write authority, and credentials reuse existing seams rather than new subsystems. Legacy conversion uses `@deepseek-ai/libreoffice-kit` directly; `office-to-pdf` only renders PDF and is not the conversion path.
 
 ## Complexity Tracking
 

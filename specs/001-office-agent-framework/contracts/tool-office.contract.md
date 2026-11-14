@@ -1,7 +1,7 @@
 # Contract: Agent Document Tools
 
 **Owner**: `packages/document/tool-office` (Consumer of `ctx.officeExchange`)
-**Transport**: registered on the harness tool registry; model-visible schema and results
+**Transport**: registered on the harness tool registry; model-visible schema and results. Host-owned: the tool validates session/roots/version, then sends a correlated command over the gateway to the renderer, which applies it to the live unit and returns a correlated result. Without a live renderer the call fails with `document-not-open`; a timeout fails without a write.
 
 ## Tools
 

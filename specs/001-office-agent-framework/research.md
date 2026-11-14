@@ -91,3 +91,40 @@ This file records the technical decisions that resolve the plan's open questions
 - **Rationale**: Directly satisfies FR-020, SC-003 (visible in the open editor), and SC-012 (agent edits undoable at the document level). It is the natural consequence of Option B: one model means one instance.
 - **Alternatives**: A separate headless instance writing the file and forcing a reload (loses shared undo, harder 2 s visibility); the Host owning the unit with the editor as a remote view (fights Univer's DOM/command model).
 - **Consequence**: Agent tool execution routes into the renderer for open documents; the bridge enforces the same version guard and Change Record path. A headless/CLI run without an editor refuses document operations.
+
+## R15. Agent command transport (accepted 2026-11-14)
+
+- **Decision**: Keep document tools Host-owned. The tool validates session, roots, and version, then sends a correlated command over the gateway; the renderer applies it to the live unit and returns a correlated result. A missing live instance yields `document-not-open`; a timeout fails the tool without a write.
+- **Rationale**: Tool policy, logging, and model-visible results stay in one trusted place, satisfying model-visible ⟺ logged. Client-side tool execution would still need Host validation, producing two owners.
+- **Alternatives**: Client-registered tools (framework support unproven; split authority); Host headless writes (loses shared undo).
+- **Consequence**: The renderer needs a command executor keyed by correlation id; the Host tool owns timeouts and the audit event.
+
+## R16. Undo source of truth (accepted 2026-11-14)
+
+- **Decision**: Use the editor's native undo stack for runtime undo/redo, shared by user and agent commands. `ChangeRecord.inverse` remains durable audit/recovery data.
+- **Rationale**: Both actors mutate one Univer instance; a second inverse-replay undo would diverge from the live state and duplicate history.
+- **Alternatives**: Apply `inverse` at runtime (divergence, concurrency hazards); two independent stacks (confusing UX).
+
+## R17. Save and draft policy (accepted 2026-11-14)
+
+- **Decision**: Explicit save writes the original through the version-guarded binary path. A periodic local draft (idle-debounced) supports crash recovery; drafts never overwrite the original and are cleared after a successful save.
+- **Rationale**: Satisfies FR-016 without silent writes; matches user expectations for office files.
+- **Alternatives**: Continuous autosave to the original (surprising, hard to undo); explicit-only (no recovery).
+
+## R18. Editor test harness (accepted 2026-11-14)
+
+- **Decision**: Isolate Univer behind a thin adapter. Component tests mock the adapter in jsdom; real Univer behavior is covered by the browser smoke (`test:web`).
+- **Rationale**: Univer depends on canvas/DOM and is slow/flaky under jsdom; adapter isolation keeps our save/conflict/lifecycle logic testable.
+- **Alternatives**: Real Univer in jsdom (flaky); browser-only (slow feedback, poor localization).
+
+## R19. Operation vocabulary (accepted 2026-11-14)
+
+- **Decision**: Extend the `document/edit` operation union additively (rows, columns, formulas, styles) as tasks require, with the same-version persistence acknowledgement.
+- **Rationale**: Keeps events small and semantically clear; expressing row/column edits as cell steps explodes event size and undo cost.
+- **Alternatives**: Cell-only encoding (large logs); a separate document command DSL (extra parser and versioning).
+
+## R20. Legacy open behavior (accepted 2026-11-14)
+
+- **Decision**: Convert into the workspace-scoped temp directory and open the converted copy in a new tab with a visible "editing converted copy" notice; the source is never modified.
+- **Rationale**: Keeps identity and save targets unambiguous; matches the T068 conversion location.
+- **Alternatives**: Replace the tab resource in place (confusing identity); force Save As (interrupts the workflow).

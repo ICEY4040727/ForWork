@@ -14,6 +14,12 @@
 
 - Q: Should the editable snapshot use a project-owned neutral model or the editor core's native snapshot model? → A: Use the editor core's native snapshot model directly (workbook and document snapshot types); persist attributable change operations, not raw snapshots.
 - Q: Should the editor and the agent act on one live document instance or on separate instances? → A: One live instance: the editor owns the unit and agent document tools dispatch operations to it through a renderer-side command bridge, sharing one undo stack and state.
+- Q: How do agent document operations reach the live instance? → A: Host-owned tools dispatch correlated commands over the gateway; the renderer executes them against the live unit and returns a correlated result.
+- Q: What is the source of truth for document undo and redo? → A: The editor's native undo stack, shared by user and agent commands; change records retain inverses for audit and recovery, not for runtime undo.
+- Q: What is the default save behavior? → A: Explicit save to the file plus periodic local drafts for crash recovery; the original is never written silently.
+- Q: How are browser-only editor dependencies tested? → A: The editor adapter is mocked in component tests, and real behavior is verified in a browser smoke.
+- Q: How is the change-operation vocabulary extended? → A: Operation kinds are added additively (rows, columns, formulas, styles) with a same-version persistence acknowledgement.
+- Q: How are legacy `.doc/.xls/.ppt` files opened? → A: Convert into the workspace and open the converted copy in a new tab with a visible notice; the source stays unchanged.
 
 ## User Scenarios & Testing *(mandatory)*
 

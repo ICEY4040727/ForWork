@@ -92,6 +92,20 @@ The result of mapping a file to and from a snapshot.
 
 **Validation**: rebinding preserves `documentId`, `sessionId`, and history; a missing binding keeps the document open and reports it (edge case: rename/move).
 
+## Document Draft
+
+A recoverable local draft for unsaved edits (FR-016).
+
+| Field | Type | Rules |
+|---|---|---|
+| `documentId` | string | References the open Document |
+| `contentVersion` | version | The version the draft was derived from |
+| `path` | absolute path | Draft location; never the document's own path |
+| `savedAt` | timestamp | Last draft write |
+| `snapshot` | Unit Snapshot | Native editor snapshot; not written to the session log |
+
+**Validation**: a draft never overwrites the original file; a successful save clears it; on restart a draft is offered only when its `contentVersion` matches the file or the user explicitly chooses it.
+
 ## State Transitions
 
 ```text
