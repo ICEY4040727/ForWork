@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Use `dsh-fs` for consistent file access across local, confined, and SSH execution environments. Consumers can resolve stable identities, read text or bounded bytes, list directories, watch targets, write files, apply literal edits or patch hunks, delete files, and move text files with optional patching. Optional version guards reject stale mutations. Moves report destination publication separately from source removal. Mount a provider for the chosen environment; `dsh-tool-fs` supplies model-facing tools separately.
+Use `dsh-fs` for consistent file access across local, confined, and SSH execution environments. Consumers can resolve stable identities, read text or bounded bytes, list directories, watch targets, write text or raw bytes, apply literal edits or patch hunks, delete files, and move text files with optional patching. Optional version guards reject stale mutations. Moves report destination publication separately from source removal. Mount a provider for the chosen environment; `dsh-tool-fs` supplies model-facing tools separately.
 
 ## Table of Contents
 
@@ -33,7 +33,7 @@ Pick [`fs-local`](../fs-local/README.md) for ordinary host files or [`fs-sandbox
 
 ### What the service lets you do
 
-Through `ctx.fs`, resolve paths, read text or bounded bytes, list direct children, and perform guarded mutations. `patchText` applies parsed hunks under the same lock as its version check. `deleteFile` removes a regular file. `moveFile` locks both targets, optionally patches the source text, publishes the destination, then removes the source. Guards are optional: omission mutates the current state unconditionally. Failures carry stable `FsError` codes from the runtime `FS_ERROR_CODES` list, which transport validators reuse.
+Through `ctx.fs`, resolve paths, read text or bounded bytes, list direct children, and perform guarded mutations. `writeBytes` publishes raw bytes with no encoding or binary rejection, using the same intents, atomic publication, and version derivation as `writeText`, so a binary document round-trips losslessly. `patchText` applies parsed hunks under the same lock as its version check. `deleteFile` removes a regular file. `moveFile` locks both targets, optionally patches the source text, publishes the destination, then removes the source. Guards are optional: omission mutates the current state unconditionally. Failures carry stable `FsError` codes from the runtime `FS_ERROR_CODES` list, which transport validators reuse.
 
 `watch(target, changed, signal)` reports invalidations for one file or a directory's direct entries. It resolves once observation is ready with an asynchronous close function that the caller must await. The signal cancels initialization; unsupported providers reject without polling.
 
@@ -51,7 +51,7 @@ This section explains the design decisions behind the contract and points at the
 
 The contract is built on one separation and three commitments:
 
-- **Contract over mechanism.** The service names what a storage layer can do — resolve, stat, read, list, watch, write, edit, patch, delete, move — and never how it stores bytes. Backends own target identity, execution-world coordinates, decoding, binary rejection, and atomicity.
+- **Contract over mechanism.** The service names what a storage layer can do — resolve, stat, read, list, watch, write text, write bytes, edit, patch, delete, move — and never how it stores bytes. Backends own target identity, execution-world coordinates, decoding, binary rejection, and atomicity.
 - **Policy stays off the base class.** Observed-state, read-before-edit, and version-guarded mutations are a plugin's job (`dsh-fs-observation-policy`), added by supplying the optional guard — so a sandboxed or remote backend inherits no model-facing observation policy.
 - **`editText` stays on the seam.** Version check, literal match, and atomic rewrite share one critical section, so error attribution and one-wins/one-stale concurrency stay correct; a remote backend may implement it as a native compare-and-edit.
 - **Bounds live at this seam.** `readBytes` requires `maxBytes` and fails with `FS_TOO_LARGE` rather than truncating, so no backend ever buffers an unbounded file. `readByteRange` is bounded by its window instead: a backend transfers at most the requested `length` beyond the prefix it skips, so the caller's cap on `length` is the guard.
@@ -61,7 +61,7 @@ The contract is built on one separation and three commitments:
 | File | Role |
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service definition: the abstract `FileSystem` class, the `ctx.fs` declaration, and the `fs/*` event vocabulary |
-| [`src/types.ts`](src/types.ts) | Vocabulary: `FsTarget`/`FsTargetKey`, `FsVersion`, `FsObservation`, `FsWriteIntent`, `FsError` and its codes |
+| [`src/types.ts`](src/types.ts) | Vocabulary: `FsTarget`/`FsTargetKey`, `FsVersion`, `FsObservation`, `FsWriteIntent`, `FsWriteOutcome`, `FsBytesWriteOutcome`, `FsError` and its codes |
 
 ### How a call flows
 

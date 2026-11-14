@@ -700,6 +700,55 @@ describe('writeText', () => {
   })
 })
 
+describe('writeBytes', () => {
+  it('createIfAbsent creates a binary file and round-trips NUL and 0xFF bytes exactly', async () => {
+    const bytes = new Uint8Array([0x00, 0xff, 0x80, 0x01, 0x0a, 0x00, 0xfe])
+    const target = await fs.resolve('new.bin')
+    const outcome = await fs.writeBytes(target, bytes, { kind: 'createIfAbsent' })
+    expect(outcome.operation).toBe('create')
+    expect(new Uint8Array(await readFile(join(dir, 'new.bin')))).toEqual(bytes)
+    expect([...await fs.readBytes(target, undefined, bytes.length)]).toEqual([...bytes])
+  })
+
+  it('createIfAbsent rejects an existing file as FS_NOT_OBSERVED and keeps its bytes', async () => {
+    const path = join(dir, 'a.bin')
+    await writeFile(path, Buffer.from([1, 2, 3]))
+    const target = await fs.resolve('a.bin')
+    await expect(fs.writeBytes(target, new Uint8Array([0, 0xff]), { kind: 'createIfAbsent' }))
+      .rejects.toMatchObject({ code: 'FS_NOT_OBSERVED' })
+    expect(new Uint8Array(await readFile(path))).toEqual(new Uint8Array([1, 2, 3]))
+  })
+
+  it('replaceIfVersion replaces at the current version and bumps the version', async () => {
+    const path = join(dir, 'doc.bin')
+    await writeFile(path, Buffer.from([1, 2, 3]))
+    const target = await fs.resolve('doc.bin')
+    const before = await versionOf(target)
+    const outcome = await fs.writeBytes(target, new Uint8Array([0, 0xff, 4]), { kind: 'replaceIfVersion', version: before })
+    expect(outcome.operation).toBe('update')
+    expect(outcome.version).not.toBe(before)
+    expect(new Uint8Array(await readFile(path))).toEqual(new Uint8Array([0, 0xff, 4]))
+    expect(await versionOf(target)).toBe(outcome.version)
+  })
+
+  it('replaceIfVersion rejects a stale version and leaves the file unchanged', async () => {
+    const path = join(dir, 'doc.bin')
+    await writeFile(path, Buffer.from([1, 2, 3]))
+    const target = await fs.resolve('doc.bin')
+    const stale = await versionOf(target)
+    await writeFile(path, Buffer.from([9, 9, 9]))
+    await expect(fs.writeBytes(target, new Uint8Array([0, 0xff]), { kind: 'replaceIfVersion', version: stale }))
+      .rejects.toMatchObject({ code: 'FS_STALE_VERSION' })
+    expect(new Uint8Array(await readFile(path))).toEqual(new Uint8Array([9, 9, 9]))
+  })
+
+  it('rejects writing bytes onto a directory', async () => {
+    const target = await fs.resolve('.')
+    await expect(fs.writeBytes(target, new Uint8Array([0]), { kind: 'createIfAbsent' }))
+      .rejects.toMatchObject({ code: 'FS_NOT_REGULAR_FILE' })
+  })
+})
+
 describe('editText', () => {
   it('applies a literal edit at the matching version', async () => {
     await writeFile(join(dir, 'a.txt'), 'hello world')

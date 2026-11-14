@@ -621,7 +621,50 @@ export async function writeFileAtomic(
   mode: number | undefined,
   signal: AbortSignal | undefined,
   internals: FsIoInternals = {},
-  options: { displayPath?: string; createIfAbsent?: boolean; existingDestination?: boolean } = {},
+  options: AtomicWriteOptions = {},
+): Promise<void> {
+  return writeAtomic(absolutePath, content, 'utf8', mode, signal, internals, options)
+}
+
+/**
+ * Atomically replace a file with raw bytes through the same private, synced
+ * staging file, DACL preservation, and publication primitives as
+ * {@link writeFileAtomic}. No encoding or normalization applies: the bytes are
+ * written exactly as supplied, so binary content round-trips.
+ * @param absolutePath - destination; missing parent directories are created.
+ * @param content - the complete new file content.
+ * @param mode - POSIX mode to apply, or undefined to retain the new-file default.
+ * @param signal - cancellation checked before final publication.
+ * @param internals - Test hook for pinning temp names and observing the staged file.
+ * @param options - `displayPath`, `createIfAbsent`, and `existingDestination`
+ *   carry the same meaning as in {@link writeFileAtomic}.
+ */
+export async function writeFileAtomicBytes(
+  absolutePath: string,
+  content: Uint8Array,
+  mode: number | undefined,
+  signal: AbortSignal | undefined,
+  internals: FsIoInternals = {},
+  options: AtomicWriteOptions = {},
+): Promise<void> {
+  return writeAtomic(absolutePath, content, undefined, mode, signal, internals, options)
+}
+
+/** Publication options shared by text and raw-byte atomic writes. */
+interface AtomicWriteOptions {
+  displayPath?: string
+  createIfAbsent?: boolean
+  existingDestination?: boolean
+}
+
+async function writeAtomic(
+  absolutePath: string,
+  content: string | Uint8Array,
+  encoding: BufferEncoding | undefined,
+  mode: number | undefined,
+  signal: AbortSignal | undefined,
+  internals: FsIoInternals,
+  options: AtomicWriteOptions,
 ): Promise<void> {
   const displayPath = options.displayPath ?? absolutePath
   const existingDestination = options.existingDestination ?? mode !== undefined
@@ -654,7 +697,10 @@ export async function writeFileAtomic(
     if (platform === 'win32' && existingDestination) {
       await copyFileDacl(absolutePath, tempPath)
     }
-    await handle.writeFile(content, { encoding: 'utf8', ...signal ? { signal } : {} })
+    await handle.writeFile(content, {
+      ...encoding === undefined ? {} : { encoding },
+      ...signal ? { signal } : {},
+    })
     await handle.sync()
     await internals.inspectTemp?.({ stagingDir, tempPath })
     if (mode !== undefined) await handle.chmod(mode)

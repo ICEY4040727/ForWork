@@ -1,0 +1,159 @@
+# Office Exchange
+
+English | [中文](office-exchange.zh.md)
+
+The [document package family](../../packages/document/README.md) moves Office files between disk bytes and the editable unit snapshots consumed by the office editor and agent document tools. [office-exchange](../../packages/document/office-exchange) declares the `ctx.officeExchange` capability seam, supplies the `LocalOfficeExchange` provider, and hosts the session-scoped `officeDocument` Remote. The package registers no model-facing tool and appends no Session event. The reserved [office editor Client](../../packages/client/ui-office-editor) and [office document tools](../../packages/document/tool-office) packages register no tab, panel, slot, or tool yet; when they land, the editor reads and saves through `remote.officeDocument` and the model-facing tools consume `ctx.officeExchange`.
+
+## Ownership
+
+| Owner | Responsibility |
+|---|---|
+| [office-exchange](../../packages/document/office-exchange) | `ctx.officeExchange`: read, write, unsupported-feature detection, and legacy conversion; the `officeDocument` Remote |
+| [api/remotes](../../packages/api/remotes/README.md) | Mounts the generated `remote.officeDocument` Client namespace |
+| [base bundle](../../packages/bundle/base/README.md) | Mounts `office-exchange` with deployment bounds |
+
+## Formats and unit snapshots
+
+`OfficeFormat` is `docx`, `xlsx`, `pptx`, `doc`, `xls`, or `ppt`. The editable set is `EditableOfficeFormat` (`docx`, `xlsx`); the legacy set is `LegacyOfficeFormat` (`doc`, `xls`, `ppt`).
+
+| Format | Operations |
+|---|---|
+| `.docx`, `.xlsx` | Editable: `read` maps file bytes to a `UnitSnapshot`; `write` serializes a snapshot back to bytes |
+| `.doc`, `.xls`, `.ppt` | Legacy: `convertLegacy` produces an editable file; `read` on the original rejects with `unsupported-format` |
+| `.pptx` | Preview-only: `detectUnsupported` inspects it; `read` and `write` reject with `unsupported-format` |
+
+`UnitSnapshot` is the editors' native serializable snapshot, a discriminated union of `{ kind: 'workbook', data: IWorkbookData }` and `{ kind: 'document', data: IDocumentData }`. `read` returns `ExchangeReadResult` with the detected `format`, the parsed `snapshot`, and every `UnsupportedFeature` an edit-and-save would drop. Each `UnsupportedFeature` carries a `kind` — `macro`, `tracked-changes`, `comment`, `chart`, `drawing`, `shape`, `header-footer`, `formula-recalc`, `embedded-object`, or `other` — and an optional human-readable `detail`. A non-empty list means the write path must refuse rather than save a lossy file.
+
+`formatOf(path)` classifies a path by extension, `isEditableFormat` narrows to `docx`/`xlsx`, and `isLegacyFormat` narrows to `doc`/`xls`/`ppt`.
+
+## Seam operations and failures
+
+`ctx.officeExchange.read(path, signal?)` returns an `ExchangeReadResult`. `ctx.officeExchange.write(snapshot, format, signal?)` returns the encoded bytes without writing a file. `detectUnsupported(path, signal?)` reports loss-prone features without returning content. `convertLegacy(path, signal?, outputDir?)` returns the path of the editable file; an omitted `outputDir` writes into a fresh temporary directory outside any workspace.
+
+`OfficeExchangeConfig` bounds every provider operation: `maxFileBytes` (25 MiB by default), `maxCells` (2,000,000), and `maxConversionMs` (60,000 ms). The provider resolves the bounds once at mount and rejects a non-positive or non-integer value with `RangeError` instead of truncating work. Every operation failure is an `OfficeExchangeError` whose stable `code` is `unsupported-format`, `unsupported-feature`, `too-large`, `conversion-failed`, `not-implemented`, or `out-of-scope`.
+
+## The officeDocument Remote
+
+The Remote carries `OfficeDocumentSnapshot`, a JSON projection of a unit snapshot: `{ kind: 'workbook' | 'document', data: JsonValue }`. Univer's native interfaces admit unconstrained custom fields that JSON cannot carry, so the Host validates the projection before serializing and restores the native snapshot for a save; a non-JSON value rejects as `conversion-failed`.
+
+| Method | Behavior |
+|---|---|
+| `read(workspaceFileScope, path)` | Resolves `path` from the Session workspace root, confines it to that root, reads it through the filesystem seam under `maxBytes`, and returns `OfficeDocumentReadResult` (`format`, `snapshot`, `unsupported`, `version`) |
+| `save(workspaceFileScope, path, snapshot, format, expectedVersion)` | Serializes the snapshot and publishes it with a filesystem `replaceIfVersion` guard; returns `OfficeDocumentSaveResult` (`version`) |
+| `detectUnsupported(workspaceFileScope, path)` | Reports loss-prone features without returning content |
+| `convertLegacy(workspaceFileScope, path)` | Returns the path of the converted editable file in a fresh workspace-scoped directory |
+
+`read` records the file's opaque content version and re-stats after parsing; a file that changed while it was read rejects instead of returning a snapshot bound to a stale version. `save` never falls back to an unconditional write: when the file changed after the read, the filesystem reports `FS_STALE_VERSION` and the Remote raises `office-document/conflict`. A `format` that does not match the snapshot kind, or a non-editable format, also rejects rather than writing a partial file.
+
+The Remote maps seam and filesystem failures onto stable Remote codes: `unsupported-format`, `unsupported-feature`, `out-of-scope`, `bound-exceeded`, `conversion-failed`, and `conflict`, each carrying the offending `path`. An aborted caller signal rejects as `gateway/cancelled`. `convertLegacy` creates `<workspaceRoot>/.dsh/office-tmp/convert-<hash>-<random>/` and converts into it, so the same Remote can read the result under the unchanged root check. Each call gets its own directory; a failed conversion removes that directory, and a successful one persists until the user or Session deletes it.
+
+## Mount and composition
+
+`LocalOfficeExchange` validates its `Config` and mounts `OfficeDocumentRemote` with `maxBytes` set to `maxFileBytes`. The [base bundle](../../packages/bundle/base/README.md) mounts the provider in an `office-exchange` row with `maxFileBytes: 26214400`, `maxCells: 2000000`, and `maxConversionMs: 60000`. The Client assembly mounts the generated descriptor from `@deepseek-ai/dsh-office-exchange/remote` through [api/remotes](../../packages/api/remotes/README.md), which exposes it as `remote.officeDocument`.
+
+<!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
+
+<a id="cordis-surface"></a>
+
+## Cordis API
+
+Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
+
+<a id="ctxofficedocument--officedocumentremote"></a>
+
+### `ctx.officeDocument` — `OfficeDocumentRemote`
+
+Host Remote service backing the generated `remote.officeDocument` namespace. Reads return a JSON snapshot bound to the file's observed version; saves replace only that version, so a concurrent external edit is reported as a conflict rather than overwritten.
+
+```ts cordis-catalog
+/**
+ * Read an editable Office file into a JSON snapshot bound to its version.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
+ * @param signal - caller cancellation.
+ * @returns the detected format, snapshot, unsupported features, and observed version.
+ * @throws RemoteError when the path is out of scope, the format is not editable, or the read fails.
+ */
+@Remote async read( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<OfficeDocumentReadResult>
+
+/**
+ * Serialize a snapshot and replace the file only at the caller's version.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
+ * @param snapshot - snapshot returned by {@link read}, optionally modified.
+ * @param format - target editable format; it must match the snapshot kind.
+ * @param expectedVersion - version returned by {@link read}; a changed file is refused.
+ * @param signal - caller cancellation.
+ * @returns the version the guarded write published.
+ * @throws RemoteError with `office-document/conflict` when the file changed after the read.
+ */
+@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>
+
+/**
+ * Report the features an edit-and-save would drop without returning content.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
+ * @param signal - caller cancellation.
+ * @returns every detected unsupported feature, empty when the file round-trips cleanly.
+ * @throws RemoteError when the path is out of scope or its format cannot be inspected.
+ */
+@Remote async detectUnsupported( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<readonly UnsupportedFeature[]>
+
+/**
+ * Convert a legacy binary Office file to an editable one.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param path - absolute or workspace-relative legacy path; it must resolve inside the workspace root.
+ * @param signal - caller cancellation.
+ * @returns the path of the converted editable file inside the workspace root.
+ * @throws RemoteError when the path is out of scope or conversion fails.
+ */
+@Remote async convertLegacy(workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal): Promise<string>
+```
+
+Source: [`packages/document/office-exchange/src/remote.ts`](../../packages/document/office-exchange/src/remote.ts)
+
+<a id="ctxofficeexchange--officeexchange-abstract-seam"></a>
+
+### `ctx.officeExchange` — `OfficeExchange` (abstract seam)
+
+Service Definition for Office file interchange. A provider implements these operations for the deployment's conversion libraries; consumers depend on the seam only.
+
+```ts cordis-catalog
+/**
+ * Read an Office file into an editable unit snapshot.
+ * @param path - Absolute or workspace-relative file path.
+ * @param signal - Optional cancellation.
+ * @returns The detected format, snapshot, and unsupported features.
+ */
+abstract read(path: string, signal?: AbortSignal): Promise<ExchangeReadResult>
+
+/**
+ * Serialize a unit snapshot back to Office file bytes.
+ * @param snapshot - Editable content to serialize.
+ * @param format - Target Office format.
+ * @param signal - Optional cancellation.
+ * @returns The encoded file bytes.
+ */
+abstract write(snapshot: UnitSnapshot, format: OfficeFormat, signal?: AbortSignal): Promise<Uint8Array>
+
+/**
+ * Report features that would be lost by an edit-and-save.
+ * @param path - File path to inspect.
+ * @param signal - Optional cancellation.
+ * @returns Detected unsupported features; empty when the file round-trips cleanly.
+ */
+abstract detectUnsupported(path: string, signal?: AbortSignal): Promise<readonly UnsupportedFeature[]>
+
+/**
+ * Convert a legacy binary Office file to an editable format.
+ * @param path - Legacy file path.
+ * @param signal - Optional cancellation.
+ * @param outputDir - Directory receiving the converted file; omitted uses a
+ * fresh temporary directory outside any workspace.
+ * @returns Path of the converted editable file.
+ */
+abstract convertLegacy(path: string, signal?: AbortSignal, outputDir?: string): Promise<string>
+```
+
+Source: [`packages/document/office-exchange/src/service.ts`](../../packages/document/office-exchange/src/service.ts)
+<!-- END GENERATED cordis-surface -->

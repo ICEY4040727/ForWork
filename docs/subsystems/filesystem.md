@@ -219,7 +219,7 @@ type FsMoveOutcome =
   | { sourceBefore: string | null; destination: FsWriteOutcome; sourceDeleted: false; sourceFailure: FsMoveSourceFailure }
 ```
 
-Both `writeText` and `editText` take their version guard OPTIONALLY: omit it for an unconditional (bare-provider) mutation, supply it to guard. `writeText`'s guard is an `FsWriteIntent` — `createIfAbsent` creates a missing target and rejects an existing one with `FS_NOT_OBSERVED`, including a target that appears after the provider's initial probe because publication itself must be no-replace; `replaceIfVersion` replaces only when the target exists at the observed version, else `FS_STALE_VERSION`. Omitting `expected` unconditionally creates-or-overwrites. The union itself carries only the two guarded intents; "no guard" is expressed by omission, so write and edit both use the same optional `expected` field.
+`writeText` and `writeBytes` take their write intent OPTIONALLY: omit it for an unconditional (bare-provider) mutation, supply it to guard. The guard is an `FsWriteIntent` — `createIfAbsent` creates a missing target and rejects an existing one with `FS_NOT_OBSERVED`, including a target that appears after the provider's initial probe because publication itself must be no-replace; `replaceIfVersion` replaces only when the target exists at the observed version, else `FS_STALE_VERSION`. Omitting `expected` unconditionally creates-or-overwrites. The union itself carries only the two guarded intents; "no guard" is expressed by omission, so both writes use the same optional `expected` field. `editText` takes its `{ version }` guard the same way.
 
 ```ts type-equiv
 /**
@@ -251,6 +251,21 @@ interface FsWriteOutcome {
   before: string | null
   /** The file's content AFTER the write, LF-normalized to share `before`'s diff basis. */
   after: string
+}
+```
+
+Raw-byte writes share the text write's intents and atomic publication but report no content basis: the bytes are opaque, so `FsBytesWriteOutcome` carries only the operation and the new version.
+
+```ts type-equiv
+/**
+ * Outcome of a guarded raw-byte write. It reports only the publication result:
+ * raw bytes have no text diff basis, so no before/after content is returned.
+ */
+interface FsBytesWriteOutcome {
+  /** Whether the write created a new file or replaced an existing one. */
+  operation: 'create' | 'update'
+  /** Opaque version of the file after the write. */
+  version: FsVersion
 }
 ```
 
@@ -383,7 +398,7 @@ type FsErrorCode = typeof FS_ERROR_CODES[number]
 
 ## The service and the plugin
 
-`FileSystem` (`ctx.fs`, abstract) owns the provider primitives: `resolve`, `processPath`, `processPathFromHostPath`, `fileUrl`, `contains`, `stat`, `lstat`, `readText`, `streamText`, `readBytes`, `listDir`, `writeText`, `editText`, `patchText`, `deleteFile`, and `moveFile`. `dsh-fs-observation-policy` registers **no service** — it is a plugin that adds policy through the `fs/*` event gate: it decides the write/edit/delete intent waterfalls from unseen/absent/present state and records `FsObservation` values. The executor is `dsh-tool-fs`: it reads/writes/edits through `ctx.fs`, dispatches the waterfalls, and emits the recording event. The generated [`ctx.fs` section](#ctxfs--filesystem-abstract-seam) below shows the exact signatures.
+`FileSystem` (`ctx.fs`, abstract) owns the provider primitives: `resolve`, `processPath`, `processPathFromHostPath`, `fileUrl`, `contains`, `stat`, `lstat`, `readText`, `streamText`, `readBytes`, `readByteRange`, `listDir`, `writeText`, `writeBytes`, `editText`, `patchText`, `deleteFile`, and `moveFile`. `dsh-fs-observation-policy` registers **no service** — it is a plugin that adds policy through the `fs/*` event gate: it decides the write/edit/delete intent waterfalls from unseen/absent/present state and records `FsObservation` values. The executor is `dsh-tool-fs`: it reads/writes/edits through `ctx.fs`, dispatches the waterfalls, and emits the recording event. The generated [`ctx.fs` section](#ctxfs--filesystem-abstract-seam) below shows the exact signatures.
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 
@@ -551,6 +566,25 @@ abstract listDir(target: FsTarget, signal?: AbortSignal): Promise<FsDirEntry[]>
  * @returns the outcome, including the version the write produced.
  */
 abstract writeText( target: FsTarget, content: string, expected?: FsWriteIntent, signal?: AbortSignal, sandboxPolicy?: SandboxExecutionPolicy, ): Promise<FsWriteOutcome>
+
+/**
+ * Atomically create or replace raw bytes with no encoding, decoding, or
+ * binary rejection, so a binary document can be saved losslessly.
+ * `expected` guards intent and staleness with the same {@link FsWriteIntent}
+ * semantics as {@link writeText}; omission allows unconditional overwrite.
+ * The provider stages and publishes the same way as `writeText`, including
+ * its version derivation; the returned version is the freshness token a
+ * later guarded write must supply.
+ * @param target - the resolved target to write.
+ * @param content - the full new file content, byte for byte.
+ * @param expected - the write intent guarding the write; omit for unconditional.
+ * @param signal - aborts before atomic publication takes effect.
+ * @param sandboxPolicy - the per-call mode and workspace root this write
+ *   runs under; a sandboxing backend fences the write by it, the bare backend
+ *   ignores it. Omit to leave the backend its own default.
+ * @returns the publication operation and the version the write produced.
+ */
+abstract writeBytes( target: FsTarget, content: Uint8Array, expected?: FsWriteIntent, signal?: AbortSignal, sandboxPolicy?: SandboxExecutionPolicy, ): Promise<FsBytesWriteOutcome>
 
 /**
  * Atomically edit literal text. When supplied, the version guard is checked

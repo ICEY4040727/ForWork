@@ -15,6 +15,7 @@ import { pathToFileURL } from 'node:url'
 import z from '@deepseek-ai/schemastery'
 import { FileSystem, FsError, FsVersion } from '@deepseek-ai/dsh-fs'
 import type {
+  FsBytesWriteOutcome,
   FsDeleteOutcome,
   FsMoveOutcome,
   FsDirEntry,
@@ -44,6 +45,7 @@ import {
   removeFile,
   streamWholeText,
   writeFileAtomic,
+  writeFileAtomicBytes,
 } from './fsio.ts'
 import type { FsIoInternals, PathInfo } from './fsio.ts'
 
@@ -243,6 +245,25 @@ export class LocalFileSystem extends FileSystem {
         // overwrite must not read as every line changed. Line-ending restoration
         // is a storage detail the applied-hunk diff ignores.
         after: normalizeLineEndings(content),
+      }
+    })
+  }
+
+  override async writeBytes(
+    target: FsTarget,
+    content: Uint8Array,
+    expected?: FsWriteIntent,
+    signal?: AbortSignal,
+  ): Promise<FsBytesWriteOutcome> {
+    return this.withLock(target.targetKey, async () => {
+      const existing = await this.writeTarget(target, expected)
+      await writeFileAtomicBytes(target.targetKey, content, existing?.mode, signal, this.internals, {
+        displayPath: target.displayPath,
+        createIfAbsent: expected?.kind === 'createIfAbsent',
+      })
+      return {
+        operation: existing ? 'update' : 'create',
+        version: this.versionAfterWrite(await probe(target.targetKey), target),
       }
     })
   }

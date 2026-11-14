@@ -143,6 +143,17 @@ export interface FsWriteOutcome {
   after: string
 }
 
+/**
+ * Outcome of a guarded raw-byte write. It reports only the publication result:
+ * raw bytes have no text diff basis, so no before/after content is returned.
+ */
+export interface FsBytesWriteOutcome {
+  /** Whether the write created a new file or replaced an existing one. */
+  operation: 'create' | 'update'
+  /** Opaque version of the file after the write. */
+  version: FsVersion
+}
+
 /** A literal-replacement edit request. */
 export interface FsEditRequest {
   /** Literal non-empty text to replace. Must match exactly (after line-ending normalization). */

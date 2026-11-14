@@ -6,7 +6,7 @@ import { SubprocessExecutableNotFoundError } from '@deepseek-ai/dsh-subprocess'
 import { LocalSubprocessRuntime } from '@deepseek-ai/dsh-subprocess-local'
 import { z } from 'zod'
 import { createHelperHarness as helper } from './fixtures/helper.ts'
-import { hunkSchema, moveOptionsSchema, moveResultSchema, deleteResultSchema, targetSchema, writeResultSchema, editResultSchema, infoSchema, entriesSchema } from '../src/schemas.ts'
+import { hunkSchema, moveOptionsSchema, moveResultSchema, deleteResultSchema, targetSchema, bytesWriteResultSchema, writeResultSchema, editResultSchema, infoSchema, entriesSchema } from '../src/schemas.ts'
 
 
 const policy = (workspaceRoot: string) => ({ mode: 'workspace-write', workspaceRoot })
@@ -42,6 +42,44 @@ describe.skipIf(process.platform === 'win32')('SSH helper runtime', () => {
       await test.client.request('fs.edit', { target, edit: { oldString: 'third', newString: 'fourth', replaceAll: false }, policy: policy(test.root) }, editResultSchema)
       expect(await test.client.request('fs.readText', { target }, z.string())).toBe('fourth text')
       await expect(test.client.request('fs.write', { target, content: 'denied', policy: { mode: 'read-only', workspaceRoot: test.root } }, writeResultSchema)).rejects.toMatchObject({ code: 'FS_SANDBOX_DENIED' })
+    } finally { await test.close() }
+  })
+
+  it('round-trips a guarded binary write through the helper', async () => {
+    const test = await helper()
+    try {
+      const target = await test.client.request('fs.resolve', { path: 'doc.bin' }, targetSchema)
+      const bytes = Buffer.from([0, 0xff, 0x80, 0, 0x0a])
+      const created = await test.client.request('fs.writeBytes', {
+        target, content: bytes.toString('base64'), policy: policy(test.root), expected: { kind: 'createIfAbsent' },
+      }, bytesWriteResultSchema)
+      expect(created).toMatchObject({ operation: 'create' })
+      expect(Buffer.from(await test.client.request('fs.readBytes', { target, maxBytes: 16 }, z.string()), 'base64').equals(bytes)).toBe(true)
+      await expect(test.client.request('fs.writeBytes', {
+        target, content: bytes.toString('base64'), policy: policy(test.root), expected: { kind: 'replaceIfVersion', version: 'stale' },
+      }, bytesWriteResultSchema)).rejects.toMatchObject({ code: 'FS_STALE_VERSION' })
+      const replacement = Buffer.from([1, 2, 3]).toString('base64')
+      expect(await test.client.request('fs.writeBytes', {
+        target, content: replacement, policy: policy(test.root), expected: { kind: 'replaceIfVersion', version: created.version },
+      }, bytesWriteResultSchema)).toMatchObject({ operation: 'update' })
+      expect(Buffer.from(await test.client.request('fs.readBytes', { target, maxBytes: 16 }, z.string()), 'base64'))
+        .toEqual(Buffer.from([1, 2, 3]))
+      expect(await test.client.request('fs.writeBytes', {
+        target, content: replacement, policy: policy(test.root),
+      }, bytesWriteResultSchema)).toMatchObject({ operation: 'update' })
+      await expect(test.client.request('fs.writeBytes', {
+        target, content: replacement, policy: { mode: 'read-only', workspaceRoot: test.root },
+      }, bytesWriteResultSchema)).rejects.toMatchObject({ code: 'FS_SANDBOX_DENIED' })
+    } finally { await test.close() }
+  })
+
+  it('bounds a binary write by the helper transfer budget', async () => {
+    const test = await helper()
+    try {
+      const target = await test.client.request('fs.resolve', { path: 'huge.bin' }, targetSchema)
+      const oversized = Buffer.alloc(8 * 1024 * 1024 + 1).toString('base64')
+      await expect(test.client.request('fs.writeBytes', { target, content: oversized, policy: policy(test.root) }, bytesWriteResultSchema))
+        .rejects.toMatchObject({ code: 'FS_TOO_LARGE' })
     } finally { await test.close() }
   })
 

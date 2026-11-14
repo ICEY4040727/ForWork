@@ -29,7 +29,7 @@ kind: "package-reference"
 
 `resolve()` 在远端主机上规范化路径。`processPath()` 与 `fileUrl()` 在同一个远端命名空间中标识文件，并不授予主机侧访问能力。文件 URL 对字面的百分号、反斜杠和换行进行编码，保留原文件名。`processPathFromHostPath()` 返回 `undefined`，因此需要已安装可执行文件或引导程序的消费方必须显式提供远端产物。
 
-读取保留共享文件系统错误码。五个变更操作都会向辅助进程发送已解析的逐次调用策略；`patchText`、`deleteFile` 和 `moveFile` 使用 `fs.patch`、`fs.delete` 和 `fs.move`，防护和结果与本地提供方一致。传输丢失报告为 I/O 失败；变更可能已经提交，且不会自动重试。
+读取保留共享文件系统错误码。六个变更操作都会向辅助进程发送已解析的逐次调用策略；`writeBytes` 通过 `fs.writeBytes` 以 base64 携带原始内容，因此二进制数据绝不会经过文本编码；`patchText`、`deleteFile` 和 `moveFile` 使用 `fs.patch`、`fs.delete` 和 `fs.move`，防护和结果与本地提供方一致。传输丢失报告为 I/O 失败；变更可能已经提交，且不会自动重试。
 
 -----
 
@@ -66,7 +66,7 @@ kind: "package-reference"
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- 辅助程序将整段文本读取及单次字节窗口限制为 8 MiB。更大的读取需使用文本流或多个字节窗口；其他 JSON 传输也受连接消息大小上限约束。
+- 辅助程序将整段文本读取、单次字节窗口及原始字节写入限制为 8 MiB。更大的读取需使用文本流或多个字节窗口；其他 JSON 传输也受连接消息大小上限约束。
 - 不支持文件系统监听：提供方不覆写 `watch()`，由基类以 `FS_IO_ERROR` 拒绝；不使用轮询，也不为远程路径建立本地监听。普通读取与消费方提供的手动刷新仍可用。
 - 远端文件 URL 是执行坐标，不是主机文件系统句柄或 Web 下载链接。
 

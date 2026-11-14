@@ -40,6 +40,12 @@ const tool = defineContentToolFixture({
 
 Register the returned definition through the caller's tool registry. Use `executeToolFixture` for an already-parsed invocation, or `executeModelToolFixture` to pass one JSON-encoded call through the selected executor. The latter requires the caller to mount that executor and rejects arguments that cannot be JSON-encoded or an executor response without a result. See [`src/index.ts`](src/index.ts) for invocation fields.
 
+### Observing network egress
+
+`recordEgress(fn)` wraps `fetch`, `node:http.request`, and `node:https.request` for the duration of one async body, then restores them and returns `{ result, urls }`. It observes calls instead of replacing the transport, so a stub installed before the call remains what runs and the test needs no real network I/O. The recorder is process-global and non-nestable: a second concurrent recorder throws.
+
+`assertNoEgress(urls, { allow })` fails when any recorded destination's hostname is outside the case-insensitive allowlist; an empty list passes. Pass the configured model endpoint host in `allow` for flows that must call the model, and omit it where even a model call would violate the privacy boundary.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -79,6 +85,7 @@ None; the package itself sends no provider request.
 - Content-array values are test fixtures; product tools declare domain-owned output schemas.
 - Direct pipeline execution omits model-batch scheduling. Both execution helpers omit root Session logging; use an Agent turn when verifying the recorded conversation.
 - Plugin composition and context disposal remain caller-owned.
+- `recordEgress` observes the global `fetch` binding plus `node:http.request` and `node:https.request`; `http.get`/`https.get`, direct `undici` imports, and references captured before recording bypass it.
 
 <a id="dev-note"></a>
 ### Dev Note

@@ -17,6 +17,11 @@ import type {
 import type { TypertResource } from '@deepseek-ai/dsh-typert-protocol'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 
+// Core-owned document facts extend this map in their own module; importing it
+// here keeps the `@deepseek-ai/dsh-session/types` subpath a complete vocabulary
+// for consumers that never load the package barrel.
+import type {} from './document-events.ts'
+
 /** Identifies one session in the store (and its persistence artifacts). */
 export type SessionId = Branded<'SessionId'>
 

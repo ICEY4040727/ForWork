@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for office-exchange.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/subsystems/office-exchange.md
+/office-exchange:
+  en: ff25643a5cadfaa7
+  zh: 857e122e9ef3ef8f
+/office-exchange/ownership:
+  en: 4bff4c28cea68d59
+  zh: 12d187c6ba2df834
+/office-exchange/formats-and-unit-snapshots:
+  en: 8924477abdf61085
+  zh: 94f8973aef104070
+/office-exchange/seam-operations-and-failures:
+  en: 66b16a92cba636dc
+  zh: d68773873f49b27d
+/office-exchange/the-officedocument-remote:
+  en: 0de9cef70c966604
+  zh: 5f529c6bb61cc21e
+/office-exchange/mount-and-composition:
+  en: 6e6a3baa9a37e653
+  zh: ba93ccfadff7d60d

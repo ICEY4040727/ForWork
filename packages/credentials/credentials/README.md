@@ -90,6 +90,25 @@ apiKeyEnv: DEEPSEEK_API_KEY
 
 Requests that need the key use its current stored value, so rotating the key takes effect on the very next request — no restart and no configuration edit.
 
+### Storing model credentials in the OS secure store
+
+`SafeStorageSecureStore` protects values at rest for a desktop host. Inject Electron's `safeStorage` and the directory the application already owns; only base64 ciphertext reaches the file:
+
+```ts
+import { SafeStorageSecureStore, type SafeStorageLike } from '@deepseek-ai/dsh-credentials'
+
+declare const safeStorage: SafeStorageLike
+declare const directory: string
+declare const key: string
+
+const store = new SafeStorageSecureStore({ safeStorage, directory })
+await store.set('DEEPSEEK_API_KEY', key)   // encrypted before it reaches disk
+const stored = await store.get('DEEPSEEK_API_KEY')
+await store.delete('DEEPSEEK_API_KEY')
+```
+
+When `safeStorage.isEncryptionAvailable()` is false, `get` and `set` throw `SecureStorageUnavailableError` with code `secure-storage-unavailable`; the adapter never writes plaintext as a fallback. `delete` removes an encrypted entry without needing the system key, so a locked keychain cannot block clearing a stored secret. The adapter is not part of the default composition: the desktop host constructs it with its own application-data directory.
+
 ### What can go wrong
 
 - **A stored key outranks the launching environment** — while a value is stored, `DEEPSEEK_API_KEY=… dsh` (or a CI secret, a container `-e`) does not apply; `unset` the stored key to use the exported one.
@@ -132,6 +151,7 @@ One doctrine and four consequences:
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition: the `credentialRef`/`credentialKey` brands, `ResolvedCredential`/`CredentialRecordInfo`, the abstract provider over both key spaces, contained fan-out |
 | [`src/types.ts`](src/types.ts) | Client-safe type surface: the `CredentialRef` and `CredentialKey` brands, the stored-record union, the `CredentialInfo` reference view, the `credentials/reference-updated` and `credentials/record-updated` declarations |
+| [`src/secure-store.ts`](src/secure-store.ts) | OS-secure-store adapter: the `SecureStore` seam, the injected `SafeStorageLike`, and the `safeStorage`-backed ciphertext document |
 
 ### Client-safe types
 
@@ -176,6 +196,8 @@ These limits define when this package is a poor fit or needs special care. They 
 - **References are environment-variable-shaped** — one flat POSIX-identifier namespace, because a reference doubles as the environment name it resolves through. Records carry the richer `<owner>/<id>` addressing.
 - **Process-environment changes are invisible** — no notification can fire for a variable changed in the launching shell; a UI only re-reads `describe()` on its own navigation.
 - **A record's owner is its scope, and nothing verifies the scope is mounted** — the seam stores what it is given and reports what it stores; recognizing an orphan is the caller's join between `listRecords()` and whatever registry owns that scope, and the seam has no registry of its own to check against.
+- **The secure-store adapter is not wired into the default composition** — a desktop host constructs `SafeStorageSecureStore` with Electron's `safeStorage` and its application-data directory; this package neither selects that directory nor runs an Electron process.
+- **Secure-store writes are serialized within one instance, not across processes** — two processes writing the same ciphertext document can overwrite each other; the desktop host is expected to own the file from one process.
 
 <a id="dev-note"></a>
 ### Dev Note
@@ -185,6 +207,6 @@ These limits define when this package is a poor fit or needs special care. They 
 
 This Dev Note is working context for maintainers: open questions and undecided directions. It is explicitly non-authoritative — shipped behavior and limits live in the sections above and in the package code.
 
-The seam shape leaves room for keyring-, helper-command-, and KMS-backed providers; a remote settings provider never needs to carry secrets. None is shipped, and no current consumer requires one.
+The shipped `SafeStorageSecureStore` protects values at rest for a desktop host but is not a `CredentialProvider`. A full keyring-, helper-command-, or KMS-backed provider is still unshipped, and no current consumer requires one; a remote settings provider never needs to carry secrets.
 
 </details>

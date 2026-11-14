@@ -24,6 +24,7 @@ class FakeFileSystem extends FileSystem {
   override async patchText(): Promise<never> { throw new FsError('patch unsupported by test provider', 'FS_IO_ERROR') }
   override async deleteFile(): Promise<never> { throw new FsError('delete unsupported by test provider', 'FS_IO_ERROR') }
   override async moveFile(): Promise<never> { throw new FsError('move unsupported by test provider', 'FS_IO_ERROR') }
+  override async writeBytes(): Promise<never> { throw new FsError('bytes unsupported by test provider', 'FS_IO_ERROR') }
 
   files = new Map<string, string>()
 

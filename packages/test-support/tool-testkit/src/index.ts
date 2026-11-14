@@ -90,3 +90,5 @@ export async function executeModelToolFixture(
   if (outcome === undefined) throw new Error('Executor omitted the model tool fixture result')
   return outcome.result
 }
+
+export { recordEgress, assertNoEgress, type EgressCapture, type AssertNoEgressOptions } from './egress.ts'

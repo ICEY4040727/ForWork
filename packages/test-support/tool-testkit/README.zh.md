@@ -40,6 +40,12 @@ const tool = defineContentToolFixture({
 
 通过调用方的工具注册表注册返回的定义。使用 `executeToolFixture` 执行已解析的调用，或使用 `executeModelToolFixture` 将一次 JSON 编码的调用交给选定的执行器。后者要求调用方挂载该执行器，并在参数无法编码为 JSON 或执行器响应缺少结果时拒绝。调用字段见 [`src/index.ts`](src/index.ts)。
 
+### 观察网络出口
+
+`recordEgress(fn)` 在一个异步执行体运行期间包装 `fetch`、`node:http.request` 和 `node:https.request`，结束后恢复原函数并返回 `{ result, urls }`。它只观察调用而不替换传输，因此调用前安装的 stub 仍是实际执行者，测试无需真实网络 I/O。记录器是进程级且不可嵌套：第二个并发记录器会抛出错误。
+
+`assertNoEgress(urls, { allow })` 在任一记录目标的主机名不在大小写不敏感的允许列表内时失败；空列表通过。必须调用模型时，将配置的模型端点主机放入 `allow`；连模型调用都违反隐私边界时省略该列表。
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -79,6 +85,7 @@ const tool = defineContentToolFixture({
 - 内容数组值仅用于测试 fixture；产品工具声明领域自己的输出 schema。
 - 直接执行流水线不包含模型批次调度。两种执行辅助函数都不记录根 Session 日志；验证会话记录时应运行 Agent 回合。
 - 插件组合和 context 释放仍由调用方负责。
+- `recordEgress` 观察全局 `fetch` 绑定以及 `node:http.request` 和 `node:https.request`；`http.get`/`https.get`、直接导入的 `undici`，以及在记录开始前捕获的引用都不会经过它。
 
 <a id="dev-note"></a>
 ### 开发备注

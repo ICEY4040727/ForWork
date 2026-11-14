@@ -1,0 +1,117 @@
+---
+description: "Office Exchange capability seam: OOXML-to-unit-snapshot mapping, unsupported-feature detection, and legacy conversion shared by the office editor and agent document tools."
+kind: "package-reference"
+---
+
+# @deepseek-ai/dsh-office-exchange
+
+English | [中文](README.zh.md)
+
+## Summary
+
+Define the contract for moving Office files in and out of the editable unit model. The seam names conversion and loss-detection; providers own the ExcelJS, SheetJS, docx, and LibreOffice mechanics. The editor and agent tools consume `ctx.officeExchange` without importing a conversion library.
+
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
+-----
+
+<a id="use-this-package"></a>
+## Use this package
+
+The package default-exports `LocalOfficeExchange`, a Cordis plugin that registers `ctx.officeExchange`. Mount it with deployment bounds, then read and write through the seam:
+
+```ts
+import LocalOfficeExchange from '@deepseek-ai/dsh-office-exchange'
+
+await ctx.plugin(LocalOfficeExchange, {
+  maxFileBytes: 25 * 1024 * 1024,
+  maxCells: 2_000_000,
+  maxConversionMs: 60_000,
+})
+
+const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, signal)
+```
+
+`read(path)` returns the detected format, an editable unit snapshot, and every feature that would not survive an edit-and-save. `write(snapshot, format)` encodes the snapshot back to file bytes without writing them. `detectUnsupported(path)` reports loss-prone features without reading content into the editor. `convertLegacy(path, signal?, outputDir?)` turns a `.doc/.xls/.ppt` file into its editable equivalent; an omitted `outputDir` writes into a fresh temporary directory outside any workspace.
+
+Supported formats:
+
+- `.xlsx` and `.docx` are editable: `read` and `write` map them to Univer workbook and document snapshots.
+- `.doc`, `.xls`, and `.ppt` must be converted with `convertLegacy` before `read`; reading one directly raises `unsupported-format`.
+- `.pptx` is preview-only: `detectUnsupported` inspects it, while `read` and `write` raise `unsupported-format`.
+
+Every failure is an `OfficeExchangeError` with a stable `code`; bounds resolve once at mount and invalid values fail loudly.
+
+`formatOf(path)` classifies a path by extension; `isEditableFormat` separates directly editable `.docx/.xlsx` from formats that require conversion; `isLegacyFormat` names the legacy set.
+
+### Remote surface
+
+The plugin also mounts `ctx.officeDocument`, a session-scoped Remote surface over the same seam. Its generated Client namespace is `remote.officeDocument`; mount the package in the Host composition and add `@deepseek-ai/dsh-office-exchange/remote` to the Client assembly.
+
+- `read(workspaceFileScope, path)` resolves the path from the Session's workspace root, confines it with `assertWithinRoots`, reads it through the filesystem seam under the provider's `maxFileBytes` bound, and returns `{ format, snapshot, unsupported, version }`.
+- `save(workspaceFileScope, path, snapshot, format, expectedVersion)` serializes the snapshot through the provider and publishes it with a filesystem `replaceIfVersion` guard. A file that changed since the read rejects as `office-document/conflict`; the write never falls back to an unconditional save.
+- `detectUnsupported(workspaceFileScope, path)` reports loss-prone features without returning content.
+- `convertLegacy(workspaceFileScope, path)` returns the converted file path inside `<workspaceRoot>/.dsh/office-tmp/convert-<hash>-<random>/`, so the same Remote can `read` it under the unchanged root check. Each call gets its own directory.
+
+`OfficeDocumentSnapshot` is a JSON projection tagged with the snapshot kind: Univer's native interfaces admit unconstrained custom fields, which a JSON wire cannot carry. The Host validates the projection before serializing and maps every failure onto `office-document/*` Remote codes (`unsupported-format`, `unsupported-feature`, `out-of-scope`, `bound-exceeded`, `conversion-failed`, `conflict`).
+
+### Failure policy
+
+Failures are `OfficeExchangeError` values with a stable `code`. Reads that cannot open a file report `conversion-failed` with the path instead of leaking a Node error. A non-empty `unsupported` list on read means the write path must refuse rather than save a lossy file; the product names the offending feature and offers an alternative.
+
+-----
+
+<a id="understand-the-implementation"></a>
+## Understand the implementation
+
+<details>
+<summary>Implementation internals — click to expand</summary>
+
+`src/service.ts` declares the abstract `OfficeExchange` service, the context augmentation, and the seam vocabulary re-exported by the package entry. `src/types.ts` holds the JSON-safe wire and seam vocabulary; `src/snapshots.ts` holds the Univer snapshot types so a Remote Client never loads the editor core. `src/remote.ts` implements the `officeDocument` Remote surface: Session scope resolution, workspace confinement, version threading, the JSON projection, the workspace-scoped conversion directory, and the remaining save guarantees. `src/provider/index.ts` implements `LocalOfficeExchange` on top of the pure `provider/xlsx.ts`, `provider/docx.ts`, `provider/detect.ts`, and `provider/legacy.ts` modules: it owns file reads, format dispatch, typed read failures, caller-directed legacy conversion directories, and the validated `Config` schema. The office editor and agent tools remain consumers; this package registers no tool and emits no session event.
+
+</details>
+
+-----
+
+<a id="further-exploration"></a>
+## Further Exploration
+
+- [Document group](../README.md) — the Office conversion packages in this group.
+- [Office to PDF](../office-to-pdf/README.md) — the LibreOffice conversion provider used for legacy formats.
+
+-----
+
+<a id="model-experience"></a>
+## Model Experience
+
+None directly; agent document tools consume the seam and own their model-visible schemas and results.
+
+#### KV Cache effect
+
+None; the seam neither assembles nor sends a provider request.
+
+## Known Limitations and Deferred Work
+
+<a id="known-limitations-and-deferred-work"></a>
+
+- `LocalOfficeExchange` reads and writes local paths only; workspace confinement belongs to the tool and session layers that supply the path.
+- Legacy conversion requires the LibreOffice kit; an unavailable engine fails the conversion instead of falling back.
+- PowerPoint editing is read-only until a slide unit and its conversion are added.
+- `convertLegacy` keeps converted editable files under `<workspaceRoot>/.dsh/office-tmp/`, which the `officeDocument` Remote can read under the same root check. A failed conversion removes the directory it just created; a successful one persists until the user or session deletes it, and nothing removes it automatically yet.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers 鈥?click to expand</summary>
+
+License check (2026-11-14): `@univerjs/core` is Apache-2.0 and `exceljs` is MIT. `@univerjs/core` stays a peer dependency because this package imports only its types and emits them in declarations; `exceljs` is a runtime dependency of the `.xlsx` provider.
+
+</details>

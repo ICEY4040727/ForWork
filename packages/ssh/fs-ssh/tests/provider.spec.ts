@@ -117,6 +117,31 @@ describe('SSH filesystem provider', () => {
     expect(dispatch).toHaveBeenLastCalledWith('fs.edit', { target, edit, expected: { version: 'v2' }, policy }, signal)
   })
 
+  it('forwards raw bytes as base64, decodes the outcome, and resolves the default policy', async () => {
+    const { fs, dispatch } = await setup()
+    const bytes = new Uint8Array([0, 255, 128, 10])
+    const signal = new AbortController().signal
+    const policy: SandboxExecutionPolicy = { mode: 'workspace-write', workspaceRoot: '/remote/work' }
+    const expected = { kind: 'replaceIfVersion' as const, version: FsVersion('v3') }
+    dispatch.mockResolvedValueOnce({ operation: 'update', version: 'v4' })
+      .mockResolvedValueOnce({ operation: 'create', version: 'v5' })
+    expect(await fs.writeBytes(target, bytes, expected, signal, policy)).toEqual({ operation: 'update', version: 'v4' })
+    expect(dispatch).toHaveBeenLastCalledWith('fs.writeBytes', { target, content: Buffer.from(bytes).toString('base64'), expected, policy }, signal)
+    expect(await fs.writeBytes(target, bytes)).toEqual({ operation: 'create', version: 'v5' })
+    expect(dispatch).toHaveBeenLastCalledWith('fs.writeBytes', {
+      target, content: Buffer.from(bytes).toString('base64'), expected: undefined,
+      policy: { mode: 'read-only', workspaceRoot: '/remote/work' },
+    }, undefined)
+  })
+
+  it('preserves a stale byte-write rejection and rejects a malformed outcome', async () => {
+    const { fs, dispatch } = await setup()
+    dispatch.mockRejectedValueOnce(new RemoteOperationError('stale', 'FS_STALE_VERSION'))
+    await expect(fs.writeBytes(target, new Uint8Array([0]))).rejects.toMatchObject({ code: 'FS_STALE_VERSION' })
+    dispatch.mockResolvedValueOnce({ operation: 'create', version: 'v1', before: null, after: '' })
+    await expect(fs.writeBytes(target, new Uint8Array([0]))).rejects.toMatchObject({ code: 'FS_IO_ERROR' })
+  })
+
   it('resolves deployment policy for mutations without an explicit policy', async () => {
     const { fs, dispatch } = await setup()
     dispatch.mockResolvedValueOnce({ operation: 'create', version: 'v1', before: null, after: 'new' })

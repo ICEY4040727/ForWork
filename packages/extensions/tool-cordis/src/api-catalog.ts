@@ -1557,6 +1557,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the outcome, including the version the write produced.',
       },
       {
+        signature: 'abstract writeBytes( target: FsTarget, content: Uint8Array, expected?: FsWriteIntent, signal?: AbortSignal, sandboxPolicy?: SandboxExecutionPolicy, ): Promise<FsBytesWriteOutcome>',
+        description: 'Atomically create or replace raw bytes with no encoding, decoding, or binary rejection, so a binary document can be saved losslessly. `expected` guards intent and staleness with the same FsWriteIntent semantics as writeText; omission allows unconditional overwrite. The provider stages and publishes the same way as `writeText`, including its version derivation; the returned version is the freshness token a later guarded write must supply.',
+        parameters: [{ name: 'target', description: 'the resolved target to write.' }, { name: 'content', description: 'the full new file content, byte for byte.' }, { name: 'expected', description: 'the write intent guarding the write; omit for unconditional.' }, { name: 'signal', description: 'aborts before atomic publication takes effect.' }, { name: 'sandboxPolicy', description: 'the per-call mode and workspace root this write runs under; a sandboxing backend fences the write by it, the bare backend ignores it. Omit to leave the backend its own default.' }],
+        returns: 'the publication operation and the version the write produced.',
+      },
+      {
         signature: 'abstract editText( target: FsTarget, edit: FsEditRequest, expected?: { version: FsVersion }, signal?: AbortSignal, sandboxPolicy?: SandboxExecutionPolicy, ): Promise<FsEditOutcome>',
         description: 'Atomically edit literal text. When supplied, the version guard is checked before matching so stale content reports `FS_STALE_VERSION`; omission edits the current content without a freshness precondition.',
         parameters: [{ name: 'target', description: 'the resolved target to edit.' }, { name: 'edit', description: 'the literal search/replace request.' }, { name: 'expected', description: 'the version guard; omit for an unconditional edit.' }, { name: 'signal', description: 'aborts before atomic publication takes effect.' }, { name: 'sandboxPolicy', description: 'the per-call mode and workspace root this edit runs under; a sandboxing backend fences the edit by it, the bare backend ignores it. Omit to leave the backend its own default.' }],
@@ -2119,6 +2125,72 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Delete one item after checking its version; absence succeeds without an event.',
         parameters: [{ name: 'request', description: 'Session, message, and observed item version.' }],
         returns: 'the stable absent postcondition or an explicit failure.',
+      },
+    ],
+  },
+  {
+    key: 'officeDocument',
+    summary: 'Host Remote service backing the generated `remote.officeDocument` namespace.',
+    description: 'Host Remote service backing the generated `remote.officeDocument` namespace. Reads return a JSON snapshot bound to the file\'s observed version; saves replace only that version, so a concurrent external edit is reported as a conflict rather than overwritten.',
+    methods: [
+      {
+        signature: '@Remote async read( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<OfficeDocumentReadResult>',
+        description: 'Read an editable Office file into a JSON snapshot bound to its version.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the detected format, snapshot, unsupported features, and observed version.',
+        throws: ['RemoteError when the path is out of scope, the format is not editable, or the read fails.'],
+      },
+      {
+        signature: '@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>',
+        description: 'Serialize a snapshot and replace the file only at the caller\'s version.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'snapshot', description: 'snapshot returned by {@link read}, optionally modified.' }, { name: 'format', description: 'target editable format; it must match the snapshot kind.' }, { name: 'expectedVersion', description: 'version returned by {@link read}; a changed file is refused.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the version the guarded write published.',
+        throws: ['RemoteError with `office-document/conflict` when the file changed after the read.'],
+      },
+      {
+        signature: '@Remote async detectUnsupported( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<readonly UnsupportedFeature[]>',
+        description: 'Report the features an edit-and-save would drop without returning content.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'every detected unsupported feature, empty when the file round-trips cleanly.',
+        throws: ['RemoteError when the path is out of scope or its format cannot be inspected.'],
+      },
+      {
+        signature: '@Remote async convertLegacy(workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal): Promise<string>',
+        description: 'Convert a legacy binary Office file to an editable one.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative legacy path; it must resolve inside the workspace root.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the path of the converted editable file inside the workspace root.',
+        throws: ['RemoteError when the path is out of scope or conversion fails.'],
+      },
+    ],
+  },
+  {
+    key: 'officeExchange',
+    summary: 'Service Definition for Office file interchange.',
+    description: 'Service Definition for Office file interchange. A provider implements these operations for the deployment\'s conversion libraries; consumers depend on the seam only.',
+    methods: [
+      {
+        signature: 'abstract read(path: string, signal?: AbortSignal): Promise<ExchangeReadResult>',
+        description: 'Read an Office file into an editable unit snapshot.',
+        parameters: [{ name: 'path', description: 'Absolute or workspace-relative file path.' }, { name: 'signal', description: 'Optional cancellation.' }],
+        returns: 'The detected format, snapshot, and unsupported features.',
+      },
+      {
+        signature: 'abstract write(snapshot: UnitSnapshot, format: OfficeFormat, signal?: AbortSignal): Promise<Uint8Array>',
+        description: 'Serialize a unit snapshot back to Office file bytes.',
+        parameters: [{ name: 'snapshot', description: 'Editable content to serialize.' }, { name: 'format', description: 'Target Office format.' }, { name: 'signal', description: 'Optional cancellation.' }],
+        returns: 'The encoded file bytes.',
+      },
+      {
+        signature: 'abstract detectUnsupported(path: string, signal?: AbortSignal): Promise<readonly UnsupportedFeature[]>',
+        description: 'Report features that would be lost by an edit-and-save.',
+        parameters: [{ name: 'path', description: 'File path to inspect.' }, { name: 'signal', description: 'Optional cancellation.' }],
+        returns: 'Detected unsupported features; empty when the file round-trips cleanly.',
+      },
+      {
+        signature: 'abstract convertLegacy(path: string, signal?: AbortSignal, outputDir?: string): Promise<string>',
+        description: 'Convert a legacy binary Office file to an editable format.',
+        parameters: [{ name: 'path', description: 'Legacy file path.' }, { name: 'signal', description: 'Optional cancellation.' }, { name: 'outputDir', description: 'Directory receiving the converted file; omitted uses a fresh temporary directory outside any workspace.' }],
+        returns: 'Path of the converted editable file.',
       },
     ],
   },
@@ -6376,6 +6448,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface EveryScheduleRecord {\n    readonly id: ScheduleId;\n    readonly kind: \'every\';\n    readonly title: string;\n    readonly prompt: string;\n    readonly everySeconds: number;\n    readonly scheduledAt: string;\n}',
   },
   {
+    name: 'ExchangeReadResult',
+    declaration: 'export interface ExchangeReadResult {\n    readonly format: OfficeFormat;\n    readonly snapshot: UnitSnapshot;\n    readonly unsupported: readonly UnsupportedFeature[];\n}',
+  },
+  {
     name: 'FeedbackCategory',
     declaration: 'export type FeedbackCategory = \'task-result\' | \'instruction-following\' | \'product-interaction\' | \'service-stability\' | \'resource-cost\' | \'security-privacy-permission\' | \'other\';',
   },
@@ -6558,6 +6634,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ForgeWorktreeWaiting',
     declaration: 'export type ForgeWorktreeWaiting = \'creation\' | \'restoration\';',
+  },
+  {
+    name: 'FsBytesWriteOutcome',
+    declaration: 'export interface FsBytesWriteOutcome {\n    operation: \'create\' | \'update\';\n    version: FsVersion;\n}',
   },
   {
     name: 'FsDeleteOutcome',
@@ -7404,8 +7484,24 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type ObjectJsonSchema = JsonSchemaNode & {\n    type: \'object\';\n};',
   },
   {
+    name: 'OfficeDocumentReadResult',
+    declaration: 'export interface OfficeDocumentReadResult {\n    readonly format: OfficeFormat;\n    readonly snapshot: OfficeDocumentSnapshot;\n    readonly unsupported: readonly UnsupportedFeature[];\n    readonly version: string;\n}',
+  },
+  {
+    name: 'OfficeDocumentSaveResult',
+    declaration: 'export interface OfficeDocumentSaveResult {\n    readonly version: string;\n}',
+  },
+  {
+    name: 'OfficeDocumentSnapshot',
+    declaration: 'export type OfficeDocumentSnapshot = {\n    readonly kind: \'workbook\';\n    readonly data: JsonValue;\n} | {\n    readonly kind: \'document\';\n    readonly data: JsonValue;\n};',
+  },
+  {
     name: 'OfficeExtension',
     declaration: 'export type OfficeExtension = \'doc\' | \'docx\' | \'xls\' | \'xlsx\' | \'ppt\' | \'pptx\';',
+  },
+  {
+    name: 'OfficeFormat',
+    declaration: 'export type OfficeFormat = \'docx\' | \'xlsx\' | \'pptx\' | \'doc\' | \'xls\' | \'ppt\';',
   },
   {
     name: 'OfficeSourceKey',
@@ -9942,6 +10038,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'UiRenderResult',
     declaration: 'export type UiRenderResult = UiNode;',
+  },
+  {
+    name: 'UnitSnapshot',
+    declaration: 'export type UnitSnapshot = {\n    readonly kind: \'workbook\';\n    readonly data: IWorkbookData;\n} | {\n    readonly kind: \'document\';\n    readonly data: IDocumentData;\n};',
+  },
+  {
+    name: 'UnsupportedFeature',
+    declaration: 'export interface UnsupportedFeature {\n    readonly kind: UnsupportedFeatureKind;\n    readonly detail?: string;\n}',
+  },
+  {
+    name: 'UnsupportedFeatureKind',
+    declaration: 'export type UnsupportedFeatureKind = \'macro\' | \'tracked-changes\' | \'comment\' | \'chart\' | \'drawing\' | \'shape\' | \'header-footer\' | \'formula-recalc\' | \'embedded-object\' | \'other\';',
   },
   {
     name: 'UpdateBundleOptions',

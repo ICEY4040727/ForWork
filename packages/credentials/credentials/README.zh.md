@@ -90,6 +90,25 @@ apiKeyEnv: DEEPSEEK_API_KEY
 
 需要该密钥的请求使用它当前存储的值，因此轮换密钥会作用于紧随其后的下一次请求——无需重启，无需改配置。
 
+### 在操作系统安全存储中保存模型凭据
+
+`SafeStorageSecureStore` 为桌面 Host 提供静态值保护。注入 Electron 的 `safeStorage` 与应用已经拥有的目录；只有 base64 密文会写入文件：
+
+```ts
+import { SafeStorageSecureStore, type SafeStorageLike } from '@deepseek-ai/dsh-credentials'
+
+declare const safeStorage: SafeStorageLike
+declare const directory: string
+declare const key: string
+
+const store = new SafeStorageSecureStore({ safeStorage, directory })
+await store.set('DEEPSEEK_API_KEY', key)   // encrypted before it reaches disk
+const stored = await store.get('DEEPSEEK_API_KEY')
+await store.delete('DEEPSEEK_API_KEY')
+```
+
+当 `safeStorage.isEncryptionAvailable()` 为 false 时，`get` 与 `set` 抛出带 `secure-storage-unavailable` 代码的 `SecureStorageUnavailableError`；适配器绝不会改用明文写入。`delete` 无需系统密钥即可移除加密条目，因此锁定的钥匙串不会阻止清除已存储的机密。该适配器不属于默认组合：由桌面 Host 用自己的应用数据目录构造它。
+
 ### 可能出错的地方
 
 - **存储的密钥优先于启动环境**——存在存储值时，`DEEPSEEK_API_KEY=… dsh`（或 CI 机密、容器 `-e`）不会生效；要使用导出的密钥，请 `unset` 存储的密钥。
@@ -132,6 +151,7 @@ apiKeyEnv: DEEPSEEK_API_KEY
 |---|---|
 | [`src/index.ts`](src/index.ts) | Service Definition：`credentialRef`/`credentialKey` 品牌、`ResolvedCredential`/`CredentialRecordInfo`、覆盖两个键空间的抽象提供方、带失败隔离的扇出 |
 | [`src/types.ts`](src/types.ts) | 客户端安全类型面：`CredentialRef` 与 `CredentialKey` 品牌、存储记录联合类型、`CredentialInfo` 引用视图、`credentials/reference-updated` 与 `credentials/record-updated` 事件声明 |
+| [`src/secure-store.ts`](src/secure-store.ts) | 操作系统安全存储适配器：`SecureStore` seam、注入的 `SafeStorageLike`，以及由 `safeStorage` 支撑的密文文档 |
 
 ### 客户端安全类型
 
@@ -176,6 +196,8 @@ apiKeyEnv: DEEPSEEK_API_KEY
 - **引用限定为环境变量形状**——单一扁平的 POSIX 标识符命名空间，因为引用同时就是它借以解析的环境变量名。记录使用更丰富的 `<owner>/<id>` 寻址。
 - **进程环境变化不可见**——无法为启动 shell 中改变的变量发出通知；界面只能在自身导航时重新读取 `describe()`。
 - **记录的拥有者就是它的 scope，而没有任何环节核验该 scope 是否已挂载**——seam 存下被交予的内容，并报告它存了什么；识别遗留记录需要调用方将 `listRecords()` 的结果与拥有该 scope 的注册表关联起来，seam 自身没有可供核对的注册表。
+- **安全存储适配器未接入默认组合**——桌面 Host 用 Electron 的 `safeStorage` 与应用数据目录构造 `SafeStorageSecureStore`；本包既不选择该目录，也不运行 Electron 进程。
+- **安全存储的写入只在单个实例内串行，不跨进程**——两个进程写同一份密文文档时会互相覆盖；预期由桌面 Host 从单一进程拥有该文件。
 
 <a id="dev-note"></a>
 ### 开发备注
@@ -185,6 +207,6 @@ apiKeyEnv: DEEPSEEK_API_KEY
 
 本开发备注是维护者的工作上下文：开放问题与尚未决定的探索方向。它明确不具权威性——已交付的行为与限制以上文和包代码为准。
 
-该 seam 的接口为 keyring、辅助命令与 KMS 后端提供方预留了扩展空间；远端设置提供方永远不必携带机密。目前没有任何一种随附，也没有当前消费方需要它们。
+已随附的 `SafeStorageSecureStore` 为桌面 Host 提供静态值保护，但它不是 `CredentialProvider`。完整的 keyring、辅助命令或 KMS 后端提供方仍未随附，当前也没有消费方需要它们；远端设置提供方永远不必携带机密。
 
 </details>

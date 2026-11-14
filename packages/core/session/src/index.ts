@@ -26,6 +26,7 @@ import { buildForkSeed } from './fork.ts'
 
 export { buildForkSeed } from './fork.ts'
 export * from './types.ts'
+export * from './document-events.ts'
 export { SessionPreparation } from './preparation.ts'
 export type { SessionPreparationOptions } from './preparation.ts'
 export type { AssistantMessage, DeveloperMessage, SystemMessage, ToolResultMessage, UserMessage } from '@deepseek-ai/dsh-llm'

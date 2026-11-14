@@ -1,7 +1,7 @@
 /**
  * Filesystem Service Definition for one execution world. Backends own stable target
  * identity, process paths and file URIs, containment, text reads, decoding,
- * binary rejection, and atomic mutations. Read windows and
+ * binary rejection, lossless binary writes, and atomic mutations. Read windows and
  * observed-state policy stay in consumer and policy plugins; `editText`
  * remains here so version check, literal match, and rewrite share one critical
  * section.
@@ -13,6 +13,7 @@ import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandb
 import type { PatchHunk } from '@deepseek-ai/dsh-fs-patch'
 import { FsError } from './types.ts'
 import type {
+  FsBytesWriteOutcome,
   FsDeleteOutcome,
   FsMoveOutcome,
   FsDirEntry,
@@ -34,6 +35,7 @@ export {
   FsVersion,
 } from './types.ts'
 export type {
+  FsBytesWriteOutcome,
   FsDeleteOutcome,
   FsMoveOutcome,
   FsMoveSourceFailure,
@@ -286,6 +288,31 @@ export abstract class FileSystem extends Service {
     signal?: AbortSignal,
     sandboxPolicy?: SandboxExecutionPolicy,
   ): Promise<FsWriteOutcome>
+
+  /**
+   * Atomically create or replace raw bytes with no encoding, decoding, or
+   * binary rejection, so a binary document can be saved losslessly.
+   * `expected` guards intent and staleness with the same {@link FsWriteIntent}
+   * semantics as {@link writeText}; omission allows unconditional overwrite.
+   * The provider stages and publishes the same way as `writeText`, including
+   * its version derivation; the returned version is the freshness token a
+   * later guarded write must supply.
+   * @param target - the resolved target to write.
+   * @param content - the full new file content, byte for byte.
+   * @param expected - the write intent guarding the write; omit for unconditional.
+   * @param signal - aborts before atomic publication takes effect.
+   * @param sandboxPolicy - the per-call mode and workspace root this write
+   *   runs under; a sandboxing backend fences the write by it, the bare backend
+   *   ignores it. Omit to leave the backend its own default.
+   * @returns the publication operation and the version the write produced.
+   */
+  abstract writeBytes(
+    target: FsTarget,
+    content: Uint8Array,
+    expected?: FsWriteIntent,
+    signal?: AbortSignal,
+    sandboxPolicy?: SandboxExecutionPolicy,
+  ): Promise<FsBytesWriteOutcome>
 
   /**
    * Atomically edit literal text. When supplied, the version guard is checked

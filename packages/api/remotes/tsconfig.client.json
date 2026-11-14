@@ -113,6 +113,9 @@
       "path": "../../document/office-to-pdf"
     },
     {
+      "path": "../../document/office-exchange"
+    },
+    {
       "path": "../account-controller"
     },
     {

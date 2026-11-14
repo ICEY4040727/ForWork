@@ -26,7 +26,9 @@ Each package owns its configuration and lifetime rules; the subsystem reference 
 
 | Package | Role | ctx key |
 |---|---|---|
+| [office-exchange](office-exchange/README.md) | OOXML to unit-snapshot mapping, unsupported-feature detection, and legacy conversion | `ctx.officeExchange` |
 | [office-to-pdf](office-to-pdf/README.md) | Authorized Office bytes to complete PDFs with bounded queues and caching | `ctx.officeToPdf` |
+| [tool-office](tool-office/README.md) | Model-facing Office document tools backed by Office Exchange | — |
 
 -----
 
