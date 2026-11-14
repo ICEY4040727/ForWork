@@ -54,7 +54,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [x] T015 [P] Implement the stable identity registry with rebind/missing in `packages/session/session-document/src/document-identity.ts`; tests in `packages/session/session-document/tests/document-identity.spec.ts`.
 - [x] T016 [P] Implement Change Record, attribution, and the version guard in `packages/session/session-document/src/document-changes.ts`; tests in `packages/session/session-document/tests/document-changes.spec.ts`.
 - [x] T017 [P] Implement write-root confinement in `packages/document/office-exchange/src/authority.ts` using the filesystem seam; tests in `packages/document/office-exchange/tests/authority.spec.ts`.
-- [x] T018 [P] Wire credential storage to the OS secure store in `packages/credentials/credentials/` (consumer only, no new subsystem); tests in `packages/credentials/credentials/tests/secure-store.spec.ts`.
+- [x] T018 [P] Wire the package-level credential adapter to the OS secure store in `packages/credentials/credentials/` (consumer only, no new subsystem); tests in `packages/credentials/credentials/tests/secure-store.spec.ts`. Desktop `safeStorage` construction/wiring is T063.
 - [x] T019 [P] Enforce telemetry-off-by-default and add the egress assertion harness in `packages/test-support/tool-testkit/`; test in `packages/test-support/tool-testkit/tests/egress.spec.ts`.
 - [x] T020 Verify the foundation: `corepack pnpm exec tsc -b packages/document/office-exchange packages/core/session packages/session/session-document` plus `corepack pnpm exec vitest run` for those packages.
 
@@ -62,7 +62,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 
 > Technical selections (2026-11-14, recorded in spec/plan/research/data-model/contracts): agent tools stay Host-owned and send correlated gateway commands to the single live unit (R15); runtime undo is the editor's native stack (R16); explicit save plus periodic drafts (R17); adapter-mock component tests plus a browser smoke (R18); additive operation union (R19); legacy files open as a converted copy in a new tab (R20).
 >
-> Consistency pass (2026-11-14): save is the only version bump; an accepted agent tool call persists immediately and refuses mixed-actor saves (`pending-edits`); save-time unsupported refusal added as T074; T025/T065 merged; T056/T057 split into audit helper vs client native undo; T040/T070 split into Host draft storage vs client capture; `Document Draft` added to the spec entities; "same file" clarified for legacy sources; SC-003 timing moved to the client suite.
+> Consistency pass (2026-11-14): save is the only version bump; an accepted agent tool call persists immediately and refuses mixed-actor saves (`pending-edits`); save-time unsupported refusal added as T074; T025/T065 merged; T056/T057 split into audit helper vs client native undo; **T077 owns the Host draft store, T040 orchestrates recovery, T070 captures in the client**; `Document Draft` added to the spec entities; "same file" clarified for legacy sources; SC-003 timing moved to the client suite.
 >
 > Progress (2026-11-14): **US1 implementation complete** except the long `test:web` run (T028). Delivered: T021/T022/T052/T072/T075 tab+patterns+adapter+bundle; T023/T024 Univer runtime (lazy); T025/T065 Remote-only hook; T026 external change/dirty close; T027 panel; T053/T073 legacy open+notice; T054 native undo; T055/T057/T058 perf/undo/visibility; T070 client drafts; T074 save refusal; T076 liveshare endpoints; T077 Host draft Remote; T078 host aggregate 177→0. Verified: 136 client tests with 100% client coverage, `tsc` host+client aggregates 0 errors, `test:gui` 13,227 pass (2 unrelated flaky specs pass alone), performance 29.9 ms open / 46.7 ms save for 10k cells. **T028 remains: `DSH_SNAPSHOT=replay pnpm run test:web` not yet executed.**
 
@@ -82,22 +82,22 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 
 - [x] T022 [US1] Register the `office` tab kind and file patterns in `packages/client/ui-office-editor/src/client/index.ts`.
 - [x] T075 [US1] Register `ui-office-editor` in the web-app bundle: add the `dsh.client` row in `packages/bundle/web-app/cordis.patch.yml` and the dependency in `packages/bundle/web-app/package.json` (its `tsconfig.client.json` reference already exists).
-- [x] T023 [P] [US1] Embed the Univer Sheets preset in `packages/client/ui-office-editor/src/client/SheetsEditor.tsx`.
-- [x] T024 [P] [US1] Embed the Univer Docs preset in `packages/client/ui-office-editor/src/client/DocsEditor.tsx`.
+- [x] T023 [P] [US1] Embed the Univer Sheets preset in `packages/client/ui-office-editor/src/client/editor/sheets.ts`.
+- [x] T024 [P] [US1] Embed the Univer Docs preset in `packages/client/ui-office-editor/src/client/editor/docs.ts`.
 - [x] T025 [US1] Implement `useOfficeDocument` against the `officeDocument` Remote (read/save/detect/convert) in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`.
-- [x] T064 [US1] Expose a session-scoped `officeDocument` Client Remote (`read`, `save`, `detectUnsupported`, `convertLegacy`) in `packages/document/office-exchange/src/remote.ts`, persisting saves through the filesystem seam with a version guard; tests in `packages/document/office-exchange/tests/remote.spec.ts`. **Blocked on T066.**
+- [x] T064 [US1] Expose a session-scoped `officeDocument` Client Remote (`read`, `save`, `detectUnsupported`, `convertLegacy`) in `packages/document/office-exchange/src/remote.ts`, persisting saves through the filesystem seam with a version guard; tests in `packages/document/office-exchange/tests/remote.spec.ts`. T066 supplies the binary write.
 - [x] T066 [US1] Add a version-guarded binary write to the filesystem seam and all providers: `packages/fs/fs/src/` (Service Definition), `packages/fs/fs-local/`, `packages/fs/fs-sandbox/`, `packages/fs/fs-ssh/`, reusing `FsWriteIntent` and the existing atomic-write/lock path; tests per provider. Required by T064 because OOXML is binary.
-- [x] T065 [US1] Verify the client imports no Host service directly: assert only the `officeDocument` Remote is used in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`; test in `packages/client/ui-office-editor/tests/remote-only.spec.tsx`.
+- [x] T065 [US1] Verify the client imports no Host service directly: assert only the `officeDocument` Remote is used in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`; test in `packages/client/ui-office-editor/tests/remote-only.spec.ts`.
 - [x] T026 [US1] Handle external change reload and unsaved-close warning in `packages/client/ui-office-editor/src/client/changes.ts`.
 - [x] T070 [US1] Implement client-side draft capture (idle-debounced, version-bound) and its `officeDocument` Remote call in `packages/client/ui-office-editor/src/client/drafts.ts`; tests in `packages/client/ui-office-editor/tests/drafts.client.spec.ts`.
 - [x] T077 [US1] Add `writeDraft`/`readDraft`/`clearDraft` to the `officeDocument` Remote and Host storage under `<workspaceRoot>/.dsh/office-tmp/drafts/` (version-bound, authority-checked); tests in `packages/document/office-exchange/tests/drafts.spec.ts`.
-- [x] T074 [US1] Refuse a save when the open document carries unsupported features: re-check the read result/detection in the save hook and show the named feature in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`; test in `packages/client/ui-office-editor/tests/save-refusal.spec.tsx`.
+- [x] T074 [US1] Refuse a save when the open document carries unsupported features: re-check the read result/detection in the save hook and show the named feature in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`; test in `packages/client/ui-office-editor/tests/use-office-document.spec.tsx` and `tests/editor.spec.tsx`.
 - [x] T027 [US1] Render the open-document panel in `packages/client/ui-office-editor/src/client/DocumentPanel.tsx`.
-- [ ] T028 [US1] Verify: `corepack pnpm run test:gui`; `DSH_SNAPSHOT=replay corepack pnpm run test:web` if assembled output changed. **Blocked by T078's host-aggregate errors; the office surface is green.**
+- [ ] T028 [US1] Verify: `corepack pnpm run test:gui`; then `DSH_SNAPSHOT=replay corepack pnpm run test:web` — mandatory because US1 changed assembled output. **Web lane unblocked by T078; `test:web` not yet executed.**
 - [x] T078 Fix the host-aggregate `TS2375` in `packages/document/office-exchange/tests/provider-docx.spec.ts` and triage the remaining `tsc -p tsconfig.host.json` errors as pre-existing vs ours; rerun the host aggregate so T028 can attempt `test:web`. **Host aggregate 177→0 after moving client tests to the `.client.` lane; web lane unblocked.**
 - [x] T052 [US1] Exclude `.pptx` from the editable tab and assert it stays preview-only (FR-011) in `packages/client/ui-office-editor/tests/patterns.client.spec.ts`
 - [x] T053 [US1] Wire legacy conversion on open by calling `convertLegacy` in `packages/client/ui-office-editor/src/client/useOfficeDocument.ts`; test in `packages/client/ui-office-editor/tests/legacy-open.spec.tsx`
-- [x] T072 [US1] Isolate Univer behind an adapter seam and mock it in component tests; add the browser smoke for real editor behavior in `packages/client/ui-office-editor/src/client/adapter.ts` and `packages/client/ui-office-editor/tests/adapter.spec.ts`
+- [x] T072 [US1] Isolate Univer behind an adapter seam and mock it in component tests in `packages/client/ui-office-editor/src/client/adapter.ts` and `packages/client/ui-office-editor/tests/adapter.spec.ts`; the real browser smoke is T028.
 - [x] T073 [US1] Open legacy conversions in a new tab with a visible "editing converted copy" notice in `packages/client/ui-office-editor/src/client/DocumentPanel.tsx`; test in `packages/client/ui-office-editor/tests/legacy-notice.spec.tsx`
 - [x] T067 [US1] Classify `officeExchange`/`officeDocument` in the Cordis catalog (`SERVICE_PAGE`, `LINK_MAP`, and a new `docs/subsystems/office-exchange.md` + `.zh.md` `cordis-surface` page) so `gen-cordis-catalog --check` passes.
 - [x] T068 [US1] Make `convertLegacy` write into a workspace-scoped temp directory inside the permitted roots so the converted file is readable through the Remote; update the provider, Remote, and tests.
@@ -141,7 +141,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [ ] T037 [US3] Implement the `document` projection and open-document system-prompt injection in `packages/session/session-document/src/document-projection.ts`; tests in `packages/session/session-document/tests/document-projection.spec.ts`.
 - [ ] T038 [US3] Implement restore-after-restart of the open-document set in `packages/session/session-document/src/document-restore.ts`.
 - [ ] T039 [P] [US3] Implement rename/move rebind and missing reporting in `packages/session/session-document/src/document-identity.ts`.
-- [ ] T040 [P] [US3] Implement Host-side draft persistence and recovery storage in `packages/session/session-document/src/document-draft.ts` (location, version binding, cleanup); the client capture/debounce is T070.
+- [ ] T040 [P] [US3] Implement recovery/restore orchestration over the T077 draft Remote (read draft, compare `contentVersion`, offer restore, clear on save) in `packages/session/session-document/src/document-recovery.ts`; the draft store itself is T077 and client capture is T070.
 - [ ] T041 [US3] Verify: session migration test, `corepack pnpm run test:snapshot`, and the TypeScript and Python SDK expected-output updates.
 
 **Checkpoint**: Documents are durable, restorable, and cross-turn referenceable.
@@ -154,7 +154,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 
 - [ ] T042 [P] Add the privacy egress test proving no document bytes leave the device (SC-008) in `packages/test-support/tool-testkit/tests/egress-documents.spec.ts`.
 - [ ] T043 [P] Add the write-authority test proving out-of-root writes are refused (SC-011) in `packages/document/tool-office/tests/authority.spec.ts`.
-- [ ] T044 [P] Add the unsaved-work recovery test (SC-010) in `packages/session/session-document/tests/document-draft.spec.ts`.
+- [ ] T044 [P] Add the unsaved-work recovery test (SC-010) in `packages/session/session-document/tests/document-recovery.spec.ts`.
 - [ ] T045 [P] Document the packages and subsystem: `packages/document/office-exchange/README.md` Model Experience section, `packages/client/ui-office-editor/README.md`, `docs/subsystems/office-editing.md`.
 - [ ] T046 [P] Add config catalog entries and run `verify-package-dependencies`, `verify-export-jsdoc`, and `verify-client-packages` for the new packages.
 - [ ] T047 Run `corepack pnpm run build:check`, `corepack pnpm run doc-sync`, and `corepack pnpm run test:coverage`; fix regressions.

@@ -88,7 +88,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **FR-003**: The product MUST convert legacy `.doc/.xls/.ppt` to a modern editable format on open without altering the source.
 - **FR-004**: The product MUST expose document structure and content to the agent as structured operations, not raw bytes.
 - **FR-005**: Agent edits and user edits MUST converge on one document state, with version-guarded writes and a visible conflict report.
-- **FR-006**: The product MUST record document open/edit/close as durable session facts so the agent can reference documents across turns.
+- **FR-006**: The product MUST record document open/edit/rebind/missing/close as durable session facts so the agent can reference documents across turns.
 - **FR-007**: The product MUST restore the open-document set after restart.
 - **FR-008**: The product MUST refuse and explain any save that would drop unsupported content.
 - **FR-009**: The product MUST be delivered as an independently signed Windows and macOS desktop application under its own scope and brand, with no remaining DeepSeek brand, telemetry, or default model adapter.
