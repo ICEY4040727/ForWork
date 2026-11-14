@@ -108,6 +108,38 @@ Host Remote service backing the generated `remote.officeDocument` namespace. Rea
  * @throws RemoteError when the path is out of scope or conversion fails.
  */
 @Remote async convertLegacy(workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal): Promise<string>
+
+/**
+ * Persist one recovery draft for an open document.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param documentId - caller-owned identity of the open document; it selects the draft file.
+ * @param documentPath - document path the draft is captured for; it is recorded, never written.
+ * @param contentVersion - file version the snapshot was captured from.
+ * @param snapshot - wire snapshot of the editable content.
+ * @param signal - caller cancellation.
+ * @returns the time the draft was written.
+ * @throws RemoteError when the draft store is out of scope or cannot be written.
+ */
+@Remote async writeDraft( workspaceFileScope: WorkspaceFileScope, documentId: string, documentPath: string, contentVersion: string, snapshot: OfficeDocumentSnapshot, signal: AbortSignal, ): Promise<OfficeDocumentDraftWriteResult>
+
+/**
+ * Read the recovery draft persisted for one open document.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param documentId - caller-owned identity of the open document; it selects the draft file.
+ * @param signal - caller cancellation.
+ * @returns the stored draft, or `null` when the document has no draft.
+ * @throws RemoteError when the draft store is out of scope or its content is malformed.
+ */
+@Remote async readDraft( workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal, ): Promise<OfficeDocumentDraft | null>
+
+/**
+ * Remove the recovery draft persisted for one open document.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param documentId - caller-owned identity of the open document; it selects the draft file.
+ * @param signal - caller cancellation.
+ * @throws RemoteError when the draft store is out of scope or its entry cannot be removed.
+ */
+@Remote async clearDraft(workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal): Promise<void>
 ```
 
 Source: [`packages/document/office-exchange/src/remote.ts`](../../packages/document/office-exchange/src/remote.ts)

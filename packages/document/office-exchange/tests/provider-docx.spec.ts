@@ -250,7 +250,7 @@ it('writes a table without table metadata using default column widths', async ()
   const dataWithoutSource: IDocumentData = {
     id: original.id,
     documentStyle: original.documentStyle,
-    body: original.body,
+    ...(original.body === undefined ? {} : { body: original.body }),
   }
   const reopened = await readDocument(await writeDocument(dataWithoutSource))
   const table = reopened.tableSource?.['table-1']

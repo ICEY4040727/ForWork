@@ -5,9 +5,11 @@ kind: "package-reference"
 
 # @deepseek-ai/dsh-client-ui-office-editor
 
+English | [中文](README.zh.md)
+
 ## Summary
 
-Client plugin package for an embedded Office document editor in the right Sidebar. It reserves the package for a tab type that opens `.docx` and `.xlsx` files, an editor surface, and open/save paths through `ctx.officeExchange`. The plugin currently registers no tab, panel, or editor, and no source module imports Univer yet.
+Client plugin package for an embedded Office document editor in the right Sidebar. It registers the `office` tab type for Session-scoped `.docx` and `.xlsx` addresses, reads and saves through the `officeDocument` Remote, and mounts the Univer Sheets or Docs core preset behind an adapter seam. Edits are captured as idle-debounced recovery drafts, and reopening the document offers a stored draft instead of applying it silently. Opening a legacy `.doc`, `.xls`, or `.ppt` source converts it and opens the copy in a new tab; an editable copy opens here with a notice naming the original, and a converted presentation stays in the read-only preview.
 
 ## Table of Contents
 
@@ -23,9 +25,13 @@ Client plugin package for an embedded Office document editor in the right Sideba
 <a id="use-this-package"></a>
 ## Use this package
 
-The package is not wired into a profile. Mounting it registers nothing and adds no visible control.
+The Web bundle mounts the package. Opening a `.docx` or `.xlsx` file in the right Sidebar claims the address with the `office` type and opens an editable sheet or paragraph surface. Spreadsheets and word-processing documents use separate Univer presets behind the adapter. Saving writes through the `officeDocument` Remote at the version the read observed; a stale version surfaces as a conflict. A file that reports an unsupported feature cannot be saved, and the panel names the features that would be lost.
 
-The planned editor opens a workspace document in a right-Sidebar tab, edits cells or paragraphs in place, and saves through `ctx.officeExchange`. Spreadsheets and word-processing documents use separate editor presets, and `.pptx` stays in the read-only document preview.
+A legacy `.doc`, `.xls`, or `.ppt` source is converted through the same Remote and reopened as a copy in that tab's place; the original is never written. The converted tab shows a dismissible banner naming the source. The body also lists the Session's open Office documents and focuses one when clicked.
+
+An external file change reloads a clean tab and prompts before discarding unsaved edits. Closing a dirty tab is vetoed by the Sidebar's cleanup-failure path, and the panel then offers save-and-close, discard-and-close, or cancel.
+
+While the unit is dirty, an edit schedules a recovery draft after 2 s without another edit. Reopening the document reads that draft once and offers recovery; a draft captured from the current file version is offered directly, while one from an older version is labelled stale and is still applied only when the user chooses it. A successful save and a discard both remove the stored draft.
 
 -----
 
@@ -35,9 +41,13 @@ The planned editor opens a workspace document in a right-Sidebar tab, edits cell
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-`src/index.ts` is the Host companion and defines an empty apply function for the Client loader. `src/client/index.ts` is the browser plugin and currently registers no slot contribution, tab type, service, or store.
+`src/index.ts` is the Host companion and defines an empty apply function for the Client loader. `src/client/index.ts` is the browser plugin: it registers `officeDefinition()` into `ctx.sidebarRightTabs`, the dictionaries, the body under `sidebar.right.pane.tab`, the chip title under `sidebar.right.pane.tab.title`, and the dirty-close veto through `ctx.sidebarRight.registerCloseHandler`. The definition keeps the body mounted across tab switches so a live edit survives.
 
-`tsconfig.host.json` and `tsconfig.client.json` compile the two plugin faces separately, and `tsdown.config.ts` builds the browser bundle from the emitted Host declarations. Editor code, Univer presets, and tab registration belong to the browser face when they land.
+`definition.ts` declares the `office` kind, its `.docx`/`.xlsx` patterns plus the legacy `.doc`/`.xls`/`.ppt` sources it converts, and the Session-file veto. `OfficePanel.tsx` reads the file metadata through `useResource`, calls `useOfficeDocument` against the injected `officeDocument` Remote, and mounts the adapter only after a successful read. `useOfficeDocument.ts` owns read/save state, the expected-version guard, failure classification, the external-change rule, the recovery offer, and the legacy conversion that reopens the copy through the tab's own `openResource`. `drafts.ts` owns the idle-debounced scheduler: each panel creates one instance, an edit replaces its pending candidate, `flush` writes immediately, `cancel` waits for an in-flight write, and every refusal or rejection reaches the hook's draft failure state. `changes.ts` owns the dirty and close-warning snapshot store the panel and close handler share; `notices.ts` owns the converted-copy records keyed by the converted tab's content id. `DocumentPanel.tsx` lists the Session's open `office` tabs from `sidebarRight.openTabs`. `target.ts` maps addresses to Remote paths and builds the converted copy's address with the workspace-path helper. `face.ts` binds the Remote, the adapter, those stores, and the open-tab inventory for the slot registration.
+
+`adapter.ts` owns the runtime boundary: `OfficeAdapter`, `OfficeEditorHandle`, `createAdapter(runtimeFactory?)`, and a controllable test adapter. The default factory dynamically imports `editor/sheets.ts` or `editor/docs.ts`; those modules construct `createUniver` with `UniverSheetsCorePreset` or `UniverDocsCorePreset`, their en-US locale default exports and CSS, create the unit from the wire snapshot, and report mutations from the preset's command signal. No module imports Univer at top level, so jsdom tests never load it. Undo and redo are the preset header's standard controls; the handle forwards the same native history.
+
+`tsconfig.host.json` and `tsconfig.client.json` compile the two plugin faces separately, and `tsdown.config.ts` emits the browser bundle plus the lazily requested sheets and docs chunks.
 
 </details>
 
@@ -48,7 +58,6 @@ The planned editor opens a workspace document in a right-Sidebar tab, edits cell
 
 - [ui-sidebar-right](../ui-sidebar-right/README.md) — the right Sidebar and its tab-type registry.
 - [ui-sidebar-documentpreview](../ui-sidebar-documentpreview/README.md) — the read-only document preview beside the editor.
-- [Office Exchange](../../document/office-exchange/README.md) — the conversion capability behind open and save.
 - [Client group](../README.md) — the browser packages in this group.
 
 -----
@@ -74,9 +83,13 @@ None; the package neither assembles nor sends a provider request.
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- The editor is not implemented; the plugin registers no tab type, document panel, or editor preset.
+- A real Univer mount needs a browser (canvas, ResizeObserver, preset styles); the unit lane replaces the runtime factory and the assembled browser smoke owns the real mount.
+- The close warning is an in-panel banner shown after the Sidebar vetoes removal, not a native modal. The body stays mounted through hiding, so the pending prompt appears when its tab is activated.
+- The editor UI ships with the preset's en-US locale only.
+- A converted `.ppt` copy is a `.pptx`, which stays read-only in the document preview, so presentations never open in this editor.
+- Converted-copy notices and the open-document list come from this window's plugin state and the Sidebar's open-tab inventory; the `document` Session projection replaces that list and restores the set after a restart.
+- Recovery drafts are stored by the `officeDocument` Remote under `<workspaceRoot>/.dsh/office-tmp/drafts/` and are read only when a document opens. The offer is per tab open, so a re-read after an external change does not re-offer an older draft.
 - Univer core and presets are Apache-2.0; the package pins `@univerjs/core`, `@univerjs/presets`, `@univerjs/preset-sheets-core`, and `@univerjs/preset-docs-core` at 1.4.0 for the editor surface.
-- The Client injects no services and has no bundle row, so a profile cannot mount it as a working editor yet.
 
 <a id="dev-note"></a>
 ### Dev Note

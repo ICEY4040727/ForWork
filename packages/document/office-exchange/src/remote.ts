@@ -9,7 +9,7 @@
 
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import type { IDocumentData, IWorkbookData } from '@univerjs/core'
@@ -24,6 +24,8 @@ import { OfficeExchangeError } from './errors.ts'
 import type { OfficeExchange } from './service.ts'
 import type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
 import type {
+  OfficeDocumentDraft,
+  OfficeDocumentDraftWriteResult,
   OfficeDocumentReadResult,
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,
@@ -182,6 +184,121 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     } catch (cause) {
       throw this.failure(cause, path, signal)
     }
+  }
+
+  /**
+   * Persist one recovery draft for an open document.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param documentId - caller-owned identity of the open document; it selects the draft file.
+   * @param documentPath - document path the draft is captured for; it is recorded, never written.
+   * @param contentVersion - file version the snapshot was captured from.
+   * @param snapshot - wire snapshot of the editable content.
+   * @param signal - caller cancellation.
+   * @returns the time the draft was written.
+   * @throws RemoteError when the draft store is out of scope or cannot be written.
+   */
+  @Remote
+  async writeDraft(
+    workspaceFileScope: WorkspaceFileScope,
+    documentId: string,
+    documentPath: string,
+    contentVersion: string,
+    snapshot: OfficeDocumentSnapshot,
+    signal: AbortSignal,
+  ): Promise<OfficeDocumentDraftWriteResult> {
+    const draftPath = this.draftPath(workspaceFileScope.workspaceRoot, documentId)
+    try {
+      const target = await this.draftTarget(workspaceFileScope.workspaceRoot, draftPath, true, signal)
+      const savedAt = new Date().toISOString()
+      const draft: OfficeDocumentDraft = { documentId, path: documentPath, contentVersion, snapshot, savedAt }
+      await this.files().writeText(target, JSON.stringify(draft), undefined, signal)
+      return { savedAt }
+    } catch (cause) {
+      throw this.failure(cause, draftPath, signal)
+    }
+  }
+
+  /**
+   * Read the recovery draft persisted for one open document.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param documentId - caller-owned identity of the open document; it selects the draft file.
+   * @param signal - caller cancellation.
+   * @returns the stored draft, or `null` when the document has no draft.
+   * @throws RemoteError when the draft store is out of scope or its content is malformed.
+   */
+  @Remote
+  async readDraft(
+    workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal,
+  ): Promise<OfficeDocumentDraft | null> {
+    const draftPath = this.draftPath(workspaceFileScope.workspaceRoot, documentId)
+    try {
+      const fs = this.files()
+      const target = await this.draftTarget(workspaceFileScope.workspaceRoot, draftPath, false, signal)
+      const info = await fs.stat(target, signal)
+      if (info === undefined) return null
+      if (info.type !== 'file') {
+        throw new OfficeExchangeError('conversion-failed', `The draft at "${draftPath}" is not a regular file.`)
+      }
+      const bytes = await fs.readBytes(target, signal, this.config.maxBytes)
+      return parseDraft(new TextDecoder().decode(bytes), draftPath)
+    } catch (cause) {
+      throw this.failure(cause, draftPath, signal)
+    }
+  }
+
+  /**
+   * Remove the recovery draft persisted for one open document.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param documentId - caller-owned identity of the open document; it selects the draft file.
+   * @param signal - caller cancellation.
+   * @throws RemoteError when the draft store is out of scope or its entry cannot be removed.
+   */
+  @Remote
+  async clearDraft(workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal): Promise<void> {
+    const draftPath = this.draftPath(workspaceFileScope.workspaceRoot, documentId)
+    try {
+      const fs = this.files()
+      const target = await this.draftTarget(workspaceFileScope.workspaceRoot, draftPath, false, signal)
+      const info = await fs.stat(target, signal)
+      if (info === undefined) return
+      await fs.deleteFile(target, undefined, signal)
+    } catch (cause) {
+      throw this.failure(cause, draftPath, signal)
+    }
+  }
+
+  /**
+   * The draft file for one document identity: a digest keeps a caller-supplied
+   * id from naming a path outside the draft directory.
+   */
+  private draftPath(workspaceRoot: string, documentId: string): string {
+    const digest = createHash('sha256').update(documentId).digest('hex')
+    return join(workspaceRoot, '.dsh', 'office-tmp', 'drafts', `${digest}.json`)
+  }
+
+  /** Resolve one draft path inside the workspace root, creating its directory for a write. */
+  private async draftTarget(
+    workspaceRoot: string, path: string, create: boolean, signal: AbortSignal,
+  ): Promise<FsTarget> {
+    const directory = dirname(path)
+    await assertWithinRoots(directory, [workspaceRoot])
+    if (create) {
+      try {
+        await mkdir(directory, { recursive: true })
+      } catch (cause) {
+        throw new OfficeExchangeError(
+          'conversion-failed',
+          `The draft store at "${directory}" could not be created (${String(cause)}).`,
+        )
+      }
+      // Re-check after creation: a link placed between the first check and
+      // `mkdir` resolves outside the root here instead of being written through.
+      await assertWithinRoots(directory, [workspaceRoot], { allowMissing: false })
+    }
+    const fs = this.files()
+    const target = await fs.resolve(path, { cwd: workspaceRoot, signal })
+    await assertWithinRoots(fs.processPath(target), [workspaceRoot])
+    return target
   }
 
   /**
@@ -401,4 +518,45 @@ function isDocumentData(value: unknown): value is IDocumentData {
 /** Whether a JSON value is a plain object the mapping helpers can index. */
 function isJsonObject(value: unknown): value is Record<string, JsonValue> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ * Parse persisted draft text. Malformed JSON, a non-object root, or a missing
+ * required field is a `conversion-failed` draft rather than a partial draft.
+ */
+function parseDraft(text: string, path: string): OfficeDocumentDraft {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(text)
+  } catch (error) {
+    throw new OfficeExchangeError('conversion-failed', `The draft at "${path}" is not valid JSON (${String(error)}).`)
+  }
+  if (!isJsonObject(parsed)) {
+    throw new OfficeExchangeError('conversion-failed', `The draft at "${path}" is not a JSON object.`)
+  }
+  const draft = draftRecord(parsed)
+  if (draft === undefined) {
+    throw new OfficeExchangeError('conversion-failed', `The draft at "${path}" is missing a required field.`)
+  }
+  return draft
+}
+
+/** Project one parsed draft object onto the wire draft, or refuse an incomplete record. */
+function draftRecord(value: Record<string, JsonValue>): OfficeDocumentDraft | undefined {
+  const { documentId, path, contentVersion, savedAt, snapshot } = value
+  if (
+    typeof documentId !== 'string'
+    || typeof path !== 'string'
+    || typeof contentVersion !== 'string'
+    || typeof savedAt !== 'string'
+    || !isDraftSnapshot(snapshot)
+  ) return undefined
+  return { documentId, path, contentVersion, savedAt, snapshot }
+}
+
+/** Whether a parsed value carries an edit snapshot with its kind and payload. */
+function isDraftSnapshot(value: JsonValue | undefined): value is OfficeDocumentSnapshot {
+  if (!isJsonObject(value)) return false
+  if (value['kind'] !== 'workbook' && value['kind'] !== 'document') return false
+  return isJsonObject(value['data'])
 }

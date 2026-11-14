@@ -2161,6 +2161,26 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'the path of the converted editable file inside the workspace root.',
         throws: ['RemoteError when the path is out of scope or conversion fails.'],
       },
+      {
+        signature: '@Remote async writeDraft( workspaceFileScope: WorkspaceFileScope, documentId: string, documentPath: string, contentVersion: string, snapshot: OfficeDocumentSnapshot, signal: AbortSignal, ): Promise<OfficeDocumentDraftWriteResult>',
+        description: 'Persist one recovery draft for an open document.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'documentId', description: 'caller-owned identity of the open document; it selects the draft file.' }, { name: 'documentPath', description: 'document path the draft is captured for; it is recorded, never written.' }, { name: 'contentVersion', description: 'file version the snapshot was captured from.' }, { name: 'snapshot', description: 'wire snapshot of the editable content.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the time the draft was written.',
+        throws: ['RemoteError when the draft store is out of scope or cannot be written.'],
+      },
+      {
+        signature: '@Remote async readDraft( workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal, ): Promise<OfficeDocumentDraft | null>',
+        description: 'Read the recovery draft persisted for one open document.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'documentId', description: 'caller-owned identity of the open document; it selects the draft file.' }, { name: 'signal', description: 'caller cancellation.' }],
+        returns: 'the stored draft, or `null` when the document has no draft.',
+        throws: ['RemoteError when the draft store is out of scope or its content is malformed.'],
+      },
+      {
+        signature: '@Remote async clearDraft(workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal): Promise<void>',
+        description: 'Remove the recovery draft persisted for one open document.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'documentId', description: 'caller-owned identity of the open document; it selects the draft file.' }, { name: 'signal', description: 'caller cancellation.' }],
+        throws: ['RemoteError when the draft store is out of scope or its entry cannot be removed.'],
+      },
     ],
   },
   {
@@ -7482,6 +7502,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ObjectJsonSchema',
     declaration: 'export type ObjectJsonSchema = JsonSchemaNode & {\n    type: \'object\';\n};',
+  },
+  {
+    name: 'OfficeDocumentDraft',
+    declaration: 'export interface OfficeDocumentDraft {\n    readonly documentId: string;\n    readonly path: string;\n    readonly contentVersion: string;\n    readonly snapshot: OfficeDocumentSnapshot;\n    readonly savedAt: string;\n}',
+  },
+  {
+    name: 'OfficeDocumentDraftWriteResult',
+    declaration: 'export interface OfficeDocumentDraftWriteResult {\n    readonly savedAt: string;\n}',
   },
   {
     name: 'OfficeDocumentReadResult',

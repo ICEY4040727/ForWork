@@ -162,6 +162,13 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'productAnalytics/watchPolicy': 'owner-only', // owner product analytics
   'pluginRegistryProbe/fastest': 'owner-only', // owner plugin registry probe
   'sessionReferenceResolver/candidates': 'owner-only', // owner composer reference resolution
+  'officeDocument/clearDraft': 'owner-only', // owner Office editor; the draft store is owner workspace state
+  'officeDocument/convertLegacy': 'owner-only', // owner Office editor; conversion writes a copy beside the source
+  'officeDocument/detectUnsupported': 'owner-only', // owner Office editor; readers hold no workspace document read
+  'officeDocument/read': 'owner-only', // owner Office editor; readers hold no workspace document read
+  'officeDocument/readDraft': 'owner-only', // owner Office editor; readers hold no workspace document read
+  'officeDocument/save': 'owner-only', // owner Office editor; the save replaces the owner's workspace file
+  'officeDocument/writeDraft': 'owner-only', // owner Office editor; drafts capture the owner's unsaved edits
   'officeToPdf/generation': 'owner-only', // owner document export
   'officeToPdf/render': 'owner-only', // owner document export
   'speech/cancelPreparation': 'owner-only', // owner voice input

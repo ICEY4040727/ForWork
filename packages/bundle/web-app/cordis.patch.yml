@@ -296,6 +296,12 @@
     - id: ui-sidebar-documentpreview
       name: '@deepseek-ai/dsh-client-ui-sidebar-documentpreview'
 
+    # The right Sidebar's editable Office tab for .docx and .xlsx; its body is
+    # a placeholder behind the editor adapter seam until the Univer embeds land.
+    # .pptx stays with the document preview above.
+    - id: ui-office-editor
+      name: '@deepseek-ai/dsh-client-ui-office-editor'
+
     # Web profiles opt in; Desktop retains sandboxed HTTP(S) Browser tabs.
     - id: ui-sidebar-browser
       name: '@deepseek-ai/dsh-client-ui-sidebar-browser'

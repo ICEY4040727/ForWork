@@ -20,6 +20,8 @@ export type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
 export type {
   EditableOfficeFormat,
   LegacyOfficeFormat,
+  OfficeDocumentDraft,
+  OfficeDocumentDraftWriteResult,
   OfficeDocumentReadResult,
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,

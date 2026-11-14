@@ -17,6 +17,15 @@ describe('viewer endpoint classification', () => {
     expect(Object.keys(COMPLETE_VIEWER_ENDPOINT_CLASSES)).toEqual(CLASSIFIED)
   })
 
+  it.each([
+    'officeDocument/convertLegacy',
+    'officeDocument/detectUnsupported',
+    'officeDocument/read',
+    'officeDocument/save',
+  ] as const)('keeps %s on the owner Office editor', (endpoint) => {
+    expect(COMPLETE_VIEWER_ENDPOINT_CLASSES[endpoint]).toBe('owner-only')
+  })
+
   it('reports the endpoint a classification is missing', () => {
     const incomplete = Object.fromEntries(
       Object.entries(VIEWER_ENDPOINT_CLASSES).filter(([endpoint]) => endpoint !== 'session/prompt'),

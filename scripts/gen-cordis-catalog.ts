@@ -370,6 +370,8 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   OfficeDocumentReadResult: 'office-exchange.md',
   OfficeDocumentSaveResult: 'office-exchange.md',
   OfficeDocumentSnapshot: 'office-exchange.md',
+  OfficeDocumentDraft: 'office-exchange.md',
+  OfficeDocumentDraftWriteResult: 'office-exchange.md',
   CreatedShare: 'liveshare.md',
   CreateShareRequest: 'liveshare.md',
   OwnerIdentityRequest: 'liveshare.md',

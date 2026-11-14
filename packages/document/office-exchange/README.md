@@ -59,6 +59,11 @@ The plugin also mounts `ctx.officeDocument`, a session-scoped Remote surface ove
 - `save(workspaceFileScope, path, snapshot, format, expectedVersion)` serializes the snapshot through the provider and publishes it with a filesystem `replaceIfVersion` guard. A file that changed since the read rejects as `office-document/conflict`; the write never falls back to an unconditional save.
 - `detectUnsupported(workspaceFileScope, path)` reports loss-prone features without returning content.
 - `convertLegacy(workspaceFileScope, path)` returns the converted file path inside `<workspaceRoot>/.dsh/office-tmp/convert-<hash>-<random>/`, so the same Remote can `read` it under the unchanged root check. Each call gets its own directory.
+- `writeDraft(workspaceFileScope, documentId, documentPath, contentVersion, snapshot)` persists one recovery draft and returns `{ savedAt }`. The draft lives at `<workspaceRoot>/.dsh/office-tmp/drafts/<sha256(documentId)>.json`; the digest keeps a caller-chosen id from naming a path outside the draft directory. It replaces an existing draft and never writes the document path itself.
+- `readDraft(workspaceFileScope, documentId)` returns `{ documentId, path, contentVersion, snapshot, savedAt }`, or `null` when the document has no draft. A malformed draft rejects as `office-document/conversion-failed`.
+- `clearDraft(workspaceFileScope, documentId)` removes the draft; clearing a document without a draft is a no-op.
+
+Drafts are version-bound: the record carries the `contentVersion` the snapshot was captured from, so a restore path can compare it with the file's current version before offering recovery. Both the draft directory and the resolved draft file pass `assertWithinRoots`, so a link that points outside the workspace root is refused rather than written through.
 
 `OfficeDocumentSnapshot` is a JSON projection tagged with the snapshot kind: Univer's native interfaces admit unconstrained custom fields, which a JSON wire cannot carry. The Host validates the projection before serializing and maps every failure onto `office-document/*` Remote codes (`unsupported-format`, `unsupported-feature`, `out-of-scope`, `bound-exceeded`, `conversion-failed`, `conflict`).
 
@@ -74,7 +79,7 @@ Failures are `OfficeExchangeError` values with a stable `code`. Reads that canno
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-`src/service.ts` declares the abstract `OfficeExchange` service, the context augmentation, and the seam vocabulary re-exported by the package entry. `src/types.ts` holds the JSON-safe wire and seam vocabulary; `src/snapshots.ts` holds the Univer snapshot types so a Remote Client never loads the editor core. `src/remote.ts` implements the `officeDocument` Remote surface: Session scope resolution, workspace confinement, version threading, the JSON projection, the workspace-scoped conversion directory, and the remaining save guarantees. `src/provider/index.ts` implements `LocalOfficeExchange` on top of the pure `provider/xlsx.ts`, `provider/docx.ts`, `provider/detect.ts`, and `provider/legacy.ts` modules: it owns file reads, format dispatch, typed read failures, caller-directed legacy conversion directories, and the validated `Config` schema. The office editor and agent tools remain consumers; this package registers no tool and emits no session event.
+`src/service.ts` declares the abstract `OfficeExchange` service, the context augmentation, and the seam vocabulary re-exported by the package entry. `src/types.ts` holds the JSON-safe wire and seam vocabulary; `src/snapshots.ts` holds the Univer snapshot types so a Remote Client never loads the editor core. `src/remote.ts` implements the `officeDocument` Remote surface: Session scope resolution, workspace confinement, version threading, the JSON projection, the workspace-scoped conversion directory, the recovery-draft store, and the remaining save guarantees. `src/provider/index.ts` implements `LocalOfficeExchange` on top of the pure `provider/xlsx.ts`, `provider/docx.ts`, `provider/detect.ts`, and `provider/legacy.ts` modules: it owns file reads, format dispatch, typed read failures, caller-directed legacy conversion directories, and the validated `Config` schema. The office editor and agent tools remain consumers; this package registers no tool and emits no session event.
 
 </details>
 
@@ -105,6 +110,7 @@ None; the seam neither assembles nor sends a provider request.
 - Legacy conversion requires the LibreOffice kit; an unavailable engine fails the conversion instead of falling back.
 - PowerPoint editing is read-only until a slide unit and its conversion are added.
 - `convertLegacy` keeps converted editable files under `<workspaceRoot>/.dsh/office-tmp/`, which the `officeDocument` Remote can read under the same root check. A failed conversion removes the directory it just created; a successful one persists until the user or session deletes it, and nothing removes it automatically yet.
+- Recovery drafts accumulate under `<workspaceRoot>/.dsh/office-tmp/drafts/` until `clearDraft` removes them; nothing prunes drafts for documents that are no longer open yet.
 
 <a id="dev-note"></a>
 ### Dev Note

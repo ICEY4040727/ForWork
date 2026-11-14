@@ -1,8 +1,92 @@
-/** Register the embedded Office document editor in the right Sidebar. */
-import type { Context } from '@deepseek-ai/cordis'
+/**
+ * Browser half: register `office` as a right-Sidebar tab type.
+ *
+ * The type reaches the Sidebar through its public path only: the definition
+ * into `ctx.sidebarRightTabs`, the body into the keyed `sidebar.right.pane.tab`
+ * seat, and the chip title into `sidebar.right.pane.tab.title`, both under the
+ * definition's `id`. The body reads the file through the `officeDocument`
+ * Remote, mounts the editor runtime behind the adapter seam, shares one
+ * plugin-owned change surface with the tab close handler, and lists the
+ * Session's open Office documents from the Sidebar's open-tab inventory. A
+ * legacy source is converted and reopened as a copy through the tab's own
+ * `openResource` action, with the original path kept in the plugin's notice
+ * store.
+ */
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
+import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import type {} from '@deepseek-ai/dsh-office-exchange/remote'
+import { officeAdapter } from './adapter.ts'
+import { createOfficeTabChanges } from './changes.ts'
+import { officePanelInjected } from './face.ts'
+import { createOfficeLegacyNotices } from './notices.ts'
+import { OfficePanel } from './OfficePanel.tsx'
+import { OfficeTitle } from './OfficeTitle.tsx'
+import { OFFICE_ID, OFFICE_KIND, officeDefinition } from './definition.ts'
+import { en, zh } from './locales.ts'
+
+export type { OfficeEditorKey } from './locales.ts'
+
+/** This package's copy namespace. */
+const NS = 'officeEditor'
+
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface LocaleNamespaceMap {
+    /** Editor body, save, refusal, external-change, and close-prompt copy. */
+    officeEditor: import('./locales.ts').OfficeEditorKey
+  }
+}
+
+/** Required browser services: the tab registry, the slots, copy, the Remote, and close cleanup. */
+export const inject = ['slots', 'locale', 'sidebarRightTabs', 'sidebarRight', 'remote', 'remote.officeDocument']
 
 /**
- * Register the Office editor tab type and its document panel.
- * @param _ctx - owning Client context; no tab type, panel, or editor preset is registered yet.
+ * Client plugin body: register the type, its dictionaries, its body and chip
+ * title, and the unsaved-close veto.
+ * @param ctx - client root context carrying the registry, slots, copy, and Remote.
  */
-export function apply(_ctx: Context): void {}
+export function apply(ctx: ClientContext): void {
+  const changes = createOfficeTabChanges()
+  const notices = createOfficeLegacyNotices()
+  ctx.effect(() => ctx.sidebarRightTabs.register(officeDefinition()), 'ui-office-editor: type')
+  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-office-editor: dictionaries')
+  ctx.effect(() => ctx.sidebarRight.registerCloseHandler(OFFICE_KIND, (_sessionId, tab) => {
+    if (changes.isDirty(tab.id)) {
+      changes.warnClose(tab.id)
+      throw new Error(`ui-office-editor: "${tab.title}" has unsaved changes`)
+    }
+    changes.forget(tab.id)
+    notices.forget(tab.contentId)
+  }), 'ui-office-editor: close')
+  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
+    {
+      name: 'sidebar.right.pane.tab', key: OFFICE_ID, locale: NS,
+      inject: () => officePanelInjected({
+        read: (sessionId, path, signal) => ctx.remote.officeDocument.read(sessionId, path, signal),
+        save: (sessionId, path, snapshot, format, expectedVersion, signal) =>
+          ctx.remote.officeDocument.save(sessionId, path, snapshot, format, expectedVersion, signal),
+        convert: (sessionId, path, signal) => ctx.remote.officeDocument.convertLegacy(sessionId, path, signal),
+        writeDraft: (sessionId, documentId, documentPath, contentVersion, snapshot, signal) =>
+          ctx.remote.officeDocument.writeDraft(
+            sessionId, documentId, documentPath, contentVersion, snapshot, signal,
+          ),
+        readDraft: (sessionId, documentId, signal) =>
+          ctx.remote.officeDocument.readDraft(sessionId, documentId, signal),
+        clearDraft: (sessionId, documentId, signal) =>
+          ctx.remote.officeDocument.clearDraft(sessionId, documentId, signal),
+        adapter: officeAdapter,
+        changes,
+        notices,
+        openTabs: ctx.sidebarRight.openTabs,
+      }),
+    },
+    OfficePanel,
+  )), 'ui-office-editor: body')
+  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab.title', () => ctx.slots.register(
+    { name: 'sidebar.right.pane.tab.title', key: OFFICE_ID },
+    OfficeTitle,
+  )), 'ui-office-editor: title')
+}

@@ -276,6 +276,12 @@ export default defineConfig({
         // harness the jsdom lane doesn't cover yet. TODO(gui): cover and
         // remove as the client test lane matures.
         'packages/client/ui-trajectory/src/*',
+        // The Univer runtime modules construct a real browser editor (canvas,
+        // ResizeObserver, preset styles); component tests replace the runtime
+        // factory so jsdom never loads Univer (spec 001 R18), and the assembled
+        // browser smoke owns the real mount. Adapter, hook, and panel behavior
+        // stay under the per-file gate.
+        'packages/client/ui-office-editor/src/client/editor/**',
         // Electron guest integration retains its unit specs; per-file coverage
         // is deferred until a native Electron harness covers guest behavior.
         'packages/client/ui-sidebar-browser/src/client/electron/**',

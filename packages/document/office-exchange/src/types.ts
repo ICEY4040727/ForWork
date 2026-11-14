@@ -85,6 +85,30 @@ export interface OfficeDocumentSaveResult {
   readonly version: string
 }
 
+/**
+ * One recovery draft persisted for an open document. The snapshot is bound to
+ * the file version it was captured from, so a restart can tell a current draft
+ * from one based on an older file.
+ */
+export interface OfficeDocumentDraft {
+  /** Caller-owned identity of the open document. */
+  readonly documentId: string
+  /** Document path the draft was captured for, recorded as the caller supplied it. */
+  readonly path: string
+  /** File version the snapshot was captured from. */
+  readonly contentVersion: string
+  /** Captured editable content. */
+  readonly snapshot: OfficeDocumentSnapshot
+  /** ISO-8601 time the draft was written. */
+  readonly savedAt: string
+}
+
+/** The timestamp a successful draft write persisted. */
+export interface OfficeDocumentDraftWriteResult {
+  /** ISO-8601 time the draft was written. */
+  readonly savedAt: string
+}
+
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
     /** The extension or file content is not an editable Office format. */
