@@ -1,0 +1,18 @@
+{
+  "formatVersion": 2,
+  "roots": [
+    {"key":"event:document/save","kind":"event","event":"document/save","surface":false,"digest":"123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d"}
+  ],
+  "types": [],
+  "nodes": {
+    "0657d3ca5ac4e7bf": {"kind":"primitive","type":"number"},
+    "123e77bb36ab73e7": {"kind":"object","properties":[{"name":"data","type":"7d96f5fa6bd17f0d","optional":false},{"name":"ignorable","type":"dacf3d5f3e4ff619","optional":true},{"name":"seq","type":"0657d3ca5ac4e7bf","optional":false},{"name":"time","type":"0657d3ca5ac4e7bf","optional":false},{"name":"type","type":"4c216b4a2ef9d08e","optional":false}],"indices":[]},
+    "33d73b60d1d1bfc7": {"kind":"literal","value":"agent"},
+    "3854343c105c10f9": {"kind":"union","types":["33d73b60d1d1bfc7","68f44f59e91c4139"]},
+    "4c216b4a2ef9d08e": {"kind":"literal","value":"document/save"},
+    "4cd48f3e5108bd6e": {"kind":"primitive","type":"string"},
+    "68f44f59e91c4139": {"kind":"literal","value":"user"},
+    "7d96f5fa6bd17f0d": {"kind":"object","properties":[{"name":"actor","type":"3854343c105c10f9","optional":false},{"name":"contentVersion","type":"0657d3ca5ac4e7bf","optional":false},{"name":"documentId","type":"4cd48f3e5108bd6e","optional":false},{"name":"turn","type":"0657d3ca5ac4e7bf","optional":true}],"indices":[]},
+    "dacf3d5f3e4ff619": {"kind":"literal","value":true}
+  }
+}

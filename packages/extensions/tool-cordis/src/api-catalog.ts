@@ -2161,7 +2161,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   {
     key: 'officeDocument',
     summary: 'Host Remote service backing the generated `remote.officeDocument` namespace.',
-    description: 'Host Remote service backing the generated `remote.officeDocument` namespace. Reads return a JSON snapshot bound to the file\'s observed version; saves replace only that version, so a concurrent external edit is reported as a conflict rather than overwritten.',
+    description: 'Host Remote service backing the generated `remote.officeDocument` namespace. Reads return a JSON snapshot bound to the file\'s observed version; saves replace only that version, so a concurrent external edit is reported as a conflict rather than overwritten.\n\nThe service is the producer of `document/*` facts for the editor: a first read appends `document/open` once per Session, a successful save appends `document/save`, and the lifecycle endpoints append their matching facts. The open set is owned by this service per Session; no module-level state is used.',
     methods: [
       {
         signature: '@Remote async read( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<OfficeDocumentReadResult>',
@@ -2176,6 +2176,24 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'snapshot', description: 'snapshot returned by {@link read}, optionally modified.' }, { name: 'format', description: 'target editable format; it must match the snapshot kind.' }, { name: 'expectedVersion', description: 'version returned by {@link read}; a changed file is refused.' }, { name: 'signal', description: 'caller cancellation.' }],
         returns: 'the version the guarded write published.',
         throws: ['RemoteError with `office-document/conflict` when the file changed after the read.'],
+      },
+      {
+        signature: '@Remote closeDocument( workspaceFileScope: WorkspaceFileScope, documentId: string, reason: string, signal: AbortSignal, ): Promise<void>',
+        description: 'Record that an open document left the editor.\n\nThe fact is appended even when this process no longer tracks the document, so a tab closed after a Host restart still leaves a durable close. History is never deleted; the open set is derived by folding the log.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'documentId', description: 'Session-scoped identity of the closing document.' }, { name: 'reason', description: 'producer-supplied closure reason; the projection stores it unread.' }, { name: 'signal', description: 'caller cancellation.' }],
+        throws: ['RemoteError when the identity belongs to another Session or no live Session exists.'],
+      },
+      {
+        signature: '@Remote async rebindDocument( workspaceFileScope: WorkspaceFileScope, documentId: string, toPath: string, signal: AbortSignal, ): Promise<void>',
+        description: 'Record that an open document\'s file moved or was renamed.\n\nThe identity is preserved: only the locator changes, and the new path must resolve inside the Session workspace root.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'documentId', description: 'Session-scoped identity retained across the move.' }, { name: 'toPath', description: 'new path; it must resolve inside the workspace root.' }, { name: 'signal', description: 'caller cancellation.' }],
+        throws: ['RemoteError when the identity belongs to another Session, either path is out of scope, or no live Session exists.'],
+      },
+      {
+        signature: '@Remote markDocumentMissing( workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal, ): Promise<void>',
+        description: 'Record that an open document\'s file no longer resolves.\n\nThe document stays open with its identity and history; a later save, edit, or rebind marks it available again.',
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'documentId', description: 'Session-scoped identity that stays open.' }, { name: 'signal', description: 'caller cancellation.' }],
+        throws: ['RemoteError when the identity belongs to another Session or no live Session exists.'],
       },
       {
         signature: '@Remote async detectUnsupported( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<readonly UnsupportedFeature[]>',

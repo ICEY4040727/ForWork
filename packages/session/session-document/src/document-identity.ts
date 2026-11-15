@@ -12,7 +12,23 @@
  * @module @deepseek-ai/dsh-session-document/document-identity
  */
 
-import type { DocumentId } from '@deepseek-ai/dsh-session'
+import { DocumentId as brandDocumentId } from '@deepseek-ai/dsh-session'
+import type { DocumentId, SessionId } from '@deepseek-ai/dsh-session'
+
+/**
+ * Build the Session-scoped identity of one open document.
+ *
+ * The identity is `<sessionId>:<path>`; the client editor, the document tools,
+ * and the Remote surface all use this formula so a tab, a tool request, and a
+ * fact name the same document. The path inside the id is the locator the file
+ * was opened from; a later rebind keeps the id and changes only the binding.
+ * @param sessionId - Session that owns the identity.
+ * @param path - path inside the Session workspace.
+ * @returns the branded Session-local document identity.
+ */
+export function documentIdFor(sessionId: SessionId, path: string): DocumentId {
+  return brandDocumentId(`${sessionId}:${path}`)
+}
 
 /**
  * The current locator of one open document and its availability.

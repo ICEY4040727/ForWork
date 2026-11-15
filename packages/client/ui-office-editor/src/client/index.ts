@@ -10,7 +10,8 @@
  * Session's open Office documents from the Sidebar's open-tab inventory. A
  * legacy source is converted and reopened as a copy through the tab's own
  * `openResource` action, with the original path kept in the plugin's notice
- * store.
+ * store. The same plugin-owned store records the one restore pass each Session
+ * runs and the documents it could not reopen.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
@@ -18,6 +19,8 @@ import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
+// Type-only: pulls the Session standard useProjection seat and its identity.
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-office-exchange/remote'
 import { officeAdapter } from './adapter.ts'
@@ -27,8 +30,10 @@ import { officePanelInjected } from './face.ts'
 import { createOfficeLegacyNotices } from './notices.ts'
 import { OfficePanel } from './OfficePanel.tsx'
 import { OfficeTitle } from './OfficeTitle.tsx'
+import { createOfficeRestore } from './restore.ts'
 import { OFFICE_ID, OFFICE_KIND, officeDefinition } from './definition.ts'
 import { en, zh } from './locales.ts'
+import { officeDocumentIdentity, openTargetOf } from './target.ts'
 
 export type { OfficeEditorKey } from './locales.ts'
 
@@ -53,16 +58,25 @@ export const inject = ['slots', 'locale', 'sessions', 'sidebarRightTabs', 'sideb
 export function apply(ctx: ClientContext): void {
   const changes = createOfficeTabChanges()
   const notices = createOfficeLegacyNotices()
+  const restore = createOfficeRestore()
   const commandRemote: OfficeCommandRemote = ctx.remote.officeDocument
   ctx.effect(() => ctx.sidebarRightTabs.register(officeDefinition()), 'ui-office-editor: type')
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-office-editor: dictionaries')
-  ctx.effect(() => ctx.sidebarRight.registerCloseHandler(OFFICE_KIND, (_sessionId, tab) => {
+  ctx.effect(() => ctx.sidebarRight.registerCloseHandler(OFFICE_KIND, (sessionId, tab) => {
     if (changes.isDirty(tab.id)) {
       changes.warnClose(tab.id)
       throw new Error(`ui-office-editor: "${tab.title}" has unsaved changes`)
     }
     changes.forget(tab.id)
     notices.forget(tab.contentId)
+    const target = openTargetOf(tab.contentId)
+    void ctx.remote.officeDocument.closeDocument(
+      sessionId,
+      officeDocumentIdentity(sessionId, target.path),
+      'closed',
+    ).then((result) => {
+      if (!result.ok) ctx.logger.warn(`ui-office-editor: could not record closing "${tab.title}": ${result.error.message}`)
+    })
   }), 'ui-office-editor: close')
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
     {
@@ -83,8 +97,14 @@ export function apply(ctx: ClientContext): void {
         adapter: officeAdapter,
         attachCommandBridge: (sessionId, target) =>
           attachSessionCommandBridge(ctx.sessions.binding(sessionId), sessionId, target, commandRemote),
+        markMissing: (sessionId, documentId) => {
+          void ctx.remote.officeDocument.markDocumentMissing(sessionId, documentId).then((result) => {
+            if (!result.ok) ctx.logger.warn(`ui-office-editor: could not record "${documentId}" missing: ${result.error.message}`)
+          })
+        },
         changes,
         notices,
+        restore,
         openTabs: ctx.sidebarRight.openTabs,
       }),
     },

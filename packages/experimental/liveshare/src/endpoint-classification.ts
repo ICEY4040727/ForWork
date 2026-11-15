@@ -163,11 +163,14 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'pluginRegistryProbe/fastest': 'owner-only', // owner plugin registry probe
   'sessionReferenceResolver/candidates': 'owner-only', // owner composer reference resolution
   'officeDocument/clearDraft': 'owner-only', // owner Office editor; the draft store is owner workspace state
+  'officeDocument/closeDocument': 'owner-only', // owner Office editor; closing changes the owner's open set
   'officeDocument/completeCommand': 'owner-only', // owner Office editor; the live editor answers only the owner's Host command
   'officeDocument/convertLegacy': 'owner-only', // owner Office editor; conversion writes a copy beside the source
   'officeDocument/detectUnsupported': 'owner-only', // owner Office editor; readers hold no workspace document read
+  'officeDocument/markDocumentMissing': 'owner-only', // owner Office editor; the observation belongs to the owner's open set
   'officeDocument/read': 'owner-only', // owner Office editor; readers hold no workspace document read
   'officeDocument/readDraft': 'owner-only', // owner Office editor; readers hold no workspace document read
+  'officeDocument/rebindDocument': 'owner-only', // owner Office editor; the move is the owner's workspace observation
   'officeDocument/save': 'owner-only', // owner Office editor; the save replaces the owner's workspace file
   'officeDocument/writeDraft': 'owner-only', // owner Office editor; drafts capture the owner's unsaved edits
   'officeToPdf/generation': 'owner-only', // owner document export

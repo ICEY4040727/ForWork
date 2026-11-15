@@ -35,6 +35,9 @@ export function DocumentId(id: string): DocumentId {
 /** Who caused one document fact. Content changes are made by `user` or `agent`; `system` covers lifecycle actions. */
 export type DocumentEventActor = 'user' | 'agent' | 'system'
 
+/** Who caused an accepted content save. A save always has a human or agent author. */
+export type DocumentSaveActor = 'user' | 'agent'
+
 /** Format of an open document. Legacy `.doc`/`.xls`/`.ppt` files are converted before opening. */
 export type DocumentFormat = 'docx' | 'xlsx' | 'pptx'
 
@@ -207,6 +210,27 @@ export interface DocumentOpenEventData {
 }
 
 /**
+ * Payload of `document/save`: one accepted save that carried no structured
+ * operation.
+ *
+ * The editor runtime owns the user's in-memory changes: a user save writes the
+ * live unit without exposing individual steps to the Host. The fact therefore
+ * records the author and the document version the save published instead of an
+ * operation. An agent change stays `document/edit`, whose steps and inverse are
+ * known. A user save never fabricates an inverse.
+ */
+export interface DocumentSaveEventData {
+  /** Stable identity of the saved document. */
+  readonly documentId: DocumentId
+  /** Who authorized the save. */
+  readonly actor: DocumentSaveActor
+  /** Document content version the accepted save published. */
+  readonly contentVersion: number
+  /** Turn that caused the save, when a turn caused it. */
+  readonly turn?: number
+}
+
+/**
  * Payload of `document/edit`: one accepted, attributed change. The event is
  * appended only after the version guard accepts the write, and `toVersion` is
  * always `fromVersion + 1`.
@@ -273,6 +297,11 @@ declare module '@deepseek-ai/dsh-session/types' {
      * operation, and exact inverse. Raw unit snapshots are never persisted.
      */
     'document/edit': DocumentEditEventData
+    /**
+     * One accepted save whose in-memory changes stay inside the editor, so it
+     * carries the actor and published version instead of operation steps.
+     */
+    'document/save': DocumentSaveEventData
     /**
      * The open document's file moved or was renamed. The document id and all
      * earlier history are preserved.

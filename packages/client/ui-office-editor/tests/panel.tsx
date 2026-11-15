@@ -15,14 +15,17 @@ import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
 import type { SidebarRightOpenTab, SidebarRightTabActions } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
 import type { WorkspaceFileStat } from '@deepseek-ai/dsh-api-workspace-files/types'
+import type { RemoteFailure } from '@deepseek-ai/dsh-typert-protocol'
 import { createMockAdapter } from '../src/client/adapter.ts'
 import { createOfficeTabChanges } from '../src/client/changes.ts'
 import { createOfficeLegacyNotices } from '../src/client/notices.ts'
+import { createOfficeRestore } from '../src/client/restore.ts'
 import { OfficePanel } from '../src/client/OfficePanel.tsx'
 import type { OfficePanelProps } from '../src/client/OfficePanel.tsx'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
 import type { OfficePanelInjected } from '../src/client/face.ts'
 import { en, type OfficeEditorKey } from '../src/client/locales.ts'
+import type { DocumentProjectionView } from '@deepseek-ai/dsh-session-document/client'
 import { bindObservable } from './observable.ts'
 
 /** The Session every fixture addresses. */
@@ -51,6 +54,10 @@ export interface PanelInput {
   readonly title?: string
   /** The `file` resource value; absent while the resource is loading. */
   readonly meta?: WorkspaceFileStat
+  /** The Session's `document` projection value; absent while the Host has not published it. */
+  readonly projection?: DocumentProjectionView
+  /** A restore record to share across bodies; a fresh one by default. */
+  readonly restore?: ReturnType<typeof createOfficeRestore>
   /** The Remote the panel calls. */
   readonly remote: OfficeDocumentRemote
   /** Open tab metadata the panel lists; empty by default. */
@@ -61,6 +68,8 @@ export interface PanelInput {
   readonly mount?: OfficePanelInjected['mountEditor']
   /** Command-bridge attachment the panel calls; defaults to a recorder. */
   readonly attachCommandBridge?: OfficePanelInjected['attachCommandBridge']
+  /** The resource failure the panel observes; absent while the resource is healthy. */
+  readonly failure?: RemoteFailure
 }
 
 /**
@@ -72,18 +81,22 @@ export function panelFixture(input: PanelInput): {
   props: OfficePanelProps
   changes: ReturnType<typeof createOfficeTabChanges>
   notices: ReturnType<typeof createOfficeLegacyNotices>
+  restore: ReturnType<typeof createOfficeRestore>
   openTabs: SnapshotStore<readonly SidebarRightOpenTab[]>
   openResource: Mock<SidebarRightTabActions['openResource']>
   adapter: ReturnType<typeof createMockAdapter>
   attachCommandBridge: Mock<OfficePanelInjected['attachCommandBridge']>
+  markMissing: Mock<OfficePanelInjected['markMissing']>
 } {
   const address = input.address ?? 'dsh-resource://file/session/s-1/work/budget.xlsx'
   const tabId = input.tabId ?? TAB_ID
   const changes = createOfficeTabChanges()
   const notices = createOfficeLegacyNotices()
+  const restore = input.restore ?? createOfficeRestore()
   const openTabs = createSnapshotStore<readonly SidebarRightOpenTab[]>(input.openTabs ?? [])
   const openResource = vi.fn<SidebarRightTabActions['openResource']>()
   const attachCommandBridge = vi.fn<OfficePanelInjected['attachCommandBridge']>(() => () => {})
+  const markMissing = vi.fn<OfficePanelInjected['markMissing']>()
   const actions: SidebarRightTabActions = input.actions ?? {
     bindCommands: vi.fn(() => () => {}),
     openResource,
@@ -101,24 +114,27 @@ export function panelFixture(input: PanelInput): {
         actions,
       },
     }),
-    useResource: () => ({
-      status: input.meta === undefined ? 'loading' : 'live',
-      value: input.meta,
-      failure: undefined,
-    }),
+    useProjection: (key: string) => key === 'document' ? input.projection : undefined,
+    useResource: () => input.failure !== undefined
+      ? { status: 'failed', value: input.meta, failure: input.failure }
+      : { status: input.meta === undefined ? 'loading' : 'live', value: input.meta, failure: undefined },
     remote: input.remote,
     mountEditor: input.mount ?? ((container, mountInput) => adapter.mount(container, mountInput)),
     attachCommandBridge: input.attachCommandBridge ?? attachCommandBridge,
     markTabDirty: vi.fn(),
     dismissCloseWarning: vi.fn(),
+    markMissing,
     rememberLegacySource: (contentId: string, source: string) => { notices.remember(contentId, source) },
     dismissLegacyNotice: (contentId: string) => { notices.dismiss(contentId) },
+    restore,
+    dismissRestoreNotice: (sessionId: SessionId) => { restore.dismissMissing(sessionId) },
     useOfficeTab: bindObservable(changes.source),
     useLegacyNotice: bindObservable(notices.source),
     useSidebarTabs: bindObservable(openTabs),
+    useRestore: bindObservable(restore.source),
     t: translate,
   } as OfficePanelProps
-  return { props, changes, notices, openTabs, openResource, adapter, attachCommandBridge }
+  return { props, changes, notices, restore, openTabs, openResource, adapter, attachCommandBridge, markMissing }
 }
 
 /**

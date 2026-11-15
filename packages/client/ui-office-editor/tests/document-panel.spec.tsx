@@ -14,6 +14,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
 import type { SidebarRightOpenTab } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
+import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type { OfficeDocumentReadResult, OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange/types'
 import { DocumentPanel } from '../src/client/DocumentPanel.tsx'
@@ -97,5 +98,11 @@ describe('OfficePanel document list', () => {
     const view = renderPanel({ address: BUDGET, openTabs, remote: editableRemote() })
     fireEvent.click(view.getByText('report.docx'))
     expect(view.fixture.openResource).toHaveBeenCalledWith(REPORT)
+  })
+
+  it('reports a file resource that no longer resolves as missing', () => {
+    const failure = new RemoteError('workspace-file/not-found', 'no entry', { path: 'work/budget.xlsx' })
+    const view = renderPanel({ address: BUDGET, remote: editableRemote(), failure })
+    expect(view.fixture.markMissing).toHaveBeenCalledWith(SESSION_ID, `${SESSION_ID}:work/budget.xlsx`)
   })
 })

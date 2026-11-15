@@ -1,5 +1,5 @@
 ---
-description: "Host-only document session primitives: stable identity bindings across rename and missing paths, and version-guarded attributable change records with their inverses."
+description: "Host document session primitives: stable identity bindings, version-guarded change records, durable document facts, and the open-document projection and prompt section."
 kind: "package-reference"
 ---
 
@@ -7,7 +7,9 @@ kind: "package-reference"
 
 ## Summary
 
-`dsh-session-document` keeps a document's identity stable while its path moves and makes every accepted edit attributable and reversible. Identity bindings pair a Session-local `DocumentId` with the current locator and its availability; change records pair a structured edit with the actor, the version transition, and the exact inverse. Both are pure values: this library performs no filesystem access, owns no storage, registers no Cordis service, and emits no Session event. The `document` projection, restore, and the document tools feed its results into `document/*` facts.
+`dsh-session-document` keeps a document's identity stable while its path moves, makes every accepted edit attributable and reversible, and folds the durable `document/*` facts into the open-document set. Identity bindings pair a Session-local `DocumentId` with the current locator and its availability; change records pair a structured edit with the actor, the version transition, and the exact inverse; the fact writers append the lifecycle and save facts; the `document` projection and its prompt section read those facts back for the agent. Restore expands the projection into the ordered set a client reopens, and the recovery rule decides whether a stored draft matches the file it was captured from.
+
+The package is also the `session-document` Host plugin mounted by base profiles. It performs no filesystem access and owns no storage: callers supply the observations, and the Session log is the only durable source.
 
 ## Table of Contents
 
@@ -25,7 +27,7 @@ kind: "package-reference"
 
 ### When to use it
 
-Use this library wherever an open document's path may change or an edit must be undone at the document level: the `document` projection, restore after restart, the office editor, and the document tools. It is not a Cordis plugin and has no profile mount row. Callers own the filesystem observations and the Session log; the library owns only the pure transitions.
+Use this package wherever an open document's path may change, an edit must be undone at the document level, or the agent needs the current open set: the office editor Remote, restore after restart, and the document tools. Base profiles mount the `session-document` plugin, which registers the `document` projection and the open-document prompt section; the fact helpers are usable wherever a live `Session` is at hand. Callers own the filesystem observations; the Session log owns durability.
 
 ### Bind an identity
 
@@ -61,6 +63,37 @@ const undo = undoChange(record)
 - `invalid-operation` — the operation or its inverse is empty, so the change could not be applied or reversed.
 - `invalid-transition` — a version cannot describe a real document or cannot be advanced safely.
 
+### Record document facts
+
+```text
+recordDocumentOpen(session, { documentId, path, format, contentVersion })
+recordDocumentSave(session, { documentId, actor: 'user', contentVersion })
+recordDocumentRebind(session, { documentId, fromPath, toPath })
+recordDocumentMissing(session, { documentId, path })
+recordDocumentClose(session, { documentId, reason })
+```
+
+Each helper appends one ordinary Session event and returns it. Facts are append-only: a later observation appends a new fact instead of replacing an earlier one. A user save whose changes stayed in the editor is `document/save`; it records the author and published version, carries no operation steps, and never fabricates an inverse. An agent change with known steps stays `document/edit`.
+
+### Read the open set
+
+The `document` projection holds `{ order, documents }`: the display order and one entry per open document with its identity, current path, format, content version, `open` or `missing` status, and unsupported features. `document/open` inserts or updates an entry, `document/save` and `document/edit` advance its version, `document/rebind` replaces the path, `document/missing` marks it unavailable, and `document/close` removes it. Unknown events keep the same state reference, so no downstream work runs. The wire view is the same value with a schema for client restore.
+
+The plugin's prompt section renders the open set for the assembling Agent's Session, or nothing when there is no Agent or no open document. Both the projection and the section are disposed with the mounting fiber.
+
+### Restore the open set
+
+```text
+const entries = restoreSet(projection)
+const decision = recoveryDecision(draft, readResult.version)
+```
+
+`restoreSet` returns one entry per open document in the projection's own order, carrying the identity, current path, format, and status. A `missing` document stays in the set: the Session keeps it open with its history, so the caller reports its path instead of opening a dead tab. A closed document is absent from the projection already.
+
+`recoveryDecision` is the one draft rule: `none` without a draft, `offer` when the draft's captured version equals the current file version, and `stale` otherwise. A stale draft is offered only behind an explicit choice; nothing here applies it.
+
+The package also exposes `./types` (the projection's pure types and its `SessionProjectionMap` key) and `./client`, a type-only re-export of `./types`, so a client package binds `useProjection('document')` without importing a Host value module.
+
 -----
 
 <a id="understand-the-implementation"></a>
@@ -75,9 +108,16 @@ Both modules are collections of pure functions over immutable values; every func
 
 | File | Role |
 |---|---|
-| [`src/document-identity.ts`](src/document-identity.ts) | `DocumentIdentityBinding` and its create, rebind, missing, and resolve transitions |
+| [`src/document-identity.ts`](src/document-identity.ts) | `DocumentIdentityBinding`, its create, rebind, missing, and resolve transitions, and the shared `documentIdFor` identity |
 | [`src/document-changes.ts`](src/document-changes.ts) | `ChangeRecord`, `ChangeActor`, `OfficeDocumentError`, the version guard, and the undo primitive |
-| [`src/index.ts`](src/index.ts) | Package entry re-exporting both modules |
+| [`src/document-facts.ts`](src/document-facts.ts) | Append-only writers for the five `document/*` facts |
+| [`src/document-projection.ts`](src/document-projection.ts) | The `document` projection fold, state and wire schemas |
+| [`src/types.ts`](src/types.ts) | The pure entry/state/view types and the `document` projection-key declaration |
+| [`src/client.ts`](src/client.ts) | Type-only re-export of `./types` for client programs |
+| [`src/document-restore.ts`](src/document-restore.ts) | `restoreSet`: the ordered, missing-flagged set a client reopens |
+| [`src/document-recovery.ts`](src/document-recovery.ts) | `recoveryDecision`: offer, stale, or ignore one stored draft |
+| [`src/plugin.ts`](src/plugin.ts) | The `session-document` plugin: projection registration and the open-document prompt section |
+| [`src/index.ts`](src/index.ts) | Package entry re-exporting the modules and the plugin's `name`/`inject`/`apply` |
 
 </details>
 
@@ -99,21 +139,31 @@ Both modules are collections of pure functions over immutable values; every func
 
 #### What the model sees
 
-Nothing directly; the document tools own their model-visible schemas and results for `document/edit`, and this library adds no prompt or tool text.
+When at least one document is open, the prompt section renders a short English list: the open-document count implied by its position order, each file name, its format, and a `missing` marker. Example:
+
+```text
+Open documents in this session:
+1. budget.xlsx (xlsx)
+2. report.docx (docx, missing)
+```
+
+Without an Agent or without an open document the section renders nothing. The document tools own their own model-visible schemas and results.
 
 #### Token effect
 
-Zero direct tokens; the library returns transition values to its callers and never assembles prompt content.
+One line per open document, plus a one-line heading, only while documents are open. An empty open set adds zero tokens.
 
 #### KV Cache effect
 
-None; the library assembles no provider request.
+The list changes only when a `document/*` fact changes the open set or an entry's path, format, or status; it keeps a stable position for each document that stays open.
 
 ## Known Limitations and Deferred Work
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Filesystem observations are caller-supplied.** `rebindDocument` trusts the `exists` flag and `markDocumentMissing` trusts its caller; a registry that probes paths belongs with the consumer, not here.
+- **Filesystem observations are caller-supplied.** `rebindDocument` trusts the `exists` flag and `markDocumentMissing` trusts its caller; a registry that probes paths belongs with the consumer, not here. The Office editor reports a missing file from its resource failure, but no client trigger reports a move yet: `rebindDocument` exists on the Remote surface without an automatic caller.
+- **Restore and recovery stop at the decision.** `restoreSet` expands the projection and `recoveryDecision` classifies a draft; opening tabs, choosing one pass per Session, reporting missing paths, and clearing a draft after save all belong to the client that owns the tabs.
+- **The projection carries no unsupported-feature facts.** `document/open` currently has no field for them, so the entry starts empty; the Exchange read result stays the authority for a save refusal until a fact carries the list.
 - **The version guard does not serialize writers.** Callers must pass the live `currentVersion` from one authoritative document owner; the library detects a mismatch but cannot prevent two concurrent calls from reading the same version.
 - **Record validity is checked structurally only.** The library requires a non-empty operation and inverse but cannot prove the inverse restores the prior content; the editing provider that produces both is responsible for exact reversibility.
 

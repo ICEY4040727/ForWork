@@ -183,6 +183,11 @@
     - id: session-projection
       name: '@deepseek-ai/dsh-session-projection'
 
+    # Open office documents: the `document` projection and its model-facing
+    # prompt section. Reader of the `document/*` facts the Office editor emits.
+    - id: session-document
+      name: '@deepseek-ai/dsh-session-document'
+
     # Durable KV storage: the storage hub, the json backend, and the
     # schema-validated domain form over them. Session-layer persistence (the
     # projection cache below; workspace in web layers)

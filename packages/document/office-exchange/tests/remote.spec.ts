@@ -7,6 +7,10 @@ import { fileURLToPath } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
 import { SessionId } from '@deepseek-ai/dsh-session/types'
+import SessionStore from '@deepseek-ai/dsh-session'
+import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import { documentIdFor } from '@deepseek-ai/dsh-session-document'
+import type { DocumentId } from '@deepseek-ai/dsh-session'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import { ConversionError, createConverter } from '@deepseek-ai/libreoffice-kit'
 import { afterEach, beforeEach, expect, it } from 'vitest'
@@ -18,12 +22,19 @@ const scope = { sessionId: SessionId('office-document-test'), workspaceRoot: '' 
 let ctx: Context
 let root: string
 const signal = new AbortController().signal
+const events: SessionEvent[] = []
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'dsh-office-document-'))
   scope.workspaceRoot = root
+  events.length = 0
   ctx = new Context()
   await ctx.plugin(LocalFileSystem, { cwd: root })
+  await ctx.plugin(SessionStore)
+  const session = ctx.sessions.create(scope.sessionId, { meta: { cwd: root } })
+  ctx.on('session/event', (subject, event) => {
+    if (subject === session) events.push(event)
+  })
   await ctx.plugin(LocalOfficeExchange)
 })
 afterEach(async () => {
@@ -224,4 +235,96 @@ it('keeps two conversions of the same source apart', { timeout: 180_000 }, async
   expect((await readFile(second)).byteLength).toBeGreaterThan(0)
   expect((await ctx.officeDocument.read(scope, first, signal)).format).toBe('xlsx')
   expect((await ctx.officeDocument.read(scope, second, signal)).format).toBe('xlsx')
+})
+
+
+
+
+/** The Session-scoped identity the client and the tools use for one path. */
+function documentIdOf(path: string): DocumentId {
+  return documentIdFor(scope.sessionId, path)
+}
+
+it('appends document/open once for a document a Session opened', async () => {
+  const path = await copyFixture('roundtrip.xlsx')
+  await ctx.officeDocument.read(scope, path, signal)
+  await ctx.officeDocument.read(scope, path, signal)
+
+  const opens = events.filter(event => event.type === 'document/open')
+  expect(opens).toHaveLength(1)
+  expect(opens[0]?.data).toEqual({
+    documentId: documentIdOf(path),
+    path,
+    format: 'xlsx',
+    contentVersion: 0,
+  })
+})
+
+it('appends document/save with the user actor and the next content version', async () => {
+  const path = await copyFixture('roundtrip.xlsx')
+  const read = await ctx.officeDocument.read(scope, path, signal)
+  setWorkbookCell(read.snapshot, 1, 0, 'Sprocket')
+  await ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, signal)
+
+  const saves = events.filter(event => event.type === 'document/save')
+  expect(saves).toHaveLength(1)
+  expect(saves[0]?.data).toEqual({
+    documentId: documentIdOf(path),
+    actor: 'user',
+    contentVersion: 1,
+  })
+})
+
+it('closes a document and opens it again on the next read', async () => {
+  const path = await copyFixture('roundtrip.xlsx')
+  await ctx.officeDocument.read(scope, path, signal)
+  await ctx.officeDocument.closeDocument(scope, documentIdOf(path), 'closed', signal)
+  await ctx.officeDocument.read(scope, path, signal)
+
+  const closed = events.filter(event => event.type === 'document/close')
+  expect(closed).toHaveLength(1)
+  expect(closed[0]?.data).toEqual({ documentId: documentIdOf(path), reason: 'closed' })
+  expect(events.filter(event => event.type === 'document/open')).toHaveLength(2)
+})
+
+it('rebinds a moved document without changing its identity', async () => {
+  const path = await copyFixture('roundtrip.xlsx')
+  await copyFile(join(root, path), join(root, 'renamed.xlsx'))
+  await ctx.officeDocument.read(scope, path, signal)
+  const open = events.filter(event => event.type === 'document/open')[0]
+
+  await ctx.officeDocument.rebindDocument(scope, documentIdOf(path), 'renamed.xlsx', signal)
+
+  const rebound = events.filter(event => event.type === 'document/rebind')
+  expect(rebound).toHaveLength(1)
+  expect(rebound[0]?.data).toEqual({
+    documentId: documentIdOf(path),
+    fromPath: path,
+    toPath: 'renamed.xlsx',
+  })
+  expect(events.filter(event => event.type === 'document/open')[0]).toBe(open)
+})
+
+it('refuses a rebind outside the workspace root', async () => {
+  const path = await copyFixture('roundtrip.xlsx')
+  await ctx.officeDocument.read(scope, path, signal)
+  await expect(ctx.officeDocument.rebindDocument(scope, documentIdOf(path), '../outside.xlsx', signal))
+    .rejects.toMatchObject({ code: 'office-document/out-of-scope' })
+})
+
+it('marks a document missing once while keeping it open', async () => {
+  const path = await copyFixture('roundtrip.xlsx')
+  await ctx.officeDocument.read(scope, path, signal)
+  await ctx.officeDocument.markDocumentMissing(scope, documentIdOf(path), signal)
+  await ctx.officeDocument.markDocumentMissing(scope, documentIdOf(path), signal)
+
+  const missing = events.filter(event => event.type === 'document/missing')
+  expect(missing).toHaveLength(1)
+  expect(missing[0]?.data).toEqual({ documentId: documentIdOf(path), path })
+  expect(events.filter(event => event.type === 'document/close')).toHaveLength(0)
+})
+
+it('refuses a document identity from another Session', async () => {
+  await expect(ctx.officeDocument.closeDocument(scope, 'other-session:report.xlsx', 'closed', signal))
+    .rejects.toMatchObject({ code: 'gateway/bad-request' })
 })

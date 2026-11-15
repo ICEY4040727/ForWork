@@ -31,7 +31,7 @@ import type {
   UnsupportedFeature,
 } from '@deepseek-ai/dsh-office-exchange/types'
 import { externalChangeVerdict } from './changes.ts'
-import { createDraftScheduler } from './drafts.ts'
+import { createDraftScheduler, draftRecoveryDecision } from './drafts.ts'
 import { convertedAddress, legacyFormatOf, officeDocumentIdentity } from './target.ts'
 
 /** The `officeDocument` Remote methods this hook calls. */
@@ -118,8 +118,8 @@ export interface OfficeDocumentRemote {
 export interface OfficeDraftRecovery {
   /** ISO-8601 time the offered draft was written. */
   readonly savedAt: string
-  /** The draft was captured from an older file version. */
-  readonly stale: boolean
+  /** `offer` when the draft matches the file version, `stale` when it does not. */
+  readonly decision: 'offer' | 'stale'
   /** The captured editable content. */
   readonly snapshot: OfficeDocumentSnapshot
 }
@@ -366,11 +366,14 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
           setDraftError(mapOfficeFailure(draft.error))
           return
         }
-        if (draft.value === null) return
+        const stored = draft.value
+        if (stored === null) return
+        const decision = draftRecoveryDecision(stored, result.value.version)
+        if (decision === 'none') return
         setRecovery({
-          savedAt: draft.value.savedAt,
-          stale: draft.value.contentVersion !== result.value.version,
-          snapshot: draft.value.snapshot,
+          savedAt: stored.savedAt,
+          decision,
+          snapshot: stored.snapshot,
         })
       }, (error: unknown) => {
         if (!live) return

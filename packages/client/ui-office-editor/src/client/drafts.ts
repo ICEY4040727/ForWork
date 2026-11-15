@@ -11,12 +11,35 @@
 import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import type { RemoteFailure, RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import type {
+  OfficeDocumentDraft,
   OfficeDocumentDraftWriteResult,
   OfficeDocumentSnapshot,
 } from '@deepseek-ai/dsh-office-exchange/types'
 
 /** Idle period after the last edit before its draft is written. */
 export const DRAFT_IDLE_MS = 2000
+
+/** What the editor may do with one stored draft after a successful read. */
+export type DraftRecoveryDecision = 'none' | 'offer' | 'stale'
+
+/**
+ * Decide how a stored draft relates to the file a successful read just returned.
+ *
+ * This mirrors the Host rule in `@deepseek-ai/dsh-session-document`'s
+ * `document-recovery` module: the Host and this client cannot share a value
+ * module across the planes, so both sides keep the same three-way decision and
+ * the panel exposes only its result.
+ * @param draft - the stored draft, or `null` when the document has none.
+ * @param currentVersion - the version the successful read observed.
+ * @returns `none` without a draft, `offer` when the versions match, `stale` otherwise.
+ */
+export function draftRecoveryDecision(
+  draft: OfficeDocumentDraft | null,
+  currentVersion: string,
+): DraftRecoveryDecision {
+  if (draft === null) return 'none'
+  return draft.contentVersion === currentVersion ? 'offer' : 'stale'
+}
 
 /** One draft write bound to its document identity and caller lifetime. */
 export type OfficeDraftWrite = (

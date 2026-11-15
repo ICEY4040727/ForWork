@@ -12,7 +12,10 @@ import { resolve } from 'node:path'
 import { assertWithinRoots } from '@deepseek-ai/dsh-office-exchange'
 import { DocumentId } from '@deepseek-ai/dsh-session'
 import type { DocumentId as DocumentIdValue, SessionId } from '@deepseek-ai/dsh-session'
+import { documentIdFor } from '@deepseek-ai/dsh-session-document'
 import { OfficeToolResultError } from './errors.ts'
+
+export { documentIdFor }
 
 /** One resolved document identity and its confined absolute path. */
 export interface DocumentTarget {
@@ -22,16 +25,6 @@ export interface DocumentTarget {
   readonly path: string
   /** Absolute path inside the workspace root. */
   readonly absolutePath: string
-}
-
-/**
- * Build the Session-scoped identity for one open document.
- * @param sessionId - Session that owns the identity.
- * @param path - document path inside the workspace root.
- * @returns the branded identity `<sessionId>:<path>`.
- */
-export function documentIdFor(sessionId: SessionId, path: string): DocumentIdValue {
-  return DocumentId(`${sessionId}:${path}`)
 }
 
 /**

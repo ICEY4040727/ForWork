@@ -30,7 +30,7 @@ A logged, durable fact about a document. The log is the source of truth.
 
 | Field | Type | Rules |
 |---|---|---|
-| `event` | `open`/`edit`/`close`/`missing`/`rebind` | Closed set; new members require a version bump |
+| `event` | `open`/`edit`/`save`/`close`/`missing`/`rebind` | Closed set; a new member follows the repository format decision and must be safely refused by older readers |
 | `documentId` | string | References a Document |
 | `sessionId` | string | Authorizing session |
 | `turn` | turn id | Owning turn for model-visible reconstruction |
@@ -38,7 +38,7 @@ A logged, durable fact about a document. The log is the source of truth.
 | `actor` | `user`/`agent`/`system` | Who caused the fact |
 | `at` | timestamp | Recorded by the log, not the caller |
 
-**Validation**: an `edit` fact is only written after its Change Record is accepted; a `close` fact does not delete history.
+**Validation**: an `edit` fact is only written after its Change Record is accepted; a `save` fact records an accepted save whose in-memory changes stayed in the editor and therefore carries no operation steps or inverse; a `close` fact does not delete history.
 
 ## Change Record
 

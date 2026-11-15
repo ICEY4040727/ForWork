@@ -10,6 +10,7 @@ import { createMockAdapter } from '../src/client/adapter.ts'
 import type { OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange/types'
 import { createOfficeTabChanges } from '../src/client/changes.ts'
 import { createOfficeLegacyNotices } from '../src/client/notices.ts'
+import { createOfficeRestore } from '../src/client/restore.ts'
 import { officePanelInjected } from '../src/client/face.ts'
 
 const TAB = brandString<TabId>('tab-1')
@@ -28,8 +29,11 @@ describe('officePanelInjected', () => {
     const readDraft = vi.fn()
     const clearDraft = vi.fn()
     const attachCommandBridge = vi.fn(() => () => {})
+    const markMissing = vi.fn()
+    const restore = createOfficeRestore()
     const face = officePanelInjected({
-      read, convert, save, writeDraft, readDraft, clearDraft, adapter, attachCommandBridge, changes, notices, openTabs,
+      read, convert, save, writeDraft, readDraft, clearDraft, adapter, attachCommandBridge, markMissing, changes, notices,
+      restore, openTabs,
     })
     await face.remote.read(brandString<SessionId>('s-1'), 'work/budget.xlsx')
     await face.remote.convertLegacy(brandString<SessionId>('s-1'), 'work/legacy.doc')
@@ -48,6 +52,8 @@ describe('officePanelInjected', () => {
     expect(adapter.mounts).toHaveLength(1)
     expect(handle.getSnapshot()).toBe(snapshot)
     expect(face.attachCommandBridge).toBe(attachCommandBridge)
+    face.markMissing(brandString<SessionId>('s-1'), 's-1:work/budget.xlsx')
+    expect(markMissing).toHaveBeenCalledWith(brandString<SessionId>('s-1'), 's-1:work/budget.xlsx')
     face.markTabDirty(TAB, true)
     expect(changes.isDirty(TAB)).toBe(true)
     face.dismissCloseWarning(TAB)
@@ -58,6 +64,12 @@ describe('officePanelInjected', () => {
     face.dismissLegacyNotice('dsh-resource://file/session/s-1/work/report.docx')
     expect(face.hooks.legacyNotice.getSnapshot()['dsh-resource://file/session/s-1/work/report.docx'])
       .toEqual({ source: 'work/report.doc', dismissed: true })
+    expect(face.restore.claim(brandString<SessionId>('s-1'))).toBe(true)
+    face.restore.reportMissing(brandString<SessionId>('s-1'), ['work/gone.docx'])
+    expect(restore.source.getSnapshot().missing['s-1']).toEqual(['work/gone.docx'])
+    expect(face.hooks.restore).toBe(restore.source)
+    face.dismissRestoreNotice(brandString<SessionId>('s-1'))
+    expect(restore.source.getSnapshot().missing['s-1']).toBeUndefined()
     expect(face.hooks.sidebarTabs).toBe(openTabs)
     handle.dispose()
   })

@@ -8,6 +8,7 @@
  * body renders with a fake Remote and adapter so no Univer code loads.
  */
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { Context } from '@deepseek-ai/cordis'
 import { brandString } from '@deepseek-ai/dsh-brand'
@@ -34,6 +35,8 @@ import type { OfficeCommandTarget } from '../src/client/command-bridge.ts'
 import type { OfficePanelInjected } from '../src/client/face.ts'
 import { OfficeTitle } from '../src/client/OfficeTitle.tsx'
 import type { OfficeTitleProps } from '../src/client/OfficeTitle.tsx'
+import { createOfficeRestore } from '../src/client/restore.ts'
+import type { OfficeRestoreState } from '../src/client/restore.ts'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
 import { en, zh, type OfficeEditorKey } from '../src/client/locales.ts'
 
@@ -58,7 +61,7 @@ function failure<T>(code: 'office-document/conflict' | 'office-document/out-of-s
   return { ok: false, error: new RemoteError(code, code, { path: '/work/budget.xlsx' }) }
 }
 
-function fakeRemote(): {
+function fakeRemote(options: { factFailure?: boolean } = {}): {
   read: ReturnType<typeof vi.fn>
   convert: ReturnType<typeof vi.fn>
   save: ReturnType<typeof vi.fn>
@@ -66,7 +69,13 @@ function fakeRemote(): {
   readDraft: ReturnType<typeof vi.fn>
   clearDraft: ReturnType<typeof vi.fn>
   complete: ReturnType<typeof vi.fn>
-  face: OfficeDocumentRemote & { completeCommand: ReturnType<typeof vi.fn> }
+  closeDocument: ReturnType<typeof vi.fn>
+  markDocumentMissing: ReturnType<typeof vi.fn>
+  face: OfficeDocumentRemote & {
+    completeCommand: ReturnType<typeof vi.fn>
+    closeDocument: ReturnType<typeof vi.fn>
+    markDocumentMissing: ReturnType<typeof vi.fn>
+  }
 } {
   const read = vi.fn(async (): Promise<RemoteResult<OfficeDocumentReadResult>> => success(readResult('v1')))
   const convert = vi.fn(async (): Promise<RemoteResult<string>> => success('/work/report.docx'))
@@ -75,6 +84,11 @@ function fakeRemote(): {
   const readDraft = vi.fn(async (): Promise<RemoteResult<null>> => success(null))
   const clearDraft = vi.fn(async (): Promise<RemoteResult<void>> => success(undefined))
   const complete = vi.fn(async () => undefined)
+  const fact = (): RemoteResult<void> => options.factFailure === true
+    ? failure<undefined>('office-document/out-of-scope')
+    : success(undefined)
+  const closeDocument = vi.fn(async (): Promise<RemoteResult<void>> => fact())
+  const markDocumentMissing = vi.fn(async (): Promise<RemoteResult<void>> => fact())
   return {
     read,
     convert,
@@ -83,7 +97,19 @@ function fakeRemote(): {
     readDraft,
     clearDraft,
     complete,
-    face: { read, convertLegacy: convert, save, writeDraft, readDraft, clearDraft, completeCommand: complete },
+    closeDocument,
+    markDocumentMissing,
+    face: {
+      read,
+      convertLegacy: convert,
+      save,
+      writeDraft,
+      readDraft,
+      clearDraft,
+      completeCommand: complete,
+      closeDocument,
+      markDocumentMissing,
+    },
   }
 }
 
@@ -112,10 +138,13 @@ interface Boot {
   fiber: ReturnType<Context['plugin']>
   commands: MutableSessionEventSource
   completeCommand: ReturnType<typeof vi.fn>
+  warn: Mock<(message: string) => void>
 }
 
-async function boot(): Promise<Boot> {
+async function boot(options: { factFailure?: boolean } = {}): Promise<Boot> {
   const ctx = new Context()
+  const warn = vi.fn<(message: string) => void>()
+  ctx.logger.warn = warn
   const tabs = new SidebarRightTabRegistry(ctx)
   const registered: Recorded[] = []
   const slots = {
@@ -141,7 +170,7 @@ async function boot(): Promise<Boot> {
       return () => { closeHandler = undefined }
     }),
   }
-  const remote = fakeRemote()
+  const remote = fakeRemote(options)
   const commands = new MutableSessionEventSource()
   ctx.provide('sidebarRightTabs', tabs as never)
   ctx.provide('slots', slots as never)
@@ -154,7 +183,7 @@ async function boot(): Promise<Boot> {
   onTestFinished(async () => { await fiber.dispose() })
   await fiber.await()
   return {
-    tabs, registered, dictionaries, closeHandler, fiber, commands, completeCommand: remote.complete,
+    tabs, registered, dictionaries, closeHandler, fiber, commands, completeCommand: remote.complete, warn,
   }
 }
 
@@ -183,9 +212,11 @@ function panelProps(options: PanelOptions = {}): OfficePanelProps {
         contentId: ADDRESS,
         title: options.title ?? 'budget.xlsx',
         signal: SIGNAL,
-        actions: { close: options.onClose ?? vi.fn() },
+        actions: { close: options.onClose ?? vi.fn(), openResource: vi.fn() },
       },
     }),
+    useProjection: () => undefined,
+    useRestore: (selector: (value: OfficeRestoreState) => unknown) => selector({ restored: [], missing: {} }),
     useResource: () => ({
       status: options.value === undefined ? 'loading' : 'live',
       value: options.value,
@@ -196,8 +227,11 @@ function panelProps(options: PanelOptions = {}): OfficePanelProps {
     attachCommandBridge: vi.fn(() => () => {}),
     markTabDirty: options.onMarkDirty ?? vi.fn(),
     dismissCloseWarning: options.onDismissWarning ?? vi.fn(),
+    markMissing: vi.fn(),
     rememberLegacySource: vi.fn(),
     dismissLegacyNotice: vi.fn(),
+    restore: createOfficeRestore(),
+    dismissRestoreNotice: vi.fn(),
     useSidebarTabs: (selector: (value: readonly SidebarRightOpenTab[]) => unknown) => selector([]),
     useLegacyNotice: (selector: (value: Record<string, never>) => unknown) => selector({}),
     useOfficeTab: (selector: (value: OfficeTabChangeSnapshot) => unknown) => selector(changes),
@@ -286,6 +320,16 @@ describe('ui-office-editor apply', () => {
     face!.rememberLegacySource(ADDRESS, 'work/legacy.doc')
     expect(() => closeHandler?.(SESSION_ID, { id: TAB_ID, title: 'budget.xlsx', contentId: ADDRESS })).not.toThrow()
     expect(face!.hooks.legacyNotice.getSnapshot()).toEqual({})
+  })
+
+  it('logs a refused close or missing fact without blocking the tab', async () => {
+    const { registered, closeHandler, warn } = await boot({ factFailure: true })
+    const face = registered.find(entry => entry.name === 'sidebar.right.pane.tab')?.inject?.(SESSION_ID)
+    expect(() => closeHandler?.(SESSION_ID, { id: TAB_ID, title: 'budget.xlsx', contentId: ADDRESS })).not.toThrow()
+    face?.markMissing(SESSION_ID, `${SESSION_ID}:work/budget.xlsx`)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(warn).toHaveBeenCalledTimes(2)
   })
 })
 

@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { Context } from '@deepseek-ai/cordis'
 import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
 import { SessionId } from '@deepseek-ai/dsh-session/types'
+import SessionStore from '@deepseek-ai/dsh-session'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import LocalOfficeExchange, { type OfficeDocumentDraft, type OfficeDocumentSnapshot } from '../src/index.ts'
 
@@ -27,6 +28,8 @@ beforeEach(async () => {
   scope.workspaceRoot = root
   ctx = new Context()
   await ctx.plugin(LocalFileSystem, { cwd: root })
+  await ctx.plugin(SessionStore)
+  ctx.sessions.create(scope.sessionId, { meta: { cwd: root } })
   await ctx.plugin(LocalOfficeExchange)
 })
 afterEach(async () => {

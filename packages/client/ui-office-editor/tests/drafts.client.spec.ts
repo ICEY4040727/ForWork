@@ -216,7 +216,7 @@ describe('useOfficeDocument recovery', () => {
     remote.readDraft.mockResolvedValueOnce(success(draftAt('v1')))
     const { result } = renderDocument(remote.face)
     await waitFor(() => { expect(result.current.recovery).toBeDefined() })
-    expect(result.current.recovery?.stale).toBe(false)
+    expect(result.current.recovery?.decision).toBe('offer')
     expect(remote.readDraft.mock.calls[0]?.[1]).toBe(DOCUMENT_ID)
     expect(result.current.snapshot).toBe(snapshot)
     act(() => { result.current.acceptRecovery() })
@@ -230,7 +230,7 @@ describe('useOfficeDocument recovery', () => {
     remote.readDraft.mockResolvedValueOnce(success(draftAt('v0')))
     const { result } = renderDocument(remote.face)
     await waitFor(() => { expect(result.current.recovery).toBeDefined() })
-    expect(result.current.recovery?.stale).toBe(true)
+    expect(result.current.recovery?.decision).toBe('stale')
   })
 
   it('discards an offered draft and removes it from the store', async () => {

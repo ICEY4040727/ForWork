@@ -45,6 +45,7 @@
 | `event:document/missing` | event | `db4455e69146554b94bb759e4eb958972b8e4127775513d1a013c1921dedcb34` | [`{ type: "document/missing" }`](#persistence-type-sha256-db4455e69146554b94bb759e4eb958972b8e4127775513d1a013c1921dedcb34) |
 | `event:document/open` | event | `31b3e8f76f9c0408809813625d789bc832568ff3fb7bf65dc2f9f4d543828108` | [`{ type: "document/open" }`](#persistence-type-sha256-31b3e8f76f9c0408809813625d789bc832568ff3fb7bf65dc2f9f4d543828108) |
 | `event:document/rebind` | event | `99d72b97ac6e7e2fdef89bdfa688f4c00b7650762e3d9dff42c7274d0d1566c3` | [`{ type: "document/rebind" }`](#persistence-type-sha256-99d72b97ac6e7e2fdef89bdfa688f4c00b7650762e3d9dff42c7274d0d1566c3) |
+| `event:document/save` | event | `123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d` | [`{ type: "document/save" }`](#persistence-type-sha256-123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d) |
 | `event:feedback/message-delete` | event | `3ee93b06f3a125850337602bcdf155d2538c43a5c944ec55b1b3c365152d6796` | [`{ type: "feedback/message-delete" }`](#persistence-type-sha256-3ee93b06f3a125850337602bcdf155d2538c43a5c944ec55b1b3c365152d6796) |
 | `event:feedback/message-put` | event | `b5086d249e8502e9ead1d39156bb8d559bde7951cac0f14ce150345b4e42a2bf` | [`{ type: "feedback/message-put" }`](#persistence-type-sha256-b5086d249e8502e9ead1d39156bb8d559bde7951cac0f14ce150345b4e42a2bf) |
 | `event:feedback/record` | event | `b54940ff095c17e874c5be03815f4c2145a256cf3a1d34dae4ab2f7769dfffe8` | [`{ type: "feedback/record" }`](#persistence-type-sha256-b54940ff095c17e874c5be03815f4c2145a256cf3a1d34dae4ab2f7769dfffe8) |
@@ -531,7 +532,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'document/close': DocumentCloseEventData
 ```
 
-来源：[`packages/core/session/src/document-events.ts:289`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:318`](../packages/core/session/src/document-events.ts)
 
 <a id="documentcommand--log-only"></a>
 
@@ -546,7 +547,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'document/command': DocumentCommandEventData
 ```
 
-来源：[`packages/core/session/src/document-events.ts:295`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:324`](../packages/core/session/src/document-events.ts)
 
 <a id="documentedit--log-only"></a>
 
@@ -560,7 +561,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'document/edit': DocumentEditEventData
 ```
 
-来源：[`packages/core/session/src/document-events.ts:275`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:299`](../packages/core/session/src/document-events.ts)
 
 <a id="documentmissing--log-only"></a>
 
@@ -574,7 +575,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'document/missing': DocumentMissingEventData
 ```
 
-来源：[`packages/core/session/src/document-events.ts:285`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:314`](../packages/core/session/src/document-events.ts)
 
 <a id="documentopen--log-only"></a>
 
@@ -589,7 +590,7 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'document/open': DocumentOpenEventData
 ```
 
-来源：[`packages/core/session/src/document-events.ts:270`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:294`](../packages/core/session/src/document-events.ts)
 
 <a id="documentrebind--log-only"></a>
 
@@ -603,7 +604,21 @@ export type SessionEvent<T extends SessionEventType = SessionEventType> = {
 'document/rebind': DocumentRebindEventData
 ```
 
-来源：[`packages/core/session/src/document-events.ts:280`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:309`](../packages/core/session/src/document-events.ts)
+
+<a id="documentsave--log-only"></a>
+
+#### `document/save` — log-only
+
+```ts persistence-catalog
+/**
+ * One accepted save whose in-memory changes stay inside the editor, so it
+ * carries the actor and published version instead of operation steps.
+ */
+'document/save': DocumentSaveEventData
+```
+
+来源：[`packages/core/session/src/document-events.ts:304`](../packages/core/session/src/document-events.ts)
 
 ### `feedback/*`
 
@@ -1950,6 +1965,14 @@ SHA-256: `001bd066d73e5a6c36fddfad57d8f4ada0dfc1f73192dc4e95741debbb042e09`
 SHA-256: `1bc5fede418cad76e66fd5b19bb9f9c0f9fba722e01c3ea5aca1b64f51b4dc7d`
 
 `"document/rebind"`
+
+<a id="persistence-type-sha256-4c216b4a2ef9d08e64131afc0b3e483294cd76243d5ea275b8fc7a3626c9b543"></a>
+
+### `"document/save"`
+
+SHA-256: `4c216b4a2ef9d08e64131afc0b3e483294cd76243d5ea275b8fc7a3626c9b543`
+
+`"document/save"`
 
 <a id="persistence-type-sha256-a307c3810477536be6e99b8631180d999d9b4c7d5be31e779c1eefba1a6beec1"></a>
 
@@ -3698,7 +3721,7 @@ SHA-256: `824b1d4d4f007bdaa5eee7994a5db3ede7707c6cd2bf8e2509be176c7609e3bc`
 
 SHA-256: `38afed636d31ae1aa623506137763c6303a399ffa21662542712b00192de74bb`
 
-来源：[`packages/core/session/src/document-events.ts:254`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:278`](../packages/core/session/src/document-events.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -3716,7 +3739,7 @@ SHA-256: `38afed636d31ae1aa623506137763c6303a399ffa21662542712b00192de74bb`
 
 SHA-256: `41fa789ce7694143d3c4de2d070d1d0b8bbb051daec6cc8ab9bf0eaa480b3d12`
 
-来源：[`packages/core/session/src/document-events.ts:184`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:187`](../packages/core/session/src/document-events.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -3735,7 +3758,7 @@ SHA-256: `41fa789ce7694143d3c4de2d070d1d0b8bbb051daec6cc8ab9bf0eaa480b3d12`
 
 SHA-256: `9cceb1232edc9fb4a3842aefa475f802f9727cea770c07e38f52da00de6fc968`
 
-来源：[`packages/core/session/src/document-events.ts:164`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:167`](../packages/core/session/src/document-events.ts)
 
 | kind | form 属性 | 其他必需字段 | 完整定义 |
 |---|---|---|---|
@@ -3752,7 +3775,7 @@ SHA-256: `9cceb1232edc9fb4a3842aefa475f802f9727cea770c07e38f52da00de6fc968`
 
 SHA-256: `b700141f88b51ec194b79a1a42833c46f0517c100fbe101b776416e896e3194f`
 
-来源：[`packages/core/session/src/document-events.ts:214`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:238`](../packages/core/session/src/document-events.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -3774,7 +3797,7 @@ SHA-256: `b700141f88b51ec194b79a1a42833c46f0517c100fbe101b776416e896e3194f`
 
 SHA-256: `795eb6d599e0126c7397a27f969a2bc54fc83ed94070a75fb707128944def5c4`
 
-来源：[`packages/core/session/src/document-events.ts:155`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:158`](../packages/core/session/src/document-events.ts)
 
 [`DocumentEditStep`](#persistence-type-sha256-f2ac64c330c39613917b893a9a6459d1a06f8dc366d4f31cdf364ce4ec8d23c7) 的数组。
 
@@ -3788,7 +3811,7 @@ SHA-256: `795eb6d599e0126c7397a27f969a2bc54fc83ed94070a75fb707128944def5c4`
 
 SHA-256: `f2ac64c330c39613917b893a9a6459d1a06f8dc366d4f31cdf364ce4ec8d23c7`
 
-来源：[`packages/core/session/src/document-events.ts:121`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:124`](../packages/core/session/src/document-events.ts)
 
 | kind | form 属性 | 其他必需字段 | 完整定义 |
 |---|---|---|---|
@@ -3827,7 +3850,7 @@ SHA-256: `03494f560a76d2d36865f5e778e3ccbd145ec9518721aa7cdf5e7a08394a640b`
 
 SHA-256: `b1d6717b3eb1111e71af0c8ddd59397e948e400d6ce00304a620c2ce7bd01338`
 
-来源：[`packages/core/session/src/document-events.ts:39`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:42`](../packages/core/session/src/document-events.ts)
 
 以下类型之一：
 
@@ -3845,7 +3868,7 @@ SHA-256: `b1d6717b3eb1111e71af0c8ddd59397e948e400d6ce00304a620c2ce7bd01338`
 
 SHA-256: `14022e8f0a6f6abdeddeb9e5f9a635dd969768e07f99a3512a776f185330040c`
 
-来源：[`packages/core/session/src/document-events.ts:244`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:268`](../packages/core/session/src/document-events.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -3863,7 +3886,7 @@ SHA-256: `14022e8f0a6f6abdeddeb9e5f9a635dd969768e07f99a3512a776f185330040c`
 
 SHA-256: `a452b446b82d363986daba022645e42f66736662cd5689c5799c1f75076338fc`
 
-来源：[`packages/core/session/src/document-events.ts:196`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:199`](../packages/core/session/src/document-events.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -3883,13 +3906,49 @@ SHA-256: `a452b446b82d363986daba022645e42f66736662cd5689c5799c1f75076338fc`
 
 SHA-256: `c747a434a8ce645f0f1d77cab60165041a525369c1c15fd270e64449fb7d6358`
 
-来源：[`packages/core/session/src/document-events.ts:232`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:256`](../packages/core/session/src/document-events.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
 | `documentId` | 必需 | `string` |
 | `fromPath` | 必需 | `string` |
 | `toPath` | 必需 | `string` |
+| `turn` | 可选 | `number` |
+
+<a id="persistence-type-sha256-3854343c105c10f9e6574a5d638f31fa83c50bc107cd66f02d691dfe4f8f9392"></a>
+
+<a id="persistence-type-documentsaveactor"></a>
+
+<a id="persistence-type-packagescoresessionsrcdocument-eventstsdocumentsaveactor"></a>
+
+### `DocumentSaveActor`
+
+SHA-256: `3854343c105c10f9e6574a5d638f31fa83c50bc107cd66f02d691dfe4f8f9392`
+
+来源：[`packages/core/session/src/document-events.ts:39`](../packages/core/session/src/document-events.ts)
+
+以下类型之一：
+
+- `"agent"`
+- `"user"`
+
+<a id="persistence-type-sha256-7d96f5fa6bd17f0d17fc9b49bc1acb53b48c2a8f634d7b547e3a4f7bdd74d0b1"></a>
+
+<a id="persistence-type-documentsaveeventdata"></a>
+
+<a id="persistence-type-packagescoresessionsrcdocument-eventstsdocumentsaveeventdata"></a>
+
+### `DocumentSaveEventData`
+
+SHA-256: `7d96f5fa6bd17f0d17fc9b49bc1acb53b48c2a8f634d7b547e3a4f7bdd74d0b1`
+
+来源：[`packages/core/session/src/document-events.ts:222`](../packages/core/session/src/document-events.ts)
+
+| 属性 | 存在性 | 类型 |
+|---|---|---|
+| `actor` | 必需 | [`DocumentSaveActor`](#persistence-type-sha256-3854343c105c10f9e6574a5d638f31fa83c50bc107cd66f02d691dfe4f8f9392) |
+| `contentVersion` | 必需 | `number` |
+| `documentId` | 必需 | `string` |
 | `turn` | 可选 | `number` |
 
 <a id="persistence-type-sha256-9a930283b91d493d6347146f2475bb107294b379415ca02162354f46a64164f7"></a>
@@ -7289,7 +7348,7 @@ SHA-256: `ba4c40b4381e0dcdfab8fc9fc75b5c9b3e8f09ef56deeb1bec8e703b0ef8cd6d`
 
 SHA-256: `b008bb8de4204bafb2cc81a4e2f1f8c3528ae925827f92d8ae2197ccfffd76b9`
 
-来源：[`packages/core/session/src/document-events.ts:169`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:172`](../packages/core/session/src/document-events.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -7763,7 +7822,7 @@ SHA-256: `dba54c09c6e7aafc9acbed7792ecc920d99f92d0784aeeed10af55f7fe0bc8cd`
 
 SHA-256: `dcd2e1f5900afeb1e7baf6fc5416c049f77e1c8ea0882dad371d3a6c5e944252`
 
-来源：[`packages/core/session/src/document-events.ts:165`](../packages/core/session/src/document-events.ts)
+来源：[`packages/core/session/src/document-events.ts:168`](../packages/core/session/src/document-events.ts)
 
 | 属性 | 存在性 | 类型 |
 |---|---|---|
@@ -9167,6 +9226,22 @@ SHA-256: `99d72b97ac6e7e2fdef89bdfa688f4c00b7650762e3d9dff42c7274d0d1566c3`
 | `seq` | 必需 | `number` |
 | `time` | 必需 | `number` |
 | `type` | 必需 | `"document/rebind"` |
+
+<a id="persistence-type-sha256-123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d"></a>
+
+<a id="persistence-type-eventdocumentsave"></a>
+
+### `{ type: "document/save" }`
+
+SHA-256: `123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d`
+
+| 属性 | 存在性 | 类型 |
+|---|---|---|
+| `data` | 必需 | [`DocumentSaveEventData`](#persistence-type-sha256-7d96f5fa6bd17f0d17fc9b49bc1acb53b48c2a8f634d7b547e3a4f7bdd74d0b1) |
+| `ignorable` | 可选 | `true` |
+| `seq` | 必需 | `number` |
+| `time` | 必需 | `number` |
+| `type` | 必需 | `"document/save"` |
 
 <a id="persistence-type-sha256-3ee93b06f3a125850337602bcdf155d2538c43a5c944ec55b1b3c365152d6796"></a>
 

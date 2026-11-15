@@ -7,8 +7,8 @@
  * after a successful read, so loading, read failures, save refusals, external
  * changes, and the dirty close prompt are all visible without loading Univer.
  * The body also lists the Session's other open Office documents from the
- * Sidebar's public tab inventory and shows the converted-copy notice for a tab
- * opened from a legacy source.
+ * Sidebar's public tab inventory, runs the Session's one durable-set restore
+ * pass, and shows the converted-copy and missing-document notices.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
@@ -24,6 +24,7 @@ import { DocumentPanel } from './DocumentPanel.tsx'
 import type { OfficeDocumentEntry } from './DocumentPanel.tsx'
 import type { OfficeDocumentFailureCode } from './useOfficeDocument.ts'
 import { useOfficeDocument } from './useOfficeDocument.ts'
+import { useDocumentRestore } from './restore.ts'
 import { OFFICE_KIND, basenameOf } from './definition.ts'
 import { openTargetOf, officeDocumentIdentity, workspaceRootOf } from './target.ts'
 import type { OfficeEditorKey } from './locales.ts'
@@ -34,6 +35,9 @@ export type OfficePanelProps =
   & PropsRuntime<'sidebar.right.pane.tab'>
   & InjectFace<OfficePanelInjected>
   & PropsLocale<'officeEditor'>
+
+/** The missing-path list shared by every panel with nothing to report. */
+const NO_MISSING: readonly string[] = []
 
 /** Locale key for each save-refusal class. */
 const ERROR_KEYS: Record<OfficeDocumentFailureCode, OfficeEditorKey> = {
@@ -67,8 +71,9 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
  * @returns the file name, the open-document list, save and warning state, and the mounted editor surface.
  */
 export function OfficePanel({
-  useTabInfo, useResource, useSidebarTabs, useLegacyNotice, mountEditor, attachCommandBridge, markTabDirty, dismissCloseWarning,
-  rememberLegacySource, dismissLegacyNotice, useOfficeTab, remote, t,
+  useTabInfo, useProjection, useResource, useSidebarTabs, useRestore, useLegacyNotice, mountEditor, attachCommandBridge,
+  markTabDirty, dismissCloseWarning, markMissing, rememberLegacySource, dismissLegacyNotice, dismissRestoreNotice,
+  useOfficeTab, remote, restore, t,
 }: OfficePanelProps): ReactNode {
   const { tab } = useTabInfo()
   const meta = useResource<'file'>(tab.contentId)
@@ -80,6 +85,16 @@ export function OfficePanel({
   const changes = useOfficeTab(value => value)
   const notice = useLegacyNotice(value => value[tab.contentId])
   const openTabs = useSidebarTabs(value => value)
+  const projection = useProjection('document')
+  useDocumentRestore({
+    sessionId: target.sessionId,
+    projection,
+    openTabs,
+    actions: tab.actions,
+    restore,
+  })
+  const restored = useRestore(value => value)
+  const missing = restored.missing[target.sessionId] ?? NO_MISSING
   const dirty = changes[tab.id]?.dirty === true
   const warned = changes[tab.id]?.warned === true
   const openConverted = useCallback((address: string, source: string): void => {
@@ -96,6 +111,10 @@ export function OfficePanel({
     openConverted,
     dirty,
   })
+  useEffect(() => {
+    if (meta.status !== 'failed' || meta.failure?.code !== 'workspace-file/not-found') return
+    markMissing(target.sessionId, officeDocumentIdentity(target.sessionId, target.path))
+  }, [markMissing, meta.failure, meta.status, target.sessionId, target.path])
   const documents = useMemo<readonly OfficeDocumentEntry[]>(() => openTabs
     .filter(entry => entry.sessionId === target.sessionId && entry.kind === OFFICE_KIND)
     .map(entry => ({
@@ -224,17 +243,30 @@ export function OfficePanel({
           </button>
         </p>
       )}
+      {missing.length > 0 && (
+        <p className={css.banner} data-office-restore-missing>
+          <span>{t('restoreMissing', { paths: missing.join(', ') })}</span>
+          <button
+            type="button"
+            className={css.bannerAction}
+            data-office-dismiss-restore
+            onClick={() => { dismissRestoreNotice(target.sessionId) }}
+          >
+            {t('dismiss')}
+          </button>
+        </p>
+      )}
       <DocumentPanel documents={documents} onActivate={activateDocument} t={t} />
       {doc.recovery !== undefined && (
-        <p className={css.banner} data-office-draft-recovery={doc.recovery.stale ? 'stale' : 'current'}>
-          <span>{doc.recovery.stale ? t('draftStale') : t('draftFound')}</span>
+        <p className={css.banner} data-office-draft-recovery={doc.recovery.decision}>
+          <span>{doc.recovery.decision === 'stale' ? t('draftStale') : t('draftFound')}</span>
           <button
             type="button"
             className={css.bannerAction}
             data-office-recover-draft
             onClick={() => { doc.acceptRecovery() }}
           >
-            {doc.recovery.stale ? t('recoverAnyway') : t('recover')}
+            {doc.recovery.decision === 'stale' ? t('recoverAnyway') : t('recover')}
           </button>
           <button
             type="button"

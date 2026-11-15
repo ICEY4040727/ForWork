@@ -113,6 +113,8 @@ Source: [`packages/document/office-exchange/src/commands.ts`](../../packages/doc
 
 Host Remote service backing the generated `remote.officeDocument` namespace. Reads return a JSON snapshot bound to the file's observed version; saves replace only that version, so a concurrent external edit is reported as a conflict rather than overwritten.
 
+The service is the producer of `document/*` facts for the editor: a first read appends `document/open` once per Session, a successful save appends `document/save`, and the lifecycle endpoints append their matching facts. The open set is owned by this service per Session; no module-level state is used.
+
 ```ts cordis-catalog
 /**
  * Read an editable Office file into a JSON snapshot bound to its version.
@@ -136,6 +138,45 @@ Host Remote service backing the generated `remote.officeDocument` namespace. Rea
  * @throws RemoteError with `office-document/conflict` when the file changed after the read.
  */
 @Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>
+
+/**
+ * Record that an open document left the editor.
+ *
+ * The fact is appended even when this process no longer tracks the document,
+ * so a tab closed after a Host restart still leaves a durable close. History
+ * is never deleted; the open set is derived by folding the log.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param documentId - Session-scoped identity of the closing document.
+ * @param reason - producer-supplied closure reason; the projection stores it unread.
+ * @param signal - caller cancellation.
+ * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+ */
+@Remote closeDocument( workspaceFileScope: WorkspaceFileScope, documentId: string, reason: string, signal: AbortSignal, ): Promise<void>
+
+/**
+ * Record that an open document's file moved or was renamed.
+ *
+ * The identity is preserved: only the locator changes, and the new path must
+ * resolve inside the Session workspace root.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param documentId - Session-scoped identity retained across the move.
+ * @param toPath - new path; it must resolve inside the workspace root.
+ * @param signal - caller cancellation.
+ * @throws RemoteError when the identity belongs to another Session, either path is out of scope, or no live Session exists.
+ */
+@Remote async rebindDocument( workspaceFileScope: WorkspaceFileScope, documentId: string, toPath: string, signal: AbortSignal, ): Promise<void>
+
+/**
+ * Record that an open document's file no longer resolves.
+ *
+ * The document stays open with its identity and history; a later save, edit,
+ * or rebind marks it available again.
+ * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+ * @param documentId - Session-scoped identity that stays open.
+ * @param signal - caller cancellation.
+ * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+ */
+@Remote markDocumentMissing( workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal, ): Promise<void>
 
 /**
  * Report the features an edit-and-save would drop without returning content.

@@ -16,6 +16,20 @@ import type { IDocumentData, IWorkbookData } from '@univerjs/core'
 import type { WorkspaceFileScope } from '@deepseek-ai/dsh-api-workspace-files'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { FileSystem, FsInfo, FsTarget, FsVersion } from '@deepseek-ai/dsh-fs'
+import { DocumentId } from '@deepseek-ai/dsh-session'
+import type { DocumentFormat, Session } from '@deepseek-ai/dsh-session'
+import {
+  createDocumentIdentity,
+  documentIdFor,
+  markDocumentMissing as markIdentityMissing,
+  rebindDocument as rebindIdentity,
+  recordDocumentClose,
+  recordDocumentMissing,
+  recordDocumentOpen,
+  recordDocumentRebind,
+  recordDocumentSave,
+} from '@deepseek-ai/dsh-session-document'
+import type { DocumentIdentityBinding } from '@deepseek-ai/dsh-session-document'
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import { assertWithinRoots } from './authority.ts'
@@ -58,17 +72,36 @@ export const RemoteConfig: z<Partial<RemoteConfig>, RemoteConfig> = z.object({
     .default(DEFAULT_OFFICE_EXCHANGE_CONFIG.maxFileBytes),
 })
 
+/** One open document the Remote tracks for the current Host process. */
+interface OpenDocument {
+  /** Identity binding across rename and missing observations. */
+  readonly binding: DocumentIdentityBinding
+  /** Editable format detected at open. */
+  readonly format: DocumentFormat
+  /** Latest content version this process observed for the document. */
+  readonly contentVersion: number
+}
+
 /**
  * Host Remote service backing the generated `remote.officeDocument` namespace.
  * Reads return a JSON snapshot bound to the file's observed version; saves
  * replace only that version, so a concurrent external edit is reported as a
  * conflict rather than overwritten.
+ *
+ * The service is the producer of `document/*` facts for the editor: a first read
+ * appends `document/open` once per Session, a successful save appends
+ * `document/save`, and the lifecycle endpoints append their matching facts. The
+ * open set is owned by this service per Session; no module-level state is used.
  */
 export class OfficeDocumentRemote extends TypertRemoteService {
   static Config = RemoteConfig
+  static inject = ['sessions']
+
+  /** Open documents per Session, from this process's first read to its close. */
+  private readonly openDocuments = new WeakMap<Session, Map<DocumentId, OpenDocument>>()
 
   /**
-   * @param ctx - Host context carrying the Exchange seam and the filesystem.
+   * @param ctx - Host context carrying the Exchange seam, the filesystem, and Sessions.
    * @param config - deployment bounds for one Remote read.
    */
   constructor(ctx: Context, private readonly config: RemoteConfig) {
@@ -96,8 +129,10 @@ export class OfficeDocumentRemote extends TypertRemoteService {
       if (after === undefined || after.version !== info.version) {
         throw new OfficeExchangeError('conversion-failed', `"${path}" changed while it was being read.`)
       }
+      const format = editableDocumentFormat(result.format)
+      this.recordOpen(workspaceFileScope, path, format)
       return {
-        format: result.format,
+        format,
         snapshot: wireSnapshot(result),
         unsupported: result.unsupported,
         version: info.version,
@@ -136,9 +171,114 @@ export class OfficeDocumentRemote extends TypertRemoteService {
         { kind: 'replaceIfVersion', version: brandString<FsVersion>(expectedVersion) },
         signal,
       )
+      this.recordSave(workspaceFileScope, path, editableDocumentFormat(format))
       return { version: outcome.version }
     } catch (cause) {
       throw this.failure(cause, path, signal)
+    }
+  }
+
+  /**
+   * Record that an open document left the editor.
+   *
+   * The fact is appended even when this process no longer tracks the document,
+   * so a tab closed after a Host restart still leaves a durable close. History
+   * is never deleted; the open set is derived by folding the log.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param documentId - Session-scoped identity of the closing document.
+   * @param reason - producer-supplied closure reason; the projection stores it unread.
+   * @param signal - caller cancellation.
+   * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+   */
+  @Remote
+  closeDocument(
+    workspaceFileScope: WorkspaceFileScope, documentId: string, reason: string, signal: AbortSignal,
+  ): Promise<void> {
+    try {
+      signal.throwIfAborted()
+      const session = this.sessionOf(workspaceFileScope)
+      const id = this.ownedDocumentId(workspaceFileScope, documentId)
+      this.openDocumentsFor(session).delete(id)
+      recordDocumentClose(session, { documentId: id, reason })
+      return Promise.resolve()
+    } catch (cause) {
+      const failure: Error = this.failure(cause, documentId, signal)
+      return Promise.reject(failure)
+    }
+  }
+
+  /**
+   * Record that an open document's file moved or was renamed.
+   *
+   * The identity is preserved: only the locator changes, and the new path must
+   * resolve inside the Session workspace root.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param documentId - Session-scoped identity retained across the move.
+   * @param toPath - new path; it must resolve inside the workspace root.
+   * @param signal - caller cancellation.
+   * @throws RemoteError when the identity belongs to another Session, either path is out of scope, or no live Session exists.
+   */
+  @Remote
+  async rebindDocument(
+    workspaceFileScope: WorkspaceFileScope, documentId: string, toPath: string, signal: AbortSignal,
+  ): Promise<void> {
+    try {
+      const session = this.sessionOf(workspaceFileScope)
+      const id = this.ownedDocumentId(workspaceFileScope, documentId)
+      const toTarget = await this.confine(workspaceFileScope, toPath, signal)
+      const documents = this.openDocumentsFor(session)
+      const entry = documents.get(id)
+      const fromPath = entry?.binding.path ?? this.pathOf(documentId, workspaceFileScope)
+      await this.confine(workspaceFileScope, fromPath, signal)
+      signal.throwIfAborted()
+      const exists = (await this.files().stat(toTarget, signal)) !== undefined
+      // A repeat observation of the same path is not a rebind.
+      if (fromPath === toPath && entry?.binding.missing !== true) return
+      recordDocumentRebind(session, { documentId: id, fromPath, toPath })
+      const binding = rebindIdentity(
+        entry?.binding ?? createDocumentIdentity(id, fromPath),
+        toPath,
+        Date.now(),
+        exists,
+      )
+      if (entry !== undefined) {
+        documents.set(id, { ...entry, binding })
+      }
+    } catch (cause) {
+      throw this.failure(cause, documentId, signal)
+    }
+  }
+
+  /**
+   * Record that an open document's file no longer resolves.
+   *
+   * The document stays open with its identity and history; a later save, edit,
+   * or rebind marks it available again.
+   * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
+   * @param documentId - Session-scoped identity that stays open.
+   * @param signal - caller cancellation.
+   * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+   */
+  @Remote
+  markDocumentMissing(
+    workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal,
+  ): Promise<void> {
+    try {
+      signal.throwIfAborted()
+      const session = this.sessionOf(workspaceFileScope)
+      const id = this.ownedDocumentId(workspaceFileScope, documentId)
+      const documents = this.openDocumentsFor(session)
+      const entry = documents.get(id)
+      if (entry?.binding.missing === true) return Promise.resolve()
+      const path = entry?.binding.path ?? this.pathOf(documentId, workspaceFileScope)
+      recordDocumentMissing(session, { documentId: id, path })
+      if (entry !== undefined) {
+        documents.set(id, { ...entry, binding: markIdentityMissing(entry.binding, Date.now()) })
+      }
+      return Promise.resolve()
+    } catch (cause) {
+      const failure: Error = this.failure(cause, documentId, signal)
+      return Promise.reject(failure)
     }
   }
 
@@ -311,6 +451,89 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     return await this.commands().request(request, signal)
   }
 
+  /** Resolve the live Session that owns the workspace root on the wire. */
+  private sessionOf(scope: WorkspaceFileScope): Session {
+    const session = this.ctx.sessions.get(scope.sessionId)
+    if (session === undefined) {
+      throw new RemoteError(
+        'gateway/bad-request',
+        `Session "${scope.sessionId}" is not live, so its document facts cannot be recorded.`,
+        {},
+      )
+    }
+    return session
+  }
+
+  /** The open-document table for one Session, created on first use. */
+  private openDocumentsFor(session: Session): Map<DocumentId, OpenDocument> {
+    let documents = this.openDocuments.get(session)
+    if (documents === undefined) {
+      documents = new Map()
+      this.openDocuments.set(session, documents)
+    }
+    return documents
+  }
+
+  /**
+   * Append `document/open` for the first read of a document in this process.
+   * A repeat read of the same identity updates no fact: the open set already
+   * names the document.
+   */
+  private recordOpen(scope: WorkspaceFileScope, path: string, format: DocumentFormat): void {
+    const session = this.sessionOf(scope)
+    const documentId = documentIdFor(scope.sessionId, path)
+    const documents = this.openDocumentsFor(session)
+    if (documents.has(documentId)) return
+    recordDocumentOpen(session, { documentId, path, format, contentVersion: 0 })
+    documents.set(documentId, { binding: createDocumentIdentity(documentId, path), format, contentVersion: 0 })
+  }
+
+  /**
+   * Append `document/save` after a user save published a new file.
+   *
+   * The user's in-memory changes stay in the editor, so no operation steps are
+   * available and no inverse is fabricated. A document this process has not
+   * read is opened first so the save has an entry to advance.
+   */
+  private recordSave(scope: WorkspaceFileScope, path: string, format: DocumentFormat): void {
+    const session = this.sessionOf(scope)
+    const documents = this.openDocumentsFor(session)
+    const tracked = [...documents].find(([, document]) => document.binding.path === path)
+    const documentId = tracked?.[0] ?? documentIdFor(scope.sessionId, path)
+    const entry = tracked?.[1]
+    const broker = this.ctx.get('officeCommandBroker')
+    const from = Math.max(entry?.contentVersion ?? 0, broker?.versionOf(documentId) ?? 0)
+    const contentVersion = from + 1
+    if (entry === undefined) {
+      recordDocumentOpen(session, { documentId, path, format, contentVersion: 0 })
+    }
+    recordDocumentSave(session, { documentId, actor: 'user', contentVersion })
+    documents.set(documentId, {
+      binding: entry?.binding ?? createDocumentIdentity(documentId, path),
+      format,
+      contentVersion,
+    })
+    broker?.remember(documentId, contentVersion)
+  }
+
+  /** Require a document identity that belongs to the Session on the wire. */
+  private ownedDocumentId(scope: WorkspaceFileScope, documentId: string): DocumentId {
+    const prefix = `${scope.sessionId}:`
+    if (!documentId.startsWith(prefix) || documentId.length === prefix.length) {
+      throw new RemoteError(
+        'gateway/bad-request',
+        `Document id "${documentId}" does not belong to Session "${scope.sessionId}".`,
+        {},
+      )
+    }
+    return DocumentId(documentId)
+  }
+
+  /** The path recorded inside a Session-scoped document identity. */
+  private pathOf(documentId: string, scope: WorkspaceFileScope): string {
+    return documentId.slice(`${scope.sessionId}:`.length)
+  }
+
   /**
    * The draft file for one document identity: a digest keeps a caller-supplied
    * id from naming a path outside the draft directory.
@@ -417,7 +640,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   }
 
   /** Map a seam, filesystem, or cancellation failure onto the Remote error vocabulary. */
-  private failure(cause: unknown, path: string, signal: AbortSignal): unknown {
+  private failure(cause: unknown, path: string, signal: AbortSignal): Error {
     if (cause instanceof RemoteError) return cause
     if (signal.aborted) {
       return new RemoteError('gateway/cancelled', `"${path}" was not read or written.`, {}, { cause })
@@ -458,7 +681,9 @@ export class OfficeDocumentRemote extends TypertRemoteService {
       || isFsCode(cause, 'FS_IO_ERROR')) {
       return new RemoteError('office-document/conversion-failed', `"${path}" could not be read or written.`, { path }, { cause })
     }
-    return cause
+    return cause instanceof Error
+      ? cause
+      : new RemoteError('office-document/conversion-failed', `"${path}" could not be read or written.`, { path }, { cause })
   }
 }
 
@@ -529,6 +754,28 @@ function jsonValueOf(value: unknown): JsonValue {
     return record
   }
   throw new OfficeExchangeError('conversion-failed', `The snapshot contains a non-JSON ${typeof value} value.`)
+}
+
+/**
+ * Narrow a detected format to one the document facts admit.
+ * @param format - format reported by the Exchange read or save.
+ * @returns the editable document format.
+ * @throws {OfficeExchangeError} `unsupported-format` for a legacy or presentation format.
+ */
+function editableDocumentFormat(format: OfficeFormat): DocumentFormat {
+  switch (format) {
+    case 'docx':
+    case 'xlsx':
+      return format
+    case 'pptx':
+    case 'doc':
+    case 'xls':
+    case 'ppt':
+      throw new OfficeExchangeError(
+        'unsupported-format',
+        `Cannot record a .${format} document; only .docx and .xlsx are editable.`,
+      )
+  }
 }
 
 /** Restore the native unit snapshot a save must serialize. */

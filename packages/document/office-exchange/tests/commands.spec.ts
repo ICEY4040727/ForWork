@@ -208,6 +208,7 @@ describe('document command broker', () => {
     const bare = new Context()
     try {
       await bare.plugin(LocalFileSystem, { cwd: root })
+      await bare.plugin(SessionStore)
       await bare.plugin(OfficeDocumentRemote, { maxBytes: 1024 })
       await expect(bare.officeDocument.completeCommand(scope, 'request', {
         status: 'unsupported-feature',
