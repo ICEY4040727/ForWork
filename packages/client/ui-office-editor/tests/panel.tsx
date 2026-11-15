@@ -59,6 +59,8 @@ export interface PanelInput {
   readonly actions?: SidebarRightTabActions
   /** Editor mount the panel calls; defaults to a recording mock adapter. */
   readonly mount?: OfficePanelInjected['mountEditor']
+  /** Command-bridge attachment the panel calls; defaults to a recorder. */
+  readonly attachCommandBridge?: OfficePanelInjected['attachCommandBridge']
 }
 
 /**
@@ -73,6 +75,7 @@ export function panelFixture(input: PanelInput): {
   openTabs: SnapshotStore<readonly SidebarRightOpenTab[]>
   openResource: Mock<SidebarRightTabActions['openResource']>
   adapter: ReturnType<typeof createMockAdapter>
+  attachCommandBridge: Mock<OfficePanelInjected['attachCommandBridge']>
 } {
   const address = input.address ?? 'dsh-resource://file/session/s-1/work/budget.xlsx'
   const tabId = input.tabId ?? TAB_ID
@@ -80,6 +83,7 @@ export function panelFixture(input: PanelInput): {
   const notices = createOfficeLegacyNotices()
   const openTabs = createSnapshotStore<readonly SidebarRightOpenTab[]>(input.openTabs ?? [])
   const openResource = vi.fn<SidebarRightTabActions['openResource']>()
+  const attachCommandBridge = vi.fn<OfficePanelInjected['attachCommandBridge']>(() => () => {})
   const actions: SidebarRightTabActions = input.actions ?? {
     bindCommands: vi.fn(() => () => {}),
     openResource,
@@ -104,6 +108,7 @@ export function panelFixture(input: PanelInput): {
     }),
     remote: input.remote,
     mountEditor: input.mount ?? ((container, mountInput) => adapter.mount(container, mountInput)),
+    attachCommandBridge: input.attachCommandBridge ?? attachCommandBridge,
     markTabDirty: vi.fn(),
     dismissCloseWarning: vi.fn(),
     rememberLegacySource: (contentId: string, source: string) => { notices.remember(contentId, source) },
@@ -113,7 +118,7 @@ export function panelFixture(input: PanelInput): {
     useSidebarTabs: bindObservable(openTabs),
     t: translate,
   } as OfficePanelProps
-  return { props, changes, notices, openTabs, openResource, adapter }
+  return { props, changes, notices, openTabs, openResource, adapter, attachCommandBridge }
 }
 
 /**

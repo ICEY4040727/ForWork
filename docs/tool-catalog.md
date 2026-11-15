@@ -34,6 +34,7 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-fs-search` | `glob`, `grep` | `ctx.workingDirectory`, `ctx.tools`, `ctx.subprocess`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | glob and grep are unconditional discovery tools that spawn the packaged ripgrep binary (`@vscode/ripgrep`) through ctx.subprocess as ordinary foreground calls (never background jobs) — no host `rg` install and no shell layer. The catalog uses `sampleOverCapGlobResults: true`; deployments must choose that behavior explicitly. Capped results save the complete formatted list through the optional ctx.spillStore backend; returned locators are follow-up-readable/searchable when the backend exposes local paths in co-located deployments. |
 | `@deepseek-ai/dsh-tool-terminal` | `terminal_close`, `terminal_list`, `terminal_open`, `terminal_read`, `terminal_send`, `terminal_signal` | `ctx.workingDirectory`, `ctx.tools`, `ctx.terminals`, `ctx.systemPrompt`, `ctx.jobs at call time for run_in_background` | `tool/call`, `tool/result` | - | The six terminal tools are opt-in and complement one-shot shell/filesystem tools. `terminal_send(run_in_background: true)` registers with `ctx.jobs`; TUI, named key sequences, BEL, resize, auto-start, and cross-agent sharing are absent from the schema. |
 | `@deepseek-ai/dsh-tool-goal` | `create_goal`, `get_goal`, `update_goal` | `ctx.tools`, `ctx.agents`, `ctx.goals`, `ctx.systemPrompt`, `a calling Agent in an authorized open turn` | `tool/call`, `goal/change for mutations`, `tool/result` | - | create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds. |
+| `@deepseek-ai/dsh-tool-office` | `document_convert`, `document_edit_cells`, `document_edit_paragraph`, `document_read` | `ctx.tools`, `ctx.officeDocument and its command broker`, `a calling Agent with a workspace root` | `tool/call`, `document/command before a live-editor operation`, `document/edit after an accepted save`, `tool/result` | - | Reads and edits require a live editor instance; a headless Session refuses with document-not-open instead of editing a detached file. The Host performs one version-guarded save per accepted edit and records the operation with its inverse. |
 | `@deepseek-ai/dsh-tool-schedule` | `schedule_create`, `schedule_edit`, `schedule_list`, `schedule_view` | `ctx.tools`, `ctx.schedule`, `ctx.systemPrompt` | `tool/call`, `Schedule storage domain create, update, or delete`, `tool/result` | - | A preset or Agent scope mounts this package and decides which agents receive its tools. Management reads and writes Host tasks by id across Sessions. Tasks store an RFC 5545 recurrence and an existing, first-created-and-reused, or per-run-new Session target. Delegated subagents cannot call these tools. |
 | `@deepseek-ai/dsh-tool-lsp` | `lsp` | `ctx.workingDirectory`, `ctx.tools`, `ctx.lsp`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | The lsp tool keeps provider selection and language-server subprocesses behind ctx.lsp, so its model-visible schema stays stable across providers. Requires a registered provider (e.g. `@deepseek-ai/dsh-lsp-stdio`) at runtime; without one, a query returns the structured `LSP_UNAVAILABLE` error rather than changing the schema. |
 | `@deepseek-ai/dsh-tool-ralph` | `ralph` | `ctx.tools`, `ctx.workflowEngine`, `ctx.subagents`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents every fresh round)` | `tool/call`, `tool/result`, `workflow and child session events during execution` | - | A fixed foreground workflow starts one fresh structured child per round; the model selects only the immutable objective and an optional round cap. |
@@ -1495,6 +1496,164 @@ Update the current goal.
 Source: [`packages/goal/tool-goal/src/index.ts`](../packages/goal/tool-goal/src/index.ts)
 
 create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds.
+
+<a id="deepseek-aidsh-tool-office"></a>
+
+## `@deepseek-ai/dsh-tool-office`
+
+### `document_convert`
+
+Convert a legacy .doc or .xls file to an editable .docx or .xlsx copy inside the workspace.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Workspace-relative or absolute path of the legacy file."
+    }
+  },
+  "required": [
+    "path"
+  ]
+}
+```
+
+Source: [`packages/document/tool-office/src/index.ts`](../packages/document/tool-office/src/index.ts)
+
+### `document_edit_cells`
+
+Replace cell values or formulas in an open spreadsheet, then save the result immediately.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "description": "Session-scoped document id in the form \"<sessionId>:<path>\", as returned by document_read."
+    },
+    "fromVersion": {
+      "type": "integer",
+      "description": "Document content version returned by document_read or the previous edit."
+    },
+    "operations": {
+      "type": "array",
+      "description": "Cell replacements in order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sheetId": {
+            "type": "string",
+            "description": "Sheet id from document_read."
+          },
+          "row": {
+            "type": "integer",
+            "description": "Zero-based row index."
+          },
+          "column": {
+            "type": "integer",
+            "description": "Zero-based column index."
+          },
+          "value": {
+            "description": "New JSON cell value; omit when setting a formula."
+          },
+          "formula": {
+            "type": "string",
+            "description": "New formula text; omit when setting a value."
+          }
+        },
+        "required": [
+          "sheetId",
+          "row",
+          "column"
+        ]
+      }
+    }
+  },
+  "required": [
+    "documentId",
+    "fromVersion",
+    "operations"
+  ]
+}
+```
+
+Source: [`packages/document/tool-office/src/index.ts`](../packages/document/tool-office/src/index.ts)
+
+### `document_edit_paragraph`
+
+Replace paragraphs in an open text document, then save the result immediately.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "description": "Session-scoped document id in the form \"<sessionId>:<path>\", as returned by document_read."
+    },
+    "fromVersion": {
+      "type": "integer",
+      "description": "Document content version returned by document_read or the previous edit."
+    },
+    "operations": {
+      "type": "array",
+      "description": "Paragraph replacements in order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "Zero-based paragraph index from document_read."
+          },
+          "text": {
+            "type": "string",
+            "description": "Paragraph text after the edit."
+          }
+        },
+        "required": [
+          "index",
+          "text"
+        ]
+      }
+    }
+  },
+  "required": [
+    "documentId",
+    "fromVersion",
+    "operations"
+  ]
+}
+```
+
+Source: [`packages/document/tool-office/src/index.ts`](../packages/document/tool-office/src/index.ts)
+
+### `document_read`
+
+Read the structure of an open Office document: sheets, cells, formulas, paragraphs, and tables.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "description": "Session-scoped document id in the form \"<sessionId>:<path>\", as returned by document_read."
+    }
+  },
+  "required": [
+    "documentId"
+  ]
+}
+```
+
+Source: [`packages/document/tool-office/src/index.ts`](../packages/document/tool-office/src/index.ts)
+
+Reads and edits require a live editor instance; a headless Session refuses with document-not-open instead of editing a detached file. The Host performs one version-guarded save per accepted edit and records the operation with its inverse.
 
 <a id="deepseek-aidsh-tool-schedule"></a>
 

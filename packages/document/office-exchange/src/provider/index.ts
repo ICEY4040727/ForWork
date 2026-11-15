@@ -15,6 +15,7 @@ import { detectUnsupportedFeatures } from '../detect.ts'
 import { OfficeExchangeError } from '../errors.ts'
 import { formatOf, isEditableFormat, isLegacyFormat } from '../format.ts'
 import { OfficeDocumentRemote } from '../remote.ts'
+import { OfficeCommandBroker } from '../commands.ts'
 import { OfficeExchange } from '../service.ts'
 import type { ExchangeReadResult, UnitSnapshot } from '../snapshots.ts'
 import type { OfficeFormat, UnsupportedFeature } from '../types.ts'
@@ -30,6 +31,8 @@ export interface Config {
   maxCells?: number
   /** Longest allowed single legacy conversion, in milliseconds; omitted uses the default. */
   maxConversionMs?: number
+  /** Longest wait for a live editor to answer one document command, in milliseconds; omitted uses the default. */
+  commandTimeoutMs?: number
 }
 
 /** Validated bounds applied before parsing, serializing, or converting a file. */
@@ -40,6 +43,8 @@ export const Config: z<Partial<Config>, Config> = z.object({
     .default(DEFAULT_OFFICE_EXCHANGE_CONFIG.maxCells),
   maxConversionMs: z.natural().min(1).max(2_147_483_647)
     .default(DEFAULT_OFFICE_EXCHANGE_CONFIG.maxConversionMs),
+  commandTimeoutMs: z.natural().min(1).max(2_147_483_647)
+    .default(DEFAULT_OFFICE_EXCHANGE_CONFIG.commandTimeoutMs),
 })
 
 /**
@@ -61,6 +66,7 @@ export class LocalOfficeExchange extends OfficeExchange {
     super(ctx)
     this.config = resolveConfig(config)
     ctx.plugin(OfficeDocumentRemote, { maxBytes: this.config.maxFileBytes })
+    ctx.plugin(OfficeCommandBroker, { commandTimeoutMs: this.config.commandTimeoutMs })
   }
 
   /**

@@ -12,10 +12,13 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { Context } from '@deepseek-ai/cordis'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { SessionSeq } from '@deepseek-ai/dsh-session/types'
+import type { DocumentId } from '@deepseek-ai/dsh-session/src/document-events.ts'
 import type { WorkspaceFileStat } from '@deepseek-ai/dsh-api-workspace-files/types'
 import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
 import type { SidebarRightOpenTab } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { MutableSessionEventSource } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import type { OfficeDocumentReadResult, OfficeDocumentSaveResult, OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange/types'
@@ -27,6 +30,7 @@ import { OFFICE_ID, OFFICE_KIND } from '../src/client/definition.ts'
 import { apply, inject } from '../src/client/index.ts'
 import { OfficePanel } from '../src/client/OfficePanel.tsx'
 import type { OfficePanelProps } from '../src/client/OfficePanel.tsx'
+import type { OfficeCommandTarget } from '../src/client/command-bridge.ts'
 import type { OfficePanelInjected } from '../src/client/face.ts'
 import { OfficeTitle } from '../src/client/OfficeTitle.tsx'
 import type { OfficeTitleProps } from '../src/client/OfficeTitle.tsx'
@@ -61,7 +65,8 @@ function fakeRemote(): {
   writeDraft: ReturnType<typeof vi.fn>
   readDraft: ReturnType<typeof vi.fn>
   clearDraft: ReturnType<typeof vi.fn>
-  face: OfficeDocumentRemote
+  complete: ReturnType<typeof vi.fn>
+  face: OfficeDocumentRemote & { completeCommand: ReturnType<typeof vi.fn> }
 } {
   const read = vi.fn(async (): Promise<RemoteResult<OfficeDocumentReadResult>> => success(readResult('v1')))
   const convert = vi.fn(async (): Promise<RemoteResult<string>> => success('/work/report.docx'))
@@ -69,6 +74,7 @@ function fakeRemote(): {
   const writeDraft = vi.fn(async (): Promise<RemoteResult<{ savedAt: string }>> => success({ savedAt: 't' }))
   const readDraft = vi.fn(async (): Promise<RemoteResult<null>> => success(null))
   const clearDraft = vi.fn(async (): Promise<RemoteResult<void>> => success(undefined))
+  const complete = vi.fn(async () => undefined)
   return {
     read,
     convert,
@@ -76,7 +82,8 @@ function fakeRemote(): {
     writeDraft,
     readDraft,
     clearDraft,
-    face: { read, convertLegacy: convert, save, writeDraft, readDraft, clearDraft },
+    complete,
+    face: { read, convertLegacy: convert, save, writeDraft, readDraft, clearDraft, completeCommand: complete },
   }
 }
 
@@ -103,6 +110,8 @@ interface Boot {
   dictionaries: Map<string, unknown>
   closeHandler: ((sessionId: unknown, tab: { id: TabId; title: string; contentId: string }) => void) | undefined
   fiber: ReturnType<Context['plugin']>
+  commands: MutableSessionEventSource
+  completeCommand: ReturnType<typeof vi.fn>
 }
 
 async function boot(): Promise<Boot> {
@@ -132,17 +141,21 @@ async function boot(): Promise<Boot> {
       return () => { closeHandler = undefined }
     }),
   }
-  const remote = fakeRemote().face
+  const remote = fakeRemote()
+  const commands = new MutableSessionEventSource()
   ctx.provide('sidebarRightTabs', tabs as never)
   ctx.provide('slots', slots as never)
   ctx.provide('locale', locale as never)
+  ctx.provide('sessions', { binding: vi.fn(() => ({ eventSource: commands })) } as never)
   ctx.provide('sidebarRight', sidebarRight as never)
-  ctx.provide('remote', { officeDocument: remote } as never)
-  ctx.provide('remote.officeDocument', remote as never)
+  ctx.provide('remote', { officeDocument: remote.face } as never)
+  ctx.provide('remote.officeDocument', remote.face as never)
   const fiber = ctx.plugin({ inject: [...inject], apply })
   onTestFinished(async () => { await fiber.dispose() })
   await fiber.await()
-  return { tabs, registered, dictionaries, closeHandler, fiber }
+  return {
+    tabs, registered, dictionaries, closeHandler, fiber, commands, completeCommand: remote.complete,
+  }
 }
 
 interface PanelOptions {
@@ -180,6 +193,7 @@ function panelProps(options: PanelOptions = {}): OfficePanelProps {
     }),
     remote: options.remote ?? fakeRemote().face,
     mountEditor: options.mount ?? ((container, input) => adapter.mount(container, input)),
+    attachCommandBridge: vi.fn(() => () => {}),
     markTabDirty: options.onMarkDirty ?? vi.fn(),
     dismissCloseWarning: options.onDismissWarning ?? vi.fn(),
     rememberLegacySource: vi.fn(),
@@ -206,8 +220,45 @@ describe('ui-office-editor apply', () => {
     ])
   })
 
-  it('takes every registration back when the plugin is disposed', async () => {
-    const { tabs, registered, dictionaries, fiber } = await boot()
+  it('settles a Session document command through the officeDocument Remote', async () => {
+    const { registered, commands, completeCommand } = await boot()
+    const face = registered.find(entry => entry.name === 'sidebar.right.pane.tab')?.inject?.(SESSION_ID)
+    expect(face).toBeDefined()
+    const apply = vi.fn(() => ({ status: 'applied' as const }))
+    const target: OfficeCommandTarget = {
+      documentId: 'document-1',
+      version: () => 2,
+      isOpen: () => true,
+      isDirty: () => false,
+      unsupported: () => [],
+      apply,
+      snapshot: () => snapshot,
+    }
+    const detach = face!.attachCommandBridge(SESSION_ID, target)
+    commands.append({
+      type: 'event',
+      event: {
+        type: 'document/command',
+        seq: SessionSeq(1),
+        time: 1,
+        data: {
+          requestId: 'r-1',
+          documentId: brandString<DocumentId>('document-1'),
+          operation: { kind: 'read' },
+          fromVersion: 2,
+        },
+      },
+    })
+    expect(apply).not.toHaveBeenCalled()
+    expect(completeCommand).toHaveBeenCalledWith(SESSION_ID, 'r-1', {
+      status: 'read',
+      snapshot,
+      contentVersion: 2,
+    })
+    detach()
+  })
+
+  it('takes every registration back when the plugin is disposed', async () => {    const { tabs, registered, dictionaries, fiber } = await boot()
     await fiber.dispose()
     expect(tabs.get(OFFICE_KIND)).toBeUndefined()
     expect(registered).toEqual([])
@@ -419,6 +470,7 @@ describe('OfficePanel', () => {
     resolve({
       dispose,
       getSnapshot: () => snapshot,
+      apply: vi.fn(),
       undo: vi.fn(),
       redo: vi.fn(),
       isDirty: () => false,

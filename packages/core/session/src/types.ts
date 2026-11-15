@@ -572,3 +572,16 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'session/not-found': { readonly sessionId: SessionId }
   }
 }
+
+export type {
+  DocumentCellEdit,
+  DocumentColumnEdit,
+  DocumentCommandEventData,
+  DocumentCommandOperation,
+  DocumentEditOperation,
+  DocumentEditStep,
+  DocumentFormulaEdit,
+  DocumentParagraphEdit,
+  DocumentRowEdit,
+  DocumentStyleEdit,
+} from './document-events.ts'

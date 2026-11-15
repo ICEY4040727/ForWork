@@ -18,13 +18,14 @@ import type {} from '@deepseek-ai/dsh-client-resources/client'
 import type {} from '@deepseek-ai/dsh-api-workspace-files/client'
 import { pathPartsOf } from '@deepseek-ai/dsh-util-workspace-path'
 import type { OfficeEditorHandle } from './adapter.ts'
+import type { OfficeCommandTarget } from './command-bridge.ts'
 import type { OfficePanelInjected } from './face.ts'
 import { DocumentPanel } from './DocumentPanel.tsx'
 import type { OfficeDocumentEntry } from './DocumentPanel.tsx'
 import type { OfficeDocumentFailureCode } from './useOfficeDocument.ts'
 import { useOfficeDocument } from './useOfficeDocument.ts'
 import { OFFICE_KIND, basenameOf } from './definition.ts'
-import { openTargetOf, workspaceRootOf } from './target.ts'
+import { openTargetOf, officeDocumentIdentity, workspaceRootOf } from './target.ts'
 import type { OfficeEditorKey } from './locales.ts'
 import css from './OfficePanel.module.css'
 
@@ -66,7 +67,7 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
  * @returns the file name, the open-document list, save and warning state, and the mounted editor surface.
  */
 export function OfficePanel({
-  useTabInfo, useResource, useSidebarTabs, useLegacyNotice, mountEditor, markTabDirty, dismissCloseWarning,
+  useTabInfo, useResource, useSidebarTabs, useLegacyNotice, mountEditor, attachCommandBridge, markTabDirty, dismissCloseWarning,
   rememberLegacySource, dismissLegacyNotice, useOfficeTab, remote, t,
 }: OfficePanelProps): ReactNode {
   const { tab } = useTabInfo()
@@ -108,10 +109,32 @@ export function OfficePanel({
   }, [tab.actions])
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const handleRef = useRef<OfficeEditorHandle | null>(null)
+  const versionRef = useRef(0)
   const [mountFailed, setMountFailed] = useState(false)
   const name = meta.value === undefined ? tab.title : pathPartsOf(meta.value.absolutePath).name
   const docRef = useRef(doc)
   docRef.current = doc
+  const commandTarget = useMemo<OfficeCommandTarget>(() => ({
+    documentId: officeDocumentIdentity(target.sessionId, target.path),
+    version: () => versionRef.current,
+    isOpen: () => handleRef.current !== null,
+    isDirty: () => handleRef.current?.isDirty() ?? false,
+    unsupported: () => docRef.current.unsupported,
+    apply: (operation) => {
+      const handle = handleRef.current
+      if (handle === null) {
+        return { status: 'unsupported-feature', features: [{ kind: 'other', detail: 'editor is not mounted' }] }
+      }
+      const outcome = handle.apply(operation)
+      if (outcome.status === 'applied') versionRef.current += 1
+      return outcome
+    },
+    snapshot: () => handleRef.current?.getSnapshot(),
+  }), [target.sessionId, target.path])
+  useEffect(
+    () => attachCommandBridge(target.sessionId, commandTarget),
+    [attachCommandBridge, commandTarget, target.sessionId],
+  )
   const onChange = useCallback((): void => { markTabDirty(tab.id, true) }, [markTabDirty, tab.id])
   const onEdit = useCallback((): void => {
     const live = handleRef.current?.getSnapshot()
@@ -124,6 +147,7 @@ export function OfficePanel({
     if (container === null || snapshot === undefined) return
     let live = true
     let handle: OfficeEditorHandle | undefined
+    versionRef.current = 0
     setMountFailed(false)
     void mountEditor(container, { kind: snapshot.kind, snapshot, onChange, onEdit }).then((mounted) => {
       if (!live) {
@@ -147,6 +171,7 @@ export function OfficePanel({
   const persist = useCallback((closeAfter: boolean): void => {
     void doc.save(handleRef.current?.getSnapshot()).then((outcome) => {
       if (outcome !== 'saved') return
+      versionRef.current += 1
       handleRef.current?.clearDirty()
       markTabDirty(tab.id, false)
       if (closeAfter) tab.actions.close()

@@ -27,8 +27,9 @@ describe('officePanelInjected', () => {
     const writeDraft = vi.fn()
     const readDraft = vi.fn()
     const clearDraft = vi.fn()
+    const attachCommandBridge = vi.fn(() => () => {})
     const face = officePanelInjected({
-      read, convert, save, writeDraft, readDraft, clearDraft, adapter, changes, notices, openTabs,
+      read, convert, save, writeDraft, readDraft, clearDraft, adapter, attachCommandBridge, changes, notices, openTabs,
     })
     await face.remote.read(brandString<SessionId>('s-1'), 'work/budget.xlsx')
     await face.remote.convertLegacy(brandString<SessionId>('s-1'), 'work/legacy.doc')
@@ -46,6 +47,7 @@ describe('officePanelInjected', () => {
     const handle = await face.mountEditor(container, { kind: 'workbook', snapshot, onChange: vi.fn() })
     expect(adapter.mounts).toHaveLength(1)
     expect(handle.getSnapshot()).toBe(snapshot)
+    expect(face.attachCommandBridge).toBe(attachCommandBridge)
     face.markTabDirty(TAB, true)
     expect(changes.isDirty(TAB)).toBe(true)
     face.dismissCloseWarning(TAB)

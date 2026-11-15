@@ -9,6 +9,12 @@
  * same-version change because a reader that predates these types refuses the
  * Session at admission against `KNOWN_SESSION_EVENT_TYPES` instead of silently
  * dropping required facts, so `SESSION_FORMAT_VERSION` stays unchanged.
+ *
+ * `document/command` is a correlated request rather than an accepted change.
+ * Its loss cannot corrupt the reconstructed document content: the accepted
+ * result is `document/edit`, which carries the operation and its inverse. It is
+ * still a known required event so a reader cannot resume a Session that holds
+ * an unanswered request without understanding that type.
  */
 
 import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
@@ -55,6 +61,62 @@ export interface DocumentParagraphEdit {
   readonly text: string
 }
 
+/**
+ * One row insertion or deletion in a spreadsheet. `row` is the first affected
+ * zero-based index; `count` rows move or are removed as one step so undo costs
+ * do not grow with the number of edited cells.
+ */
+export interface DocumentRowEdit {
+  /** Sheet identity inside the workbook snapshot. */
+  readonly sheetId: string
+  /** Zero-based index of the first affected row. */
+  readonly row: number
+  /** Number of rows inserted or deleted. */
+  readonly count: number
+  /** Whether the rows are inserted before `row` or deleted from `row`. */
+  readonly action: 'insert' | 'delete'
+}
+
+/** One column insertion or deletion in a spreadsheet. */
+export interface DocumentColumnEdit {
+  /** Sheet identity inside the workbook snapshot. */
+  readonly sheetId: string
+  /** Zero-based index of the first affected column. */
+  readonly column: number
+  /** Number of columns inserted or deleted. */
+  readonly count: number
+  /** Whether the columns are inserted before `column` or deleted from `column`. */
+  readonly action: 'insert' | 'delete'
+}
+
+/** One formula assignment to a spreadsheet cell. */
+export interface DocumentFormulaEdit {
+  /** Sheet identity inside the workbook snapshot. */
+  readonly sheetId: string
+  /** Zero-based row index in that sheet. */
+  readonly row: number
+  /** Zero-based column index in that sheet. */
+  readonly column: number
+  /** Formula text after the edit, or `null` to clear the formula. */
+  readonly formula: string | null
+}
+
+/** One style assignment over a rectangular spreadsheet range. */
+export interface DocumentStyleEdit {
+  /** Sheet identity inside the workbook snapshot. */
+  readonly sheetId: string
+  /** Zero-based first row of the range, inclusive. */
+  readonly startRow: number
+  /** Zero-based first column of the range, inclusive. */
+  readonly startColumn: number
+  /** Zero-based last row of the range, inclusive. */
+  readonly endRow: number
+  /** Zero-based last column of the range, inclusive. */
+  readonly endColumn: number
+  /** JSON style object applied to every cell in the range. */
+  readonly style: JsonValue
+}
+
 /** One primitive change in a document edit or its inverse. */
 export type DocumentEditStep =
   | ({
@@ -65,13 +127,70 @@ export type DocumentEditStep =
     /** Marks a paragraph replacement. */
     readonly kind: 'paragraph'
   } & DocumentParagraphEdit)
+  | ({
+    /** Marks a spreadsheet row insertion or deletion. */
+    readonly kind: 'row'
+  } & DocumentRowEdit)
+  | ({
+    /** Marks a spreadsheet column insertion or deletion. */
+    readonly kind: 'column'
+  } & DocumentColumnEdit)
+  | ({
+    /** Marks a spreadsheet formula assignment. */
+    readonly kind: 'formula'
+  } & DocumentFormulaEdit)
+  | ({
+    /** Marks a spreadsheet style assignment over a range. */
+    readonly kind: 'style'
+  } & DocumentStyleEdit)
 
 /**
  * Structured, JSON-serializable content change stored by `document/edit`.
  * `document/edit` carries both this operation and its inverse instead of a raw
  * unit snapshot, so document undo is reconstructable from the Session log.
+ *
+ * The step union grows additively: a row or column change stays one step
+ * instead of expanding into one step per affected cell.
  */
 export type DocumentEditOperation = readonly DocumentEditStep[]
+
+/**
+ * One operation dispatched to the live editor unit.
+ *
+ * A read requests the current unit without changing it; an edit carries the
+ * same steps a `document/edit` fact stores. The command never carries a unit
+ * snapshot, so a persisted request cannot duplicate document content.
+ */
+export type DocumentCommandOperation =
+  | {
+    /** Requests the live unit's current state without editing it. */
+    readonly kind: 'read'
+  }
+  | {
+    /** Applies edit steps to the live unit. */
+    readonly kind: 'edit'
+    /** Steps to apply, in order. */
+    readonly steps: DocumentEditOperation
+  }
+
+/**
+ * Payload of `document/command`: a correlated request for the live editor.
+ *
+ * The Host appends one command and waits for the matching
+ * `officeDocument.completeCommand` result. The command is a request, not an
+ * accepted change: only a successful save appends `document/edit`, so a
+ * command that times out or is refused leaves no content fact behind.
+ */
+export interface DocumentCommandEventData {
+  /** Correlation id chosen by the Host for this request. */
+  readonly requestId: string
+  /** Stable identity of the open document the request targets. */
+  readonly documentId: DocumentId
+  /** Operation the live editor applies or answers. */
+  readonly operation: DocumentCommandOperation
+  /** Document content version the caller believes the live unit holds. */
+  readonly fromVersion: number
+}
 
 /** Payload of `document/open`: a document became open in the authorizing Session. */
 export interface DocumentOpenEventData {
@@ -168,5 +287,11 @@ declare module '@deepseek-ai/dsh-session/types' {
      * The document left the open set. The fact does not delete earlier history.
      */
     'document/close': DocumentCloseEventData
+    /**
+     * A correlated request for the live editor unit: apply edit steps or read
+     * the current state. The command is not an accepted change; only a
+     * successful save appends `document/edit`.
+     */
+    'document/command': DocumentCommandEventData
   }
 }

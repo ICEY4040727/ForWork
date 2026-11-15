@@ -7,6 +7,7 @@
 
 // Import the protocol module so the declaration at the end of this file
 // augments its error map rather than defining an unrelated ambient module.
+import type { DocumentCommandOperation } from '@deepseek-ai/dsh-session/types'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import type {} from '@deepseek-ai/dsh-typert-protocol'
 
@@ -109,6 +110,69 @@ export interface OfficeDocumentDraftWriteResult {
   readonly savedAt: string
 }
 
+/**
+ * One operation a Host tool dispatches to the live editor unit through the
+ * `document/command` bridge. A read asks for the current unit; an edit applies
+ * the same structured steps a `document/edit` fact stores.
+ */
+export type OfficeCommandOperation = DocumentCommandOperation
+
+/**
+ * The live editor's answer to one command.
+ *
+ * `contentVersion` is the document's numeric content version: it starts at 0
+ * when the document opens and advances by one for each accepted save. A
+ * `read` or `applied` answer reports the live value so the Host can hand the
+ * next command a current `fromVersion`.
+ */
+export type OfficeCommandResult =
+  | {
+    /** The live unit was read without changing it. */
+    readonly status: 'read'
+    /** Current editable content. */
+    readonly snapshot: OfficeDocumentSnapshot
+    /** Live document content version. */
+    readonly contentVersion: number
+  }
+  | {
+    /** The operation was applied to the live unit; nothing is saved yet. */
+    readonly status: 'applied'
+    /** Editable content after the operation. */
+    readonly snapshot: OfficeDocumentSnapshot
+    /** Live document content version after the operation. */
+    readonly contentVersion: number
+  }
+  | {
+    /** The live unit holds unsaved user edits, so an agent save is refused. */
+    readonly status: 'pending-edits'
+  }
+  | {
+    /** The live unit's version differs from the command's `fromVersion`. */
+    readonly status: 'conflict'
+    /** Live document content version. */
+    readonly currentVersion: number
+  }
+  | {
+    /** Applying or saving the operation would drop unsupported content. */
+    readonly status: 'unsupported-feature'
+    /** Features the editable model cannot preserve. */
+    readonly features: readonly UnsupportedFeature[]
+  }
+  | {
+    /** No live editor instance matched the document. */
+    readonly status: 'document-not-open'
+  }
+
+/**
+ * The Host-side outcome of one command: the editor's answer or the elapsed
+ * timeout. A timeout writes nothing and is reported as the tool's `timeout`
+ * failure rather than a live-editor status.
+ */
+export type OfficeCommandOutcome = OfficeCommandResult | {
+  /** No result arrived before the configured timeout. */
+  readonly status: 'timeout'
+}
+
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
     /** The extension or file content is not an editable Office format. */
@@ -121,6 +185,8 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'office-document/bound-exceeded': { readonly path: string }
     /** Parsing, serialization, or legacy conversion failed. */
     'office-document/conversion-failed': { readonly path: string }
+    /** The file does not exist or is not a regular file. */
+    'office-document/not-found': { readonly path: string }
     /** The file changed after the caller read it, so the guarded save was refused. */
     'office-document/conflict': { readonly path: string }
   }

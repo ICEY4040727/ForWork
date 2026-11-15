@@ -32,7 +32,7 @@ import type {
 } from '@deepseek-ai/dsh-office-exchange/types'
 import { externalChangeVerdict } from './changes.ts'
 import { createDraftScheduler } from './drafts.ts'
-import { convertedAddress, legacyFormatOf } from './target.ts'
+import { convertedAddress, legacyFormatOf, officeDocumentIdentity } from './target.ts'
 
 /** The `officeDocument` Remote methods this hook calls. */
 export interface OfficeDocumentRemote {
@@ -307,7 +307,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
   rootRef.current = workspaceRoot
   statusRef.current = state.status
   versionRef.current = state.version
-  const documentId = useMemo(() => `${sessionId}:${path}`, [sessionId, path])
+  const documentId = useMemo(() => officeDocumentIdentity(sessionId, path), [sessionId, path])
 
   const reportDraftError = useCallback((failure: RemoteFailure): void => {
     setDraftError(mapOfficeFailure(failure))

@@ -7,9 +7,20 @@ import { UniverDocsCorePreset } from '@univerjs/preset-docs-core'
 import UniverDocsCoreEnUS from '@univerjs/preset-docs-core/locales/en-US'
 import '@univerjs/preset-docs-core/lib/index.css'
 import { createUniver } from '@univerjs/presets'
+import type { DocumentEditOperation } from '@deepseek-ai/dsh-session/src/document-events.ts'
+import type { OfficeApplyOutcome } from '../command-bridge.ts'
 import type { OfficeRuntime, OfficeRuntimeMount } from '../adapter.ts'
 import { nativeHistory } from '../undo.ts'
 import { documentData, jsonValueOf, localePack } from '../wire.ts'
+
+/**
+ * Refuse an operation the docs runtime cannot apply.
+ * @param detail - the unsupported step or value.
+ * @returns the refusal carrying the dropped content.
+ */
+function unsupported(detail: string): OfficeApplyOutcome {
+  return { status: 'unsupported-feature', features: [{ kind: 'other', detail }] }
+}
 
 /**
  * Mount a word-processing document into one container.
@@ -45,6 +56,18 @@ export function mount(input: OfficeRuntimeMount): Promise<OfficeRuntime> {
   ]
   return Promise.resolve({
     getSnapshot: () => ({ kind: 'document', data: jsonValueOf(unit.save()) }),
+    apply(operation: DocumentEditOperation): OfficeApplyOutcome {
+      const paragraphs = unit.getParagraphs()
+      const targets: { paragraph: (typeof paragraphs)[number]; text: string }[] = []
+      for (const step of operation) {
+        if (step.kind !== 'paragraph') return unsupported(step.kind)
+        const paragraph = paragraphs[step.index]
+        if (paragraph === undefined) return unsupported(`paragraph ${step.index}`)
+        targets.push({ paragraph, text: step.text })
+      }
+      for (const target of targets) target.paragraph.setText(target.text)
+      return { status: 'applied' }
+    },
     undo: () => { history.undo() },
     redo: () => { history.redo() },
     onMutation(listener) {

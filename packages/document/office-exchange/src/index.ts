@@ -9,6 +9,8 @@
 
 export { assertWithinRoots } from './authority.ts'
 export type { WriteRoots } from './authority.ts'
+export { OfficeCommandBroker } from './commands.ts'
+export type { DocumentCommandRequest } from './commands.ts'
 export { OfficeExchange } from './service.ts'
 export { OfficeExchangeError } from './errors.ts'
 export type { OfficeExchangeErrorCode } from './errors.ts'
@@ -20,6 +22,9 @@ export type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
 export type {
   EditableOfficeFormat,
   LegacyOfficeFormat,
+  OfficeCommandOperation,
+  OfficeCommandOutcome,
+  OfficeCommandResult,
   OfficeDocumentDraft,
   OfficeDocumentDraftWriteResult,
   OfficeDocumentReadResult,

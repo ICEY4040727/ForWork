@@ -315,6 +315,11 @@
       config:
         sampleOverCapGlobResults: false
 
+    # Office document tools: correlated Host commands to the live editor plus
+    # one immediate version-guarded save per accepted agent edit.
+    - id: tool-office
+      name: '@deepseek-ai/dsh-tool-office'
+
     - id: agent-instructions
       name: '@deepseek-ai/dsh-agent-instructions'
       config:

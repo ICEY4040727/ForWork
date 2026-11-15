@@ -19,6 +19,11 @@ const INVALID_BOUNDS: readonly Partial<OfficeExchangeConfig>[] = [
   { maxConversionMs: Number.NaN },
   { maxConversionMs: Number.POSITIVE_INFINITY },
   { maxConversionMs: 0.5 },
+  { commandTimeoutMs: 0 },
+  { commandTimeoutMs: -1 },
+  { commandTimeoutMs: Number.NaN },
+  { commandTimeoutMs: Number.POSITIVE_INFINITY },
+  { commandTimeoutMs: 0.5 },
 ]
 
 function messageOf(overrides: Partial<OfficeExchangeConfig>): string {
@@ -36,6 +41,7 @@ it('resolves the default bounds when nothing is overridden', () => {
     maxFileBytes: 25 * 1024 * 1024,
     maxCells: 2_000_000,
     maxConversionMs: 60_000,
+    commandTimeoutMs: 5_000,
   })
 })
 
@@ -44,19 +50,22 @@ it('merges each override over the defaults', () => {
     maxFileBytes: 25 * 1024 * 1024,
     maxCells: 10,
     maxConversionMs: 60_000,
+    commandTimeoutMs: 5_000,
   })
   expect(resolveConfig({ maxFileBytes: 1_024, maxConversionMs: 5 })).toEqual({
     maxFileBytes: 1_024,
     maxCells: 2_000_000,
     maxConversionMs: 5,
+    commandTimeoutMs: 5_000,
   })
 })
 
 it('accepts positive integer bounds', () => {
-  expect(resolveConfig({ maxFileBytes: 1, maxCells: 1, maxConversionMs: 1 })).toEqual({
+  expect(resolveConfig({ maxFileBytes: 1, maxCells: 1, maxConversionMs: 1, commandTimeoutMs: 1 })).toEqual({
     maxFileBytes: 1,
     maxCells: 1,
     maxConversionMs: 1,
+    commandTimeoutMs: 1,
   })
 })
 
@@ -66,6 +75,7 @@ it('does not mutate the defaults', () => {
     maxFileBytes: 25 * 1024 * 1024,
     maxCells: 2_000_000,
     maxConversionMs: 60_000,
+    commandTimeoutMs: 5_000,
   })
 })
 

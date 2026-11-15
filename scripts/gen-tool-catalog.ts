@@ -63,6 +63,8 @@ import TerminalSessionService from '@deepseek-ai/dsh-terminal'
 import * as ToolPty from '@deepseek-ai/dsh-tool-terminal'
 import * as ToolGoal from '@deepseek-ai/dsh-tool-goal'
 import * as ToolSchedule from '@deepseek-ai/dsh-tool-schedule'
+import * as ToolOffice from '@deepseek-ai/dsh-tool-office'
+import type { OfficeDocumentRemote } from '@deepseek-ai/dsh-office-exchange'
 import ScheduleService from '@deepseek-ai/dsh-schedule'
 import Lsp from '@deepseek-ai/dsh-lsp'
 import * as ToolLsp from '@deepseek-ai/dsh-tool-lsp'
@@ -471,6 +473,20 @@ const TOOL_PACKAGES: ToolPackage[] = [
     },
     note:
       'create, edit, pause, and resume require direct-human root authority; complete and blocked also accept the exact current goal round. The default blocked lower bound is three admitted rounds.',
+  },
+  {
+    pkg: '@deepseek-ai/dsh-tool-office',
+    dir: 'tool-office',
+    source: 'packages/document/tool-office/src/index.ts',
+    requires: ['ctx.tools', 'ctx.officeDocument and its command broker', 'a calling Agent with a workspace root'],
+    writes: ['tool/call', 'document/command before a live-editor operation', 'document/edit after an accepted save', 'tool/result'],
+    async mount(ctx) {
+      // Schema harvest never executes a tool; the Remote is a stub that is never called.
+      ctx.provide('officeDocument', {} as OfficeDocumentRemote)
+      await ctx.plugin(ToolOffice)
+    },
+    note:
+      'Reads and edits require a live editor instance; a headless Session refuses with document-not-open instead of editing a detached file. The Host performs one version-guarded save per accepted edit and records the operation with its inverse.',
   },
   {
     pkg: '@deepseek-ai/dsh-tool-schedule',

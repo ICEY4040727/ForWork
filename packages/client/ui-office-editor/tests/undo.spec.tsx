@@ -28,6 +28,7 @@ function historyRuntime(): {
   }
   const runtime: OfficeRuntime = {
     getSnapshot: () => states[index] ?? snapshot,
+    apply() { return { status: 'applied' } },
     undo() {
       if (index === 0) return
       index -= 1

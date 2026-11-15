@@ -7,9 +7,20 @@ import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
 import UniverSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US'
 import '@univerjs/preset-sheets-core/lib/index.css'
 import { createUniver } from '@univerjs/presets'
+import type { DocumentEditOperation } from '@deepseek-ai/dsh-session/src/document-events.ts'
+import type { OfficeApplyOutcome } from '../command-bridge.ts'
 import type { OfficeRuntime, OfficeRuntimeMount } from '../adapter.ts'
 import { nativeHistory } from '../undo.ts'
 import { jsonValueOf, localePack, workbookData } from '../wire.ts'
+
+/**
+ * Refuse an operation the sheets runtime cannot apply.
+ * @param detail - the unsupported step or value.
+ * @returns the refusal carrying the dropped content.
+ */
+function unsupported(detail: string): OfficeApplyOutcome {
+  return { status: 'unsupported-feature', features: [{ kind: 'other', detail }] }
+}
 
 /**
  * Mount a workbook into one container.
@@ -45,6 +56,30 @@ export function mount(input: OfficeRuntimeMount): Promise<OfficeRuntime> {
   ]
   return Promise.resolve({
     getSnapshot: () => ({ kind: 'workbook', data: jsonValueOf(workbook.save()) }),
+    apply(operation: DocumentEditOperation): OfficeApplyOutcome {
+      const cells: {
+        sheet: NonNullable<ReturnType<typeof workbook.getSheetBySheetId>>
+        row: number
+        column: number
+        value: string | number | boolean | null
+      }[] = []
+      for (const step of operation) {
+        if (step.kind !== 'cell') return unsupported(step.kind)
+        const { value } = step
+        if (value !== null && typeof value !== 'string' && typeof value !== 'number' && typeof value !== 'boolean') {
+          return unsupported(`cell value ${Array.isArray(value) ? 'array' : typeof value}`)
+        }
+        const sheet = workbook.getSheetBySheetId(step.sheetId)
+        if (sheet === null) return unsupported(`sheet ${step.sheetId}`)
+        cells.push({ sheet, row: step.row, column: step.column, value })
+      }
+      for (const cell of cells) {
+        const range = cell.sheet.getRange(cell.row, cell.column)
+        if (cell.value === null) range.setValue({ v: null, f: null, p: null })
+        else range.setValue(cell.value)
+      }
+      return { status: 'applied' }
+    },
     undo: () => { history.undo() },
     redo: () => { history.redo() },
     onMutation(listener) {

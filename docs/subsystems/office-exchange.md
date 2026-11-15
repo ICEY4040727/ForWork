@@ -59,6 +59,54 @@ The Remote maps seam and filesystem failures onto stable Remote codes: `unsuppor
 
 Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnpm run verify-cordis-catalog` in doc-sync; regenerate with `pnpm run gen-cordis-catalog`) — the language sides differ only in locale-specific paired document paths. Signature blocks use a `ts cordis-catalog` fence and keep the original source JSDoc; dispatch modes are defined in the [primer](../cordis-primer.md#dispatch-modes), and the framework-inherited `ctx` API lives in [cordis-api/inherited.md](../cordis-api/inherited.md).
 
+<a id="ctxofficecommandbroker--officecommandbroker"></a>
+
+### `ctx.officeCommandBroker` — `OfficeCommandBroker`
+
+Owns pending document commands and the last observed content version per document. One instance serves every Session in its composition; a result is accepted only for the Session that recorded the request.
+
+```ts cordis-catalog
+/**
+ * Append one `document/command` request and wait for the live editor's
+ * answer.
+ * @param request - session, document, operation, and expected version.
+ * @param signal - caller cancellation; aborting withdraws the pending request.
+ * @returns the editor's result, or `timeout` when no answer arrived in time.
+ * @throws the reason carried by an aborted `signal`, or an append failure.
+ */
+async request(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome>
+
+/**
+ * Resolve one pending request with the live editor's result.
+ *
+ * A result for an unknown request id, a request from another Session, or a
+ * request that already timed out is ignored and reported as a diagnostic;
+ * late answers never change durable state.
+ * @param scope - Session identity that produced the result.
+ * @param requestId - correlation id copied from the command event.
+ * @param result - the live editor's answer.
+ */
+complete(scope: WorkspaceFileScope, requestId: string, result: OfficeCommandResult): void
+
+/**
+ * Read the last content version reported for one document.
+ * @param documentId - stable identity of the document.
+ * @returns the last reported version, or `0` before any command reported one.
+ */
+versionOf(documentId: DocumentId): number
+
+/**
+ * Record the content version one document currently holds.
+ * @param documentId - stable identity of the document.
+ * @param version - non-negative version reported by the live editor.
+ */
+remember(documentId: DocumentId, version: number): void
+```
+
+Types: [DocumentId](core.md)
+
+Source: [`packages/document/office-exchange/src/commands.ts`](../../packages/document/office-exchange/src/commands.ts)
+
 <a id="ctxofficedocument--officedocumentremote"></a>
 
 ### `ctx.officeDocument` — `OfficeDocumentRemote`
@@ -140,6 +188,33 @@ Host Remote service backing the generated `remote.officeDocument` namespace. Rea
  * @throws RemoteError when the draft store is out of scope or its entry cannot be removed.
  */
 @Remote async clearDraft(workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal): Promise<void>
+
+/**
+ * Answer one pending document command with the live editor's result.
+ *
+ * A result for an unknown request id is ignored and logged by the broker;
+ * the call itself succeeds so a late or duplicate answer never becomes a
+ * transport error.
+ * @param workspaceFileScope - Session identity that ran the command on the wire.
+ * @param requestId - correlation id copied from the `document/command` event.
+ * @param result - the live editor's status and, for read or applied commands, content.
+ * @param signal - caller cancellation; an aborted call drops the answer.
+ * @throws RemoteError with `gateway/bad-request` when a reported version is not a non-negative safe integer.
+ */
+@Remote completeCommand( workspaceFileScope: WorkspaceFileScope, requestId: string, result: OfficeCommandResult, signal: AbortSignal, ): Promise<void>
+
+/**
+ * Dispatch one correlated command from a Host document tool.
+ *
+ * The broker appends `document/command` and waits for the live editor; this
+ * method is the Host-only entry point behind the tool's command executor and
+ * is not a Remote endpoint.
+ * @param request - session, document, operation, and expected version.
+ * @param signal - caller cancellation; aborting withdraws the pending request.
+ * @returns the editor's result, or `timeout` when no answer arrived in time.
+ * @throws RemoteError with `gateway/internal` when the broker is not mounted.
+ */
+async dispatchCommand(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome>
 ```
 
 Source: [`packages/document/office-exchange/src/remote.ts`](../../packages/document/office-exchange/src/remote.ts)

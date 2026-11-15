@@ -25,6 +25,7 @@ describe('OfficePanel recovery drafts', () => {
     remote.readDraft.mockResolvedValueOnce(success(draftAt('v1')))
     const view = fixture(remote)
     expect(await view.findByText(en.draftFound)).toBeDefined()
+    await waitFor(() => { expect(view.fixture.adapter.mounts).toHaveLength(1) })
     expect(view.fixture.adapter.mounts[0]?.snapshot).toBe(snapshot)
     fireEvent.click(view.getByText(en.recover))
     expect(view.queryByText(en.draftFound)).toBeNull()
@@ -96,6 +97,7 @@ describe('OfficePanel recovery drafts', () => {
         return Promise.resolve({
           dispose() { container.replaceChildren() },
           getSnapshot: () => input.snapshot,
+          apply() { return { status: 'applied' } },
           undo() {},
           redo() {},
           isDirty: () => false,

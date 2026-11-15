@@ -163,6 +163,7 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'pluginRegistryProbe/fastest': 'owner-only', // owner plugin registry probe
   'sessionReferenceResolver/candidates': 'owner-only', // owner composer reference resolution
   'officeDocument/clearDraft': 'owner-only', // owner Office editor; the draft store is owner workspace state
+  'officeDocument/completeCommand': 'owner-only', // owner Office editor; the live editor answers only the owner's Host command
   'officeDocument/convertLegacy': 'owner-only', // owner Office editor; conversion writes a copy beside the source
   'officeDocument/detectUnsupported': 'owner-only', // owner Office editor; readers hold no workspace document read
   'officeDocument/read': 'owner-only', // owner Office editor; readers hold no workspace document read

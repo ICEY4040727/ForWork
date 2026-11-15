@@ -12,6 +12,8 @@ export interface OfficeExchangeConfig {
   maxCells: number
   /** Longest allowed single conversion, in milliseconds. */
   maxConversionMs: number
+  /** Longest wait for a live editor to answer one document command, in milliseconds. */
+  commandTimeoutMs: number
 }
 
 /** Default bounds shared by providers that do not configure their own. */
@@ -19,6 +21,7 @@ export const DEFAULT_OFFICE_EXCHANGE_CONFIG: OfficeExchangeConfig = {
   maxFileBytes: 25 * 1024 * 1024,
   maxCells: 2_000_000,
   maxConversionMs: 60_000,
+  commandTimeoutMs: 5_000,
 }
 
 /**
@@ -32,10 +35,12 @@ export function resolveConfig(overrides: Partial<OfficeExchangeConfig>): OfficeE
     maxFileBytes: overrides.maxFileBytes ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.maxFileBytes,
     maxCells: overrides.maxCells ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.maxCells,
     maxConversionMs: overrides.maxConversionMs ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.maxConversionMs,
+    commandTimeoutMs: overrides.commandTimeoutMs ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.commandTimeoutMs,
   }
   assertPositiveInteger('maxFileBytes', config.maxFileBytes)
   assertPositiveInteger('maxCells', config.maxCells)
   assertPositiveInteger('maxConversionMs', config.maxConversionMs)
+  assertPositiveInteger('commandTimeoutMs', config.commandTimeoutMs)
   return config
 }
 

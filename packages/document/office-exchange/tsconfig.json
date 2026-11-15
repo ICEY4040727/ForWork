@@ -27,6 +27,9 @@
       "path": "../../api/workspace-files/tsconfig.host.json"
     },
     {
+      "path": "../../core/session"
+    },
+    {
       "path": "../../fs/fs"
     }
   ]

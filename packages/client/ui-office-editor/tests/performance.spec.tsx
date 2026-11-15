@@ -102,6 +102,7 @@ function recordingAdapter(mounted: OfficeSnapshot[]): OfficeAdapter {
       return {
         dispose() { delete container.dataset.officeMount },
         getSnapshot: () => input.snapshot,
+        apply() { return { status: 'applied' } },
         undo() {},
         redo() {},
         isDirty: () => false,

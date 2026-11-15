@@ -213,6 +213,7 @@ it('resolves defaults through the schema and rejects invalid bounds loudly', asy
     maxFileBytes: 25 * 1024 * 1024,
     maxCells: 2_000_000,
     maxConversionMs: 60_000,
+    commandTimeoutMs: 5_000,
   })
   expect(Config({ maxCells: 10 })).toMatchObject({ maxCells: 10, maxFileBytes: 25 * 1024 * 1024 })
   expect(() => Config({ maxCells: 0 })).toThrow()

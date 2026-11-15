@@ -1,6 +1,6 @@
 ---
 description: "Host-only document session primitives: stable identity bindings across rename and missing paths, and version-guarded attributable change records with their inverses."
-kind: "package-library"
+kind: "package-reference"
 ---
 
 # @deepseek-ai/dsh-session-document
@@ -95,7 +95,15 @@ Both modules are collections of pure functions over immutable values; every func
 <a id="model-experience"></a>
 ## Model Experience
 
-None directly; the document tools own their model-visible schemas and results, and this library adds no prompt or tool text.
+### Document transitions
+
+#### What the model sees
+
+Nothing directly; the document tools own their model-visible schemas and results for `document/edit`, and this library adds no prompt or tool text.
+
+#### Token effect
+
+Zero direct tokens; the library returns transition values to its callers and never assembles prompt content.
 
 #### KV Cache effect
 

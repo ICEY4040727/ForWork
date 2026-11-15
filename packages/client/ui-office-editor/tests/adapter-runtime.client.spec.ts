@@ -32,8 +32,15 @@ function fakeRuntime(): {
   const undo = vi.fn()
   const redo = vi.fn()
   const dispose = vi.fn()
+  const emit = (): void => {
+    for (const listener of [...listeners]) listener()
+  }
   const runtime: OfficeRuntime = {
     getSnapshot: () => edited,
+    apply: () => {
+      emit()
+      return { status: 'applied' }
+    },
     undo,
     redo,
     onMutation(listener) {
@@ -48,9 +55,7 @@ function fakeRuntime(): {
     undo,
     redo,
     dispose,
-    emit() {
-      for (const listener of [...listeners]) listener()
-    },
+    emit,
   }
 }
 
@@ -89,6 +94,12 @@ describe('createAdapter', () => {
     handle.redo()
     expect(fake.undo).toHaveBeenCalledOnce()
     expect(fake.redo).toHaveBeenCalledOnce()
+    handle.clearDirty()
+    expect(handle.apply([{ kind: 'cell', sheetId: 'sheet-1', row: 0, column: 0, value: 1 }]))
+      .toEqual({ status: 'applied' })
+    expect(handle.isDirty()).toBe(false)
+    expect(onChange).toHaveBeenCalledTimes(2)
+    expect(onEdit).toHaveBeenCalledTimes(3)
   })
 
   it('disposes the runtime, unsubscribes mutations, and clears the container', async () => {
@@ -133,6 +144,9 @@ describe('createMockAdapter', () => {
     expect(onChange).toHaveBeenCalledTimes(2)
     handle.undo()
     handle.redo()
+    const operation = [{ kind: 'paragraph' as const, index: 0, text: 'Hello' }]
+    expect(handle.apply(operation)).toEqual({ status: 'applied' })
+    expect(adapter.applied).toEqual([operation])
     expect(handle.getSnapshot()).toBe(snapshot)
     handle.dispose()
     expect(container.dataset.officeMount).toBeUndefined()

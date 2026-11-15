@@ -34,6 +34,7 @@ await ctx.plugin(LocalOfficeExchange, {
   maxFileBytes: 25 * 1024 * 1024,
   maxCells: 2_000_000,
   maxConversionMs: 60_000,
+  commandTimeoutMs: 5_000,
 })
 
 const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, signal)
@@ -62,6 +63,9 @@ The plugin also mounts `ctx.officeDocument`, a session-scoped Remote surface ove
 - `writeDraft(workspaceFileScope, documentId, documentPath, contentVersion, snapshot)` persists one recovery draft and returns `{ savedAt }`. The draft lives at `<workspaceRoot>/.dsh/office-tmp/drafts/<sha256(documentId)>.json`; the digest keeps a caller-chosen id from naming a path outside the draft directory. It replaces an existing draft and never writes the document path itself.
 - `readDraft(workspaceFileScope, documentId)` returns `{ documentId, path, contentVersion, snapshot, savedAt }`, or `null` when the document has no draft. A malformed draft rejects as `office-document/conversion-failed`.
 - `clearDraft(workspaceFileScope, documentId)` removes the draft; clearing a document without a draft is a no-op.
+- `completeCommand(workspaceFileScope, requestId, result)` resolves one pending correlated command with the live editor's answer. The provider also mounts `ctx.officeCommandBroker`, the service that owns pending requests, their timeout (`commandTimeoutMs`), and the last observed numeric content version per document. A result for an unknown, late, or other-Session request is ignored and logged, never applied.
+
+`completeCommand` answers a `document/command` Session event appended by the Host tool layer; this package does not append that event itself. The result union is `read`, `applied`, `pending-edits`, `conflict`, `unsupported-feature`, or `document-not-open`; a read or applied answer carries the live snapshot and numeric content version, and a conflict carries `currentVersion`. The Host writes files only after an `applied` answer.
 
 Drafts are version-bound: the record carries the `contentVersion` the snapshot was captured from, so a restore path can compare it with the file's current version before offering recovery. Both the draft directory and the resolved draft file pass `assertWithinRoots`, so a link that points outside the workspace root is refused rather than written through.
 
@@ -79,7 +83,7 @@ Failures are `OfficeExchangeError` values with a stable `code`. Reads that canno
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-`src/service.ts` declares the abstract `OfficeExchange` service, the context augmentation, and the seam vocabulary re-exported by the package entry. `src/types.ts` holds the JSON-safe wire and seam vocabulary; `src/snapshots.ts` holds the Univer snapshot types so a Remote Client never loads the editor core. `src/remote.ts` implements the `officeDocument` Remote surface: Session scope resolution, workspace confinement, version threading, the JSON projection, the workspace-scoped conversion directory, the recovery-draft store, and the remaining save guarantees. `src/provider/index.ts` implements `LocalOfficeExchange` on top of the pure `provider/xlsx.ts`, `provider/docx.ts`, `provider/detect.ts`, and `provider/legacy.ts` modules: it owns file reads, format dispatch, typed read failures, caller-directed legacy conversion directories, and the validated `Config` schema. The office editor and agent tools remain consumers; this package registers no tool and emits no session event.
+`src/service.ts` declares the abstract `OfficeExchange` service, the context augmentation, and the seam vocabulary re-exported by the package entry. `src/types.ts` holds the JSON-safe wire and seam vocabulary; `src/snapshots.ts` holds the Univer snapshot types so a Remote Client never loads the editor core. `src/remote.ts` implements the `officeDocument` Remote surface: Session scope resolution, workspace confinement, version threading, the JSON projection, the workspace-scoped conversion directory, the recovery-draft store, command dispatch and completion, and the remaining save guarantees. `src/commands.ts` owns the `officeCommandBroker` service and its pending-request registry. `src/provider/index.ts` implements `LocalOfficeExchange` on top of the pure `provider/xlsx.ts`, `provider/docx.ts`, `provider/detect.ts`, and `provider/legacy.ts` modules: it owns file reads, format dispatch, typed read failures, caller-directed legacy conversion directories, and the validated `Config` schema. The office editor and agent tools remain consumers; this package registers no tool and emits no session event.
 
 </details>
 
@@ -96,7 +100,15 @@ Failures are `OfficeExchangeError` values with a stable `code`. Reads that canno
 <a id="model-experience"></a>
 ## Model Experience
 
-None directly; agent document tools consume the seam and own their model-visible schemas and results.
+### Exchange seam
+
+#### What the model sees
+
+Nothing directly; agent document tools consume `ctx.officeExchange` and own their model-visible schemas and results.
+
+#### Token effect
+
+Zero direct tokens; the seam returns snapshots and feature lists to its consumers and adds no prompt or result text.
 
 #### KV Cache effect
 

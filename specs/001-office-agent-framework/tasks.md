@@ -64,7 +64,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 >
 > Consistency pass (2026-11-14): save is the only version bump; an accepted agent tool call persists immediately and refuses mixed-actor saves (`pending-edits`); save-time unsupported refusal added as T074; T025/T065 merged; T056/T057 split into audit helper vs client native undo; **T077 owns the Host draft store, T040 orchestrates recovery, T070 captures in the client**; `Document Draft` added to the spec entities; "same file" clarified for legacy sources; SC-003 timing moved to the client suite.
 >
-> Progress (2026-11-14): **US1 implementation complete** except the long `test:web` run (T028). Delivered: T021/T022/T052/T072/T075 tab+patterns+adapter+bundle; T023/T024 Univer runtime (lazy); T025/T065 Remote-only hook; T026 external change/dirty close; T027 panel; T053/T073 legacy open+notice; T054 native undo; T055/T057/T058 perf/undo/visibility; T070 client drafts; T074 save refusal; T076 liveshare endpoints; T077 Host draft Remote; T078 host aggregate 177→0. Verified: 136 client tests with 100% client coverage, `tsc` host+client aggregates 0 errors, `test:gui` 13,227 pass (2 unrelated flaky specs pass alone), performance 29.9 ms open / 46.7 ms save for 10k cells. **T028 remains: `DSH_SNAPSHOT=replay pnpm run test:web` not yet executed.**
+> Progress (2026-11-15): **US2 implemented** — T029–T034 tools, T062 Host↔renderer command bridge (session `document/command` + `completeCommand`, 5 s timeout, pending-edits/conflict/not-open/unsupported), T071 operation union + persistence acknowledgement. Verified: 986 tests across core/session, session-document, office-exchange, tool-office, ui-office-editor (tool-office 100%), host/client aggregates 0 errors, oxlint, JSDoc, persistence/tool/cordis/config catalogs, product-use. **Pending verification: T028 `test:web`, T035 replayed tool snapshots.**
 
 ---
 
@@ -114,15 +114,15 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 
 **Independent Test**: Quickstart S3–S5 and S8.
 
-- [ ] T029 [P] [US2] Register `document_read`, `document_edit_cells`, `document_edit_paragraph`, `document_convert` with model-visible schemas in `packages/document/tool-office/src/index.ts`.
-- [ ] T071 [US2] Extend the `document/edit` operation union with row/column/formula/style kinds and record the same-version persistence acknowledgement in `packages/core/session/src/document-events.ts` and `docs/persistence-changes/`
-- [ ] T030 [US2] Implement `document_read` in `packages/document/tool-office/src/read.ts` per `contracts/tool-office.contract.md`.
-- [ ] T031 [US2] Implement `document_edit_cells` in `packages/document/tool-office/src/edit-cells.ts`: apply to the live unit, persist with one immediate version-guarded save, and reject stale versions and `pending-edits`.
-- [ ] T032 [P] [US2] Implement `document_edit_paragraph` in `packages/document/tool-office/src/edit-paragraph.ts` with the same live-unit apply, immediate save, and `pending-edits` rule.
-- [ ] T033 [P] [US2] Implement `document_convert` in `packages/document/tool-office/src/convert.ts`.
-- [ ] T034 [US2] Return structured `conflict`, `unsupported-feature`, `out-of-scope`, `document-missing`, `document-not-open`, `pending-edits`, `bound-exceeded` failures in `packages/document/tool-office/src/errors.ts`.
-- [ ] T035 [US2] Verify: session snapshots for tool output plus `corepack pnpm run test:coverage` for the tool package.
-- [ ] T062 [US2] Implement the Host→renderer command bridge: the Host tool sends a correlated gateway command (local IPC on desktop, no document bytes off-device), the renderer applies it to the live unit and returns the correlated result, with timeouts and `document-not-open` in `packages/client/ui-office-editor/src/client/command-bridge.ts`; test in `packages/client/ui-office-editor/tests/command-bridge.spec.tsx`.
+- [x] T029 [P] [US2] Register `document_read`, `document_edit_cells`, `document_edit_paragraph`, `document_convert` with model-visible schemas in `packages/document/tool-office/src/index.ts`.
+- [x] T071 [US2] Extend the `document/edit` operation union with row/column/formula/style kinds and record the same-version persistence acknowledgement in `packages/core/session/src/document-events.ts` and `docs/persistence-changes/`
+- [x] T030 [US2] Implement `document_read` in `packages/document/tool-office/src/read.ts` per `contracts/tool-office.contract.md`.
+- [x] T031 [US2] Implement `document_edit_cells` in `packages/document/tool-office/src/edit-cells.ts`: apply to the live unit, persist with one immediate version-guarded save, and reject stale versions and `pending-edits`.
+- [x] T032 [P] [US2] Implement `document_edit_paragraph` in `packages/document/tool-office/src/edit-paragraph.ts` with the same live-unit apply, immediate save, and `pending-edits` rule.
+- [x] T033 [P] [US2] Implement `document_convert` in `packages/document/tool-office/src/convert.ts`.
+- [x] T034 [US2] Return structured `conflict`, `unsupported-feature`, `out-of-scope`, `document-missing`, `document-not-open`, `pending-edits`, `bound-exceeded` failures in `packages/document/tool-office/src/errors.ts`.
+- [ ] T035 [US2] Verify: session snapshots for tool output plus `corepack pnpm run test:coverage` for the tool package. **Tool package coverage is 100%; the replayed session snapshot run is still pending.**
+- [x] T062 [US2] Implement the Host→renderer command bridge: the Host tool sends a correlated gateway command (local IPC on desktop, no document bytes off-device), the renderer applies it to the live unit and returns the correlated result, with timeouts and `document-not-open` in `packages/client/ui-office-editor/src/client/command-bridge.ts`; test in `packages/client/ui-office-editor/tests/command-bridge.spec.tsx`.
 - [ ] T056 [US2] Expose `ChangeRecord` inverse/audit helpers only; runtime undo/redo is the editor's native stack bound in T054, in `packages/session/session-document/src/undo.ts`
 - [x] T057 [P] [US2] Test undoing an agent edit through the native undo stack (SC-012) in `packages/client/ui-office-editor/tests/undo.spec.tsx`
 - [x] T058 [P] [US2] Add a timed agent-edit visibility test for SC-003 in `packages/client/ui-office-editor/tests/performance.spec.tsx`

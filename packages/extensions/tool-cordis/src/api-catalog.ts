@@ -2129,6 +2129,36 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'officeCommandBroker',
+    summary: 'Owns pending document commands and the last observed content version per document.',
+    description: 'Owns pending document commands and the last observed content version per document. One instance serves every Session in its composition; a result is accepted only for the Session that recorded the request.',
+    methods: [
+      {
+        signature: 'async request(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome>',
+        description: 'Append one `document/command` request and wait for the live editor\'s answer.',
+        parameters: [{ name: 'request', description: 'session, document, operation, and expected version.' }, { name: 'signal', description: 'caller cancellation; aborting withdraws the pending request.' }],
+        returns: 'the editor\'s result, or `timeout` when no answer arrived in time.',
+        throws: ['the reason carried by an aborted `signal`, or an append failure.'],
+      },
+      {
+        signature: 'complete(scope: WorkspaceFileScope, requestId: string, result: OfficeCommandResult): void',
+        description: 'Resolve one pending request with the live editor\'s result.\n\nA result for an unknown request id, a request from another Session, or a request that already timed out is ignored and reported as a diagnostic; late answers never change durable state.',
+        parameters: [{ name: 'scope', description: 'Session identity that produced the result.' }, { name: 'requestId', description: 'correlation id copied from the command event.' }, { name: 'result', description: 'the live editor\'s answer.' }],
+      },
+      {
+        signature: 'versionOf(documentId: DocumentId): number',
+        description: 'Read the last content version reported for one document.',
+        parameters: [{ name: 'documentId', description: 'stable identity of the document.' }],
+        returns: 'the last reported version, or `0` before any command reported one.',
+      },
+      {
+        signature: 'remember(documentId: DocumentId, version: number): void',
+        description: 'Record the content version one document currently holds.',
+        parameters: [{ name: 'documentId', description: 'stable identity of the document.' }, { name: 'version', description: 'non-negative version reported by the live editor.' }],
+      },
+    ],
+  },
+  {
     key: 'officeDocument',
     summary: 'Host Remote service backing the generated `remote.officeDocument` namespace.',
     description: 'Host Remote service backing the generated `remote.officeDocument` namespace. Reads return a JSON snapshot bound to the file\'s observed version; saves replace only that version, so a concurrent external edit is reported as a conflict rather than overwritten.',
@@ -2180,6 +2210,19 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Remove the recovery draft persisted for one open document.',
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'documentId', description: 'caller-owned identity of the open document; it selects the draft file.' }, { name: 'signal', description: 'caller cancellation.' }],
         throws: ['RemoteError when the draft store is out of scope or its entry cannot be removed.'],
+      },
+      {
+        signature: '@Remote completeCommand( workspaceFileScope: WorkspaceFileScope, requestId: string, result: OfficeCommandResult, signal: AbortSignal, ): Promise<void>',
+        description: 'Answer one pending document command with the live editor\'s result.\n\nA result for an unknown request id is ignored and logged by the broker; the call itself succeeds so a late or duplicate answer never becomes a transport error.',
+        parameters: [{ name: 'workspaceFileScope', description: 'Session identity that ran the command on the wire.' }, { name: 'requestId', description: 'correlation id copied from the `document/command` event.' }, { name: 'result', description: 'the live editor\'s status and, for read or applied commands, content.' }, { name: 'signal', description: 'caller cancellation; an aborted call drops the answer.' }],
+        throws: ['RemoteError with `gateway/bad-request` when a reported version is not a non-negative safe integer.'],
+      },
+      {
+        signature: 'async dispatchCommand(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome>',
+        description: 'Dispatch one correlated command from a Host document tool.\n\nThe broker appends `document/command` and waits for the live editor; this method is the Host-only entry point behind the tool\'s command executor and is not a Remote endpoint.',
+        parameters: [{ name: 'request', description: 'session, document, operation, and expected version.' }, { name: 'signal', description: 'caller cancellation; aborting withdraws the pending request.' }],
+        returns: 'the editor\'s result, or `timeout` when no answer arrived in time.',
+        throws: ['RemoteError with `gateway/internal` when the broker is not mounted.'],
       },
     ],
   },
@@ -6368,6 +6411,50 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface DirectoryRegistrationHandle {\n    (): void;\n    replace(entries: readonly LlmConfigurableProvider[]): void;\n}',
   },
   {
+    name: 'DocumentCellEdit',
+    declaration: 'export interface DocumentCellEdit {\n    readonly sheetId: string;\n    readonly row: number;\n    readonly column: number;\n    readonly value: JsonValue;\n}',
+  },
+  {
+    name: 'DocumentColumnEdit',
+    declaration: 'export interface DocumentColumnEdit {\n    readonly sheetId: string;\n    readonly column: number;\n    readonly count: number;\n    readonly action: \'insert\' | \'delete\';\n}',
+  },
+  {
+    name: 'DocumentCommandOperation',
+    declaration: 'export type DocumentCommandOperation = {\n    readonly kind: \'read\';\n} | {\n    readonly kind: \'edit\';\n    readonly steps: DocumentEditOperation;\n};',
+  },
+  {
+    name: 'DocumentCommandRequest',
+    declaration: 'export interface DocumentCommandRequest {\n    readonly session: Session;\n    readonly scope: WorkspaceFileScope;\n    readonly documentId: DocumentId;\n    readonly operation: DocumentCommandOperation;\n    readonly fromVersion: number;\n}',
+  },
+  {
+    name: 'DocumentEditOperation',
+    declaration: 'export type DocumentEditOperation = readonly DocumentEditStep[];',
+  },
+  {
+    name: 'DocumentEditStep',
+    declaration: 'export type DocumentEditStep = ({\n    readonly kind: \'cell\';\n} & DocumentCellEdit) | ({\n    readonly kind: \'paragraph\';\n} & DocumentParagraphEdit) | ({\n    readonly kind: \'row\';\n} & DocumentRowEdit) | ({\n    readonly kind: \'column\';\n} & DocumentColumnEdit) | ({\n    readonly kind: \'formula\';\n} & DocumentFormulaEdit) | ({\n    readonly kind: \'style\';\n} & DocumentStyleEdit);',
+  },
+  {
+    name: 'DocumentFormulaEdit',
+    declaration: 'export interface DocumentFormulaEdit {\n    readonly sheetId: string;\n    readonly row: number;\n    readonly column: number;\n    readonly formula: string | null;\n}',
+  },
+  {
+    name: 'DocumentId',
+    declaration: 'export type DocumentId = Branded<\'DocumentId\'>;',
+  },
+  {
+    name: 'DocumentParagraphEdit',
+    declaration: 'export interface DocumentParagraphEdit {\n    readonly index: number;\n    readonly text: string;\n}',
+  },
+  {
+    name: 'DocumentRowEdit',
+    declaration: 'export interface DocumentRowEdit {\n    readonly sheetId: string;\n    readonly row: number;\n    readonly count: number;\n    readonly action: \'insert\' | \'delete\';\n}',
+  },
+  {
+    name: 'DocumentStyleEdit',
+    declaration: 'export interface DocumentStyleEdit {\n    readonly sheetId: string;\n    readonly startRow: number;\n    readonly startColumn: number;\n    readonly endRow: number;\n    readonly endColumn: number;\n    readonly style: JsonValue;\n}',
+  },
+  {
     name: 'Domain',
     declaration: 'export interface Domain<S extends DomainSpec> {\n    readonly name: string;\n    readonly global: DomainGlobalHandleOf<S>;\n    table<N extends keyof S[\'tables\'] & string>(name: N): KvTable<TableKeyOf<S, N>, TableValueOf<S, N>>;\n    close(): Promise<void>;\n}',
   },
@@ -7502,6 +7589,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ObjectJsonSchema',
     declaration: 'export type ObjectJsonSchema = JsonSchemaNode & {\n    type: \'object\';\n};',
+  },
+  {
+    name: 'OfficeCommandOutcome',
+    declaration: 'export type OfficeCommandOutcome = OfficeCommandResult | {\n    readonly status: \'timeout\';\n};',
+  },
+  {
+    name: 'OfficeCommandResult',
+    declaration: 'export type OfficeCommandResult = {\n    readonly status: \'read\';\n    readonly snapshot: OfficeDocumentSnapshot;\n    readonly contentVersion: number;\n} | {\n    readonly status: \'applied\';\n    readonly snapshot: OfficeDocumentSnapshot;\n    readonly contentVersion: number;\n} | {\n    readonly status: \'pending-edits\';\n} | {\n    readonly status: \'conflict\';\n    readonly currentVersion: number;\n} | {\n    readonly status: \'unsupported-feature\';\n    readonly features: readonly UnsupportedFeature[];\n} | {\n    readonly status: \'document-not-open\';\n};',
   },
   {
     name: 'OfficeDocumentDraft',

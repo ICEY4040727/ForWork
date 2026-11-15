@@ -19,11 +19,14 @@ import type { FileSystem, FsInfo, FsTarget, FsVersion } from '@deepseek-ai/dsh-f
 import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import type { JsonValue } from '@deepseek-ai/dsh-util-values'
 import { assertWithinRoots } from './authority.ts'
+import type { DocumentCommandRequest, OfficeCommandBroker } from './commands.ts'
 import { DEFAULT_OFFICE_EXCHANGE_CONFIG } from './config.ts'
 import { OfficeExchangeError } from './errors.ts'
 import type { OfficeExchange } from './service.ts'
 import type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
 import type {
+  OfficeCommandOutcome,
+  OfficeCommandResult,
   OfficeDocumentDraft,
   OfficeDocumentDraftWriteResult,
   OfficeDocumentReadResult,
@@ -268,6 +271,47 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   }
 
   /**
+   * Answer one pending document command with the live editor's result.
+   *
+   * A result for an unknown request id is ignored and logged by the broker;
+   * the call itself succeeds so a late or duplicate answer never becomes a
+   * transport error.
+   * @param workspaceFileScope - Session identity that ran the command on the wire.
+   * @param requestId - correlation id copied from the `document/command` event.
+   * @param result - the live editor's status and, for read or applied commands, content.
+   * @param signal - caller cancellation; an aborted call drops the answer.
+   * @throws RemoteError with `gateway/bad-request` when a reported version is not a non-negative safe integer.
+   */
+  @Remote
+  completeCommand(
+    workspaceFileScope: WorkspaceFileScope,
+    requestId: string,
+    result: OfficeCommandResult,
+    signal: AbortSignal,
+  ): Promise<void> {
+    if (signal.aborted) return Promise.resolve()
+    return Promise.resolve().then(() => {
+      assertCommandResult(result, requestId)
+      this.commands().complete(workspaceFileScope, requestId, result)
+    })
+  }
+
+  /**
+   * Dispatch one correlated command from a Host document tool.
+   *
+   * The broker appends `document/command` and waits for the live editor; this
+   * method is the Host-only entry point behind the tool's command executor and
+   * is not a Remote endpoint.
+   * @param request - session, document, operation, and expected version.
+   * @param signal - caller cancellation; aborting withdraws the pending request.
+   * @returns the editor's result, or `timeout` when no answer arrived in time.
+   * @throws RemoteError with `gateway/internal` when the broker is not mounted.
+   */
+  async dispatchCommand(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome> {
+    return await this.commands().request(request, signal)
+  }
+
+  /**
    * The draft file for one document identity: a digest keeps a caller-supplied
    * id from naming a path outside the draft directory.
    */
@@ -320,7 +364,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     const target = await this.confine(workspaceFileScope, path, signal)
     const info = await this.files().stat(target, signal)
     if (info === undefined || info.type !== 'file') {
-      throw new OfficeExchangeError('conversion-failed', `No regular file at "${path}".`)
+      throw new RemoteError('office-document/not-found', `No regular file at "${path}".`, { path })
     }
     return { target, info }
   }
@@ -344,6 +388,19 @@ export class OfficeDocumentRemote extends TypertRemoteService {
       )
     }
     return exchange
+  }
+
+  /** The correlated command broker, required for command dispatch and completion. */
+  private commands(): OfficeCommandBroker {
+    const broker = this.ctx.get('officeCommandBroker')
+    if (broker === undefined) {
+      throw new RemoteError(
+        'gateway/internal',
+        'officeCommandBroker is absent: mount @deepseek-ai/dsh-office-exchange in this composition',
+        {},
+      )
+    }
+    return broker
   }
 
   /** The filesystem seam, required for resolution, reads, versions, and saves. */
@@ -406,6 +463,34 @@ export class OfficeDocumentRemote extends TypertRemoteService {
 }
 
 export default OfficeDocumentRemote
+
+/** Require the version fields a command result reports to be non-negative safe integers. */
+function assertCommandResult(result: OfficeCommandResult, requestId: string): void {
+  switch (result.status) {
+    case 'read':
+    case 'applied':
+      assertCommandVersion(result.contentVersion, requestId, 'contentVersion')
+      return
+    case 'conflict':
+      assertCommandVersion(result.currentVersion, requestId, 'currentVersion')
+      return
+    case 'pending-edits':
+    case 'unsupported-feature':
+    case 'document-not-open':
+      return
+  }
+}
+
+/** Refuse a wire-reported version a document cannot hold. */
+function assertCommandVersion(version: number, requestId: string, field: string): void {
+  if (!Number.isSafeInteger(version) || version < 0) {
+    throw new RemoteError(
+      'gateway/bad-request',
+      `Document command "${requestId}" reported ${field} ${String(version)}.`,
+      { issues: [{ field, value: version }] },
+    )
+  }
+}
 
 /** The backend's stable failure code, recognized structurally across package copies. */
 function isFsCode(error: unknown, code: string): boolean {

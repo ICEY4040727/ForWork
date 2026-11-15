@@ -14,6 +14,7 @@
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
@@ -21,6 +22,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-office-exchange/remote'
 import { officeAdapter } from './adapter.ts'
 import { createOfficeTabChanges } from './changes.ts'
+import { attachSessionCommandBridge, type OfficeCommandRemote } from './command-bridge.ts'
 import { officePanelInjected } from './face.ts'
 import { createOfficeLegacyNotices } from './notices.ts'
 import { OfficePanel } from './OfficePanel.tsx'
@@ -40,8 +42,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-/** Required browser services: the tab registry, the slots, copy, the Remote, and close cleanup. */
-export const inject = ['slots', 'locale', 'sidebarRightTabs', 'sidebarRight', 'remote', 'remote.officeDocument']
+/** Required browser services: the tab registry, the slots, copy, the Session feed, the Remote, and close cleanup. */
+export const inject = ['slots', 'locale', 'sessions', 'sidebarRightTabs', 'sidebarRight', 'remote', 'remote.officeDocument']
 
 /**
  * Client plugin body: register the type, its dictionaries, its body and chip
@@ -51,6 +53,7 @@ export const inject = ['slots', 'locale', 'sidebarRightTabs', 'sidebarRight', 'r
 export function apply(ctx: ClientContext): void {
   const changes = createOfficeTabChanges()
   const notices = createOfficeLegacyNotices()
+  const commandRemote: OfficeCommandRemote = ctx.remote.officeDocument
   ctx.effect(() => ctx.sidebarRightTabs.register(officeDefinition()), 'ui-office-editor: type')
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-office-editor: dictionaries')
   ctx.effect(() => ctx.sidebarRight.registerCloseHandler(OFFICE_KIND, (_sessionId, tab) => {
@@ -78,6 +81,8 @@ export function apply(ctx: ClientContext): void {
         clearDraft: (sessionId, documentId, signal) =>
           ctx.remote.officeDocument.clearDraft(sessionId, documentId, signal),
         adapter: officeAdapter,
+        attachCommandBridge: (sessionId, target) =>
+          attachSessionCommandBridge(ctx.sessions.binding(sessionId), sessionId, target, commandRemote),
         changes,
         notices,
         openTabs: ctx.sidebarRight.openTabs,

@@ -27,6 +27,17 @@ export function openTargetOf(address: string): OfficeOpenTarget {
 }
 
 /**
+ * The caller-owned identity of one open document. The recovery-draft store and
+ * the command bridge share it so both name the same tab.
+ * @param sessionId - the Session whose workspace owns the file.
+ * @param path - the workspace path handed to the Remote.
+ * @returns the Session-local document identity.
+ */
+export function officeDocumentIdentity(sessionId: SessionId, path: string): string {
+  return `${sessionId}:${path}`
+}
+
+/**
  * The legacy format a path needs converted before it can be edited.
  * @param path - a workspace path, addressed or absolute.
  * @returns `doc`, `xls`, or `ppt` for a legacy binary source, `undefined` for an editable or unrelated file.

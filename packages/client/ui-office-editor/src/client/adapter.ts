@@ -8,6 +8,8 @@
  * replace the factory so jsdom never loads Univer.
  */
 import type { OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange/types'
+import type { DocumentEditOperation } from '@deepseek-ai/dsh-session/src/document-events.ts'
+import type { OfficeApplyOutcome } from './command-bridge.ts'
 import { loadOfficeRuntime } from './editor/load.ts'
 
 /** The unit kind an adapter opens, matching the `officeDocument` snapshot discriminant. */
@@ -42,6 +44,12 @@ export interface OfficeRuntimeMount {
 export interface OfficeRuntime {
   /** The edited unit as a Remote wire snapshot. */
   getSnapshot(): OfficeSnapshot
+  /**
+   * Apply one structured operation to the live unit.
+   * @param operation - ordered steps from the Host command.
+   * @returns whether every step applied, or the features that stop it.
+   */
+  apply(operation: DocumentEditOperation): OfficeApplyOutcome
   /** Undo through the editor's native history. */
   undo(): void
   /** Redo through the editor's native history. */
@@ -65,6 +73,12 @@ export interface OfficeEditorHandle {
   dispose(): void
   /** The edited unit snapshot, in the same wire form `officeDocument.save` accepts. */
   getSnapshot(): OfficeSnapshot
+  /**
+   * Apply one structured operation to the live unit.
+   * @param operation - ordered steps from the Host command.
+   * @returns whether every step applied, or the features that stop it.
+   */
+  apply(operation: DocumentEditOperation): OfficeApplyOutcome
   /** Undo the last edit through the editor's own stack. */
   undo(): void
   /** Redo the last undone edit through the editor's own stack. */
@@ -96,8 +110,10 @@ export function createAdapter(factory: OfficeRuntimeFactory = loadOfficeRuntime)
     async mount(container, input) {
       const runtime = await factory({ container, kind: input.kind, snapshot: input.snapshot })
       let dirty = false
+      let applying = false
       let disposed = false
       const release = runtime.onMutation(() => {
+        if (applying) return
         input.onEdit?.()
         if (dirty) return
         dirty = true
@@ -112,6 +128,14 @@ export function createAdapter(factory: OfficeRuntimeFactory = loadOfficeRuntime)
           container.replaceChildren()
         },
         getSnapshot: () => runtime.getSnapshot(),
+        apply(operation) {
+          applying = true
+          try {
+            return runtime.apply(operation)
+          } finally {
+            applying = false
+          }
+        },
         undo: () => { runtime.undo() },
         redo: () => { runtime.redo() },
         isDirty: () => dirty,
@@ -133,6 +157,8 @@ export const officeAdapter: OfficeAdapter = createAdapter()
 export interface MockOfficeAdapter extends OfficeAdapter {
   /** Mount inputs in mount order. */
   readonly mounts: readonly OfficeMountInput[]
+  /** Operations the mounted handles applied, in call order. */
+  readonly applied: readonly DocumentEditOperation[]
   /**
    * Set the most recently mounted handle's dirty state and notify its owner.
    * @param dirty - the new state; a call before any mount does nothing.
@@ -146,9 +172,11 @@ export interface MockOfficeAdapter extends OfficeAdapter {
  */
 export function createMockAdapter(): MockOfficeAdapter {
   const mounts: OfficeMountInput[] = []
+  const applied: DocumentEditOperation[] = []
   const states: { input: OfficeMountInput; dirty: boolean }[] = []
   return {
     mounts,
+    applied,
     setDirty(dirty) {
       const state = states.at(-1)
       if (state === undefined) return
@@ -166,6 +194,10 @@ export function createMockAdapter(): MockOfficeAdapter {
           delete container.dataset.officeMount
         },
         getSnapshot: () => input.snapshot,
+        apply(operation) {
+          applied.push(operation)
+          return { status: 'applied' }
+        },
         undo() {},
         redo() {},
         isDirty: () => state.dirty,

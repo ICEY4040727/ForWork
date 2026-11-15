@@ -1,8 +1,10 @@
 /** The panel's injected business face, shared by the registration and its tests. */
 import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
 import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SidebarRightOpenTab } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type { OfficeAdapter, OfficeEditorHandle, OfficeMountInput } from './adapter.ts'
+import type { OfficeCommandTarget } from './command-bridge.ts'
 import type { OfficeTabChangeSnapshot, OfficeTabChanges } from './changes.ts'
 import type { OfficeLegacyNoticeSnapshot, OfficeLegacyNotices } from './notices.ts'
 import type { OfficeDocumentRemote } from './useOfficeDocument.ts'
@@ -13,6 +15,13 @@ export interface OfficePanelInjected {
   readonly remote: OfficeDocumentRemote
   /** Mount the editor runtime behind the adapter seam. */
   readonly mountEditor: (container: HTMLElement, input: OfficeMountInput) => Promise<OfficeEditorHandle>
+  /**
+   * Subscribe one tab to its Session's `document/command` facts.
+   * @param sessionId - the Session whose command feed is read.
+   * @param target - the live tab state and adapter the bridge acts on.
+   * @returns stops listening for commands for this tab.
+   */
+  readonly attachCommandBridge: (sessionId: SessionId, target: OfficeCommandTarget) => () => void
   /** Record whether this tab's live unit has unsaved edits. */
   readonly markTabDirty: (tabId: TabId, dirty: boolean) => void
   /** Dismiss the close prompt without saving or closing. */
@@ -51,6 +60,8 @@ export interface OfficePanelDeps {
   readonly clearDraft: OfficeDocumentRemote['clearDraft']
   /** The editor runtime adapter. */
   readonly adapter: OfficeAdapter
+  /** Subscribe one tab to its Session's `document/command` facts. */
+  readonly attachCommandBridge: OfficePanelInjected['attachCommandBridge']
   /** The plugin-owned change surface. */
   readonly changes: OfficeTabChanges
   /** The plugin-owned converted-copy notices. */
@@ -65,10 +76,11 @@ export interface OfficePanelDeps {
  * @returns the callbacks and observables the panel receives.
  */
 export function officePanelInjected(deps: OfficePanelDeps): OfficePanelInjected {
-  const { read, save, convert, writeDraft, readDraft, clearDraft, adapter, changes, notices, openTabs } = deps
+  const { read, save, convert, writeDraft, readDraft, clearDraft, adapter, attachCommandBridge, changes, notices, openTabs } = deps
   return {
     remote: { read, save, convertLegacy: convert, writeDraft, readDraft, clearDraft },
     mountEditor: (container, input) => adapter.mount(container, input),
+    attachCommandBridge,
     markTabDirty: (tabId, dirty) => { changes.markDirty(tabId, dirty) },
     dismissCloseWarning: (tabId) => { changes.dismissWarning(tabId) },
     rememberLegacySource: (contentId, source) => { notices.remember(contentId, source) },
