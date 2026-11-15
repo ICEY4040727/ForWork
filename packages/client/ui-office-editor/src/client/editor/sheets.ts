@@ -1,6 +1,6 @@
 ﻿/**
  * The Univer Sheets runtime: the core preset, its English pack, and the CSS
- * the preset requires. Loaded only through the adapter's dynamic import.
+ * the preset requires. Loaded only through the editor runtime chunk.
  */
 import { CommandType, LocaleType } from '@univerjs/core'
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'

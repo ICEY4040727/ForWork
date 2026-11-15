@@ -21,6 +21,11 @@ describe('client runtime boundary', () => {
       expect(sourceOf(file)).not.toMatch(/from '@univerjs/u)
     }
   })
+
+  it('requests one editor runtime chunk instead of per-kind sibling chunks', () => {
+    const source = sourceOf('../src/client/editor/load.ts')
+    expect([...source.matchAll(/import\('([^']+)'\)/gu)].map(match => match[1])).toEqual(['./runtime.ts'])
+  })
 })
 
 describe('useOfficeDocument Remote boundary', () => {

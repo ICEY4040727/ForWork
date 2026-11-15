@@ -1,6 +1,6 @@
 ﻿/**
  * The Univer Docs runtime: the core preset, its English pack, and the CSS the
- * preset requires. Loaded only through the adapter's dynamic import.
+ * preset requires. Loaded only through the editor runtime chunk.
  */
 import { CommandType, LocaleType } from '@univerjs/core'
 import { UniverDocsCorePreset } from '@univerjs/preset-docs-core'

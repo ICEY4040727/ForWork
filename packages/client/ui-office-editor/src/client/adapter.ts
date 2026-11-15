@@ -4,7 +4,7 @@
  * The component layer never imports an editor runtime. An adapter mounts a
  * surface into a container through an injected runtime factory, owns the live
  * unit, and reports dirty changes; the default factory dynamically imports the
- * sheets or docs module only when a document actually mounts. Component tests
+ * editor runtime chunk only when a document actually mounts. Component tests
  * replace the factory so jsdom never loads Univer.
  */
 import type { OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange/types'
@@ -102,7 +102,7 @@ export interface OfficeAdapter {
 
 /**
  * Create an adapter over one runtime factory.
- * @param factory - runtime loader; the default dynamically imports the Univer preset modules.
+ * @param factory - runtime loader; the default dynamically imports the editor runtime chunk.
  * @returns the adapter the tab body mounts.
  */
 export function createAdapter(factory: OfficeRuntimeFactory = loadOfficeRuntime): OfficeAdapter {
@@ -145,7 +145,7 @@ export function createAdapter(factory: OfficeRuntimeFactory = loadOfficeRuntime)
   }
 }
 
-/** The shipped adapter: the default factory loads the preset modules lazily. */
+/** The shipped adapter: the default factory loads the editor runtime chunk lazily. */
 export const officeAdapter: OfficeAdapter = createAdapter()
 
 /**
