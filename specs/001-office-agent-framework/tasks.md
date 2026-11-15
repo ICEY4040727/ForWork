@@ -64,7 +64,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 >
 > Consistency pass (2026-11-14): save is the only version bump; an accepted agent tool call persists immediately and refuses mixed-actor saves (`pending-edits`); save-time unsupported refusal added as T074; T025/T065 merged; T056/T057 split into audit helper vs client native undo; **T077 owns the Host draft store, T040 orchestrates recovery, T070 captures in the client**; `Document Draft` added to the spec entities; "same file" clarified for legacy sources; SC-003 timing moved to the client suite.
 >
-> Progress (2026-11-15): **US3 implemented** — T036 facts (`open`/`save`/`edit`/`close`/`rebind`/`missing`; `document/save` added same-version), T037 `document` projection + dynamic system-prompt section (real Agent assembly + HMR disposal tests), T038 restore set + client restore, T039 Host rebind/missing endpoints, T040 draft recovery decision/orchestration over T077. Verified: session-document 40, client 175, office-exchange 141, tool-office 80; host/client aggregates 0. **Known limits:** restore needs a mounted Office body (layout persistence normally provides one); the client rebind trigger awaits a move signal. **Pending: T041 snapshots/SDK, T028 full web lane, T035 tool snapshots.**
+> Progress (2026-11-15): **US3 implemented and committed** — facts (`open`/`save`/`edit`/`close`/`rebind`/`missing`), `document` projection + dynamic prompt section, restore + draft recovery, Host lifecycle endpoints. Verified: session-document 40, client 175, office-exchange 141, tool-office 80; aggregates 0; migration/catalog 1448 pass. **T041/T035 remain:** snapshot replay needs re-recording with a key (5 office tool-list deltas; Windows env diffs), and no `document_*` session fixture exists. **Lockfile refreshed separately (`a0a4565e`).**
 
 ---
 
@@ -121,7 +121,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [x] T032 [P] [US2] Implement `document_edit_paragraph` in `packages/document/tool-office/src/edit-paragraph.ts` with the same live-unit apply, immediate save, and `pending-edits` rule.
 - [x] T033 [P] [US2] Implement `document_convert` in `packages/document/tool-office/src/convert.ts`.
 - [x] T034 [US2] Return structured `conflict`, `unsupported-feature`, `out-of-scope`, `document-missing`, `document-not-open`, `pending-edits`, `bound-exceeded` failures in `packages/document/tool-office/src/errors.ts`.
-- [ ] T035 [US2] Verify: session snapshots for tool output plus `corepack pnpm run test:coverage` for the tool package. **Tool package coverage is 100%; the replayed session snapshot run is still pending.**
+- [ ] T035 [US2] Verify: session snapshots for tool output plus `corepack pnpm run test:coverage` for the tool package. **Tool package coverage is 100%; no session-level `document_*` tool-output fixture exists yet — it requires recording with a key.**
 - [x] T062 [US2] Implement the Host→renderer command bridge: the Host tool sends a correlated gateway command (local IPC on desktop, no document bytes off-device), the renderer applies it to the live unit and returns the correlated result, with timeouts and `document-not-open` in `packages/client/ui-office-editor/src/client/command-bridge.ts`; test in `packages/client/ui-office-editor/tests/command-bridge.spec.tsx`.
 - [ ] T056 [US2] Expose `ChangeRecord` inverse/audit helpers only; runtime undo/redo is the editor's native stack bound in T054, in `packages/session/session-document/src/undo.ts`
 - [x] T057 [P] [US2] Test undoing an agent edit through the native undo stack (SC-012) in `packages/client/ui-office-editor/tests/undo.spec.tsx`
@@ -142,7 +142,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [x] T038 [US3] Implement restore-after-restart of the open-document set in `packages/session/session-document/src/document-restore.ts`. **Client restore runs from the first mounted Office body; a session with no Office tab has no trigger (layout persistence normally mounts them).**
 - [x] T039 [P] [US3] Implement rename/move rebind and missing reporting in `packages/session/session-document/src/document-identity.ts`. **Host endpoints and missing trigger are wired; the client move/rebind trigger still awaits a move signal.**
 - [x] T040 [P] [US3] Implement recovery/restore orchestration over the T077 draft Remote (read draft, compare `contentVersion`, offer restore, clear on save) in `packages/session/session-document/src/document-recovery.ts`; the draft store itself is T077 and client capture is T070.
-- [ ] T041 [US3] Verify: session migration test, `corepack pnpm run test:snapshot`, and the TypeScript and Python SDK expected-output updates.
+- [ ] T041 [US3] Verify: session migration test, `corepack pnpm run test:snapshot`, and the TypeScript and Python SDK expected-output updates. **Migration/catalog pass (1448 tests). Snapshot replay: 5 office-caused tool-list deltas need re-recording with `DEEPSEEK_API_KEY` on macOS/Linux; ~190 Windows-only env diffs; SDK expected outputs show no office delta. Lockfile refreshed separately.**
 
 **Checkpoint**: Documents are durable, restorable, and cross-turn referenceable.
 
