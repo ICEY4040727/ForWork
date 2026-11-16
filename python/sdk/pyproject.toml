@@ -17,7 +17,7 @@ dependencies = [
 
 [project.urls]
 Homepage = "https://github.com/ICEY4040727/ForWork"
-Documentation = "https://github.com/ICEY4040727/ForWork/blob/master/docs/user/guide/python-sdk.md"
+Documentation = "https://github.com/ICEY4040727/ForWork/blob/main/docs/user/guide/python-sdk.md"
 Issues = "https://github.com/ICEY4040727/ForWork/issues"
 Source = "https://github.com/ICEY4040727/ForWork"
 

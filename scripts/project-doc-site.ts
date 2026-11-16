@@ -23,7 +23,7 @@ import {
   splitMarkdownUrlTarget,
 } from './markdown.ts'
 
-const REPOSITORY_URL = 'https://github.com/deepseek-ai/deepseek-harness'
+const REPOSITORY_URL = 'https://github.com/ICEY4040727/ForWork'
 const root = resolve(import.meta.dirname, '..')
 const generatedRoot = resolve(root, 'website/.generated')
 
@@ -31,10 +31,10 @@ const generatedRoot = resolve(root, 'website/.generated')
  * Resolve the public repository ref used by projected source links.
  *
  * @param environment Build environment containing an optional explicit public ref.
- * @returns The configured public ref, or `master`.
+ * @returns The configured public ref, or `main`.
  */
 export function resolveRepositoryRef(environment: NodeJS.ProcessEnv): string {
-  return environment.DOCS_REPOSITORY_REF ?? 'master'
+  return environment.DOCS_REPOSITORY_REF ?? 'main'
 }
 
 interface Replacement {
@@ -55,11 +55,11 @@ export interface RewriteMarkdownOptions {
   repositoryRef: string
   /**
    * Place one referenced image beside the projected page and return the URL to
-   * reach it from that page. A GitHub raw URL cannot serve this repository —
-   * `raw.githubusercontent.com` answers 404 for a private one, and no reader of
-   * the site is authenticated to it — so an image travels into the generated
-   * tree and Vite bundles it like any other site asset. Omitted by callers that
-   * only rewrite text, which then leave images pointing at the repository.
+   * reach it from that page. A GitHub raw URL cannot serve a private repository,
+   * because `raw.githubusercontent.com` answers 404 for one and no reader of the
+   * site is authenticated to it, so an image travels into the generated tree and
+   * Vite bundles it like any other site asset. Omitted by callers that only
+   * rewrite text, which then leave images pointing at the repository.
    */
   placeImage?: (absPath: string) => string
 }
@@ -140,7 +140,7 @@ function githubTarget(
   image: boolean,
 ): string {
   const path = repoPath(absPath, repoRoot)
-  if (image) return `https://raw.githubusercontent.com/deepseek-ai/deepseek-harness/${repositoryRef}/${path}${suffix}`
+  if (image) return `https://raw.githubusercontent.com/ICEY4040727/ForWork/${repositoryRef}/${path}${suffix}`
   const kind = lstatSync(absPath).isDirectory() ? 'tree' : 'blob'
   const lineSuffix = line === undefined ? suffix : `#L${line}`
   return `${REPOSITORY_URL}/${kind}/${repositoryRef}/${path}${lineSuffix}`
@@ -300,7 +300,7 @@ function referencedImages(): string[] {
       route: page.route,
       pages: docsPages,
       repoRoot: root,
-      repositoryRef: 'master',
+      repositoryRef: 'main',
       placeImage: (absPath) => {
         const real = publishableImage(absPath, root)
         if (real !== undefined) found.add(real)
