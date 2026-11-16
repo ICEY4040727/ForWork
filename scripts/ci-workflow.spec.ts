@@ -1692,12 +1692,11 @@ describe('Documentation site publication', () => {
     // Complete history: the release scripts read tags.
     expect(checkout).toMatchObject({ with: { 'fetch-depth': 0 } })
 
-    // Projected source links stay on the public repository's master. That
-    // repository advances only to each release commit, so its master never
-    // carries unreleased work, while it retains only the most recent tags:
-    // following the dispatched tag would leave every source link on a deploy
-    // from an older tag unresolvable.
-    expect(workflow.env.DOCS_REPOSITORY_REF).toBe('master')
+    // Projected source links stay on the public repository's canonical default
+    // branch, while it retains only the most recent tags: following the
+    // dispatched tag would leave every source link on a deploy from an older
+    // tag unresolvable.
+    expect(workflow.env.DOCS_REPOSITORY_REF).toBe('main')
 
     // The environment owns the deployment tag policy and the required reviewers.
     expect(deploy.environment).toMatchObject({ name: 'github-pages' })
