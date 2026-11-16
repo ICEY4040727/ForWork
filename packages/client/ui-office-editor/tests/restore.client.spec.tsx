@@ -8,6 +8,7 @@ import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { brandString } from '@forwork/brand'
 import type { DocumentId } from '@forwork/session/src/document-events.ts'
+import type { SessionId } from '@forwork/session/types'
 import type { TabId } from '@forwork/client-ui-dockkit'
 import type { SidebarRightOpenTab } from '@forwork/client-ui-sidebar-right/client'
 import type { DocumentProjectionEntry, DocumentProjectionView } from '@forwork/session-document/client'
@@ -71,6 +72,14 @@ describe('restorePlan', () => {
   it('reports nothing for an empty open set', () => {
     expect(restorePlan({ order: [], documents: {} })).toEqual({ open: [], missing: [] })
   })
+
+  it('skips an order entry with no document record', () => {
+    const view = projectionOf([REPORT])
+    const danglingId = brandString<DocumentId>(`${SESSION_ID}:${GONE}`)
+    const dangling: DocumentProjectionView = { ...view, order: [danglingId, ...view.order] }
+
+    expect(restorePlan(dangling)).toEqual({ open: [REPORT], missing: [] })
+  })
 })
 
 describe('createOfficeRestore', () => {
@@ -92,6 +101,18 @@ describe('createOfficeRestore', () => {
     const settled = restore.source.getSnapshot()
     restore.dismissMissing(SESSION_ID)
     expect(restore.source.getSnapshot()).toBe(settled)
+  })
+
+  it('keeps another Session notice when one is dismissed', () => {
+    const restore = createOfficeRestore()
+    const other = brandString<SessionId>('s-2')
+
+    restore.reportMissing(SESSION_ID, [GONE])
+    restore.reportMissing(other, [NOTES])
+    restore.dismissMissing(SESSION_ID)
+
+    expect(restore.source.getSnapshot().missing[SESSION_ID]).toBeUndefined()
+    expect(restore.source.getSnapshot().missing[other]).toEqual([NOTES])
   })
 })
 

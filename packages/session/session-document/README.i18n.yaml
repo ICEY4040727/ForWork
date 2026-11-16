@@ -9,8 +9,8 @@
   en: bb7f969c6c967b65
   zh: 07dfe2a929792f74
 /forwork-session-document/summary:
-  en: fb047afb91b5508c
-  zh: 63ceeaefe6c10730
+  en: 2d2875438ff38757
+  zh: 31c9a44540254524
 /forwork-session-document/table-of-contents:
   en: d152484eb41ac6b4
   zh: 5ea16c73684ce99f
@@ -51,8 +51,11 @@
   en: 1ad12c0e7fb0edde
   zh: b84bcb1541446e87
 /forwork-session-document/model-experience/document-transitions/what-the-model-sees:
-  en: 1f886f46fba72e46
-  zh: 59cf42af5350850c
+  en: 6691bf825335d815
+  zh: c2e172f3c6051fbe
+/forwork-session-document/model-experience/document-transitions/what-the-model-sees/open-document-prompt-section:
+  en: 1c417a996ef24ba1
+  zh: 8bb70947d79d369c
 /forwork-session-document/model-experience/document-transitions/token-effect:
   en: c339473cae5b6d08
   zh: e59e489bb7877064

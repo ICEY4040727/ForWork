@@ -26,7 +26,9 @@ kind: "package-group"
 
 | 包 | 职责 | ctx 键 |
 |---|---|---|
+| [office-exchange](office-exchange/README.zh.md) | OOXML 到单元快照映射、不支持特性检测与旧版转换 | `ctx.officeExchange` |
 | [office-to-pdf](office-to-pdf/README.zh.md) | 将已授权 Office 字节转换为完整 PDF，并提供有界队列和缓存 | `ctx.officeToPdf` |
+| [tool-office](tool-office/README.zh.md) | 由 Office Exchange 支撑的面向模型的 Office 文档工具 | — |
 
 -----
 

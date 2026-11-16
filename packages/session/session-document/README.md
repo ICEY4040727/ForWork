@@ -9,9 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-session-document` keeps a document's identity stable while its path moves, makes every accepted edit attributable and reversible, and folds the durable `document/*` facts into the open-document set. Identity bindings pair a Session-local `DocumentId` with the current locator and its availability; change records pair a structured edit with the actor, the version transition, and the exact inverse; the fact writers append the lifecycle and save facts; the `document` projection and its prompt section read those facts back for the agent. Restore expands the projection into the ordered set a client reopens, and the recovery rule decides whether a stored draft matches the file it was captured from.
-
-The package is also the `session-document` Host plugin mounted by base profiles. It performs no filesystem access and owns no storage: callers supply the observations, and the Session log is the only durable source.
+`dsh-session-document` keeps a document's identity stable across path moves, makes every accepted edit attributable and reversible, and folds durable `document/*` facts into the open-document set. Identity bindings pair a Session-local `DocumentId` with its locator and availability; change records pair an edit with the actor, version transition, and inverse; the `document` projection and prompt section read those facts back. Restore expands the projection into the set a client reopens, and the recovery rule matches a stored draft to its captured file. The base-profile `session-document` Host plugin accesses no filesystem and owns no storage: the Session log is the only durable source.
 
 ## Table of Contents
 
@@ -141,15 +139,15 @@ Both modules are collections of pure functions over immutable values; every func
 
 #### What the model sees
 
-When at least one document is open, the prompt section renders a short English list: the open-document count implied by its position order, each file name, its format, and a `missing` marker. Example:
+When at least one document is open, the prompt section renders a short English list: the open-document count implied by its position order, each file name, its format, and a `missing` marker. Without an Agent or without an open document the section renders nothing; the document tools own their own model-visible schemas and results.
 
-```text
+##### Open-document prompt section
+
+```markdown
 Open documents in this session:
 1. budget.xlsx (xlsx)
 2. report.docx (docx, missing)
 ```
-
-Without an Agent or without an open document the section renders nothing. The document tools own their own model-visible schemas and results.
 
 #### Token effect
 

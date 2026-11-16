@@ -30,6 +30,10 @@ kind: "package-reference"
 ```ts
 import LocalOfficeExchange from '@forwork/office-exchange'
 
+declare const ctx: import('@forwork/cordis').Context
+declare const path: string
+declare const signal: AbortSignal
+
 await ctx.plugin(LocalOfficeExchange, {
   maxFileBytes: 25 * 1024 * 1024,
   maxCells: 2_000_000,

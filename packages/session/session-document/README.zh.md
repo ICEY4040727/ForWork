@@ -9,9 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-`dsh-session-document` 在文档路径移动时保持其身份稳定，让每次接受的编辑可归属且可逆，并把持久的 `document/*` 事实折叠为打开文档集合。身份绑定把 Session 本地的 `DocumentId` 与当前定位符及其可用性配对；变更记录把结构化编辑与 actor、版本迁移和精确逆操作配对；事实写入器追加生命周期与保存事实；`document` projection 及其 prompt 区段为 agent 读回这些事实。Restore 把 projection 展开为 Client 重新打开的有序集合，恢复规则决定已存储草稿是否匹配它捕获自的文件。
-
-该包也是由基础 profile 挂载的 `session-document` Host 插件。它不访问文件系统，也不拥有存储：调用方提供观察结果，Session 日志是唯一的持久来源。
+`dsh-session-document` 在路径移动时保持文档身份稳定，让每次接受的编辑可归属且可逆，并把持久的 `document/*` 事实折叠为打开文档集合。身份绑定把 Session 本地的 `DocumentId` 与定位符及其可用性配对；变更记录把编辑与 actor、版本迁移和逆操作配对；`document` projection 与 prompt 区段读回这些事实。Restore 把 projection 展开为 Client 重新打开的有序集合，恢复规则把已存储草稿与它捕获自的文件匹配。基础 profile 的 `session-document` Host 插件不访问文件系统，也不拥有存储：Session 日志是唯一的持久来源。
 
 ## 目录
 
@@ -141,15 +139,15 @@ const decision = recoveryDecision(draft, readResult.version)
 
 #### 模型看到什么
 
-当至少打开一个文档时，prompt 区段渲染一份简短的英文列表：由位置顺序体现的打开文档数量、每个文件名、其格式以及 `missing` 标记。示例：
+当至少打开一个文档时，prompt 区段渲染一份简短的英文列表：由位置顺序体现的打开文档数量、每个文件名、其格式以及 `missing` 标记。没有 Agent 或没有打开文档时，区段不渲染任何内容；文档工具拥有自己的模型可见 schema 与结果。
 
-```text
+##### 打开文档 prompt 区段
+
+```markdown
 Open documents in this session:
 1. budget.xlsx (xlsx)
 2. report.docx (docx, missing)
 ```
-
-没有 Agent 或没有打开文档时，区段不渲染任何内容。文档工具拥有自己的模型可见 schema 与结果。
 
 #### Token 影响
 

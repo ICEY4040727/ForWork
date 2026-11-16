@@ -1,5 +1,7 @@
 # Office Exchange fixtures
 
+English | [中文](README.zh.md)
+
 Deterministic binary fixtures for `@forwork/office-exchange` round-trip, mapping, and
 unsupported-feature detection tests.
 

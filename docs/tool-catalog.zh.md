@@ -38,6 +38,7 @@
 | `@forwork/tool-fs-search` | `glob`、`grep` | `ctx.workingDirectory`、`ctx.tools`、`ctx.subprocess`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn 随包提供的 ripgrep 二进制文件（`@vscode/ripgrep`），并作为普通前台调用运行，绝不作为后台任务；无需在宿主机安装 `rg`，也不经过 shell 层。本目录使用 `sampleOverCapGlobResults: true`；部署必须显式选择该行为。结果超过上限时，会通过可选的 ctx.spillStore 后端保存完整的格式化列表；在共置部署中，如果后端公开本地路径，返回的定位信息可供后续读取／搜索。 |
 | `@forwork/tool-terminal` | `terminal_close`、`terminal_list`、`terminal_open`、`terminal_read`、`terminal_send`、`terminal_signal` | `ctx.workingDirectory`、`ctx.tools`、`ctx.terminals`、`ctx.systemPrompt`、`ctx.jobs at call time for run_in_background` | `tool/call`、`tool/result` | - | 这 6 个终端工具需要选择启用，用于补充一次性 bash／文件系统工具。`terminal_send(run_in_background: true)` 会注册到 `ctx.jobs`；schema 不包含 TUI、具名按键序列、BEL、调整尺寸、自动启动和跨 agent 共享。 |
 | `@forwork/tool-goal` | `create_goal`、`get_goal`、`update_goal` | `ctx.tools`、`ctx.agents`、`ctx.goals`、`ctx.systemPrompt`、`a calling Agent in an authorized open turn` | `tool/call`、`goal/change for mutations`、`tool/result` | - | create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。 |
+| `@forwork/tool-office` | `document_convert`、`document_edit_cells`、`document_edit_paragraph`、`document_read` | `ctx.tools`、`ctx.officeDocument and its command broker`、`a calling Agent with a workspace root` | `tool/call`、`document/command before a live-editor operation`、`document/edit after an accepted save`、`tool/result` | - | 读取与编辑需要活跃的编辑器实例；无头 Session 会以 document-not-open 拒绝，而不是编辑脱离的文件。Host 对每次接受的编辑执行一次带版本守卫的保存，并记录该操作及其逆操作。 |
 | `@forwork/tool-schedule` | `schedule_create`、`schedule_edit`、`schedule_list`、`schedule_view` | `ctx.tools`、`ctx.schedule`、`ctx.systemPrompt` | `tool/call`、Schedule storage domain 创建、更新或删除、`tool/result` | - | preset 或 Agent scope 挂载本包，并决定哪些 Agent 获得工具。管理工具按 id 跨会话读写 Host 的任务。任务保存 RFC 5545 重复规则，执行位置可选已有会话、首次创建后复用的会话或每次运行新建的会话。委派子 Agent 不能调用这些工具。 |
 | `@forwork/tool-lsp` | `lsp` | `ctx.workingDirectory`、`ctx.tools`、`ctx.lsp`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | lsp 工具将提供方选择和语言服务器子进程置于 ctx.lsp 之后，因此其模型可见 schema 在更换提供方时保持稳定。运行时要求已注册提供方，例如 `@forwork/lsp-stdio`；如果没有提供方，查询会返回结构化 `LSP_UNAVAILABLE` 错误，而不会改变 schema。 |
 | `@forwork/tool-ralph` | `ralph` | `ctx.tools`、`ctx.workflowEngine`、`ctx.subagents`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents every fresh round)` | `tool/call`、`tool/result`、`workflow and child session events during execution` | - | 固定的前台工作流会在每个 Round 启动一个全新的结构化子级；模型只能选择不可变目标和可选的 Round 上限。 |
@@ -1501,6 +1502,164 @@ glob 和 grep 是无条件可用的发现工具，通过 ctx.subprocess spawn �
 来源：[`packages/goal/tool-goal/src/index.ts`](../packages/goal/tool-goal/src/index.ts)
 
 create、edit、pause 和 resume 要求直接来自人类的根权限；complete 和 blocked 也接受确切的当前 Goal Round。blocked 的默认下限是 3 个获准的 Round。
+
+<a id="forworktool-office"></a>
+
+## `@forwork/tool-office`
+
+### `document_convert`
+
+将工作区内的旧版 .doc 或 .xls 文件转换为可编辑的 .docx 或 .xlsx 副本。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "path": {
+      "type": "string",
+      "description": "Workspace-relative or absolute path of the legacy file."
+    }
+  },
+  "required": [
+    "path"
+  ]
+}
+```
+
+来源：[`packages/document/tool-office/src/index.ts`](../packages/document/tool-office/src/index.ts)
+
+### `document_edit_cells`
+
+替换打开的电子表格中的单元格值或公式，然后立即保存结果。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "description": "Session-scoped document id in the form \"<sessionId>:<path>\", as returned by document_read."
+    },
+    "fromVersion": {
+      "type": "integer",
+      "description": "Document content version returned by document_read or the previous edit."
+    },
+    "operations": {
+      "type": "array",
+      "description": "Cell replacements in order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sheetId": {
+            "type": "string",
+            "description": "Sheet id from document_read."
+          },
+          "row": {
+            "type": "integer",
+            "description": "Zero-based row index."
+          },
+          "column": {
+            "type": "integer",
+            "description": "Zero-based column index."
+          },
+          "value": {
+            "description": "New JSON cell value; omit when setting a formula."
+          },
+          "formula": {
+            "type": "string",
+            "description": "New formula text; omit when setting a value."
+          }
+        },
+        "required": [
+          "sheetId",
+          "row",
+          "column"
+        ]
+      }
+    }
+  },
+  "required": [
+    "documentId",
+    "fromVersion",
+    "operations"
+  ]
+}
+```
+
+来源：[`packages/document/tool-office/src/index.ts`](../packages/document/tool-office/src/index.ts)
+
+### `document_edit_paragraph`
+
+替换打开的文本文档中的段落，然后立即保存结果。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "description": "Session-scoped document id in the form \"<sessionId>:<path>\", as returned by document_read."
+    },
+    "fromVersion": {
+      "type": "integer",
+      "description": "Document content version returned by document_read or the previous edit."
+    },
+    "operations": {
+      "type": "array",
+      "description": "Paragraph replacements in order.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "description": "Zero-based paragraph index from document_read."
+          },
+          "text": {
+            "type": "string",
+            "description": "Paragraph text after the edit."
+          }
+        },
+        "required": [
+          "index",
+          "text"
+        ]
+      }
+    }
+  },
+  "required": [
+    "documentId",
+    "fromVersion",
+    "operations"
+  ]
+}
+```
+
+来源：[`packages/document/tool-office/src/index.ts`](../packages/document/tool-office/src/index.ts)
+
+### `document_read`
+
+读取打开的 Office 文档结构：工作表、单元格、公式、段落与表格。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "documentId": {
+      "type": "string",
+      "description": "Session-scoped document id in the form \"<sessionId>:<path>\", as returned by document_read."
+    }
+  },
+  "required": [
+    "documentId"
+  ]
+}
+```
+
+来源：[`packages/document/tool-office/src/index.ts`](../packages/document/tool-office/src/index.ts)
+
+读取与编辑需要活跃的编辑器实例；无头 Session 会以 document-not-open 拒绝，而不是编辑脱离的文件。Host 对每次接受的编辑执行一次带版本守卫的保存，并记录该操作及其逆操作。
 
 <a id="forworktool-schedule"></a>
 

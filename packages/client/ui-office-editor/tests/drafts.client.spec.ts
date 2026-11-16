@@ -10,7 +10,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { RemoteError } from '@forwork/typert-protocol'
 import type { RemoteResult } from '@forwork/typert-protocol'
 import type { OfficeDocumentDraft } from '@forwork/office-exchange/types'
-import { createDraftScheduler } from '../src/client/drafts.ts'
+import { createDraftScheduler, draftRecoveryDecision } from '../src/client/drafts.ts'
 import type { OfficeDraftSchedulerInput } from '../src/client/drafts.ts'
 import { useOfficeDocument } from '../src/client/useOfficeDocument.ts'
 import type { OfficeDocumentRemote, UseOfficeDocumentInput } from '../src/client/useOfficeDocument.ts'
@@ -74,6 +74,10 @@ afterEach(() => {
 })
 
 describe('draft scheduler', () => {
+  it('decides no recovery when the document has no stored draft', () => {
+    expect(draftRecoveryDecision(null, 'v1')).toBe('none')
+  })
+
   it('writes the latest candidate only after the idle period', async () => {
     vi.useFakeTimers()
     const { scheduler, write } = schedulerHarness()

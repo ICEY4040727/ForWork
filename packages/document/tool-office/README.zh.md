@@ -30,6 +30,8 @@ kind: "package-reference"
 ```ts
 import * as ToolOffice from '@forwork/tool-office'
 
+declare const ctx: import('@forwork/cordis').Context
+
 await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 ```
 

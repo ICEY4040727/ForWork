@@ -45,6 +45,7 @@ session 组让对话持久保存，恢复已发布的日志格式，并使已提
 | 包 | 职责 | ctx key |
 |---|---|---|
 | [`session-projection/`](session-projection/README.zh.md) | 定义并驱动把已提交事件折叠为完整当前值的投影单元 | `ctx.sessionProjections` |
+| [`session-document/`](session-document/README.zh.md) | 为打开的 office 文档提供稳定的文档身份绑定以及可归属、可逆的变更记录 | 库，不使用 ctx key |
 | [`working-directory/`](working-directory/README.zh.md) | 拥有每个 Session 的有效执行目录和用户上下文变更 | `ctx.workingDirectory` |
 | [`tool-working-directory/`](tool-working-directory/README.zh.md) | 通过一个工具读取或改变当前目录 | `working_directory` |
 | [`session-projection-cache/`](session-projection-cache/README.zh.md) | 持久化投影检查点，使冷读跳过全量日志加载 | `ctx.sessionProjectionCache` |

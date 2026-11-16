@@ -35,7 +35,7 @@ import { OfficePanel } from './OfficePanel.tsx'
 import { OfficeTitle } from './OfficeTitle.tsx'
 import { createOfficeRestore, restoreOnSessionActivation } from './restore.ts'
 import { OFFICE_ID, OFFICE_KIND, officeDefinition } from './definition.ts'
-import { en, zh } from './locales.ts'
+import { de, en, es, fr, ja, pt, ru, zh } from './locales.ts'
 import { officeDocumentIdentity, openTargetOf } from './target.ts'
 
 export type { OfficeEditorKey } from './locales.ts'
@@ -70,7 +70,7 @@ export function apply(ctx: ClientContext): void {
   const restore = createOfficeRestore()
   const commandRemote: OfficeCommandRemote = ctx.remote.officeDocument
   ctx.effect(() => ctx.sidebarRightTabs.register(officeDefinition()), 'ui-office-editor: type')
-  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-office-editor: dictionaries')
+  ctx.effect(() => ctx.locale.register(NS, { zh, en, ja, es, fr, de, ru, pt }), 'ui-office-editor: dictionaries')
   ctx.effect(() => restoreOnSessionActivation({
     sessions: ctx.sessions.list,
     openTabs: ctx.sidebarRight.openTabs,

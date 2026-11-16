@@ -40,7 +40,7 @@ import type { OfficeTitleProps } from '../src/client/OfficeTitle.tsx'
 import { createOfficeRestore } from '../src/client/restore.ts'
 import type { OfficeRestoreState } from '../src/client/restore.ts'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
-import { en, zh, type OfficeEditorKey } from '../src/client/locales.ts'
+import { de, en, es, fr, ja, pt, ru, zh, type OfficeEditorKey } from '../src/client/locales.ts'
 
 const ADDRESS = 'dsh-resource://file/session/s-1/work/budget.xlsx'
 const SESSION_ID = brandString<SessionId>('s-1')
@@ -268,7 +268,7 @@ describe('ui-office-editor apply', () => {
     expect(definition?.patterns).toEqual(['*.docx', '*.xlsx', '*.doc', '*.xls', '*.ppt'])
     expect(definition?.priority).toBe('builtin')
     expect(definition?.keepMounted).toBe(true)
-    expect(dictionaries.get('officeEditor')).toEqual({ zh, en })
+    expect(dictionaries.get('officeEditor')).toEqual({ zh, en, ja, es, fr, de, ru, pt })
     expect(registered.map(entry => [entry.name, entry.key, entry.locale, entry.component])).toEqual([
       ['sidebar.right.pane.tab', OFFICE_ID, 'officeEditor', OfficePanel],
       ['sidebar.right.pane.tab.title', OFFICE_ID, undefined, OfficeTitle],
@@ -401,6 +401,15 @@ describe('ui-office-editor apply', () => {
     face!.rememberLegacySource(ADDRESS, 'work/legacy.doc')
     expect(() => closeHandler?.(SESSION_ID, { id: TAB_ID, title: 'budget.xlsx', contentId: ADDRESS })).not.toThrow()
     expect(face!.hooks.legacyNotice.getSnapshot()).toEqual({})
+  })
+
+  it('records a missing document fact without a warning', async () => {
+    const { registered, warn } = await boot()
+    const face = registered.find(entry => entry.name === 'sidebar.right.pane.tab')?.inject?.(SESSION_ID)
+    face?.markMissing(SESSION_ID, `${SESSION_ID}:work/budget.xlsx`)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(warn).not.toHaveBeenCalled()
   })
 
   it('logs a refused close or missing fact without blocking the tab', async () => {

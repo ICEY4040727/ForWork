@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-Client plugin package for an embedded Office document editor in the right Sidebar. It registers the `office` tab type for Session-scoped `.docx` and `.xlsx` addresses, reads and saves through the `officeDocument` Remote, and mounts the Univer Sheets or Docs core preset behind an adapter seam. Edits are captured as idle-debounced recovery drafts, and reopening the document offers a stored draft instead of applying it silently. Opening a legacy `.doc`, `.xls`, or `.ppt` source converts it and opens the copy in a new tab; an editable copy opens here with a notice naming the original, and a converted presentation stays in the read-only preview.
+Client plugin package for an embedded Office editor in the right Sidebar. It registers the `office` tab type for Session-scoped `.docx` and `.xlsx` addresses, reads and saves through the `officeDocument` Remote, and mounts the Univer Sheets or Docs core preset behind an adapter seam. Edits become idle-debounced recovery drafts, and reopening offers a stored draft instead of applying it silently. Opening a legacy `.doc`, `.xls`, or `.ppt` source converts it and opens the copy in a new tab; an editable copy opens here with a notice naming the original, while a converted presentation stays in the read-only preview.
 
 ## Table of Contents
 

@@ -69,6 +69,17 @@ describe('restoreSet', () => {
     expect(restoreSet(documentProjectionDefinition.init())).toEqual([])
   })
 
+  it('skips an order entry with no document record', () => {
+    const state = stateOf([openEntry(FIRST, 'first.xlsx', 'xlsx')])
+
+    expect(restoreSet({ ...state, order: [SECOND, FIRST] })).toEqual([{
+      documentId: FIRST,
+      path: 'first.xlsx',
+      format: 'xlsx',
+      status: 'open',
+    }])
+  })
+
   it('omits a closed document and reports a missing one that stayed open', async () => {
     const ctx = new Context()
     await ctx.plugin(SessionStore)

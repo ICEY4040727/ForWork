@@ -9,326 +9,341 @@
   en: 6cc2cd9ced70bb09
   zh: 1c0e6cb4ba2ed637
 /tool-schema-catalog/tool-package-map:
-  en: 7b5b99bcc5cd46f4
-  zh: c1697f88326440ff
-/tool-schema-catalog/deepseek-ai-dsh-plugin-manager:
-  en: e0143916bb634762
-  zh: e0143916bb634762
-/tool-schema-catalog/deepseek-ai-dsh-plugin-manager/plugin-manager:
-  en: 2fbe2e5b88e81a54
-  zh: a9de46c13bda53d8
-/tool-schema-catalog/deepseek-ai-dsh-plugin-market:
-  en: 1ec7b4cbc3d98e28
-  zh: 1ec7b4cbc3d98e28
-/tool-schema-catalog/deepseek-ai-dsh-plugin-market/plugin-market:
-  en: ecb8ee73c7bc68b8
-  zh: 59af75c81d7d529d
-/tool-schema-catalog/deepseek-ai-dsh-mcp-resources:
-  en: dd78bd55ec83a539
-  zh: dd78bd55ec83a539
-/tool-schema-catalog/deepseek-ai-dsh-mcp-resources/list-mcp-resource-templates:
+  en: 76917e62166c2bc1
+  zh: 9c7388a1f5977d23
+/tool-schema-catalog/forwork-plugin-manager:
+  en: f2ce2536c6fa8aa9
+  zh: f2ce2536c6fa8aa9
+/tool-schema-catalog/forwork-plugin-manager/plugin-manager:
+  en: f2027f5603d9c20e
+  zh: 081adf975d8571fd
+/tool-schema-catalog/forwork-plugin-market:
+  en: 575c2dbcc9accb9b
+  zh: 575c2dbcc9accb9b
+/tool-schema-catalog/forwork-plugin-market/plugin-market:
+  en: 4a6a017316241197
+  zh: 97e3b9017bf41fc1
+/tool-schema-catalog/forwork-mcp-resources:
+  en: dccf64a1f1efdc63
+  zh: dccf64a1f1efdc63
+/tool-schema-catalog/forwork-mcp-resources/list-mcp-resource-templates:
   en: 96275ece9d040944
   zh: 1fa9744642601ece
-/tool-schema-catalog/deepseek-ai-dsh-mcp-resources/list-mcp-resources:
+/tool-schema-catalog/forwork-mcp-resources/list-mcp-resources:
   en: bf4236607199d61e
   zh: 82f4f749dcabc89f
-/tool-schema-catalog/deepseek-ai-dsh-mcp-resources/read-mcp-resource:
-  en: 5d92c07fa062734f
-  zh: 2d6f0cb8116cf567
-/tool-schema-catalog/deepseek-ai-dsh-experimental-browser-use-stagehand-native:
-  en: 19e7df8d692b4375
-  zh: 19e7df8d692b4375
-/tool-schema-catalog/deepseek-ai-dsh-experimental-browser-use-stagehand-native/stagehand-act:
+/tool-schema-catalog/forwork-mcp-resources/read-mcp-resource:
+  en: 591d826b9f4e6bb7
+  zh: e11cd7e4daffad8b
+/tool-schema-catalog/forwork-experimental-browser-use-stagehand-native:
+  en: 359b74fc2bc7cbc9
+  zh: 359b74fc2bc7cbc9
+/tool-schema-catalog/forwork-experimental-browser-use-stagehand-native/stagehand-act:
   en: c4b27bf62c534dcc
   zh: 70c53824ed57ac23
-/tool-schema-catalog/deepseek-ai-dsh-experimental-browser-use-stagehand-native/stagehand-extract:
+/tool-schema-catalog/forwork-experimental-browser-use-stagehand-native/stagehand-extract:
   en: ec7462ab99848155
   zh: 632fe0249040708e
-/tool-schema-catalog/deepseek-ai-dsh-experimental-browser-use-stagehand-native/stagehand-navigate:
+/tool-schema-catalog/forwork-experimental-browser-use-stagehand-native/stagehand-navigate:
   en: ef97f063a037a006
   zh: 27727ccc908e007f
-/tool-schema-catalog/deepseek-ai-dsh-experimental-browser-use-stagehand-native/stagehand-observe:
+/tool-schema-catalog/forwork-experimental-browser-use-stagehand-native/stagehand-observe:
   en: 2068f1baa0a59e1b
   zh: 5743c7b33e2c5ccb
-/tool-schema-catalog/deepseek-ai-dsh-experimental-browser-use-stagehand-native/stagehand-screenshot:
+/tool-schema-catalog/forwork-experimental-browser-use-stagehand-native/stagehand-screenshot:
   en: 4910ab327694ee97
   zh: 17e79e4366cb636d
-/tool-schema-catalog/deepseek-ai-dsh-experimental-browser-use-stagehand-native/stagehand-tabs:
-  en: a0d5b9b891358120
-  zh: 25793a62709770b5
-/tool-schema-catalog/deepseek-ai-dsh-action-cards:
-  en: 60c9df6ffda98a1d
-  zh: 60c9df6ffda98a1d
-/tool-schema-catalog/deepseek-ai-dsh-action-cards/propose-action:
-  en: 633c32b6df889830
-  zh: b88ea00b2033c11b
-/tool-schema-catalog/deepseek-ai-dsh-tool-ask-user:
-  en: e713a4a11a15d13c
-  zh: e713a4a11a15d13c
-/tool-schema-catalog/deepseek-ai-dsh-tool-ask-user/ask-user-question:
-  en: 664dae29d0eae65f
-  zh: 2efa5d3f2cb31bf9
-/tool-schema-catalog/deepseek-ai-dsh-tool-executor-ptc:
-  en: 8c8643ef46fd075f
-  zh: 8c8643ef46fd075f
-/tool-schema-catalog/deepseek-ai-dsh-tool-executor-ptc/run-code:
-  en: 7917e16cbc2c366f
-  zh: c39eb0420544f04a
-/tool-schema-catalog/deepseek-ai-dsh-plan-mode:
-  en: b500b530845e26a9
-  zh: b500b530845e26a9
-/tool-schema-catalog/deepseek-ai-dsh-plan-mode/exit-plan-mode:
-  en: b410483c2bd0c1a1
-  zh: a07ceea6abf1dda3
-/tool-schema-catalog/deepseek-ai-dsh-tool-bash:
-  en: 408ff0a5189bd7ec
-  zh: 408ff0a5189bd7ec
-/tool-schema-catalog/deepseek-ai-dsh-tool-bash/bash:
-  en: 5efe055aae48993c
-  zh: e0653e51ef1344ce
-/tool-schema-catalog/deepseek-ai-dsh-tool-present:
-  en: f656575e6df094f6
-  zh: f656575e6df094f6
-/tool-schema-catalog/deepseek-ai-dsh-tool-present/present:
-  en: c3ab3e71f3c5fd20
-  zh: d6afeb62bac77a24
-/tool-schema-catalog/deepseek-ai-dsh-tool-pwsh:
-  en: b222fc05f3f8ee4a
-  zh: b222fc05f3f8ee4a
-/tool-schema-catalog/deepseek-ai-dsh-tool-pwsh/pwsh:
-  en: 00489572a7e8cb3e
-  zh: c0ecb3909392ee89
-/tool-schema-catalog/deepseek-ai-dsh-tool-cordis:
-  en: 76c7c62f9029b6f5
-  zh: 76c7c62f9029b6f5
-/tool-schema-catalog/deepseek-ai-dsh-tool-cordis/cordis-inspect-list:
+/tool-schema-catalog/forwork-experimental-browser-use-stagehand-native/stagehand-tabs:
+  en: ab0481079b9155fc
+  zh: bcdceb266705f0e2
+/tool-schema-catalog/forwork-action-cards:
+  en: 5a9d4d443e16bc51
+  zh: 5a9d4d443e16bc51
+/tool-schema-catalog/forwork-action-cards/propose-action:
+  en: 6fb542bd711421ac
+  zh: 91f0469f68d15e94
+/tool-schema-catalog/forwork-tool-ask-user:
+  en: 19ee23bee960f974
+  zh: 19ee23bee960f974
+/tool-schema-catalog/forwork-tool-ask-user/ask-user-question:
+  en: 78499d8b46cb7cc2
+  zh: 5ecda4a7329f7cce
+/tool-schema-catalog/forwork-tool-executor-ptc:
+  en: e9951ccf46d89ddb
+  zh: e9951ccf46d89ddb
+/tool-schema-catalog/forwork-tool-executor-ptc/run-code:
+  en: b0d9589882ed547c
+  zh: b4cfc6f05bfdc377
+/tool-schema-catalog/forwork-plan-mode:
+  en: 6d648aacd8be8ef2
+  zh: 6d648aacd8be8ef2
+/tool-schema-catalog/forwork-plan-mode/exit-plan-mode:
+  en: f7d5b2dfc2391c6a
+  zh: 1872a763b19f3f29
+/tool-schema-catalog/forwork-tool-bash:
+  en: ed87a790ceb59714
+  zh: ed87a790ceb59714
+/tool-schema-catalog/forwork-tool-bash/bash:
+  en: cb8e76fe8d2c87cd
+  zh: fbb3a9c74175d3b5
+/tool-schema-catalog/forwork-tool-present:
+  en: 15f8549b4a2ed5b7
+  zh: 15f8549b4a2ed5b7
+/tool-schema-catalog/forwork-tool-present/present:
+  en: 4d722695b3073906
+  zh: 95b99041417f03b3
+/tool-schema-catalog/forwork-tool-pwsh:
+  en: e2e98d73243cac0d
+  zh: e2e98d73243cac0d
+/tool-schema-catalog/forwork-tool-pwsh/pwsh:
+  en: d140bdbfd703e238
+  zh: b901d8bcc8496863
+/tool-schema-catalog/forwork-tool-cordis:
+  en: 5653a3b8eda85a3a
+  zh: 5653a3b8eda85a3a
+/tool-schema-catalog/forwork-tool-cordis/cordis-inspect-list:
   en: 594e5b42047969cc
   zh: 72189ca21345c210
-/tool-schema-catalog/deepseek-ai-dsh-tool-cordis/cordis-inspect-query:
-  en: 42a647ba98527f9e
-  zh: c53ade6a47ea523f
-/tool-schema-catalog/deepseek-ai-dsh-tool-bash-persistent:
-  en: bdd9e88c49029e05
-  zh: bdd9e88c49029e05
-/tool-schema-catalog/deepseek-ai-dsh-tool-bash-persistent/bash:
-  en: 86421501a9d65ccc
-  zh: d1dc400507952331
-/tool-schema-catalog/deepseek-ai-dsh-tool-pwsh-persistent:
-  en: 40a053607298a4c5
-  zh: 40a053607298a4c5
-/tool-schema-catalog/deepseek-ai-dsh-tool-pwsh-persistent/pwsh:
-  en: 214866b3419c8e12
-  zh: c23368fc61772d52
-/tool-schema-catalog/deepseek-ai-dsh-tool-str-replace-editor:
-  en: 591f6e54dbbc38fe
-  zh: 591f6e54dbbc38fe
-/tool-schema-catalog/deepseek-ai-dsh-tool-str-replace-editor/str-replace-editor:
-  en: 3d11196a13e69228
-  zh: 56019c74cf0633cd
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs:
-  en: 07d595ce1f1a5184
-  zh: 07d595ce1f1a5184
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs/apply-patch:
+/tool-schema-catalog/forwork-tool-cordis/cordis-inspect-query:
+  en: 00cf884c937cfeae
+  zh: cc820155f57484f1
+/tool-schema-catalog/forwork-tool-bash-persistent:
+  en: 935edf4cd1b76bb5
+  zh: 935edf4cd1b76bb5
+/tool-schema-catalog/forwork-tool-bash-persistent/bash:
+  en: f00b92733b943c44
+  zh: d496a99d762e747b
+/tool-schema-catalog/forwork-tool-pwsh-persistent:
+  en: e8381d07d26dfca2
+  zh: e8381d07d26dfca2
+/tool-schema-catalog/forwork-tool-pwsh-persistent/pwsh:
+  en: ec800e264157bd79
+  zh: 7cc45a3d567efdef
+/tool-schema-catalog/forwork-tool-str-replace-editor:
+  en: 1631827a17b8d684
+  zh: 1631827a17b8d684
+/tool-schema-catalog/forwork-tool-str-replace-editor/str-replace-editor:
+  en: 402f51eabeb4197a
+  zh: 2d75d4d030a259e5
+/tool-schema-catalog/forwork-tool-fs:
+  en: 39d6e4d1ceba0f70
+  zh: 39d6e4d1ceba0f70
+/tool-schema-catalog/forwork-tool-fs/apply-patch:
   en: 50b4939c9a1d96ac
   zh: e733cc1156e2853c
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs/edit:
+/tool-schema-catalog/forwork-tool-fs/edit:
   en: 5b6a252adde51af6
   zh: 7aa172a5d8b9cbd2
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs/read:
+/tool-schema-catalog/forwork-tool-fs/read:
   en: 94bfc5b03c63baef
   zh: 339338a0e74696c3
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs/read-image:
+/tool-schema-catalog/forwork-tool-fs/read-image:
   en: f6f7a1140066ce04
   zh: d528e01a0939795a
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs/write:
-  en: 22e7c232e157a1e2
-  zh: 176da52cdd4765a9
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs-search:
-  en: 703fea005ce84c50
-  zh: 703fea005ce84c50
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs-search/glob:
+/tool-schema-catalog/forwork-tool-fs/write:
+  en: 976d670e0631de22
+  zh: 40981a6332abd8b0
+/tool-schema-catalog/forwork-tool-fs-search:
+  en: 71906d6d742d565c
+  zh: 71906d6d742d565c
+/tool-schema-catalog/forwork-tool-fs-search/glob:
   en: 3ba734ba7852cdd5
   zh: c6ce31ff2c195520
-/tool-schema-catalog/deepseek-ai-dsh-tool-fs-search/grep:
-  en: 6e1f7da62cc9a35b
-  zh: 594817b0befeea86
-/tool-schema-catalog/deepseek-ai-dsh-tool-terminal:
-  en: 77501c1b592b6a88
-  zh: 77501c1b592b6a88
-/tool-schema-catalog/deepseek-ai-dsh-tool-terminal/terminal-close:
+/tool-schema-catalog/forwork-tool-fs-search/grep:
+  en: 2a1f9d99d83e6adb
+  zh: 96c155d8e5184d56
+/tool-schema-catalog/forwork-tool-terminal:
+  en: c4148e3f529cd7de
+  zh: c4148e3f529cd7de
+/tool-schema-catalog/forwork-tool-terminal/terminal-close:
   en: 4da73ab1c95aadc6
   zh: 998471bc4f5af00a
-/tool-schema-catalog/deepseek-ai-dsh-tool-terminal/terminal-list:
+/tool-schema-catalog/forwork-tool-terminal/terminal-list:
   en: 4cde2b1d38f93e04
   zh: 2c93f43d54ec9da2
-/tool-schema-catalog/deepseek-ai-dsh-tool-terminal/terminal-open:
+/tool-schema-catalog/forwork-tool-terminal/terminal-open:
   en: 7051c20587ae426d
   zh: 39a6aad70d643fbc
-/tool-schema-catalog/deepseek-ai-dsh-tool-terminal/terminal-read:
+/tool-schema-catalog/forwork-tool-terminal/terminal-read:
   en: 833b47cca9b00b9d
   zh: 24b3db5b48f0446a
-/tool-schema-catalog/deepseek-ai-dsh-tool-terminal/terminal-send:
+/tool-schema-catalog/forwork-tool-terminal/terminal-send:
   en: 60a8805611533884
   zh: 50e4ac6e7f7b9b0a
-/tool-schema-catalog/deepseek-ai-dsh-tool-terminal/terminal-signal:
-  en: 0191964f5be70426
-  zh: 501c2769633a2a0b
-/tool-schema-catalog/deepseek-ai-dsh-tool-goal:
-  en: 74fff3741e7c13de
-  zh: 74fff3741e7c13de
-/tool-schema-catalog/deepseek-ai-dsh-tool-goal/create-goal:
+/tool-schema-catalog/forwork-tool-terminal/terminal-signal:
+  en: 94eca7aad49a0cc8
+  zh: 165b98902f489d91
+/tool-schema-catalog/forwork-tool-goal:
+  en: a6ffcb616a233ec8
+  zh: a6ffcb616a233ec8
+/tool-schema-catalog/forwork-tool-goal/create-goal:
   en: 9ae877cdf8a641a3
   zh: f83c3c09e80e4190
-/tool-schema-catalog/deepseek-ai-dsh-tool-goal/get-goal:
+/tool-schema-catalog/forwork-tool-goal/get-goal:
   en: 0b517f13dfde11fe
   zh: b7ee7482e8ecde56
-/tool-schema-catalog/deepseek-ai-dsh-tool-goal/update-goal:
-  en: 5f8a1d6e44e57d09
-  zh: d757489fdacde22d
-/tool-schema-catalog/deepseek-ai-dsh-tool-schedule:
-  en: 9fd2eccb1ee51372
-  zh: 9fd2eccb1ee51372
-/tool-schema-catalog/deepseek-ai-dsh-tool-schedule/schedule-create:
+/tool-schema-catalog/forwork-tool-goal/update-goal:
+  en: de2012364b5edd28
+  zh: b37bb01c5002544c
+/tool-schema-catalog/forwork-tool-office:
+  en: 3324b28aa243e4f1
+  zh: 3324b28aa243e4f1
+/tool-schema-catalog/forwork-tool-office/document-convert:
+  en: 666e7247241482ac
+  zh: 7446b33b1e97e0e3
+/tool-schema-catalog/forwork-tool-office/document-edit-cells:
+  en: 42504a92ff90b22e
+  zh: 448dcd1336a171c1
+/tool-schema-catalog/forwork-tool-office/document-edit-paragraph:
+  en: 9105820c5f8771bd
+  zh: c308521877ae448a
+/tool-schema-catalog/forwork-tool-office/document-read:
+  en: bd3b929b15ac1501
+  zh: 661838bd5b6942ad
+/tool-schema-catalog/forwork-tool-schedule:
+  en: bdabee48c6768e0e
+  zh: bdabee48c6768e0e
+/tool-schema-catalog/forwork-tool-schedule/schedule-create:
   en: 7237e492f01fb8fb
   zh: 2fd2bea81919baf6
-/tool-schema-catalog/deepseek-ai-dsh-tool-schedule/schedule-edit:
+/tool-schema-catalog/forwork-tool-schedule/schedule-edit:
   en: 08db239b9e1c3e8f
   zh: c3860a8f20a01965
-/tool-schema-catalog/deepseek-ai-dsh-tool-schedule/schedule-list:
+/tool-schema-catalog/forwork-tool-schedule/schedule-list:
   en: e2c657d431fd02a8
   zh: 7651bf05938eff69
-/tool-schema-catalog/deepseek-ai-dsh-tool-schedule/schedule-view:
-  en: 008cd46ab3c05305
-  zh: 8ef5a0f40640013e
-/tool-schema-catalog/deepseek-ai-dsh-tool-lsp:
-  en: 32982123b1f0e5bc
-  zh: 32982123b1f0e5bc
-/tool-schema-catalog/deepseek-ai-dsh-tool-lsp/lsp:
-  en: 877f1dc0f69e2038
-  zh: 5dda8001fb614315
-/tool-schema-catalog/deepseek-ai-dsh-tool-ralph:
-  en: 45bd083870e2c92d
-  zh: 45bd083870e2c92d
-/tool-schema-catalog/deepseek-ai-dsh-tool-ralph/ralph:
-  en: e97552156225cf10
-  zh: 9ea32b8485e950ec
-/tool-schema-catalog/deepseek-ai-dsh-tool-skill:
-  en: 927a5ac0974b7642
-  zh: 927a5ac0974b7642
-/tool-schema-catalog/deepseek-ai-dsh-tool-skill/skill:
-  en: 9b159d5831855afb
-  zh: 275ee82af0e0f59a
-/tool-schema-catalog/deepseek-ai-dsh-tool-session-query:
-  en: eac1dff4b6d9e195
-  zh: eac1dff4b6d9e195
-/tool-schema-catalog/deepseek-ai-dsh-tool-session-query/session-event-read:
+/tool-schema-catalog/forwork-tool-schedule/schedule-view:
+  en: 0a410a36a5b1e829
+  zh: 7f432f7064ce5b0c
+/tool-schema-catalog/forwork-tool-lsp:
+  en: 260155f6ec3b312d
+  zh: 260155f6ec3b312d
+/tool-schema-catalog/forwork-tool-lsp/lsp:
+  en: d64d39b10828fa7c
+  zh: 26a910794f9f8dee
+/tool-schema-catalog/forwork-tool-ralph:
+  en: 02b9bd3a62c1db16
+  zh: 02b9bd3a62c1db16
+/tool-schema-catalog/forwork-tool-ralph/ralph:
+  en: d6e637f7b958b729
+  zh: 319fcd212c61a486
+/tool-schema-catalog/forwork-tool-skill:
+  en: 88c228a53fe734b0
+  zh: 88c228a53fe734b0
+/tool-schema-catalog/forwork-tool-skill/skill:
+  en: c039408a81e1167a
+  zh: f4c9df82bc229e81
+/tool-schema-catalog/forwork-tool-session-query:
+  en: 1923144d1a05fd21
+  zh: 1923144d1a05fd21
+/tool-schema-catalog/forwork-tool-session-query/session-event-read:
   en: 285bab0bd6b50949
   zh: 9c839e05237a7226
-/tool-schema-catalog/deepseek-ai-dsh-tool-session-query/session-event-search:
+/tool-schema-catalog/forwork-tool-session-query/session-event-search:
   en: 5cd9f05b83f5797e
   zh: dc6880566b0c5138
-/tool-schema-catalog/deepseek-ai-dsh-tool-session-query/session-event-trace:
+/tool-schema-catalog/forwork-tool-session-query/session-event-trace:
   en: de64e837459d7313
   zh: 60bfcb3691ab862c
-/tool-schema-catalog/deepseek-ai-dsh-tool-session-query/session-search:
+/tool-schema-catalog/forwork-tool-session-query/session-search:
   en: c7bc2ee2892bf0e9
   zh: 1cd6a5d6f7494ca1
-/tool-schema-catalog/deepseek-ai-dsh-tool-session-query/session-trace:
-  en: 73d2146c02eaa16a
-  zh: 34caad3065de7148
-/tool-schema-catalog/deepseek-ai-dsh-experimental-tool-subagent-oar:
-  en: 8daafae6faf7898e
-  zh: 8daafae6faf7898e
-/tool-schema-catalog/deepseek-ai-dsh-experimental-tool-subagent-oar/subagent-oar:
-  en: 4936c61a65f8cdb2
-  zh: 5a1bfbb9738a62a9
-/tool-schema-catalog/deepseek-ai-dsh-tool-subagent:
-  en: 841abe0dd5913ea7
-  zh: 841abe0dd5913ea7
-/tool-schema-catalog/deepseek-ai-dsh-tool-subagent/list-subagent-models:
+/tool-schema-catalog/forwork-tool-session-query/session-trace:
+  en: abf0e6a4c3be9b67
+  zh: d25511b1c456a044
+/tool-schema-catalog/forwork-experimental-tool-subagent-oar:
+  en: a1390f6f22260039
+  zh: a1390f6f22260039
+/tool-schema-catalog/forwork-experimental-tool-subagent-oar/subagent-oar:
+  en: fc5c0cf5a3f0f3c5
+  zh: aaab00bbcfe87f4c
+/tool-schema-catalog/forwork-tool-subagent:
+  en: 54448a776a1543a0
+  zh: 54448a776a1543a0
+/tool-schema-catalog/forwork-tool-subagent/list-subagent-models:
   en: 0e21650bbe8c71c7
   zh: fe4033efb38d51a3
-/tool-schema-catalog/deepseek-ai-dsh-tool-subagent/subagent:
-  en: 9912eeda5bc40b43
-  zh: 0cb70f9a0d923bee
-/tool-schema-catalog/deepseek-ai-dsh-tool-subagent-control:
-  en: ab82e130c3413f04
-  zh: ab82e130c3413f04
-/tool-schema-catalog/deepseek-ai-dsh-tool-subagent-control/interrupt-agent:
+/tool-schema-catalog/forwork-tool-subagent/subagent:
+  en: fa1ae1ac5434c6fd
+  zh: 92d04d15c99a0cd1
+/tool-schema-catalog/forwork-tool-subagent-control:
+  en: 236f645077fa0970
+  zh: 236f645077fa0970
+/tool-schema-catalog/forwork-tool-subagent-control/interrupt-agent:
   en: a622b15cc2598d51
   zh: ece4b2af6a11c49c
-/tool-schema-catalog/deepseek-ai-dsh-tool-subagent-control/list-agents:
+/tool-schema-catalog/forwork-tool-subagent-control/list-agents:
   en: 8d50c6e19c9517ab
   zh: 6ae97d046c5915db
-/tool-schema-catalog/deepseek-ai-dsh-tool-subagent-control/send-message:
+/tool-schema-catalog/forwork-tool-subagent-control/send-message:
   en: b53326fedeab850d
   zh: ecb75b6ce31da009
-/tool-schema-catalog/deepseek-ai-dsh-tool-subagent-control/wait-agent:
-  en: 4b95d11b610d34ca
-  zh: 9b0d9b6012be30d8
-/tool-schema-catalog/deepseek-ai-dsh-tool-jobs:
-  en: 9be673b1604d0114
-  zh: 9be673b1604d0114
-/tool-schema-catalog/deepseek-ai-dsh-tool-jobs/job-kill:
+/tool-schema-catalog/forwork-tool-subagent-control/wait-agent:
+  en: 17cb0d6bca0fbe7d
+  zh: fc6449a620071e37
+/tool-schema-catalog/forwork-tool-jobs:
+  en: a7d03d07fb89f098
+  zh: a7d03d07fb89f098
+/tool-schema-catalog/forwork-tool-jobs/job-kill:
   en: 14294cc1988ae768
   zh: 80a9152bdc02723f
-/tool-schema-catalog/deepseek-ai-dsh-tool-jobs/job-list:
+/tool-schema-catalog/forwork-tool-jobs/job-list:
   en: 0c37fb1fed979d72
   zh: 5ea9d07f5a4a8a6c
-/tool-schema-catalog/deepseek-ai-dsh-tool-jobs/job-output:
-  en: 2977f731fb90d147
-  zh: 4f422613ff720055
-/tool-schema-catalog/deepseek-ai-dsh-tool-agent-team:
-  en: 3f1a9c3509853972
-  zh: 3f1a9c3509853972
-/tool-schema-catalog/deepseek-ai-dsh-tool-agent-team/team-task-create:
+/tool-schema-catalog/forwork-tool-jobs/job-output:
+  en: bc524a896d8ef71a
+  zh: dcf1ea7d2871204d
+/tool-schema-catalog/forwork-tool-agent-team:
+  en: eaf40b572af8e620
+  zh: eaf40b572af8e620
+/tool-schema-catalog/forwork-tool-agent-team/team-task-create:
   en: ac9ed819b705b4b8
   zh: 306477d2d457369a
-/tool-schema-catalog/deepseek-ai-dsh-tool-agent-team/team-task-get:
+/tool-schema-catalog/forwork-tool-agent-team/team-task-get:
   en: bca1abf330638c19
   zh: 903bfa977f75c046
-/tool-schema-catalog/deepseek-ai-dsh-tool-agent-team/team-task-list:
+/tool-schema-catalog/forwork-tool-agent-team/team-task-list:
   en: 8001eda7e9ff6a25
   zh: 2414761029f21404
-/tool-schema-catalog/deepseek-ai-dsh-tool-agent-team/team-task-update:
-  en: 9acd1c5b2fac9853
-  zh: 3bd81e9cd1f1c28d
-/tool-schema-catalog/deepseek-ai-dsh-tool-todo:
-  en: dea62d26fb18ff68
-  zh: dea62d26fb18ff68
-/tool-schema-catalog/deepseek-ai-dsh-tool-todo/todo-write:
-  en: f252137b940b38d1
-  zh: 25bd9c6b1ce783d8
-/tool-schema-catalog/deepseek-ai-dsh-tool-working-directory:
-  en: 1bdc4627ca4fff29
-  zh: 1bdc4627ca4fff29
-/tool-schema-catalog/deepseek-ai-dsh-tool-working-directory/working-directory:
-  en: ac1944f6035b8b50
-  zh: f5fc005c13185211
-/tool-schema-catalog/deepseek-ai-dsh-experimental-tool-worktree:
-  en: d5f5679abe86e316
-  zh: d5f5679abe86e316
-/tool-schema-catalog/deepseek-ai-dsh-experimental-tool-worktree/create-worktree:
-  en: 41950f76db71e7f7
-  zh: 654d2e5505ff3d3c
-/tool-schema-catalog/deepseek-ai-dsh-tool-workflow:
-  en: bb38a9d29f46563c
-  zh: bb38a9d29f46563c
-/tool-schema-catalog/deepseek-ai-dsh-tool-workflow/workflow:
-  en: fdd667cfe21481e8
-  zh: 88864d3b958398a4
-/tool-schema-catalog/deepseek-ai-dsh-tool-workspace-dependencies:
-  en: 96bffc40b80df4b8
-  zh: 96bffc40b80df4b8
-/tool-schema-catalog/deepseek-ai-dsh-tool-workspace-dependencies/load-workspace-dependencies:
-  en: 77b88764ff3464e9
-  zh: a9ca7eeb15ada747
-/tool-schema-catalog/deepseek-ai-dsh-tool-web:
-  en: 4b9918342d3aa931
-  zh: 4b9918342d3aa931
-/tool-schema-catalog/deepseek-ai-dsh-tool-web/web-fetch:
+/tool-schema-catalog/forwork-tool-agent-team/team-task-update:
+  en: 599ad5ea366aa4ad
+  zh: 6c61eb63ff369946
+/tool-schema-catalog/forwork-tool-todo:
+  en: fe25d0694f6ea91c
+  zh: fe25d0694f6ea91c
+/tool-schema-catalog/forwork-tool-todo/todo-write:
+  en: 6ea5989eec58f920
+  zh: 7eafefbff7187ba2
+/tool-schema-catalog/forwork-tool-working-directory:
+  en: 164380dfe91119f8
+  zh: 164380dfe91119f8
+/tool-schema-catalog/forwork-tool-working-directory/working-directory:
+  en: e5ab1eb24570d1bf
+  zh: 6d22cf82b5d677a8
+/tool-schema-catalog/forwork-experimental-tool-worktree:
+  en: 0055ef567b021c28
+  zh: 0055ef567b021c28
+/tool-schema-catalog/forwork-experimental-tool-worktree/create-worktree:
+  en: 0fc3ab95713008da
+  zh: 8ec1983e13245b10
+/tool-schema-catalog/forwork-tool-workflow:
+  en: 7dec9a5aaeddf6e1
+  zh: 7dec9a5aaeddf6e1
+/tool-schema-catalog/forwork-tool-workflow/workflow:
+  en: ab5cb63c4eac32f7
+  zh: 1460d85c81798d32
+/tool-schema-catalog/forwork-tool-workspace-dependencies:
+  en: 291b75a74abd16a1
+  zh: 291b75a74abd16a1
+/tool-schema-catalog/forwork-tool-workspace-dependencies/load-workspace-dependencies:
+  en: a97140d02f3ed23a
+  zh: d58bb0e21092e121
+/tool-schema-catalog/forwork-tool-web:
+  en: e969e6770fe7a5fa
+  zh: e969e6770fe7a5fa
+/tool-schema-catalog/forwork-tool-web/web-fetch:
   en: 8673f203aea9bdf2
   zh: 4e17783ffdf34c83
-/tool-schema-catalog/deepseek-ai-dsh-tool-web/web-search:
+/tool-schema-catalog/forwork-tool-web/web-search:
   en: cc1ad38bf0006710
   zh: 324eacb827a09e93

@@ -409,6 +409,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
         const stored = draft.value
         if (stored === null) return
         const decision = draftRecoveryDecision(stored, result.value.version)
+        /* v8 ignore next -- a non-null stored draft always decides offer or stale. */
         if (decision === 'none') return
         setRecovery({
           savedAt: stored.savedAt,
