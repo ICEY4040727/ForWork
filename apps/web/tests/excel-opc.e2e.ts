@@ -20,10 +20,13 @@ describe.skipIf(mode === 'record')('web e2e: independent-writer Excel previews',
   let consoleErrors: ReturnType<typeof watchConsole>
 
   beforeAll(async () => {
+    // Without the editable office tab, .xlsx falls back to the shared read-only
+    // FortuneSheet renderer this scenario owns.
     scaffold = await launchWebScaffold({
       developerTools: false,
       replayFixture: fileURLToPath(new URL('../../../snapshots/web/lifecycle-chrome/session.v3.jsonl', import.meta.url)),
       compareReplaySession: false,
+      extraOverlayPath: [fileURLToPath(new URL('./no-sidebar-office-editor.overlay.yml', import.meta.url))],
     })
     browser = await chromium.launch()
     page = await newEnglishPage(browser)
