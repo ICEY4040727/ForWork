@@ -6,7 +6,7 @@
 
 ## Summary
 
-Fork the MIT-licensed harness into an independently branded Windows/macOS desktop product and add a first-class document capability: an embedded Univer (Apache-2.0 core) editor for `.docx`/`.xlsx`, a self-owned Exchange layer between OOXML files and Univer unit snapshots, agent tools that operate the same snapshot, durable attributable `document/*` session facts, and local-first safety (no upload, opt-in telemetry, write authority, credential storage, stable identity). Delivery is additive first; the scope/brand/signature rename is the final gated phase.
+Fork the MIT-licensed harness into **ForWork**, a Windows/macOS desktop product published under the `@forwork/*` npm scope with the `forwork-` artifact prefix and `forwork` CLI, and add a first-class document capability: an embedded Univer (Apache-2.0 core) editor for `.docx`/`.xlsx`, a self-owned Exchange layer between OOXML files and Univer unit snapshots, agent tools that operate the same snapshot, durable attributable `document/*` session facts, and local-first safety (no upload, opt-in telemetry, write authority, credential storage, stable identity). Delivery is additive first; the identity-landing phase (scope, CLI, artifacts, brand, vendored re-scope, telemetry/default adapter, scan, signing) is scripted and gated per Constitution V.
 
 ## Technical Context
 
@@ -34,14 +34,14 @@ Fork the MIT-licensed harness into an independently branded Windows/macOS deskto
 
 | Principle | Gate | Status |
 |---|---|---|
-| I. Independent Identity | No shipped surface retains `deepseek`; a scan gate asserts it | PASS with planned final rename phase |
+| I. Independent Identity | No shipped surface retains `deepseek`; `@forwork/*` scope, `forwork` CLI, `forwork-` artifacts; a scan gate asserts it | PASS once the identity-landing phase (T049–T051) lands |
 | II. Offline, Local-First Desktop | Edit/save local; no upload; telemetry opt-in; no AGPL/cloud engine | PASS |
 | III. Documents First-Class | `document/*` facts, projection, restore | PASS |
 | IV. Lossless, Non-Destructive Editing | Unsupported-feature detection, refusal, attribution, undo, conflict | PASS |
 | V. Incremental, Reversible Delivery | Additive packages/events before destructive rename | PASS |
 | VI. Evidence Over Claims | Per-phase check ladder; egress/write-authority tests | PASS |
 | VII. License and Dependency Hygiene | MIT + Apache-2.0 notices; license check on new dependencies | PASS |
-| VIII. Fork Stewardship | Additive seams; merge-forward with recovery copy and intent | PASS |
+| VIII. Selective Upstream Follow | Additive seams; cherry-pick by the decision table, no merge-forward claim | PASS |
 
 No violations require a Complexity Tracking justification beyond the three already recorded.
 

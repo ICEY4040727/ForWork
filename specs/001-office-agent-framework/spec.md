@@ -91,7 +91,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **FR-006**: The product MUST record document open/edit/rebind/missing/close as durable session facts so the agent can reference documents across turns.
 - **FR-007**: The product MUST restore the open-document set after restart.
 - **FR-008**: The product MUST refuse and explain any save that would drop unsupported content.
-- **FR-009**: The product MUST be delivered as an independently signed Windows and macOS desktop application under its own scope and brand, with no remaining DeepSeek brand, telemetry, or default model adapter.
+- **FR-009**: The product MUST be delivered as the ForWork desktop application under the `@forwork/*` npm scope, the `forwork-` artifact prefix, and the `forwork` CLI, with no remaining DeepSeek brand, telemetry, default model adapter, or upstream npm scope in any shipped surface.
 - **FR-010**: The product MUST operate fully offline for editing and saving, with no required external document server or cloud account.
 - **FR-011**: `.pptx` MUST be viewable but not editable in v1.
 - **FR-012**: The product MUST preserve MIT and Apache-2.0 notices for the harness base and the editor core.
