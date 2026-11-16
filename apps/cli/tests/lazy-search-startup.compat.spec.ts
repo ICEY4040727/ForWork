@@ -48,10 +48,10 @@ function runBuiltWeb(cwd: string): Promise<{ stdout: string; stderr: string; cod
   return new Promise((resolveRun, rejectRun) => {
     const env: NodeJS.ProcessEnv = {
       ...process.env,
-      DEEPSEEK_API_KEY: 'dsh-cli-smoke-dummy-key',
+      FORWORK_API_KEY: 'dsh-cli-smoke-dummy-key',
       DSH_HOME: join(cwd, '.dsh'),
     }
-    delete env.DEEPSEEK_BASE_URL
+    delete env.FORWORK_BASE_URL
     delete env.NODE_OPTIONS
     delete env.NODE_NO_WARNINGS
     const child = spawn(process.execPath, [
@@ -74,7 +74,7 @@ function runBuiltWeb(cwd: string): Promise<{ stdout: string; stderr: string; cod
     child.stderr.setEncoding('utf8')
     child.stdout.on('data', (chunk: string) => {
       stdout += chunk
-      if (!settled && /dsh web: http:\/\/127\.0\.0\.1:\d+/u.test(stdout)) {
+      if (!settled && /forwork web: http:\/\/127\.0\.0\.1:\d+/u.test(stdout)) {
         settled = true
         child.kill('SIGTERM')
       }
@@ -118,7 +118,7 @@ describe.skipIf(!requireBuiltArtifacts)('built CLI lazy-search startup', () => {
     const cwd = await mkdtemp(join(tmpdir(), 'dsh-cli-lazy-search-'))
     try {
       const result = await runBuiltWeb(cwd)
-      expect(result.stdout).toMatch(/dsh web: http:\/\/127\.0\.0\.1:\d+/u)
+      expect(result.stdout).toMatch(/forwork web: http:\/\/127\.0\.0\.1:\d+/u)
       expect(result.code).toBe(0)
       expect(result.stderr).not.toMatch(/ExperimentalWarning: SQLite/u)
     } finally {

@@ -2,27 +2,27 @@
 # section, a hash of its English and Chinese blocks outside code blocks and generated regions.
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write python/sdk/README.md
-/deepseek-harness-python-sdk:
-  en: 43f7de064985e731
-  zh: 9ad59629660b1f13
-/deepseek-harness-python-sdk/optional-office-operations:
+/forwork-python-sdk:
+  en: a37d130c3a60804f
+  zh: e5481e32c3d1ec45
+/forwork-python-sdk/optional-office-operations:
   en: ddf4dabea526cef1
   zh: 6e31cab10d2f3ed8
-/deepseek-harness-python-sdk/start-a-runtime:
-  en: ac793c588b13ce87
-  zh: 502015cda46de3ac
-/deepseek-harness-python-sdk/run-text-and-commands:
+/forwork-python-sdk/start-a-runtime:
+  en: d8aaa0dc7259a103
+  zh: 26587aba2e31d2b0
+/forwork-python-sdk/run-text-and-commands:
   en: b2c847c1452e137d
   zh: c595c5e82151d0cb
-/deepseek-harness-python-sdk/client-approvals:
+/forwork-python-sdk/client-approvals:
   en: 1d18c09832dd4a42
   zh: 6e7260b650a1f987
-/deepseek-harness-python-sdk/customize-plugins:
-  en: 91856793ff7c39a8
-  zh: b11c073f14090b40
-/deepseek-harness-python-sdk/native-user-questions:
+/forwork-python-sdk/customize-plugins:
+  en: b9ce08cbc2e79e83
+  zh: 8d0b7464b521a472
+/forwork-python-sdk/native-user-questions:
   en: 979ad00fe498b2be
   zh: 4b656bd268292a13
-/deepseek-harness-python-sdk/results-and-notifications:
+/forwork-python-sdk/results-and-notifications:
   en: 6b81899ea865ffd2
   zh: d9e326a3fb04e696

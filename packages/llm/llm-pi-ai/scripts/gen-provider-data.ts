@@ -26,6 +26,10 @@ const SUPPLEMENTS: Readonly<Record<string, { baseURLEnv: readonly string[] }>> =
   'google-vertex': { baseURLEnv: ['GOOGLE_CLOUD_PROJECT', 'GCLOUD_PROJECT', 'GOOGLE_CLOUD_LOCATION'] },
 }
 
+const ENV_OVERRIDES: Readonly<Record<string, readonly string[]>> = {
+  deepseek: ['FORWORK_API_KEY'],
+}
+
 /** Insert newly discovered names after their predecessor in the resolver. */
 function merge(into: string[], sequence: readonly string[]): void {
   for (const [index, name] of sequence.entries()) {
@@ -111,7 +115,7 @@ export async function generateProviderData(providers: readonly Provider[] = buil
       ...[provider.baseUrl ?? '', ...urls].flatMap(url => [...url.matchAll(/\{([A-Z][A-Z0-9_]+)\}/g)].map(match => match[1]!)),
     ])]
     data[provider.id] = {
-      env,
+      env: ENV_OVERRIDES[provider.id] ?? env,
       ...fixed && !fixed.includes('{') ? { defaultBaseURL: fixed } : {},
       ...baseURLEnv.length === 0 ? {} : { baseURLEnv },
     }

@@ -1,6 +1,6 @@
 {
   "name": "@forwork/acp",
-  "description": "Automation-only Agent Client Protocol server for driving DeepSeek Harness agents over JSON-RPC stdio",
+  "description": "Automation-only Agent Client Protocol server for driving ForWork agents over JSON-RPC stdio",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

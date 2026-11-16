@@ -8,7 +8,7 @@ import type { DeepSeekWebGuidance } from '../src/transport.ts'
  */
 export function customGuidance(capability: 'search' | 'fetch'): DeepSeekWebGuidance {
   return {
-    subject: capability === 'search' ? 'Search' : 'Fetch', plugin: 'web-deepseek-api', custom: true,
+    subject: capability === 'search' ? 'Search' : 'Fetch', plugin: 'web-api', custom: true,
     baseURLField: `${capability}BaseURL`, apiKeyEnvField: `${capability}ApiKeyEnv`,
   }
 }

@@ -129,11 +129,11 @@ pnpm run build
 The real DeepSeek adapter and key-backed agent demos read credentials from the environment or from a gitignored `.env` at the repo root:
 
 ```sh
-DEEPSEEK_API_KEY=sk-...
-DEEPSEEK_BASE_URL=https://... # optional
+FORWORK_API_KEY=sk-...
+FORWORK_BASE_URL=https://... # optional
 ```
 
-`DEEPSEEK_BASE_URL` is optional and defaults to the public API. Never commit real credentials. The real-API e2e suites self-skip when `DEEPSEEK_API_KEY` is not set.
+`FORWORK_BASE_URL` is optional and defaults to the public API. Never commit real credentials. The real-API e2e suites self-skip when `FORWORK_API_KEY` is not set.
 
 ### Git integrations
 
@@ -167,7 +167,7 @@ The fork follows upstream selectively under [Constitution VIII](../.specify/memo
 | Core framework bug fix that does not touch a diverged file | Take | Direct benefit |
 | Dependency or lockfile security/compatibility upgrade | Take, then rerun the full relevant checks | Prevent breakage |
 | Fix on a file this fork has diverged on | Skip by default; if critical, take and re-apply the local change | Conflict cost |
-| DeepSeek product, brand, account, telemetry, `web-deepseek-api`, default search | Drop | Unrelated and conflicts with independent identity |
+| DeepSeek product, brand, account, telemetry, `web-api`, default search | Drop | Unrelated and conflicts with independent identity |
 | Experimental or optional package this product does not ship | Drop unless adopted | No product value |
 | Dependency imposing AGPL, a cloud account, or a paid SDK | Drop | Offline/local-first and license principles |
 | Breaking `SESSION_FORMAT_VERSION` change or required migration | Defer and write an upgrade guide | Highest migration risk |
@@ -206,10 +206,10 @@ Run the repository build separately before using these source-checkout demos:
 pnpm run build
 ```
 
-The one-shot Headless coding agent needs `DEEPSEEK_API_KEY` in the environment or repo-root `.env`:
+The one-shot Headless coding agent needs `FORWORK_API_KEY` in the environment or repo-root `.env`:
 
 ```sh
-pnpm dsh --profile headless "summarize this workspace"
+pnpm forwork --profile headless "summarize this workspace"
 ```
 
 The PTC mode demo runs the same headless profile with code presentation enabled:
@@ -223,13 +223,13 @@ pnpm run demo:ptc -- "summarize this workspace"
 Web and Desktop share one command pair. `start:*` launches the artifacts of a prior `pnpm run build` or `build:artifacts`; `dev:*` runs `build:artifacts` first and then launches. Web additionally keeps client bundles rebuilt on source edits, because its Host runs from source while the browser loads built bundles:
 
 ```sh
-pnpm run start:web       # serve built Web artifacts through the source launcher (the same launch as pnpm dsh web)
+pnpm run start:web       # serve built Web artifacts through the source launcher (the same launch as pnpm forwork web)
 pnpm run dev:web         # build, serve, and rebuild Web client bundles on source edits
 pnpm run start:desktop   # launch built Desktop artifacts
 pnpm run dev:desktop     # build, then launch Desktop
 ```
 
-Arguments after a Web command reach `dsh web`, for example `pnpm run dev:web --no-open --port 3081`; `dev:web` also accepts `--skip-build` to reuse the existing artifact tree and `--no-serve` to run only the rebuild watchers beside a server started elsewhere. Both Web commands use the normal Harness home, while the Desktop commands use the isolated development home described in the [Desktop README](../apps/desktop/README.md). The root `Makefile` names the same commands as `make web`, `make dev-web`, `make desktop`, `make dev-desktop`, and `make build`; `ARGS='--no-open'` forwards options.
+Arguments after a Web command reach `forwork web`, for example `pnpm run dev:web --no-open --port 3081`; `dev:web` also accepts `--skip-build` to reuse the existing artifact tree and `--no-serve` to run only the rebuild watchers beside a server started elsewhere. Both Web commands use the normal Harness home, while the Desktop commands use the isolated development home described in the [Desktop README](../apps/desktop/README.md). The root `Makefile` names the same commands as `make web`, `make dev-web`, `make desktop`, `make dev-desktop`, and `make build`; `ARGS='--no-open'` forwards options.
 
 ### TODO markers
 

@@ -16,7 +16,7 @@ import LlmRuntime from '@forwork/llm'
 import * as Account from '@forwork/llm-deepseek-account'
 import * as Official from '@forwork/llm-deepseek-api-key'
 import WebRuntime from '@forwork/web'
-import * as webApiPlugin from '@forwork/web-deepseek-api'
+import * as webApiPlugin from '@forwork/web-api'
 
 const cleanups: Array<() => Promise<void>> = []
 
@@ -30,7 +30,7 @@ const MODULES = new Map<string, unknown>([
   ['@forwork/llm-deepseek-api-key', Official],
   ['@forwork/llm-deepseek-account', Account],
   ['@forwork/web', WebRuntime],
-  ['@forwork/web-deepseek-api', webApiPlugin],
+  ['@forwork/web-api', webApiPlugin],
 ])
 
 /** One dispatched Search or Fetch API request. */
@@ -42,7 +42,7 @@ interface Sent {
 
 /**
  * Boot the composition with a fixed launch environment and a stubbed network.
- * @param web - web-deepseek-api config.
+ * @param web - web-api config.
  * @param environment - launch-environment variables.
  * @returns the booted root context and the Search and Fetch API requests sent so far.
  */
@@ -53,7 +53,7 @@ async function bootComposition(web: Record<string, unknown>, environment: Record
     return Response.json(url.endsWith('/search') ? { results: [] } : { content: '# Page' })
   })
   vi.stubGlobal('fetch', fetchMock)
-  const root = await mkdtemp(join(tmpdir(), 'dsh-web-deepseek-api-composition-'))
+  const root = await mkdtemp(join(tmpdir(), 'dsh-web-api-composition-'))
   cleanups.push(async () => { await rm(root, { recursive: true, force: true }) })
   const previousHome = process.env.DSH_HOME
   process.env.DSH_HOME = root
@@ -67,9 +67,9 @@ async function bootComposition(web: Record<string, unknown>, environment: Record
     { id: 'llm-deepseek', name: '@forwork/llm-deepseek-api-key' },
     { id: 'llm-deepseek-account', name: '@forwork/llm-deepseek-account' },
     { id: 'web', name: '@forwork/web', config: { searchProvider: 'deepseek-search-api', fetchProvider: 'deepseek-fetch-api' } },
-    { id: 'web-deepseek-api', name: '@forwork/web-deepseek-api', config: web },
+    { id: 'web-api', name: '@forwork/web-api', config: web },
   ]))
-  const ctx: Context = await boot('web-deepseek-api-composition', configPath, [], (host) => {
+  const ctx: Context = await boot('web-api-composition', configPath, [], (host) => {
     const modules: ModuleLoaderV2 = {
       version: 'v2', loadCache: new Map(),
       async import(specifier) {
@@ -101,10 +101,10 @@ function entry(ctx: Context, id: string) {
   return found.fiber
 }
 
-describe('web-deepseek-api over the real model routes', () => {
-  it('serves a user with only DEEPSEEK_API_KEY by default, at the origin DEEPSEEK_BASE_URL names', async () => {
+describe('web-api over the real model routes', () => {
+  it('serves a user with only FORWORK_API_KEY by default, at the origin FORWORK_BASE_URL names', async () => {
     const { ctx, sent } = await bootComposition({}, {
-      DEEPSEEK_API_KEY: 'chat-key', DEEPSEEK_BASE_URL: 'https://internal.deepseek.test/anthropic',
+      FORWORK_API_KEY: 'chat-key', FORWORK_BASE_URL: 'https://internal.deepseek.test/anthropic',
     })
     expect([await ctx.web.searchReady(undefined), await ctx.web.fetchReady(undefined)]).toEqual([true, true])
     await ctx.web.search({ query: 'q' })
@@ -118,7 +118,7 @@ describe('web-deepseek-api over the real model routes', () => {
   it('sends Fetch to its own YAML endpoint while Search follows the route', async () => {
     const { ctx, sent } = await bootComposition(
       { fetchBaseURL: 'https://own.deepseek.test/v1/tools', fetchApiKeyEnv: 'OWN_FETCH_KEY' },
-      { DEEPSEEK_API_KEY: 'chat-key', OWN_FETCH_KEY: 'own-key', DEEPSEEK_BASE_URL: 'https://internal.deepseek.test/anthropic' },
+      { FORWORK_API_KEY: 'chat-key', OWN_FETCH_KEY: 'own-key', FORWORK_BASE_URL: 'https://internal.deepseek.test/anthropic' },
     )
     await ctx.web.search({ query: 'q' })
     await ctx.web.fetch({ url: 'https://example.test/' })
@@ -128,15 +128,15 @@ describe('web-deepseek-api over the real model routes', () => {
     ])
   })
 
-  it('sends DEEPSEEK_API_KEY to the official base once the route entry is disposed, and unregisters with its own fiber', async () => {
+  it('sends FORWORK_API_KEY to the official base once the route entry is disposed, and unregisters with its own fiber', async () => {
     const { ctx, sent } = await bootComposition({}, {
-      DEEPSEEK_API_KEY: 'chat-key', DEEPSEEK_BASE_URL: 'https://internal.deepseek.test/anthropic',
+      FORWORK_API_KEY: 'chat-key', FORWORK_BASE_URL: 'https://internal.deepseek.test/anthropic',
     })
     await entry(ctx, 'llm-deepseek').dispose()
     expect(await ctx.web.searchReady(undefined)).toBe(true)
     await ctx.web.search({ query: 'q' })
     expect(sent()).toEqual([{ endpoint: 'https://api.deepseek.com/v1/tools/search', authorization: 'Bearer chat-key', token: null }])
-    await entry(ctx, 'web-deepseek-api').dispose()
+    await entry(ctx, 'web-api').dispose()
     expect(ctx.web.listProviders()).toEqual({ search: [], fetch: [] })
   })
 })

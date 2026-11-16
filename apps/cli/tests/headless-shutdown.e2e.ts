@@ -88,7 +88,7 @@ async function runHeadlessPtySmoke(): Promise<string> {
       env: {
         DSH_HOME: home,
         DSH_AGENTS_HOME: join(cwd, '.agents'),
-        DEEPSEEK_API_KEY: 'keyless-shutdown-no-call',
+        FORWORK_API_KEY: 'keyless-shutdown-no-call',
         DSH_TELEMETRY_DISABLED: '1',
         DSH_TEST_SHUTDOWN_ARM_FILE: join(cwd, 'shutdown-armed'),
       },
@@ -110,10 +110,10 @@ async function runHeadlessPtySmoke(): Promise<string> {
       stripFinalNewline: false,
     })
     if (result.timedOut) {
-      throw new Error(`dsh headless PTY driver did not exit. stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
+      throw new Error(`forwork headless PTY driver did not exit. stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
     }
     if (result.failed) {
-      throw new Error(`dsh headless PTY driver exited ${String(result.exitCode)}. stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
+      throw new Error(`forwork headless PTY driver exited ${String(result.exitCode)}. stdout:\n${result.stdout}\nstderr:\n${result.stderr}`)
     }
     return result.stdout
   } finally {

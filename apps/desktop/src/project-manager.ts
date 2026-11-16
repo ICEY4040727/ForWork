@@ -26,7 +26,7 @@ import { initProfile, removeLinkProjections, sanitizeProfile } from '@forwork/ap
 import { PROFILE_TEMPLATES, type ProfileTemplate } from '@forwork/official-bundles'
 
 const PROJECT_NAME = '@forwork/desktop-runtime'
-const DSH_PACKAGE = '@forwork/dsh'
+const DSH_PACKAGE = '@forwork/cli'
 const CORE_BUILD_PACKAGE = '@forwork/subprocess-local'
 const WEB_PROFILE = PROFILE_TEMPLATES.web as ProfileTemplate
 const WORKSPACE_SETTINGS = 'nodeLinker: hoisted\nautoInstallPeers: false\n'

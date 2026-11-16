@@ -70,7 +70,7 @@ describe('dsh-sdk-minimal bundle', () => {
       config: { maxTokensAsSuccess: false },
     })
     expect(rows.find(row => row.id === 'llm-deepseek')?.config).toEqual({
-      apiKeyEnv: 'DEEPSEEK_API_KEY',
+      apiKeyEnv: 'FORWORK_API_KEY',
       defaultContextWindow: { __jsExpr: 'Number(process.env.DSH_CONTEXT_WINDOW ?? 1000000)' },
       streamIdleTimeoutMs: 172800000,
     })

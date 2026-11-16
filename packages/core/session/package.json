@@ -1,6 +1,6 @@
 {
   "name": "@forwork/session",
-  "description": "Event-sourced session store for the DeepSeek Harness",
+  "description": "Event-sourced session store for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

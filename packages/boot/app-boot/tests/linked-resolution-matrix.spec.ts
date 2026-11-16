@@ -300,7 +300,7 @@ class MatrixFixture {
   readonly packageDir: string
   readonly sources = new Map<string, Source>()
   readonly importerDir: string
-  readonly installDir = join(this.root, 'installation', 'node_modules', '@forwork', 'dsh')
+  readonly installDir = join(this.root, 'installation', 'node_modules', '@forwork', 'cli')
   readonly runtimeDir: string
   readonly peerProjection: PeerProjection[] = []
 
@@ -319,7 +319,7 @@ class MatrixFixture {
   setup(): void {
     const value = this.scenario
     manifest(this.installDir, {
-      name: '@forwork/dsh', version: '1.0.0',
+      name: '@forwork/cli', version: '1.0.0',
       dependencies: value.inRuntime ? { [value.name]: '*' } : {},
     })
     if (value.inRuntime) this.package(this.runtimeDir, 'runtime')

@@ -1,7 +1,7 @@
 /**
  * The web search and fetch page's staged form over three settings namespaces:
  * `web`, whose `searchProvider` and `fetchProvider` the two provider menus
- * write, `web-deepseek-api` for the DeepSeek Search and Fetch APIs, and
+ * write, `web-api` for the DeepSeek Search and Fetch APIs, and
  * `web-search-deepseek` for legacy Messages search.
  *
  * A selection equal to the deployment's composed value clears the override
@@ -41,7 +41,7 @@ import {
  */
 export const WEB_SEARCH_NS = 'web-search-deepseek'
 /** Namespace of the DeepSeek Search and Fetch API providers. */
-export const WEB_API_NS = 'web-deepseek-api'
+export const WEB_API_NS = 'web-api'
 /** Namespace of the web service's provider selection. */
 export const WEB_NS = 'web'
 
@@ -63,7 +63,7 @@ const MENU_ORDER = {
 } as const satisfies Record<keyof ProviderList, readonly string[]>
 
 /** Credential reference legacy Messages search resolves when its section names none. */
-const DEFAULT_API_KEY_REF = 'DEEPSEEK_API_KEY'
+const DEFAULT_API_KEY_REF = 'FORWORK_API_KEY'
 
 /** Form field the credential control stages under. */
 const API_KEY_FIELD = 'legacyApiKey'

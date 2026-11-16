@@ -22,12 +22,12 @@ declare module '@forwork/cordis' {
 
 /** Default model selection supplied by plugin configuration. */
 export interface Config {
-  /** Registered provider route. */
-  provider: Volatile<string>
-  /** Provider-owned model id. */
-  model: Volatile<string>
+  /** Registered provider route; omitted until a deployment or saved selection supplies one. */
+  provider?: Volatile<string | undefined>
+  /** Provider-owned model id; omitted until a deployment or saved selection supplies one. */
+  model?: Volatile<string | undefined>
   /** Adapter-owned reasoning effort; omission follows the provider default. */
-  reasoningEffort: Volatile<string | undefined>
+  reasoningEffort?: Volatile<string | undefined>
 }
 
 /** Project stored settings onto the Agent-facing selection type. */
@@ -49,8 +49,8 @@ export class AgentDefaultModelConfig extends Service {
   private saves: Promise<void> = Promise.resolve()
 
   static Config = z.object({
-    provider: z.string().required().volatile(),
-    model: z.string().required().volatile(),
+    provider: z.string().volatile(),
+    model: z.string().volatile(),
     reasoningEffort: z.string().volatile(),
   })
 
@@ -63,11 +63,17 @@ export class AgentDefaultModelConfig extends Service {
   /**
    * Read the current default model selection.
    * @returns a detached provider, model, and optional reasoning selection.
+   * @throws when no provider or model is configured; a deployment must supply one before creating agents.
    */
   currentSelection(): ModelSelection {
-    const reasoningEffort = this.config.reasoningEffort.get()
+    const provider = this.config.provider?.get()
+    const model = this.config.model?.get()
+    if (provider === undefined || model === undefined) {
+      throw new Error('agent-default-model: no default provider and model are configured; choose a provider and model in Settings.')
+    }
+    const reasoningEffort = this.config.reasoningEffort?.get()
     return selection({
-      provider: this.config.provider.get(), model: this.config.model.get(),
+      provider, model,
       ...reasoningEffort === undefined ? {} : { reasoningEffort },
     })
   }

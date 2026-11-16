@@ -1,6 +1,6 @@
 {
   "name": "dsh-python-runtime-closure",
-  "description": "Dependency-only deploy root defining the dsh executable shipped by the Python runtime wheel.",
+  "description": "Dependency-only deploy root defining the forwork executable shipped by the Python runtime wheel.",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "@forwork/cordis-plugin-loader": "workspace:~",
     "@forwork/cordis-plugin-timer": "workspace:~",
     "@forwork/cosmokit": "workspace:~",
-    "@forwork/dsh": "workspace:*",
+    "@forwork/cli": "workspace:*",
     "@forwork/acp": "workspace:*",
     "@forwork/agent": "workspace:*",
     "@forwork/agent-default-model": "workspace:*",

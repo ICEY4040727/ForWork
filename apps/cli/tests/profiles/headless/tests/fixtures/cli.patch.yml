@@ -44,8 +44,8 @@
 
 # Own key references no runner sets on the DeepSeek Search and Fetch APIs: the
 # turn runs as a deployment without web search credentials, whatever
-# DEEPSEEK_API_KEY the launching environment exports.
-- id: web-deepseek-api
+# FORWORK_API_KEY the launching environment exports.
+- id: web-api
   config:
     searchApiKeyEnv: DSH_KEYLESS_SMOKE_SEARCH_KEY
     fetchApiKeyEnv: DSH_KEYLESS_SMOKE_FETCH_KEY

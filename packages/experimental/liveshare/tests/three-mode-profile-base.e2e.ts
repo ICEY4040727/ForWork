@@ -1,7 +1,7 @@
 /**
  * Minimal real-profile base for the three-mode acceptance driver.
  *
- * A normal `dsh` profile starts with real Session, controller, Agent, permissions and file tools in
+ * A normal `forwork` profile starts with real Session, controller, Agent, permissions and file tools in
  * a private temp home; one completed turn runs through that pipeline with a deterministic keyless
  * model, and the real `write` tool must have created a file inside the run's workspace before every
  * resource is reclaimed. Only the model is a fixture: execution, authorization, the controller and
@@ -23,7 +23,7 @@ const dshBinScript = fileURLToPath(new URL('../../../../apps/cli/src/bin.ts', im
 const tsconfigPath = fileURLToPath(new URL('../../../../tsconfig.json', import.meta.url))
 const fixturePlugin = pathToFileURL(fileURLToPath(new URL('./fixtures/base-llm.mjs', import.meta.url))).href
 
-/** One `dsh` run against the private home; the model is the only fixture. */
+/** One `forwork` run against the private home; the model is the only fixture. */
 async function run(cwd: string, home: string, args: readonly string[]) {
   const launch = resolveExampleLaunch({
     srcBin: dshBinScript,
@@ -35,7 +35,7 @@ async function run(cwd: string, home: string, args: readonly string[]) {
       DSH_HOME: home,
       DSH_AGENTS_HOME: join(cwd, '.agents'),
       DSH_TELEMETRY_DISABLED: '1',
-      DEEPSEEK_API_KEY: '',
+      FORWORK_API_KEY: '',
       NODE_OPTIONS: [
         process.env.NODE_OPTIONS,
         '--disable-warning=ExperimentalWarning',

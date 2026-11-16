@@ -2,7 +2,7 @@
 
 [English](python-sdk.md) | 中文
 
-本教程安装已发布的 Python SDK，运行随附的独立极简 profile，并说明如何从自己的程序自定义同一个 `dsh` profile。
+本教程安装已发布的 Python SDK，运行随附的独立极简 profile，并说明如何从自己的程序自定义同一个 `forwork` profile。
 
 ## 前置条件
 
@@ -39,7 +39,7 @@ python -m pip install deepseek-harness-sdk
 
 :::
 
-安装内容包含匹配的原生运行时 wheel 与 `dsh` 命令。普通 SDK 运行不需要系统 Node.js。需要构建产物的仓库贡献者应使用 [Python 贡献者工作流](../../../python/development.zh.md)。
+安装内容包含匹配的原生运行时 wheel 与 `forwork` 命令。普通 SDK 运行不需要系统 Node.js。需要构建产物的仓库贡献者应使用 [Python 贡献者工作流](../../../python/development.zh.md)。
 
 ## 运行检入示例
 
@@ -53,13 +53,13 @@ python -m pip install deepseek-harness-sdk
 ::: code-group
 
 ```sh [Linux/macOS]
-export DEEPSEEK_API_KEY=sk-your-key-here
-# export DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1
+export FORWORK_API_KEY=sk-your-key-here
+# export FORWORK_BASE_URL=http://127.0.0.1:8000/v1
 ```
 
 ```powershell [Windows PowerShell]
-$env:DEEPSEEK_API_KEY = "sk-your-key-here"
-# $env:DEEPSEEK_BASE_URL = "http://127.0.0.1:8000/v1"
+$env:FORWORK_API_KEY = "sk-your-key-here"
+# $env:FORWORK_BASE_URL = "http://127.0.0.1:8000/v1"
 ```
 
 :::
@@ -118,11 +118,11 @@ with DeepSeekHarness(
 print(result.final_response)
 ```
 
-SDK 会延迟启动内置的 `dsh --profile sdk-minimal` 进程，并复用到上下文管理器退出。Profile、其持久 patch、home patch 与任何有序 `patches` tuple 共同组成应用配置。不存在独立 Python 运行时 bin 或完整配置选项。
+SDK 会延迟启动内置的 `forwork --profile sdk-minimal` 进程，并复用到上下文管理器退出。Profile、其持久 patch、home patch 与任何有序 `patches` tuple 共同组成应用配置。不存在独立 Python 运行时 bin 或完整配置选项。
 
 ## 安装或定义插件
 
-需要在该 home 中持久保存依赖与 bundle 层时，使用 `dsh plugin`：
+需要在该 home 中持久保存依赖与 bundle 层时，使用 `forwork plugin`：
 
 <div>
 <a id="linux-与-macos-3"></a>
@@ -133,14 +133,14 @@ SDK 会延迟启动内置的 `dsh --profile sdk-minimal` 进程，并复用到�
 
 ```sh [Linux/macOS]
 export DSH_HOME=/absolute/path/to/example-dsh-home
-dsh --profile sdk-minimal --dump-default-config >/dev/null
-dsh plugin --profile sdk-minimal add file:/absolute/path/to/my-plugin-bundle
+forwork --profile sdk-minimal --dump-default-config >/dev/null
+forwork plugin --profile sdk-minimal add file:/absolute/path/to/my-plugin-bundle
 ```
 
 ```powershell [Windows PowerShell]
 $env:DSH_HOME = "C:\work\example-dsh-home"
-dsh --profile sdk-minimal --dump-default-config | Out-Null
-dsh plugin --profile sdk-minimal add file:C:/work/my-plugin-bundle
+forwork --profile sdk-minimal --dump-default-config | Out-Null
+forwork plugin --profile sdk-minimal add file:C:/work/my-plugin-bundle
 ```
 
 :::
@@ -193,7 +193,7 @@ dsh plugin --profile sdk-minimal add file:C:/work/my-plugin-bundle
 
 图片读取需要支持图片输入的路由。自动压缩保留完整 Session 日志；模型与存储影响见[组合包参考](../../../packages/bundle/sdk-minimal/README.zh.md)。在这个 `sdk-minimal` 组合中，不支持的斜杠输入保持为普通提示词文本。
 
-已安装 wheel 仍会打包完整 `web` profile 与前端产物。如果 Python SDK 部署还需要浏览器应用，请针对显式 `DSH_HOME` 运行 `dsh web`；`web` 是独立 CLI 应用，不能为 Python SDK client 提供服务。
+已安装 wheel 仍会打包完整 `web` profile 与前端产物。如果 Python SDK 部署还需要浏览器应用，请针对显式 `DSH_HOME` 运行 `forwork web`；`web` 是独立 CLI 应用，不能为 Python SDK client 提供服务。
 
 需要隔离 profile、插件、凭据、设置与会话时，应使用新的 home。独立工作应使用新的 session id；只有继续同一段持久对话和会话资源时，才同时复用 harness、home 与 id。
 

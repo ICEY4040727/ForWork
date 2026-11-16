@@ -9,12 +9,12 @@ import { composeEntries, loadProfileDirectory } from '@forwork/app-boot'
 import { createPluginProfile } from '../src/project-manager.ts'
 
 it('retains one shared resource consumer in the Desktop Web profile', () => {
-  const home = mkdtempSync(join(tmpdir(), 'dsh-desktop-profile-mcp-'))
+  const home = mkdtempSync(join(tmpdir(), 'forwork-desktop-profile-mcp-'))
   try {
     const profileDir = join(home, 'profiles', 'desktop')
     createPluginProfile(profileDir)
     const installAnchor = fileURLToPath(new URL('../../cli/package.json', import.meta.url))
-    const profile = loadProfileDirectory('dsh desktop', profileDir, installAnchor)
+    const profile = loadProfileDirectory('forwork desktop', profileDir, installAnchor)
     const warnings: string[] = []
     const rows = composeEntries([
       ...profile.layers.map(layer => layer.patches),

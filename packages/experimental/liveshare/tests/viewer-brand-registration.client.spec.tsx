@@ -75,7 +75,7 @@ describe('viewer brand registration', () => {
     expect(entryErrors).toEqual([])
 
     const mark = runtime.renderSlot('sidebar.brand.mark', { size: 24 })
-    const name = runtime.renderSlot('sidebar.brand.name', {})
+    const name = runtime.renderSlot('sidebar.brand.name', { t: (key: string) => key })
     expect(mark.container.querySelector('[data-shipped="brand-mark"]')).toBeNull()
     expect(mark.container.querySelector('svg')).not.toBeNull()
     expect(name.container.querySelector('[data-shipped="brand-name"]')).toBeNull()

@@ -146,9 +146,9 @@ function fixture(name = '@forwork/core'): {
   // and the long directory name for a Windows tmpdir spelled with an 8.3 short name.
   const root = realpathSync.native(mkdtempSync(join(tmpdir(), 'dsh-profile-resolution-')))
   roots.push(root)
-  const installDir = join(root, 'global', 'node_modules', '@forwork', 'dsh')
+  const installDir = join(root, 'global', 'node_modules', '@forwork', 'cli')
   const installed = join(installDir, 'node_modules', name)
-  const installAnchor = pkg(installDir, '@forwork/dsh', 0, { [name]: '*' })
+  const installAnchor = pkg(installDir, '@forwork/cli', 0, { [name]: '*' })
   pkg(installed, name, 1)
   const profileDir = join(root, 'profiles', 'web')
   file(join(profileDir, 'package.json'), JSON.stringify({
@@ -286,7 +286,7 @@ describe('runtime resolution', { concurrent: false }, () => {
       symlinkSync(dirname(f.installAnchor), dirname(installAnchor), 'junction')
     }
     if (origin === 'bundle') {
-      pkg(dirname(f.installAnchor), '@forwork/dsh', 0)
+      pkg(dirname(f.installAnchor), '@forwork/cli', 0)
       f.profile.layers.push({
         packageName: 'bridge', packageDir: f.installed,
         patchPaths: [join(f.installed, 'cordis.patch.yml')], patches: [],
@@ -296,7 +296,7 @@ describe('runtime resolution', { concurrent: false }, () => {
     const resolution = await createRuntimeResolution({
       installAnchor, profile: f.profile, home: f.root,
     })
-    expect(resolution.entries.find(entry => entry.name === '@forwork/dsh')?.declarer).toBe(f.installAnchor)
+    expect(resolution.entries.find(entry => entry.name === '@forwork/cli')?.declarer).toBe(f.installAnchor)
     expect(resolution.entries.find(entry => entry.name === 'middle')?.declarer)
       .toBe(join(bridge, 'package.json'))
     expect(resolution.entries.find(entry => entry.name === 'leaf')).toMatchObject({
@@ -564,7 +564,7 @@ describe('runtime resolution', { concurrent: false }, () => {
   it('preserves an npm alias package self-reference', async () => {
     const f = fixture()
     file(f.installAnchor, JSON.stringify({
-      name: '@forwork/dsh',
+      name: '@forwork/cli',
       version: '0.0.0',
       type: 'module',
       exports: { import: './index.js', require: './index.cjs' },
@@ -2092,7 +2092,7 @@ describe('runtime resolution', { concurrent: false }, () => {
   } {
     const f = fixture()
     const installDir = dirname(f.installAnchor)
-    pkg(installDir, '@forwork/dsh', 0, { '@forwork/core': '*', '@forwork/util': '*' })
+    pkg(installDir, '@forwork/cli', 0, { '@forwork/core': '*', '@forwork/util': '*' })
     pkg(join(installDir, 'node_modules', '@forwork', 'dsh-util'), '@forwork/util', 2)
     const linkedRoot = join(f.root, 'work', 'my-plugin')
     const writeManifest = (peers: Record<string, string> | undefined): void => {
@@ -2432,7 +2432,7 @@ describe('runtime resolution', { concurrent: false }, () => {
         selected: join(installDir, 'node_modules', 'outer-peer'), marker: 3,
       },
     ]
-    pkg(installDir, '@forwork/dsh', 0, Object.fromEntries(queries.map(({ name }) => [name, '*'])))
+    pkg(installDir, '@forwork/cli', 0, Object.fromEntries(queries.map(({ name }) => [name, '*'])))
     for (const [index, query] of queries.entries()) {
       pkg(join(installDir, 'node_modules', query.name), query.name, index + 1)
       pkg(query.nativeDir, query.name, query.nativeMarker)
@@ -2480,7 +2480,7 @@ describe('runtime resolution', { concurrent: false }, () => {
       const name = '@forwork/core'
       const f = fixture(name)
       const installDir = dirname(f.installAnchor)
-      pkg(installDir, '@forwork/dsh', 0, {
+      pkg(installDir, '@forwork/cli', 0, {
         [name]: '*', 'host-consumer': '*', 'workspace-consumer': '*',
       })
       const hostSource = join(installDir, 'src')

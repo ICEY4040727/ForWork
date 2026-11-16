@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Command-line entry for dsh.
- * @module @forwork/dsh/bin
+ * Command-line entry for forwork.
+ * @module @forwork/cli/bin
  */
 
 /* v8 ignore file -- built-bin acceptance exercises this self-executing dispatch. */
@@ -19,7 +19,7 @@ export type RunCliOptions = Pick<RunProfileOptions, 'packageManager'> & {
 }
 
 /**
- * Run the public dsh command-line interface.
+ * Run the public forwork command-line interface.
  * @param options - Package runtime and Desktop profile access supplied by the installation.
  * @returns a promise that settles when the selected command mode finishes.
  */
@@ -33,7 +33,7 @@ export async function runCli(options: RunCliOptions = {}): Promise<void> {
       const { runProfile } = await import('./profile-boot.ts')
       try {
         await runProfile({
-          environment: loadLayeredEnv('dsh'),
+          environment: loadLayeredEnv('forwork'),
           profile: invocation.profile,
           fromDefaultProfile: invocation.fromDefaultProfile,
           patchFiles: invocation.patches,
@@ -69,7 +69,7 @@ export async function runCli(options: RunCliOptions = {}): Promise<void> {
     }
     default:
       invocation satisfies never
-      throw new Error(`dsh: unhandled invocation mode ${JSON.stringify(invocation)}`)
+      throw new Error(`forwork: unhandled invocation mode ${JSON.stringify(invocation)}`)
   }
 }
 

@@ -67,7 +67,7 @@ it('routes manual packaging to the dedicated runner with explicit preset and sig
   expect(job['runs-on']).toBe('dsh-win-package-trial')
   expect(JSON.stringify(job.env)).not.toContain('runner.')
   expect(job.steps.find(step => step.name === 'Configure persistent pnpm store')?.env?.DSH_DESKTOP_PACKAGE_CACHE_DIR)
-    .toBe('${{ runner.tool_cache }}/dsh-desktop-package-cache')
+    .toBe('${{ runner.tool_cache }}/forwork-desktop-package-cache')
   expect(workflow.concurrency).toEqual({ group: 'windows-desktop-package', 'cancel-in-progress': false })
   expect(workflow.permissions).toEqual({ contents: 'read' })
   expect(Object.keys(workflow.on.workflow_dispatch!.inputs).sort()).toEqual([

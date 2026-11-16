@@ -1,6 +1,6 @@
 {
   "name": "@forwork/skill-badge",
-  "description": "Bundled dsh badge skill provider for DeepSeek Harness",
+  "description": "Bundled dsh badge skill provider for ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

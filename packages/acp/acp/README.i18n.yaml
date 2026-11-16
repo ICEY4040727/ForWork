@@ -3,14 +3,14 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/acp/acp/README.md
 /:
-  en: c2dc875f178f219b
-  zh: e1ebac19bf1c696d
+  en: c9b0f07b7e7b3831
+  zh: d8afb2f451dcb379
 /forwork-acp:
   en: 6f464dd01946e74a
   zh: 01ae33ccad46bb3d
 /forwork-acp/summary:
-  en: 59aff9dea7a075b1
-  zh: c0f5734c5fd09126
+  en: 6d100c11de3dced3
+  zh: 79475b5fd858d823
 /forwork-acp/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
@@ -24,8 +24,8 @@
   en: ba798f192218c0ff
   zh: f89ccbb362fd2a6a
 /forwork-acp/use-this-package/start-a-server:
-  en: ba96bb533aec95dd
-  zh: b37bc6ca48507308
+  en: 50f79bea85e514ad
+  zh: 9037a6ba9df5aae5
 /forwork-acp/use-this-package/protocol-contract:
   en: 195315c12edf895f
   zh: de307288858a8ece

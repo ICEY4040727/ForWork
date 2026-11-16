@@ -3,14 +3,14 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/sdk/client/README.md
 /:
-  en: 09cb25e4bcf56851
-  zh: a0a5913941d23eff
+  en: db68a11066aff752
+  zh: 51b74cd9c7a8a5f5
 /forwork-sdk-client:
   en: f3e6172a2af2e896
   zh: 61368bdf763214bd
 /forwork-sdk-client/summary:
-  en: 4ee2979053e5ad16
-  zh: 16bba7e87a22eabf
+  en: 2badd4fb678082b1
+  zh: 0b5e063baa086d47
 /forwork-sdk-client/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
@@ -45,8 +45,8 @@
   en: 165364de2cee0a9f
   zh: c4dc37b44e1e621e
 /forwork-sdk-client/further-exploration:
-  en: 1048b6b2c0954717
-  zh: 7ce29dd1ca545e06
+  en: a177ae0b1c8e3c9c
+  zh: ec2c2ca6affe7d74
 /forwork-sdk-client/model-experience:
   en: e82a55513d3cd30e
   zh: ecd8c0875ff2fb87
@@ -54,8 +54,8 @@
   en: 7abe0be104a791e7
   zh: 445311f78b1069ca
 /forwork-sdk-client/known-limitations-and-deferred-work:
-  en: e00784c261256658
-  zh: 4e22ad9e7bc22a2b
+  en: e940b91736f49da0
+  zh: 2b9ff9a8578cf655
 /forwork-sdk-client/known-limitations-and-deferred-work/dev-note:
   en: 6177a56f053936a4
   zh: 0f4b20228c2d15da

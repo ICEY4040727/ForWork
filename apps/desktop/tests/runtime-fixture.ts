@@ -30,12 +30,12 @@ export function writePackage(modules: string, name: string, fields: Record<strin
  * @returns Sealed runtime metadata.
  */
 export function runtimeFixture(root: string, version = '1.0.0', nodeVersion = '24.17.0'): DesktopRuntimeDescriptor {
-  const names = ['@forwork/dsh', '@forwork/desktop-host', '@forwork/base', '@forwork/web-app', '@forwork/cordis']
+  const names = ['@forwork/cli', '@forwork/desktop-host', '@forwork/base', '@forwork/web-app', '@forwork/cordis']
   for (const name of names) {
     const bundle = name === '@forwork/base' || name === '@forwork/web-app'
     const path = writePackage(join(root, 'node_modules'), name, {
       version,
-      ...(name === '@forwork/dsh' ? { dependencies: Object.fromEntries(names.slice(1).map(dependency => [dependency, version])) } : {}),
+      ...(name === '@forwork/cli' ? { dependencies: Object.fromEntries(names.slice(1).map(dependency => [dependency, version])) } : {}),
       ...(bundle ? { dsh: { bundle: { patch: './bundle.yml' } } } : {}),
     })
     if (bundle) writeFileSync(join(path, 'bundle.yml'), '[]\n')

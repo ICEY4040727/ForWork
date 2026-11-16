@@ -51,7 +51,7 @@ it('delivers an overdue reminder with the SDK route and lets the client resume t
   const address = server.address()
   if (address === null || typeof address === 'string') throw new Error('model fixture has no port')
   const env = { ...process.env, DSH_PERMISSION_MODE: 'danger-full-access', DSH_TELEMETRY_DISABLED: '1',
-    DEEPSEEK_API_KEY: 'keyless-schedule-fixture', DEEPSEEK_BASE_URL: `http://127.0.0.1:${String(address.port)}` }
+    FORWORK_API_KEY: 'keyless-schedule-fixture', FORWORK_BASE_URL: `http://127.0.0.1:${String(address.port)}` }
   clearAmbientProxyEnv(env)
   const first = new DeepSeekHarness({ cwd: root, dshHome: join(root, '.dsh'), patches: [patch],
     model: 'deepseek-v4-pro', maxTokens: 5678, initializeTimeoutMs: 30_000,
@@ -106,7 +106,7 @@ it('refuses new Session destinations before storing tasks in the shipped SDK pro
   const address = server.address()
   if (address === null || typeof address === 'string') throw new Error('model fixture has no port')
   const env = { ...process.env, DSH_PERMISSION_MODE: 'danger-full-access', DSH_TELEMETRY_DISABLED: '1',
-    DEEPSEEK_API_KEY: 'keyless-schedule-fixture', DEEPSEEK_BASE_URL: `http://127.0.0.1:${String(address.port)}` }
+    FORWORK_API_KEY: 'keyless-schedule-fixture', FORWORK_BASE_URL: `http://127.0.0.1:${String(address.port)}` }
   clearAmbientProxyEnv(env)
   const client = new DeepSeekHarness({ cwd: root, dshHome: join(root, '.dsh'),
     model: 'deepseek-v4-pro', initializeTimeoutMs: 30_000, env })

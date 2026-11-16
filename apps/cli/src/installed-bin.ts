@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Installed CLI entry for disk launchers and embedded runtimes.
- * @module @forwork/dsh/installed-bin
+ * @module @forwork/cli/installed-bin
  */
 import { realpathSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'

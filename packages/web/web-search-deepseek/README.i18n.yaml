@@ -9,8 +9,8 @@
   en: 308ff1ad600c2913
   zh: 0eeb0ae5747196c0
 /forwork-web-search-deepseek/summary:
-  en: 6b1267e732370877
-  zh: 64460aba0564cb44
+  en: 1ef27cae42cc402f
+  zh: ba5f2047b54760c6
 /forwork-web-search-deepseek/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
@@ -18,11 +18,11 @@
   en: e0d352d6402d9d3b
   zh: a449234557ef8bd6
 /forwork-web-search-deepseek/use-this-package/when-to-choose-it:
-  en: 0187c8af8d2d98c5
-  zh: 1c9607b3a662bcaa
+  en: 698bedbce81c53d7
+  zh: 3e418490be5be7d3
 /forwork-web-search-deepseek/use-this-package/minimal-configuration:
-  en: 3289bbba981f52a3
-  zh: 6940cf9776e43a32
+  en: 0ac89726e11625e6
+  zh: 7af9120ef9d38e5e
 /forwork-web-search-deepseek/use-this-package/authentication:
   en: 7a765ba931329067
   zh: 6fc14edcc378684a
@@ -39,8 +39,8 @@
   en: 9842c69ad3636bb3
   zh: 3cdc3f816cbdd0cb
 /forwork-web-search-deepseek/understand-the-implementation/design-philosophy:
-  en: 1b1760efbf4568c1
-  zh: fca06c959e51ce16
+  en: 3ef2c7f2be59cb0a
+  zh: 82f6cbcf6df527af
 /forwork-web-search-deepseek/understand-the-implementation/source-map:
   en: 6488e1c85646339f
   zh: 2b5ca1c6b5939a8c
@@ -90,11 +90,11 @@
   en: 1d836a33dfa97fcf
   zh: 2593ccf2a5716b02
 /forwork-web-search-deepseek/known-limitations-and-deferred-work:
-  en: 1cb15cc5e9b1967d
-  zh: 64f1d93e94bbc9c3
+  en: 37103d4a0db8f214
+  zh: 761efb116e0e9390
 /forwork-web-search-deepseek/known-limitations-and-deferred-work/dev-note:
   en: 7f775cc79dbce94b
   zh: 12b8f68f9e7c48ca
 /forwork-web-search-deepseek/known-limitations-and-deferred-work/dev-note/dedicated-retrieval-endpoint:
-  en: 188ca3400a73352e
-  zh: f948e2c565ec6ac1
+  en: f82e373b7b936cb7
+  zh: 5183a47e79833e2f

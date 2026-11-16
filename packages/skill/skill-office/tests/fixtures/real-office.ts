@@ -10,7 +10,7 @@ export function officeModelPatches() {
     ...completions ? [
       { id: 'llm-deepseek', disabled: true },
       { id: 'llm-pi-ai', config: { providers: { 'office-test': {
-        api: 'openai-completions', apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: process.env.DEEPSEEK_BASE_URL,
+        api: 'openai-completions', apiKeyEnv: 'FORWORK_API_KEY', baseURL: process.env.FORWORK_BASE_URL,
         compat: { thinkingFormat: 'deepseek' },
         models: [{ id: model, contextWindow: 128000, maxTokens: 8192, input: ['text', 'image'] }],
       } } } },

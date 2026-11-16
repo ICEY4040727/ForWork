@@ -2,21 +2,21 @@
 # section, a hash of its English and Chinese blocks outside code blocks and generated regions.
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write apps/cli/README.md
-/forwork-dsh:
-  en: 743ed918647c3c90
-  zh: e6971787d0db94e8
-/forwork-dsh/entry-modes:
-  en: a1e035a813554366
-  zh: b87053214afe71b6
-/forwork-dsh/app-arguments:
+/forwork-cli:
+  en: 2337aaa3f626325c
+  zh: f9669551aedf74cb
+/forwork-cli/entry-modes:
+  en: 1466950c2656ab31
+  zh: 73f3b9167f3955c1
+/forwork-cli/app-arguments:
   en: cc03e6b75206661b
   zh: 99e41f4143198352
-/forwork-dsh/profiles:
-  en: 67d1118f13800c2b
-  zh: e0ad58fffa13cc8e
-/forwork-dsh/optional-overlays:
+/forwork-cli/profiles:
+  en: 2ba454ee5943ce5e
+  zh: 420831d3b32bcf24
+/forwork-cli/optional-overlays:
   en: 3a40ddc44e55f79c
   zh: 8d3949132e1ef93c
-/forwork-dsh/development:
-  en: c61900e03464b2c0
-  zh: 7bf04f57ce5eb7c2
+/forwork-cli/development:
+  en: 1a1d2ba02b2d8169
+  zh: 2862cc25c3181e06

@@ -36,7 +36,7 @@ kind: "package-reference"
 ```yaml
 - name: '@forwork/llm-deepseek-api-key'
   config:
-    apiKeyEnv: DEEPSEEK_API_KEY
+    apiKeyEnv: FORWORK_API_KEY
     retryPolicy:
       mode: always
       backoff:

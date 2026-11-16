@@ -117,8 +117,8 @@ describe('Python SDK dsh profile keyless smoke', () => {
         DSH_PERMISSION_MODE: 'danger-full-access',
         DSH_TELEMETRY_DISABLED: '1',
         DSH_TOOLS_MODE: ptc ? 'native' : 'ptc',
-        DEEPSEEK_API_KEY: 'keyless-smoke-no-call',
-        DEEPSEEK_BASE_URL: `http://127.0.0.1:${address.port}`,
+        FORWORK_API_KEY: 'keyless-smoke-no-call',
+        FORWORK_BASE_URL: `http://127.0.0.1:${address.port}`,
         ...(envValue === undefined ? {} : { DSH_MAX_TOKENS_AS_SUCCESS: envValue }),
       },
       timeout: 35_000,
@@ -153,7 +153,7 @@ describe('Python SDK dsh profile keyless smoke', () => {
       expect(initialized).toMatchObject({
         jsonrpc: '2.0',
         id: 1,
-        result: { serverInfo: { name: 'deepseek-harness-sdk-runtime' } },
+        result: { serverInfo: { name: 'forwork-sdk-runtime' } },
       })
 
       child.stdin.write(`${JSON.stringify({
@@ -211,8 +211,8 @@ describe('Python SDK dsh profile keyless smoke', () => {
         'Time sampled while preparing']) {
         expect(requestText.includes(text), text).toBe(true)
       }
-      expect(requestText).not.toContain('Current DeepSeek Harness implementation checkout:')
-      expect(requestText).not.toContain('Current DeepSeek Harness Web GUI URL:')
+      expect(requestText).not.toContain('Current ForWork implementation checkout:')
+      expect(requestText).not.toContain('Current ForWork Web GUI URL:')
 
       child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'shutdown' })}\n`)
       const shutdown = await waitForLine(lines, value => value.id === 3, () => stderr)
@@ -280,7 +280,7 @@ describe('Python SDK dsh profile keyless smoke', () => {
     if (offloadEnabled) await writeFile(editorPatch, [
       '- id: llm-deepseek',
       '  config:',
-      '    apiKeyEnv: DEEPSEEK_API_KEY',
+      '    apiKeyEnv: FORWORK_API_KEY',
       '    maxRequestFilesBytes: 1',
       '    imageOffloadByteQuantum: 1',
       '',
@@ -337,8 +337,8 @@ describe('Python SDK dsh profile keyless smoke', () => {
         ...launch.env,
         DSH_HOME: join(root, '.dsh'),
         DSH_SYSTEM_PROMPT: 'Minimal allowlist prompt.',
-        DEEPSEEK_API_KEY: 'keyless-smoke-no-call',
-        DEEPSEEK_BASE_URL: `http://127.0.0.1:${address.port}`,
+        FORWORK_API_KEY: 'keyless-smoke-no-call',
+        FORWORK_BASE_URL: `http://127.0.0.1:${address.port}`,
       },
       timeout: 35_000,
       killSignal: 'SIGKILL',
@@ -457,7 +457,7 @@ describe('Python SDK dsh profile keyless smoke', () => {
       ...launch.args, '--profile', 'sdk', '--patch', patch,
     ], {
       cwd: repoRoot,
-      env: { ...launch.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1', DEEPSEEK_API_KEY: 'keyless-no-call' },
+      env: { ...launch.env, DSH_HOME: home, DSH_TELEMETRY_DISABLED: '1', FORWORK_API_KEY: 'keyless-no-call' },
       stdin: 'pipe',
       stripFinalNewline: false,
       timeout: 25_000,
@@ -499,7 +499,7 @@ describe('Python SDK dsh profile keyless smoke', () => {
         env: {
           ...launch.env,
           DSH_HOME: join(root, '.dsh'),
-          DEEPSEEK_API_KEY: 'keyless-smoke-no-call',
+          FORWORK_API_KEY: 'keyless-smoke-no-call',
           DSH_MAX_TOKENS_AS_SUCCESS: 'sometimes',
         },
         stdin: 'ignore',
@@ -577,7 +577,7 @@ it.each(['unset', 'empty', 'bundled', 'full', 'python-only', 'python-only-no-cli
     env: { DSH_HOME: home, DSH_PRIMARY_RUNTIME: mode === 'unset' || mode === 'bundled' ? undefined : mode === 'empty' ? '' : source + '/',
       DSH_BUNDLED_PRIMARY_RUNTIME: mode === 'unset' ? undefined : mode === 'bundled' || mode === 'empty' ? source : join(root, 'unused-default'),
       DSH_PERMISSION_MODE: 'danger-full-access', DSH_TELEMETRY_DISABLED: '1',
-      DEEPSEEK_API_KEY: 'local-fixture', DEEPSEEK_BASE_URL: `http://127.0.0.1:${address.port}` },
+      FORWORK_API_KEY: 'local-fixture', FORWORK_BASE_URL: `http://127.0.0.1:${address.port}` },
   })
   const child = execa(officeLaunch.command, officeLaunch.args, { cwd: repoRoot, env: officeLaunch.env, timeout: 60_000, reject: false })
   onTestFinished(async () => { child.kill('SIGKILL'); await child })

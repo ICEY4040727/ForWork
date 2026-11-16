@@ -42,16 +42,16 @@ describe('dsh-base bundle', () => {
     expect(rows.filter(row => row.id === 'subagent-codex')).toHaveLength(0)
     expect(rows.filter(row => row.id === 'subagent-claude-code')).toHaveLength(0)
     expect(rows.find(row => row.id === 'web')?.config).toEqual({ searchProvider: 'deepseek-search-api', fetchProvider: 'http' })
-    expect(rows.find(row => row.id === 'web-deepseek-api')).toEqual({ id: 'web-deepseek-api', name: '@forwork/web-deepseek-api' })
+    expect(rows.find(row => row.id === 'web-api')).toEqual({ id: 'web-api', name: '@forwork/web-api' })
     expect(rows.find(row => row.id === 'web-fetch-http')).toBeDefined()
     expect(rows.find(row => row.id === 'web-search-deepseek')).toMatchObject({
-      name: '@forwork/web-search-deepseek', config: { apiKeyEnv: 'DEEPSEEK_API_KEY' },
+      name: '@forwork/web-search-deepseek', config: { apiKeyEnv: 'FORWORK_API_KEY' },
     })
     expect(rows.find(row => row.id === 'tool-web')?.config).toMatchObject({ fetch: true })
     expect(manifest.dependencies).not.toHaveProperty('@forwork/subagent-codex')
     expect(manifest.dependencies).not.toHaveProperty('@forwork/subagent-claude-code')
     expect(manifest.dependencies).toHaveProperty('@forwork/web-fetch-http')
-    expect(manifest.dependencies).toHaveProperty('@forwork/web-deepseek-api')
+    expect(manifest.dependencies).toHaveProperty('@forwork/web-api')
     expect(manifest.dependencies).toHaveProperty('@forwork/web-search-deepseek')
   })
 

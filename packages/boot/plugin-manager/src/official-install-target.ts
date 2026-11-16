@@ -24,7 +24,7 @@ function manifestAt(file: string): WorkspaceManifest {
 export function officialBundleInstallTarget(name: string, installAnchor: string, version: string): { spec: string; version: string } {
   const anchor = realpathSync(installAnchor)
   const installation = manifestAt(anchor)
-  const source = installation.name === '@forwork/dsh'
+  const source = installation.name === '@forwork/cli'
     && Object.values(installation.dependencies ?? {}).some(value => value.startsWith('workspace:'))
   if (!source) return { spec: `${name}@${version}`, version }
   const root = resolve(dirname(anchor), '../..')

@@ -3,7 +3,7 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-settings-plugin-inventory/README.md
 /:
-  en: 9121298d88fe8ea6
+  en: a7ceb2ac4ae9be64
   zh: 5da705491f951d0e
 /forwork-client-ui-settings-plugin-inventory:
   en: 97f5f0620fc1067d

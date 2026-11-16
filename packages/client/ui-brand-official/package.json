@@ -1,6 +1,6 @@
 {
   "name": "@forwork/client-ui-brand-official",
-  "description": "Official DeepSeek Harness brand artwork and click-triggered home background",
+  "description": "Official ForWork brand artwork and click-triggered home background",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

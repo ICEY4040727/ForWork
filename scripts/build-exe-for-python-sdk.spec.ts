@@ -115,7 +115,7 @@ describe('Python runtime executable builder CLI', () => {
     expect(cliManifest.dependencies).not.toHaveProperty('@forwork/subprocess-local')
     expect(cliManifest.devDependencies).toHaveProperty('@forwork/subprocess-local')
     expect(runtimeManifest.dependencies).toHaveProperty('@forwork/subprocess-local')
-    expect(bootstrap).toContain("import('@forwork/dsh/lib/bin.js')")
+    expect(bootstrap).toContain("import('@forwork/cli/lib/bin.js')")
     expect(bootstrap).toContain('await runCli({ packageManager })')
     expect(bootstrap).toContain("import('@forwork/subprocess-local/runner')")
     expect(bootstrap).toContain('await runSelectedSubprocessRunner(selection)')

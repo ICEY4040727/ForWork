@@ -358,7 +358,7 @@ export class DeepSeekSearchProvider implements WebSearchProvider {
     const { resolveApiKey } = options
     const resolved = resolveApiKey === undefined ? undefined : await resolveCredential(resolveApiKey, signal)
     if (resolved !== undefined && resolved.length > 0) return resolved
-    const ref = options.apiKeyEnv ?? 'DEEPSEEK_API_KEY'
+    const ref = options.apiKeyEnv ?? 'FORWORK_API_KEY'
     throw new WebError(
       `DeepSeek search has no API key for "${ref}"; store it through the credentials service`
       + ' (the web Models page writes it), export it in the launching environment, or set a literal'

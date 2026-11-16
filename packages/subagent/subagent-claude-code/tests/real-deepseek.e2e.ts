@@ -58,12 +58,12 @@ async function expectQuiescent(handles: readonly SubprocessHandle[]): Promise<vo
   }
 }
 
-describe.skipIf(!process.env.DEEPSEEK_API_KEY)(
+describe.skipIf(!process.env.FORWORK_API_KEY)(
   'Claude Code provider with real DeepSeek API',
   () => {
     it('returns one unique nonce through the production provider and real SDK/CLI', async () => {
-      const apiKey = process.env.DEEPSEEK_API_KEY
-      if (apiKey === undefined) throw new Error('e2e ran without DEEPSEEK_API_KEY')
+      const apiKey = process.env.FORWORK_API_KEY
+      if (apiKey === undefined) throw new Error('e2e ran without FORWORK_API_KEY')
       const root = mkdtempSync(join(tmpdir(), 'dsh-claude-deepseek-e2e-'))
       roots.push(root)
       const workspace = join(root, 'workspace')

@@ -66,7 +66,7 @@ function unmetRequirements(fields: Record<string, unknown>, runtimeVersion: stri
     if (typeof range !== 'string') {
       throw new Error(`Plugin manifest peerDependencies[${JSON.stringify(name)}] must be a string`)
     }
-    if (name !== '@forwork/dsh' && !name.startsWith('@forwork/')) continue
+    if (name !== '@forwork/cli' && !name.startsWith('@forwork/')) continue
     const requirement = ['workspace:^', 'workspace:~', 'workspace:*'].includes(range) ? runtimeVersion : range
     if (!satisfies(runtimeVersion, requirement)) unmet[name] = range
   }
@@ -75,7 +75,7 @@ function unmetRequirements(fields: Record<string, unknown>, runtimeVersion: stri
 
 /**
  * Check the plugin's dsh requirements against the runtime. An own `engines.dsh` range decides alone and
- * peerDependencies are ignored; otherwise every @forwork/dsh or @forwork/* peer must match.
+ * peerDependencies are ignored; otherwise every @forwork/cli or @forwork/* peer must match.
  * Prereleases participate in ranges. For peers only, workspace:^, workspace:~, and workspace:* refer to
  * the current runtime; other empty or invalid ranges, including any workspace: `engines.dsh`, are unmet.
  * @param manifest - parsed plugin package.json; inherited fields are ignored.
@@ -112,6 +112,6 @@ export function pluginCompatibilityWarning(issue: PluginCompatibility): string {
   return `Plugin ${key} is incompatible with dsh ${issue.runtimeVersion}: requirements ${JSON.stringify(issue.requirements)}. `
     + 'Running it may cause crashes or data loss. '
     + 'Update the plugin or install a plugin version compatible with this dsh runtime. '
-    + `To accept this risk explicitly, grant the exact-version exemption for ${key} on dsh ${issue.runtimeVersion} with \`dsh plugin allow-version\` or the plugin manager, then retry the installation or restart dsh. `
+    + `To accept this risk explicitly, grant the exact-version exemption for ${key} on dsh ${issue.runtimeVersion} with \`forwork plugin allow-version\` or the plugin manager, then retry the installation or restart dsh. `
     + `Exact-version exemption: ${issue.exempted ? 'active' : 'not active'}.`
 }

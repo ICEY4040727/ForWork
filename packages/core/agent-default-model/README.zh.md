@@ -29,7 +29,7 @@ kind: "package-reference"
 
 ### 配置默认值
 
-组合要求提供 provider 和模型。即使没有挂载配置编辑器，消费者也可读取即时引用。
+默认不提供 provider 和模型。请在此处或通过已保存的选择配置两者；未设置前 `currentSelection()` 会明确失败。即使没有挂载配置编辑器，消费者也可读取即时引用。
 
 ```yaml
 - name: '@forwork/agent-default-model'
@@ -40,8 +40,8 @@ kind: "package-reference"
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
-| `provider` | 必填 | 新 agent 使用的已注册提供方路由 |
-| `model` | 必填 | 新 agent 使用的、由提供方持有的模型 id |
+| `provider` | 未配置时必填 | 新 agent 使用的已注册提供方路由 |
+| `model` | 未配置时必填 | 新 agent 使用的、由提供方持有的模型 id |
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#forworkagent-default-model) 列出所有接受的字段。`reasoningEffort` 是可选的；保存不含此字段的选择，会从 profile 的完整配置覆盖中移除此字段。
 

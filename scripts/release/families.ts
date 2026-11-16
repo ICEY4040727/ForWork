@@ -1,7 +1,7 @@
 /**
  * The three independent publish sequences this repository releases from
  * (`packages/` + `apps/`, `vendor/`, and `native/`) and the two this module
- * owns: `dsh` and `vendor`. Each family carries its own version baseline, tag
+ * owns: `forwork` and `vendor`. Each family carries its own version baseline, tag
  * naming, and publish set, so releasing one never republishes another
  * ([rationale](../../.agents/notes/implemented/process/2026-08-10-npm-release-sequences.md)).
  *
@@ -397,7 +397,7 @@ class DshFamily extends ReleaseFamily {
 
   /** Publish every advertised on-demand package before the installation that offers it. */
   protected override publicationPrerequisites(member: ReleaseMember): readonly string[] {
-    return member.name === '@forwork/dsh' ? ON_DEMAND_BUNDLES : []
+    return member.name === '@forwork/cli' ? ON_DEMAND_BUNDLES : []
   }
 
   /** Require the packed DSH runtime graph to stay on the shared exact release version. */
@@ -407,7 +407,7 @@ class DshFamily extends ReleaseFamily {
       const dependencies = manifest[section]
       if (dependencies === null || typeof dependencies !== 'object' || Array.isArray(dependencies)) continue
       for (const [name, range] of Object.entries(dependencies)) {
-        if (name !== '@forwork/dsh' && !name.startsWith('@forwork/')) continue
+        if (name !== '@forwork/cli' && !name.startsWith('@forwork/')) continue
         if (range !== member.version) {
           throw new Error(`${member.name}: packed ${section}.${name} must equal ${member.version}, got ${String(range)}`)
         }
@@ -415,7 +415,7 @@ class DshFamily extends ReleaseFamily {
     }
   }
 
-  readonly installedEntry = { packageName: '@forwork/dsh', binPath: 'lib/bin.js' }
+  readonly installedEntry = { packageName: '@forwork/cli', binPath: 'lib/bin.js' }
 }
 
 /** `vendor/*`: every package keeps its own version line, so every package has its own tag. */

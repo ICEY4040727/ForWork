@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { DeepSeekFetchApiProvider, DeepSeekSearchApiProvider } from '@forwork/web-deepseek-api'
+import { DeepSeekFetchApiProvider, DeepSeekSearchApiProvider } from '@forwork/web-api'
 import { customGuidance } from './guidance.ts'
 
 /** Real Search and Fetch API probes; the base names the deployment the key authenticates. */
-const apiKey = process.env.DEEPSEEK_API_KEY
+const apiKey = process.env.FORWORK_API_KEY
 const baseURL = process.env.DEEPSEEK_SEARCH_API_TEST_BASE_URL ?? ''
 const maybe = apiKey !== undefined && apiKey.length > 0 && baseURL.length > 0 ? describe : describe.skip
 

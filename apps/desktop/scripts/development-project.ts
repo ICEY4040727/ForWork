@@ -124,9 +124,9 @@ function mirrorWorkspaceDependencies(roots: readonly string[], destinationRoot: 
  */
 export function prepareDevelopmentProject(options: DevelopmentProjectOptions): string {
   const cliManifest = readManifest(join(options.cliDir, 'package.json'))
-  if (cliManifest.name !== '@forwork/dsh' || cliManifest.version !== options.release.version) {
+  if (cliManifest.name !== '@forwork/cli' || cliManifest.version !== options.release.version) {
     throw new Error(
-      `desktop development: apps/cli must be @forwork/dsh@${options.release.version}, found `
+      `desktop development: apps/cli must be @forwork/cli@${options.release.version}, found `
       + `${String(cliManifest.name)}@${String(cliManifest.version)}`,
     )
   }
@@ -152,13 +152,13 @@ export function prepareDevelopmentProject(options: DevelopmentProjectOptions): s
     ...mirrorDependencyLinks(options.dependencyDir, destinationModules),
     ...mirrorWorkspaceDependencies([options.cliDir, options.hostDir], destinationModules),
   ]
-  const dshLink = join(destinationModules, '@forwork', 'dsh')
+  const dshLink = join(destinationModules, '@forwork', 'cli')
   removeOwnedPath(dshLink)
   linkDirectory(options.cliDir, dshLink)
-  const hostLink = join(destinationModules, '@forwork', 'dsh-desktop-host')
+  const hostLink = join(destinationModules, '@forwork', 'desktop-host')
   removeOwnedPath(hostLink)
   linkDirectory(options.hostDir, hostLink)
-  const sharedPackages = [...new Set([...names, '@forwork/dsh', '@forwork/desktop-host'])].flatMap((name) => {
+  const sharedPackages = [...new Set([...names, '@forwork/cli', '@forwork/desktop-host'])].flatMap((name) => {
     const manifest = readManifest(join(destinationModules, name, 'package.json'))
     return typeof manifest.version === 'string' ? [{ name, version: manifest.version, path: `node_modules/${name}` }] : []
   })

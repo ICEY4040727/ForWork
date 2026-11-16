@@ -134,11 +134,11 @@ pnpm run build
 真实的 DeepSeek 适配器和需要密钥的 agent 演示从环境变量或仓库根目录一个被 gitignore 的 `.env` 文件读取凭证：
 
 ```sh
-DEEPSEEK_API_KEY=sk-...
-DEEPSEEK_BASE_URL=https://... # optional
+FORWORK_API_KEY=sk-...
+FORWORK_BASE_URL=https://... # optional
 ```
 
-`DEEPSEEK_BASE_URL` 可选，默认为公开 API。请勿提交真实凭证。未设置 `DEEPSEEK_API_KEY` 时，真实 API 的 e2e 套件会自动跳过。
+`FORWORK_BASE_URL` 可选，默认为公开 API。请勿提交真实凭证。未设置 `FORWORK_API_KEY` 时，真实 API 的 e2e 套件会自动跳过。
 
 ### Git 集成
 
@@ -172,7 +172,7 @@ pi-ai 检查会在内存中重新生成预期元数据。数据过期时，检�
 | 未触及已分叉文件的框架核心 bug 修复 | 取 | 直接受益 |
 | 依赖/锁文件的安全与兼容升级 | 取，并复跑相关全套检查 | 防止破坏 |
 | 落在已分叉文件上的修复 | 默认跳过；关键 bug 则取后重新叠加本地改动 | 冲突成本 |
-| DeepSeek 产品/品牌/账户/遥测/`web-deepseek-api`/默认搜索 | 丢弃 | 与独立身份无关且冲突 |
+| DeepSeek 产品/品牌/账户/遥测/`web-api`/默认搜索 | 丢弃 | 与独立身份无关且冲突 |
 | 本产品不发布的实验/可选包 | 除非采用，否则丢弃 | 不带走负担 |
 | 引入 AGPL、云账号或付费 SDK 的依赖 | 丢弃 | 违反离线/本地优先与许可原则 |
 | 破坏性 `SESSION_FORMAT_VERSION` 变更或需要迁移 | 暂缓并编写升级指南 | 迁移风险最高 |
@@ -211,10 +211,10 @@ keyless [CI 工作流](../.github/workflows/ci.yml) 将独立门禁分组到若�
 pnpm run build
 ```
 
-单次运行的 Headless coding agent 需要环境变量或仓库根目录 `.env` 中的 `DEEPSEEK_API_KEY`：
+单次运行的 Headless coding agent 需要环境变量或仓库根目录 `.env` 中的 `FORWORK_API_KEY`：
 
 ```sh
-pnpm dsh --profile headless "summarize this workspace"
+pnpm forwork --profile headless "summarize this workspace"
 ```
 
 PTC mode 演示启用代码式工具展示，并运行同一个 headless profile：
@@ -228,13 +228,13 @@ pnpm run demo:ptc -- "summarize this workspace"
 Web 与 Desktop 共用同一对命令。`start:*` 启动上一次 `pnpm run build` 或 `build:artifacts` 的产物；`dev:*` 先执行 `build:artifacts` 再启动。Web 还会在源码修改时持续重建 client bundle，因为它的 Host 从源码运行，而浏览器加载的是构建产物：
 
 ```sh
-pnpm run start:web       # serve built Web artifacts through the source launcher (the same launch as pnpm dsh web)
+pnpm run start:web       # serve built Web artifacts through the source launcher (the same launch as pnpm forwork web)
 pnpm run dev:web         # build, serve, and rebuild Web client bundles on source edits
 pnpm run start:desktop   # launch built Desktop artifacts
 pnpm run dev:desktop     # build, then launch Desktop
 ```
 
-Web 命令后面的参数会传给 `dsh web`，例如 `pnpm run dev:web --no-open --port 3081`；`dev:web` 还接受 `--skip-build` 复用现有产物树，以及 `--no-serve` 只运行重建 watcher、配合别处启动的服务器。两个 Web 命令使用正常的 Harness home，而 Desktop 命令使用 [Desktop README](../apps/desktop/README.zh.md) 描述的隔离开发 home。根目录 `Makefile` 以 `make web`、`make dev-web`、`make desktop`、`make dev-desktop` 和 `make build` 命名同一套命令；`ARGS='--no-open'` 用于转发参数。
+Web 命令后面的参数会传给 `forwork web`，例如 `pnpm run dev:web --no-open --port 3081`；`dev:web` 还接受 `--skip-build` 复用现有产物树，以及 `--no-serve` 只运行重建 watcher、配合别处启动的服务器。两个 Web 命令使用正常的 Harness home，而 Desktop 命令使用 [Desktop README](../apps/desktop/README.zh.md) 描述的隔离开发 home。根目录 `Makefile` 以 `make web`、`make dev-web`、`make desktop`、`make dev-desktop` 和 `make build` 命名同一套命令；`ARGS='--no-open'` 用于转发参数。
 
 ### TODO 标记
 

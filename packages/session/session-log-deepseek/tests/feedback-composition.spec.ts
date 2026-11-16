@@ -37,7 +37,7 @@ async function boot(
 ): Promise<{ ctx: Context; server: MockLlmServer }> {
   root = await mkdtemp(join(tmpdir(), 'dsh-feedback-upload-'))
   vi.stubEnv('DSH_HOME', root)
-  vi.stubEnv('DEEPSEEK_API_KEY', 'feedback-test-key')
+  vi.stubEnv('FORWORK_API_KEY', 'feedback-test-key')
   server = await startMockLlmServer(mock)
   const modules = new Map<string, unknown>([
     ['@forwork/session', SessionStore],

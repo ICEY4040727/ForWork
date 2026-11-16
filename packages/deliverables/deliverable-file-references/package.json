@@ -1,6 +1,6 @@
 {
   "name": "@forwork/deliverable-file-references",
-  "description": "Shared model guidance for file links and deliverables across DeepSeek Harness hosts",
+  "description": "Shared model guidance for file links and deliverables across ForWork hosts",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

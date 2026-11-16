@@ -3,7 +3,7 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-settings-web-search/README.md
 /:
-  en: 88b8ad7d3580e897
+  en: c2474eac5c43f1e0
   zh: 36380f07046212c5
 /forwork-client-ui-settings-web-search:
   en: 854c0e97049b512d
@@ -15,14 +15,14 @@
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
 /forwork-client-ui-settings-web-search/use-this-package:
-  en: bf26f223253bb9b8
-  zh: b687ab66557c1f95
+  en: b5626b4e61eddf25
+  zh: 8435ee3e83bfc13b
 /forwork-client-ui-settings-web-search/understand-the-implementation:
-  en: 078184ee0b31389a
-  zh: 8d74eb3b687a2d6f
+  en: 6e7fb4fc9cfb19c7
+  zh: fd72cbec2c204855
 /forwork-client-ui-settings-web-search/further-exploration:
-  en: 782f6f99769f5645
-  zh: 310a9544ae051c9d
+  en: 2d01d9f2fadd4dd1
+  zh: 2e05886e3fd60460
 /forwork-client-ui-settings-web-search/model-experience:
   en: 6b7c6f82ab6c8435
   zh: 4517689c899abcbe

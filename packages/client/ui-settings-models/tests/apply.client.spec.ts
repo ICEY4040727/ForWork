@@ -285,7 +285,7 @@ describe('pushed invalidations', () => {
     )()
     injected.controller.store.update((state) => { state.status = 'ready' })
     const load = vi.spyOn(injected.controller, 'load').mockResolvedValue()
-    b.remote.emit('credentials/reference-updated', ['DEEPSEEK_API_KEY'])
+    b.remote.emit('credentials/reference-updated', ['FORWORK_API_KEY'])
     expect(load).toHaveBeenCalledTimes(1)
   })
 

@@ -6,7 +6,7 @@ import { Config as OfficialConfig } from '@forwork/llm-deepseek-api-key'
 /** One model route row. */
 export interface RouteRow {
   /** Provider id the route registers. */
-  provider: 'deepseek-official' | 'deepseek-account'
+  provider: 'deepseek-official' | 'account'
   /** Route plugin config, parsed by the route package's own schema. */
   config?: Record<string, unknown>
   /** Loader package name; defaults to the package that registers the provider. */
@@ -19,7 +19,7 @@ export interface RouteRow {
 
 const PACKAGES = {
   'deepseek-official': '@forwork/llm-deepseek-api-key',
-  'deepseek-account': '@forwork/llm-deepseek-account',
+  'account': '@forwork/llm-deepseek-account',
 } as const
 
 /**

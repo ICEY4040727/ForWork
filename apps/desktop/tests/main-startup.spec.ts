@@ -95,7 +95,7 @@ const harness = await vi.hoisted(async () => {
       focus: vi.fn(),
       sendInputEvent: vi.fn(),
       send: vi.fn((channel: string, state: { policy?: { blocking: boolean } }) => {
-        if (channel === 'dsh-desktop:mandatory-state' && state.policy?.blocking) policyBlocked.resolve()
+        if (channel === 'forwork-desktop:mandatory-state' && state.policy?.blocking) policyBlocked.resolve()
       }),
     })
     readonly shown = deferred()
@@ -862,7 +862,7 @@ describe('desktop main startup', () => {
     await vi.advanceTimersByTimeAsync(0)
     const zh = locale === 'zh-CN'
     expect(harness.dialog.showMessageBox).toHaveBeenLastCalledWith(expect.objectContaining({
-      type: 'info', title: zh ? '关于 DeepSeek Harness' : 'About DeepSeek Harness', message: 'DeepSeek Harness',
+      type: 'info', title: zh ? '关于 ForWork' : 'About ForWork', message: 'ForWork',
       detail: zh ? '版本 V1.0.0' : 'Version V1.0.0', buttons: [zh ? '确定' : 'OK'], cancelId: 0,
     }))
     // A dialog that cannot open is logged, not surfaced as an unhandled rejection.
@@ -1306,7 +1306,7 @@ describe('desktop main startup', () => {
     expect(() => handler(event, 'application', NaN, 34)).toThrow('invalid popup request')
     const application = handler(event, 'application', 48, 34)
     expect(harness.menu.buildFromTemplate.mock.lastCall![0].map(item => item.label ?? item.type)).toEqual([
-      '关于 DeepSeek Harness', 'separator', '检查更新…', '管理 dsh 命令…', 'separator', zh.toggleDevToolsMenu, 'separator', '退出',
+      '关于 ForWork', 'separator', '检查更新…', '管理 dsh 命令…', 'separator', zh.toggleDevToolsMenu, 'separator', '退出',
     ])
     expect(harness.popup.mock.lastCall![0]).toMatchObject({ window, x: 48, y: 34 })
     expect(harness.popup.mock.lastCall![0].callback).toBeTypeOf('function')
@@ -2680,7 +2680,7 @@ describe('desktop main startup', () => {
       level: 'error', message: 'client-modules: bundle script plugins/??a/client.js&rev=1 failed to load',
       sourceId: 'dsh-app://app/assets/entry.js', lineNumber: 12,
     })
-    host.onFailure!(new Error('dsh desktop host exited with 1: fatal uncaught exception: ENOENT'))
+    host.onFailure!(new Error('forwork desktop host exited with 1: fatal uncaught exception: ENOENT'))
     await host.stopping.promise
     expect(writeCrashReport).toHaveBeenCalledOnce()
     const [directory, report] = vi.mocked(writeCrashReport).mock.calls[0]!
@@ -2743,7 +2743,7 @@ describe('desktop main startup', () => {
         expect(quitCompleted).toBe(false)
         await vi.advanceTimersByTimeAsync(1)
         expect(workerExited).toBe(false)
-        expect(console.error).toHaveBeenCalledWith('dsh desktop: operation report Worker has not exited; continuing shutdown')
+        expect(console.error).toHaveBeenCalledWith('forwork desktop: operation report Worker has not exited; continuing shutdown')
       } else {
         finishReport()
         await vi.advanceTimersByTimeAsync(0)
@@ -2786,7 +2786,7 @@ describe('desktop main startup', () => {
     else finishReport({ appended: false, timedOut: false, cancelled: true })
     await harness.quitCompleted.promise
     if (stuck) {
-      expect(console.error).toHaveBeenCalledWith('dsh desktop: operation report Worker has not exited; continuing shutdown')
+      expect(console.error).toHaveBeenCalledWith('forwork desktop: operation report Worker has not exited; continuing shutdown')
       finishReport({ appended: false, timedOut: false, cancelled: true })
     }
     expect(harness.app.relaunch).toHaveBeenCalledTimes(response === 0 ? 0 : 1)
@@ -2894,7 +2894,7 @@ describe('desktop main startup', () => {
     await harness.dialogShown.promise
     expect(harness.windows[0]!.urls).toEqual(['dsh-app://app/'])
     expect(harness.dialog.showMessageBox).toHaveBeenCalledOnce()
-    expect(harness.handlers.has('dsh-desktop:backend-retry')).toBe(false)
+    expect(harness.handlers.has('forwork-desktop:backend-retry')).toBe(false)
     expect(harness.hosts).toHaveLength(1)
   })
 

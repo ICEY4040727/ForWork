@@ -86,12 +86,10 @@
       name: '@forwork/plugin-package-inventory-deepseek'
 
     # The transport-independent default for Agents created by entry points.
-    # Settings may supply a saved selection; consumers read it at creation time.
+    # No provider is shipped: a deployment or the saved selection must configure
+    # one, and agent creation fails loudly until it does.
     - id: agent-default-model
       name: '@forwork/agent-default-model'
-      config:
-        provider: deepseek-official
-        model: deepseek-flash
 
     - id: jobs
       name: '@forwork/jobs-local'
@@ -486,13 +484,13 @@
     # defaults to the DeepSeek Search API (deepseek-search-api) and fetch to the
     # anonymous local fetcher (http). The DeepSeek Search and Fetch APIs
     # (deepseek-search-api, deepseek-fetch-api) follow the conversation: on the
-    # deepseek-account route they send the account token to that route's
+    # account route they send the account token to that route's
     # origin, and otherwise the API key of the DeepSeek API-key route to its
-    # origin, so a DEEPSEEK_API_KEY alone serves both without a sign-in.
+    # origin, so a FORWORK_API_KEY alone serves both without a sign-in.
     # searchBaseURL / searchApiKeyEnv (fetch* for Fetch) pin one capability to
     # its own endpoint and key instead.
     # Legacy Messages search (deepseek-official) is selectable separately and
-    # uses its own endpoint, with the account token or DEEPSEEK_API_KEY.
+    # uses its own endpoint, with the account token or FORWORK_API_KEY.
     # Anonymous fetch accepts only public
     # HTTP(S) destinations, resolves and validates every destination, and pins
     # every actual connection. This composition gives web_search 60s whichever
@@ -509,10 +507,10 @@
     - id: web-search-deepseek
       name: '@forwork/web-search-deepseek'
       config:
-        apiKeyEnv: DEEPSEEK_API_KEY
+        apiKeyEnv: FORWORK_API_KEY
 
-    - id: web-deepseek-api
-      name: '@forwork/web-deepseek-api'
+    - id: web-api
+      name: '@forwork/web-api'
 
     - id: web-fetch-http
       name: '@forwork/web-fetch-http'

@@ -1,7 +1,7 @@
 /**
  * DeepSeek Fetch API provider: page Markdown through one direct request, without
  * a model request.
- * @module @forwork/web-deepseek-api/fetch
+ * @module @forwork/web-api/fetch
  */
 import type { WebFetchProvider, WebFetchRequest, WebFetchResult } from '@forwork/web'
 import {

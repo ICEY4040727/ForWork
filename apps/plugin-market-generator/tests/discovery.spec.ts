@@ -60,12 +60,12 @@ describe('isBundle and dshRange', () => {
   })
 
   it('copies engines.dsh, else joins DSH peer ranges, and refuses ranges installation rejects', () => {
-    expect(dshRange({ engines: { dsh: '>=0.2.0' }, peerDependencies: { '@forwork/dsh': '1' } })).toBe('>=0.2.0')
-    expect(dshRange({ peerDependencies: { react: '18', '@forwork/agent': 'workspace:*', '@forwork/dsh': '*' } })).toBeUndefined()
+    expect(dshRange({ engines: { dsh: '>=0.2.0' }, peerDependencies: { '@forwork/cli': '1' } })).toBe('>=0.2.0')
+    expect(dshRange({ peerDependencies: { react: '18', '@forwork/agent': 'workspace:*', '@forwork/cli': '*' } })).toBeUndefined()
     // Installation refuses an empty range, any `workspace:` engines.dsh, and a padded workspace peer on every DSH version.
     for (const manifest of [
-      { peerDependencies: { '@forwork/dsh': ' ' } }, { engines: { dsh: '' } }, { engines: { dsh: 'workspace:*' } },
-      { peerDependencies: { '@forwork/dsh': ' workspace:*' } },
+      { peerDependencies: { '@forwork/cli': ' ' } }, { engines: { dsh: '' } }, { engines: { dsh: 'workspace:*' } },
+      { peerDependencies: { '@forwork/cli': ' workspace:*' } },
     ]) expect(dshRange(manifest)).toBeInstanceOf(Error)
     expect(dshRange({ engines: { dsh: '>1 <1' } })).toEqual(new Error('no DSH version satisfies the DSH range: >1 <1'))
     expect(dshRange({ engines: { dsh: ' * ' } })).toBeUndefined()
@@ -74,20 +74,20 @@ describe('isBundle and dshRange', () => {
       peerDependencies: { '@forwork/a': '^0.2.0 || ^0.3.0', '@forwork/b': '>=0.2.1', '@forwork/c': '>=0.2.1', '@forwork/d': '<1 ||' },
     })).toBe('>=0.2.0 <0.3.0-0 >=0.2.1 || >=0.3.0 <0.4.0-0 >=0.2.1')
     // A hyphen range is expanded before combining, and combinations no version satisfies are dropped.
-    expect(dshRange({ peerDependencies: { '@forwork/dsh': '1.0.0 - 2.0.0', '@forwork/x': '>=1.5.0 || <0.5.0' } })).toBe('>=1.0.0-0 <2.0.1-0 >=1.5.0')
-    expect(dshRange({ peerDependencies: { '@forwork/dsh': '^0.1.0', '@forwork/x': '^0.2.0' } }))
+    expect(dshRange({ peerDependencies: { '@forwork/cli': '1.0.0 - 2.0.0', '@forwork/x': '>=1.5.0 || <0.5.0' } })).toBe('>=1.0.0-0 <2.0.1-0 >=1.5.0')
+    expect(dshRange({ peerDependencies: { '@forwork/cli': '^0.1.0', '@forwork/x': '^0.2.0' } }))
       .toEqual(new Error('no DSH version satisfies every DSH peer range: ^0.1.0, ^0.2.0'))
-    expect(dshRange({ peerDependencies: { '@forwork/dsh': '^0.2.0-rc.1' } })).toBe('^0.2.0-rc.1')
-    expect(dshRange({ peerDependencies: { '@forwork/dsh': '>=0.1.0 || *', '@forwork/x': '^0.2.0 || *' } })).toBeUndefined()
-    expect(dshRange({ peerDependencies: { '@forwork/dsh': '<0.1.0', '@forwork/x': '>=0.2.0' } }))
+    expect(dshRange({ peerDependencies: { '@forwork/cli': '^0.2.0-rc.1' } })).toBe('^0.2.0-rc.1')
+    expect(dshRange({ peerDependencies: { '@forwork/cli': '>=0.1.0 || *', '@forwork/x': '^0.2.0 || *' } })).toBeUndefined()
+    expect(dshRange({ peerDependencies: { '@forwork/cli': '<0.1.0', '@forwork/x': '>=0.2.0' } }))
       .toEqual(new Error('no DSH version satisfies every DSH peer range: <0.1.0, >=0.2.0'))
-    expect(dshRange({ peerDependencies: { '@forwork/dsh': '*', '@forwork/x': '>=0' } })).toBeUndefined()
+    expect(dshRange({ peerDependencies: { '@forwork/cli': '*', '@forwork/x': '>=0' } })).toBeUndefined()
     expect(dshRange({ peerDependencies: { '@forwork/llm': '*', '@forwork/x': '*' } })).toBeUndefined()
     const wide = Object.fromEntries(Array.from({ length: 3 }, (_, peer) => [`@forwork/${peer}`, Array.from({ length: 10 }, (_, minor) => `>=0.${minor}.${peer}`).join(' || ')]))
     expect(dshRange({ peerDependencies: wide })).toEqual(new Error('DSH peer ranges combine into more than 256 alternatives'))
     expect(dshRange({ peerDependencies: { '@forwork/a': 'workspace:>=1' } })).toEqual(new Error('DSH range "workspace:>=1" is not a valid SemVer range'))
     expect(dshRange({ engines: { dsh: 'not a range' } })).toBeInstanceOf(Error)
-    expect(dshRange({ peerDependencies: { '@forwork/dsh': '>=0.2.0', '@forwork/x': 'not a range' } })).toEqual(new Error('DSH range "not a range" is not a valid SemVer range'))
+    expect(dshRange({ peerDependencies: { '@forwork/cli': '>=0.2.0', '@forwork/x': 'not a range' } })).toEqual(new Error('DSH range "not a range" is not a valid SemVer range'))
   })
 })
 

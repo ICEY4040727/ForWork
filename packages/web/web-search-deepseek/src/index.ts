@@ -2,7 +2,7 @@
  * Register a DeepSeek-backed provider in `ctx.web`. It calls the Anthropic-compatible Messages API
  * with native `web_search_20250305`. A search initiated by a Session on the DeepSeek account route
  * authenticates with the account token when the account service allows the search endpoint;
- * every other search reuses `DEEPSEEK_API_KEY`. The provider does not reuse `DEEPSEEK_BASE_URL`;
+ * every other search reuses `FORWORK_API_KEY`. The provider does not reuse `FORWORK_BASE_URL`;
  * auxiliary search has its own endpoint configuration. The provider reports itself not ready for a
  * model request whose search would have no credential.
  * @module @forwork/web-search-deepseek
@@ -48,13 +48,13 @@ export const name = 'web-search-deepseek'
 /** The web seam this provider registers into. */
 export const inject = ['web']
 
-const DEFAULT_API_KEY_ENV = 'DEEPSEEK_API_KEY'
+const DEFAULT_API_KEY_ENV = 'FORWORK_API_KEY'
 
 /** Plugin config (all optional — `apply` fills env-var and constant defaults). */
 export interface Config {
   /** Literal DeepSeek API key; prefer {@link apiKeyEnv} so no secret enters configuration files. */
   apiKey: Volatile<string | undefined>
-  /** Credential reference resolved for each search; defaults to `DEEPSEEK_API_KEY`. */
+  /** Credential reference resolved for each search; defaults to `FORWORK_API_KEY`. */
   apiKeyEnv: Volatile<string>
   /** Anthropic-compatible endpoint base; `/messages` is appended. */
   baseURL: Volatile<string | undefined>
@@ -83,12 +83,12 @@ export const Config = z.object({
 
 /**
  * Auxiliary-search endpoint, independent of the conversation adapter's
- * `$DEEPSEEK_BASE_URL` and selected protocol.
+ * `$FORWORK_BASE_URL` and selected protocol.
  */
 const SEARCH_BASE_URL_ENV = 'DEEPSEEK_SEARCH_BASE_URL'
 
 /** Provider route id `dsh-llm-deepseek-account` registers; `request/context` events record it per Session. */
-const ACCOUNT_PROVIDER = 'deepseek-account'
+const ACCOUNT_PROVIDER = 'account'
 
 /** Settings namespace carrying this provider's endpoint, model, and key reference. */
 export const WEB_SEARCH_DEEPSEEK_SETTINGS_NAMESPACE = 'web-search-deepseek'

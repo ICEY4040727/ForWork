@@ -29,12 +29,12 @@ describe('desktop package-set selection', () => {
 
   it('includes only the available internal production closure', () => {
     const available = new Map<string, PackedDesktopPackage>([
-      ['@forwork/dsh', packed('@forwork/dsh', {
+      ['@forwork/cli', packed('@forwork/cli', {
         dependencies: { '@forwork/base': '^1.0.0', external: '^2.0.0' },
         optionalDependencies: { '@forwork/platform-package': '1.0.0', '@forwork/missing-platform': '1.0.0' },
       })],
       ['@forwork/desktop-host', packed('@forwork/desktop-host', {
-        dependencies: { '@forwork/dsh': '^1.0.0' },
+        dependencies: { '@forwork/cli': '^1.0.0' },
       })],
       ['@forwork/base', packed('@forwork/base', {
         peerDependencies: { '@forwork/cordis': '^1.0.0' },
@@ -45,7 +45,7 @@ describe('desktop package-set selection', () => {
     ])
     expect(selectDesktopPackageClosure(available, { platform: 'win32', arch: 'x64' }).map(entry => entry.manifest.name)).toEqual([
       '@forwork/cordis',
-      '@forwork/dsh',
+      '@forwork/cli',
       '@forwork/base',
       '@forwork/desktop-host',
       '@forwork/platform-package',
@@ -56,22 +56,22 @@ describe('desktop package-set selection', () => {
     '@forwork/base', '@forwork/cordis', '@forwork/node-addon-system',
   ])('rejects required prepared package %s absent from the packed release inputs', (dependency) => {
     const available = new Map<string, PackedDesktopPackage>([
-      ['@forwork/dsh', packed('@forwork/dsh', {
+      ['@forwork/cli', packed('@forwork/cli', {
         dependencies: { [dependency]: '^1.0.0' },
       })],
       ['@forwork/desktop-host', packed('@forwork/desktop-host', {
-        dependencies: { '@forwork/dsh': '^1.0.0' },
+        dependencies: { '@forwork/cli': '^1.0.0' },
       })],
     ])
     expect(() => selectDesktopPackageClosure(available, { platform: 'win32', arch: 'x64' })).toThrow(/unpacked package/u)
     expect(() => selectDesktopPackageClosure(new Map([
-      ['@forwork/dsh', packed('@forwork/dsh')],
+      ['@forwork/cli', packed('@forwork/cli')],
     ]), { platform: 'win32', arch: 'x64' })).toThrow(/omit @forwork\/desktop-host/u)
   })
 
   it('leaves independently published Office packages to npm resolution', () => {
     const available = new Map<string, PackedDesktopPackage>([
-      ['@forwork/dsh', packed('@forwork/dsh', {
+      ['@forwork/cli', packed('@forwork/cli', {
         dependencies: {
           '@deepseek-ai/libreoffice-kit': '0.0.1',
           '@deepseek-ai/libreoffice-kit-wasm': '0.0.1',
@@ -80,7 +80,7 @@ describe('desktop package-set selection', () => {
       ['@forwork/desktop-host', packed('@forwork/desktop-host')],
     ])
     expect(selectDesktopPackageClosure(available, { platform: 'win32', arch: 'x64' }).map(entry => entry.manifest.name)).toEqual([
-      '@forwork/dsh', '@forwork/desktop-host',
+      '@forwork/cli', '@forwork/desktop-host',
     ])
   })
 
@@ -102,7 +102,7 @@ describe('desktop package-set selection', () => {
 const macProvider = '@forwork/experimental-cua-macos'
 const cuaBundle = '@forwork/cua-bundle'
 const targetManifests = () => new Map<string, PackedDesktopPackage>([
-  ['@forwork/dsh', packed('@forwork/dsh', { dependencies: { [cuaBundle]: '1.0.0' } })],
+  ['@forwork/cli', packed('@forwork/cli', { dependencies: { [cuaBundle]: '1.0.0' } })],
   ['@forwork/desktop-host', packed('@forwork/desktop-host')],
   [cuaBundle, packed(cuaBundle, {
     optionalDependencies: { [macProvider]: '1.0.0' }, dependencies: { '@forwork/cua': '1.0.0' },

@@ -1,6 +1,6 @@
 {
   "name": "@forwork/storage-sqlite",
-  "description": "SQLite storage backend (kv facet) for the DeepSeek Harness storage hub",
+  "description": "SQLite storage backend (kv facet) for the ForWork storage hub",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

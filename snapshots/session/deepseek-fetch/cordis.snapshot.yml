@@ -24,8 +24,8 @@
     searchProvider: deepseek-search-api
     fetchProvider: deepseek-fetch-api
 
-- id: web-deepseek-api
-  name: '@forwork/web-deepseek-api'
+- id: web-api
+  name: '@forwork/web-api'
   config:
     fetchApiKeyEnv: DSH_SNAPSHOT_FETCH_KEY
     fetchBaseURL: http://127.0.0.1:43118/api/v1/tools

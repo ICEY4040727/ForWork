@@ -2,7 +2,7 @@
 
 ## 目标
 
-把 DeepSeek Harness **fork 成自有产品**（改 scope/品牌/签名，不蹭 deepseek），并在其核心内置"智能体操作办公文档"能力：文档成为**会话一等实体**，侧栏内嵌**可编辑的 Word/Excel**（Univer 内核），Agent 通过**共享内容模型**高保真读写同一文档。
+把 ForWork **fork 成自有产品**（改 scope/品牌/签名，不蹭 deepseek），并在其核心内置"智能体操作办公文档"能力：文档成为**会话一等实体**，侧栏内嵌**可编辑的 Word/Excel**（Univer 内核），Agent 通过**共享内容模型**高保真读写同一文档。
 
 ## 已确认决策
 
@@ -49,9 +49,9 @@ Agent 编辑(headless Univer 命令) ──┤→ 同一 Unit Snapshot
 **剥离 / 重命名**（不"蹭 deepseek"的完整性清单）：
 - `@deepseek-ai/dsh-*` → `<org>/<pkg>*`（全部包 scope + 依赖引用）
 - 品牌：fish 标记/名称槽位 → 自有品牌（`sidebar.brand.*`、桌面菜单、窗口标题）
-- `dsh` CLI 名 → 自有命令名
+- `forwork` CLI 名 → 自有命令名
 - 遥测：`product-analytics` → 移除或替换为自有（默认关闭）
-- 模型默认适配器：`web-deepseek-api` / `DEEPSEEK_API_KEY` → 自有模型配置
+- 模型默认适配器：`web-api` / `FORWORK_API_KEY` → 自有模型配置
 - 文档/artwork/官网 → 自有；桌面 Windows/macOS 签名身份 → 自有证书
 - 保留根 MIT 版权声明；Univer 等第三方保留其 NOTICE
 
@@ -67,7 +67,7 @@ Agent 编辑(headless Univer 命令) ──┤→ 同一 Unit Snapshot
 
 ### 阶段 0 — Fork 与改品牌（无功能变化，先打通可发布底座）
 1. Fork 仓库到自有组织；`@deepseek-ai/dsh-*` → `<org>/*`（含 `package.json`、tsconfig references、import、cordis.yml 行、bundle 依赖）。
-2. 改品牌槽位、`dsh` CLI 名、移除/替换 `product-analytics`、替换默认模型适配器与 `DEEPSEEK_API_KEY` 引用、删 deepseek 专属文档/artwork。
+2. 改品牌槽位、`forwork` CLI 名、移除/替换 `product-analytics`、替换默认模型适配器与 `FORWORK_API_KEY` 引用、删 deepseek 专属文档/artwork。
 3. 保留 MIT 声明；验证：`pnpm install && pnpm run build && pnpm run typecheck && pnpm run lint` 全绿，桌面可 `package`。
 
 ### 阶段 1 — Exchange 转换层（无 UI，先 xlsx 后 docx）
@@ -99,7 +99,7 @@ Agent 编辑(headless Univer 命令) ──┤→ 同一 Unit Snapshot
 - **LibreOffice 往返**：现有 `office-to-pdf` 只到 PDF；往返 docx/xlsx/pptx 是新能力，须在阶段 1 核实，不足则扩展独立 kit 或改用其他转换。
 - **Univer 商业边界**：Slides/文件转换/协作/快公式引擎是商业 SDK——已用"自建 Exchange + pptx 首期只读"规避，但 Exchange 的 docx 保真是自己承担的风险。
 - **session 格式迁移**：`document/*` 入 `SessionEventMap` 需 `SESSION_FORMAT_VERSION` 决策，破坏面走升级指南。
-- **fork 完整性**：漏改任何 `dsh` 引用/遥测/品牌残留都会"仍蹭 deepseek"，需阶段 0 的引用扫描门禁（`verify-*` 脚本改造成自有断言）。
+- **fork 完整性**：漏改任何 `forwork` 引用/遥测/品牌残留都会"仍蹭 deepseek"，需阶段 0 的引用扫描门禁（`verify-*` 脚本改造成自有断言）。
 
 ## 回滚 / 迁移（fork 顺序）
 

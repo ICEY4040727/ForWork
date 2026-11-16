@@ -1,6 +1,6 @@
 {
   "name": "@forwork/agent-loop",
-  "description": "The concrete agent loop plugin for the DeepSeek Harness",
+  "description": "The concrete agent loop plugin for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

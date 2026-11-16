@@ -1,6 +1,6 @@
 {
   "name": "@forwork/tool-web",
-  "description": "Model-facing web tools (web_search, web_fetch) over the DeepSeek Harness web capability seam (ctx.web)",
+  "description": "Model-facing web tools (web_search, web_fetch) over the ForWork web capability seam (ctx.web)",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"
@@ -55,7 +55,7 @@
     "@forwork/tool-testkit": "workspace:*",
     "@forwork/tools": "workspace:*",
     "@forwork/web": "workspace:*",
-    "@forwork/web-deepseek-api": "workspace:*",
+    "@forwork/web-api": "workspace:*",
     "@forwork/web-fetch-http": "workspace:*",
     "@types/turndown": "^5.0.6",
     "@forwork/scope": "workspace:*",

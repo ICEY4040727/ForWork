@@ -133,7 +133,7 @@ export default class ClassPlugin {
   constructor() { throw new Error('PLUGIN_CONSTRUCTOR_EXECUTED') }
 }`
 
-describe.skipIf(!builtArtifactsExist)('dsh --dump-config-schema assembled output', () => {
+describe.skipIf(!builtArtifactsExist)('forwork --dump-config-schema assembled output', () => {
   it('prints native namespace and class schemas without applying plugins or evaluating !!js', async () => {
     const fixture = await createFixture({
       namespace: namespaceModule,
@@ -306,9 +306,9 @@ describe.skipIf(!builtArtifactsExist)('dsh --dump-config-schema assembled output
       { level: 'error', path: '/2', message: 'fixture module import failed' },
     ])
     expect(result.stderr.split('\n')).toEqual([
-      'dsh: error: [/0] Config is not a native Schemastery schema',
-      'dsh: error: [/1] fixture lazy schema failed',
-      'dsh: error: [/2] fixture module import failed',
+      'forwork: error: [/0] Config is not a native Schemastery schema',
+      'forwork: error: [/1] fixture lazy schema failed',
+      'forwork: error: [/2] fixture module import failed',
     ])
   })
 
@@ -344,7 +344,7 @@ describe.skipIf(!builtArtifactsExist)('dsh --dump-config-schema assembled output
     await writeFile(overlay, '- id: missing\n  disabled: true\n')
     const schema = await dump(fixture, ['--patch', overlay])
     expect(schema.exitCode).toBe(0)
-    expect(schema.stderr).toBe('dsh: warning: patch: entry "missing" not found')
+    expect(schema.stderr).toBe('forwork: warning: patch: entry "missing" not found')
     expect(parseSchema(schema.stdout)['x-cordis'].diagnostics).toEqual([{ level: 'warning', message: 'patch: entry "missing" not found' }])
     const config = await dump(fixture, ['--patch', overlay], '--dump-config')
     expect(config.exitCode).toBe(0)

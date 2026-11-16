@@ -2,7 +2,7 @@
  * Authentication and redirect-rejecting transport shared by the Search and
  * Fetch API providers in this package
  * ([rationale](../../../../.agents/notes/implemented/feature/2026-10-15-deepseek-search-fetch-api.md)).
- * @module @forwork/web-deepseek-api/transport
+ * @module @forwork/web-api/transport
  */
 import type { CredentialRef } from '@forwork/credentials'
 import { WebError } from '@forwork/web'
@@ -298,7 +298,7 @@ async function resolveApiKey(options: DeepSeekWebAuth, signal?: AbortSignal): Pr
   const resolved = resolveApiKey === undefined ? undefined : await resolveCredential(resolveApiKey, signal)
   if (resolved !== undefined && resolved.length > 0) return resolved
   throw new WebError(
-    options.missingKeyMessage ?? `DeepSeek web access has no API key for "${options.apiKeyEnv ?? 'DEEPSEEK_API_KEY'}"`,
+    options.missingKeyMessage ?? `DeepSeek web access has no API key for "${options.apiKeyEnv ?? 'FORWORK_API_KEY'}"`,
     'WEB_PROVIDER_CREDENTIAL_MISSING',
   )
 }

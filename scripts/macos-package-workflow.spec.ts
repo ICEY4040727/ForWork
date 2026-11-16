@@ -69,7 +69,7 @@ describe.each(['arm64', 'x64'])('macOS %s packaging', (arch) => {
     expect(JSON.stringify(env)).not.toContain('runner.')
     const steps = workflow.jobs.package!.steps
     const cache = steps.find(step => step.name === 'Configure persistent package caches')!
-    expect(cache.env?.DSH_DESKTOP_PACKAGE_CACHE_DIR).toBe('${{ runner.tool_cache }}/dsh-desktop-package-cache')
+    expect(cache.env?.DSH_DESKTOP_PACKAGE_CACHE_DIR).toBe('${{ runner.tool_cache }}/forwork-desktop-package-cache')
     expect(cache.run).toContain('PNPM_CONFIG_STORE_DIR=$DSH_DESKTOP_PACKAGE_CACHE_DIR/workspace-pnpm-store')
     expect(cache.run).toContain('DSH_DESKTOP_PACKAGE_CACHE_DIR=$DSH_DESKTOP_PACKAGE_CACHE_DIR')
     expect(steps.indexOf(cache)).toBeLessThan(steps.findIndex(step => step.name === 'Install locked dependencies'))

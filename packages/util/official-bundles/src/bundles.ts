@@ -41,7 +41,7 @@ export const RETIRED_BUNDLES: ReadonlySet<string> = new Set([
   '@forwork/experimental-agent-team-profile',
 ])
 
-/** The bundle list a `dsh plugin` init uses for a name with no shipped template. */
+/** The bundle list a `forwork plugin` init uses for a name with no shipped template. */
 export const DEFAULT_PROFILE_BUNDLES: readonly string[] = ['@forwork/base']
 
 /**

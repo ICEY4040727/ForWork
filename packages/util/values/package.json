@@ -1,6 +1,6 @@
 {
   "name": "@forwork/util-values",
-  "description": "Duplicate-install-safe value primitives for the DeepSeek Harness",
+  "description": "Duplicate-install-safe value primitives for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

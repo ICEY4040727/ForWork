@@ -1,6 +1,6 @@
 {
   "name": "@forwork/client-ui-plugin-market",
-  "description": "Discover tab of the dsh web Plugins page: browse configured plugin market indexes and install their bundles",
+  "description": "Discover tab of the forwork web Plugins page: browse configured plugin market indexes and install their bundles",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

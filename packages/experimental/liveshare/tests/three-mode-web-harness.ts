@@ -1,5 +1,5 @@
 /**
- * Isolated real `dsh web` instance for the three-mode acceptance driver.
+ * Isolated real `forwork web` instance for the three-mode acceptance driver.
  *
  * The harness boots the shipped web profile in a private temp home and workspace and exposes the
  * shipped HTTP carrier. The model route is the deterministic keyless fixture beside this module;
@@ -426,7 +426,7 @@ export async function bootWebOwner(options: WebOwnerOptions = {}): Promise<WebOw
       DSH_HOME: home,
       DSH_AGENTS_HOME: join(cwd, '.agents'),
       DSH_TELEMETRY_DISABLED: '1',
-      DEEPSEEK_API_KEY: '',
+      FORWORK_API_KEY: '',
       // Diagnostic only: the fixture appends one line per adapter call to this temp file.
       BASE_LLM_LOG: join(cwd, 'base-llm.log'),
       // Diagnostic only: proves the loader activated the fixture plugin at all.
@@ -757,7 +757,7 @@ function registerTeardown(
 }
 
 /**
- * Install one workspace bundle into a profile the way `dsh plugin install` would.
+ * Install one workspace bundle into a profile the way `forwork plugin install` would.
  *
  * The profile's own `node_modules` is the second anchor bundle resolution reads, so a bundle this
  * checkout provides has to appear there; the profile manifest declares the dependency it links.

@@ -19,7 +19,7 @@ const searchProvider = (options: DeepSeekSearchProviderOptions): DeepSeekSearchP
  * can complete without structured source blocks, so this is not a reliable
  * merge signal. Its body remains because mocks cannot confirm the wire shape.
  */
-const apiKey = process.env.DEEPSEEK_API_KEY
+const apiKey = process.env.FORWORK_API_KEY
 const maybe = apiKey !== undefined && apiKey.length > 0 ? describe : describe.skip
 
 maybe('DeepSeekSearchProvider real API', () => {
@@ -32,7 +32,7 @@ maybe('DeepSeekSearchProvider real API', () => {
       maxTokens: DEEPSEEK_DEFAULT_MAX_TOKENS,
       maxUses: DEEPSEEK_DEFAULT_MAX_USES,
     })
-    const result = await provider.search({ query: 'What is DeepSeek Harness?', maxResults: 5 })
+    const result = await provider.search({ query: 'What is ForWork?', maxResults: 5 })
     expect(result.sources.length).toBeGreaterThan(0)
     for (const source of result.sources) expect(source.url).toMatch(/^https?:\/\//)
   }, 60_000)

@@ -1,6 +1,6 @@
 {
   "name": "@forwork/terminal-bash",
-  "description": "Persistent shell PTY backend over the DeepSeek Harness subprocess terminal primitive",
+  "description": "Persistent shell PTY backend over the ForWork subprocess terminal primitive",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

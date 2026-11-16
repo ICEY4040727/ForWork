@@ -14,14 +14,14 @@ import { testProfileResolution } from './profiles/headless/tests/profile-resolut
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url))
 const dshSourceBin = 'apps/cli/src/bin.ts'
 
-describe('dsh SOURCE launcher (node --import tsx/esm)', () => {
+describe('forwork SOURCE launcher (node --import tsx/esm)', () => {
   testProfileResolution('src')
 
   it('launches the source CLI without building', async () => {
     const rootPackage = JSON.parse(await readFile(new URL('../../../package.json', import.meta.url), 'utf8')) as {
       readonly scripts?: Record<string, string>
     }
-    expect(rootPackage.scripts?.dsh).toBe('node --import tsx/esm apps/cli/src/bin.ts')
+    expect(rootPackage.scripts?.forwork).toBe('node --import tsx/esm apps/cli/src/bin.ts')
   })
 
   it('boots the source entry and requires a profile', async () => {

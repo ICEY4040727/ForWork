@@ -14,12 +14,12 @@ import { TranslationError } from './error.ts'
 import type { TranslationLog } from './storage.ts'
 
 const MODEL = 'deepseek-flash'
-const OWNER_PACKAGES = { 'deepseek-account': '@forwork/llm-deepseek-account',
+const OWNER_PACKAGES = { 'account': '@forwork/llm-deepseek-account',
   'deepseek-official': '@forwork/llm-deepseek-api-key' } as const
 
 interface NativeOwnerFields { llm: LlmRuntime; fiber: Fiber }
 type NativeOwner = NativeOwnerFields & (
-  | { provider: 'deepseek-account'; config: AccountNativeConfig }
+  | { provider: 'account'; config: AccountNativeConfig }
   | { provider: 'deepseek-official'; config: OfficialNativeConfig }
 )
 /** Configured model input of an owner: Account overrides over its listing, or the Official catalog. */
@@ -27,7 +27,7 @@ type ModelConfig = ReturnType<AccountNativeConfig['modelOverrides']['get']> | Re
 type EligibleOwner = NativeOwner & { modelConfig: ModelConfig; apiKeyRef?: string }
 
 function modelConfigOf(owner: NativeOwner): ModelConfig {
-  return owner.provider === 'deepseek-account' ? owner.config.modelOverrides.get() : owner.config.models.get()
+  return owner.provider === 'account' ? owner.config.modelOverrides.get() : owner.config.models.get()
 }
 
 /**
@@ -71,7 +71,7 @@ function nativeOwner(ctx: Context, provider: PaidTranslationProvider): NativeOwn
   if (directory === undefined || directory.settingsPath.length !== 0) return undefined
   const entry = [...loader.entries()].find(row => row.options.id === directory.settingsNs && row.options.name === OWNER_PACKAGES[provider])
   if (entry?.fiber?.state !== FiberState.ACTIVE) return undefined
-  return provider === 'deepseek-account'
+  return provider === 'account'
     ? { llm, fiber: entry.fiber.ctx.fiber, provider, config: entry.fiber.effectiveConfig as AccountNativeConfig }
     : { llm, fiber: entry.fiber.ctx.fiber, provider, config: entry.fiber.effectiveConfig as OfficialNativeConfig }
 }
@@ -116,7 +116,7 @@ export async function availablePaidProviders(ctx: Context, config: Config, signa
   track: (work: Promise<unknown>) => void): Promise<readonly TranslationProvider[]> {
   using timeout = deadline(signal, config.deepseekTimeoutMs, 'TRANSLATION_TIMEOUT')
   const available: TranslationProvider[] = ['bing', 'google']
-  for (const provider of ['deepseek-account', 'deepseek-official'] as const) {
+  for (const provider of ['account', 'deepseek-official'] as const) {
     try {
       const candidate = await eligible(ctx, provider, timeout.signal, track)
       timeout.signal.throwIfAborted()

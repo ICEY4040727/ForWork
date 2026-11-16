@@ -44,7 +44,7 @@ let home: string
 beforeAll(() => {
   home = mkdtempSync(join(tmpdir(), 'dsh-deepseek-egress-'))
   vi.stubEnv('DSH_HOME', home)
-  vi.stubEnv('DEEPSEEK_API_KEY', 'probe-key')
+  vi.stubEnv('FORWORK_API_KEY', 'probe-key')
 })
 afterAll(() => {
   vi.unstubAllEnvs()

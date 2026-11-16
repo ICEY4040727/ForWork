@@ -39,7 +39,7 @@ describe('profile roster', () => {
 
   it('names the CLI manifest as the installation', () => {
     expect(installationManifest(repoRoot)).toEqual({
-      name: '@forwork/dsh',
+      name: '@forwork/cli',
       manifest: join(repoRoot, 'apps/cli/package.json'),
     })
   })

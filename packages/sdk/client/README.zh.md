@@ -1,5 +1,5 @@
 ---
-description: "面向以子进程方式启动 DeepSeek Harness 运行时、并通过 stdio JSON-RPC 驱动 agent（智能体）轮次的调用方的 TypeScript SDK 客户端：DeepSeekHarness 运行 API 与低层 HarnessClient。"
+description: "面向以子进程方式启动 ForWork 运行时、并通过 stdio JSON-RPC 驱动 agent（智能体）轮次的调用方的 TypeScript SDK 客户端：DeepSeekHarness 运行 API 与低层 HarnessClient。"
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-library"
 
 ## 概述
 
-`dsh-sdk-client` 让 TypeScript 程序通过 stdio JSON-RPC 驱动完整的 DeepSeek Harness 运行时。使用 `run()` 运行普通文本、支持的 slash 命令和图片内容块，通过 `onNotification` 观察其通知。`HarnessClient` 提供直接协议访问。调用方可以提供 `dshBin`；否则客户端解析同版本的 `@forwork/dsh` 可执行文件。客户端持有子进程，报告类型化错误，并在 `close()` 或 `await using` 时回收进程。
+`dsh-sdk-client` 让 TypeScript 程序通过 stdio JSON-RPC 驱动完整的 ForWork 运行时。使用 `run()` 运行普通文本、支持的 slash 命令和图片内容块，通过 `onNotification` 观察其通知。`HarnessClient` 提供直接协议访问。调用方可以提供 `dshBin`；否则客户端解析同版本的 `@forwork/cli` 可执行文件。客户端持有子进程，报告类型化错误，并在 `close()` 或 `await using` 时回收进程。
 
 ## 目录
 
@@ -161,7 +161,7 @@ console.log(result.finalResponse)
 - [JSON-RPC 服务插件](../server/README.zh.md)——服务本客户端的运行时插件。
 - [Python SDK](../../../python/README.zh.md) — 共享同一运行时对端与协议的设计孪生。
 - [SDK subagent 后端](../../subagent/subagent-dsh-sdk/README.zh.md) — harness 内部消费本客户端的例子。
-- [SDK 应用组合包](../../bundle/sdk-app/README.zh.md) — 本客户端启动的 `dsh --profile sdk` 运行时应用。
+- [SDK 应用组合包](../../bundle/sdk-app/README.zh.md) — 本客户端启动的 `forwork --profile sdk` 运行时应用。
 
 -----
 
@@ -181,7 +181,7 @@ console.log(result.finalResponse)
 
 这些限制说明本客户端何时不合适或需要特别注意。它们是当前包约束，不是与其他 SDK 客户端的对比或任务积压。
 
-- **无捆绑运行时解析**——客户端解析同版本 `@forwork/dsh` 包（或调用方提供的 `dshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
+- **无捆绑运行时解析**——客户端解析同版本 `@forwork/cli` 包（或调用方提供的 `dshBin`）；打包可执行文件的发现留在 Python 侧，直到出现 TypeScript 发行版消费方。
 - **无运行时取消请求**——RPC 超时或观察回调失败会结束本地等待，不会停止运行时工作。停止运行时工作需要关闭 harness（见[协议限制](../protocol/README.zh.md#known-limitations-and-deferred-work)）。
 - **无独占模型响应**——提示词结果涵盖从回执到 idle 的活动，可能包含 steering 或其他排队工作。并发调用观察 Session 的实际事件流；命令结果不独占后续 turn。
 - **回调必须释放自己的资源**——SDK 通过 `AbortSignal` 发出取消；忽略它的应用工作可能在 SDK 停止等待答案后继续运行。

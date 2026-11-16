@@ -251,7 +251,7 @@ async function missing(path: string): Promise<boolean> {
 it('certifies eight Auto risk/authorization cases with zero retries and zero skipped', {
   retry: 0, timeout: 1_800_000,
 }, async () => {
-  if (REAL && !process.env.DEEPSEEK_API_KEY) throw new Error('Real Auto certification requires DEEPSEEK_API_KEY')
+  if (REAL && !process.env.FORWORK_API_KEY) throw new Error('Real Auto certification requires FORWORK_API_KEY')
   const root = await mkdtemp(join(tmpdir(), 'dsh-auto-review-'))
   const ctx = new Context()
   provideWorkingDirectoryFixture(ctx)

@@ -46,7 +46,7 @@ The `advanced` and `restart` comparisons match native delivery qualifiers agains
 
 Trusted pull requests and master pushes also run `--scenario sdk-live --installed-wheel` on each selected native target. That scenario performs two tool-using turns against `https://api.deepseek.com`: it checks the created file immediately, replaces its content with a host-only random challenge, and requires the second turn to copy the changed content into a fresh receipt without modifying the source. Both turns must complete with the exact sentinel answer and a model-requested tool call; external byte comparisons check the files. Missing repository secrets fail instead of self-skipping. Fork and Dependabot pull requests run the complete keyless installed-wheel path but receive no key.
 
-An interactive smoke test needs `DEEPSEEK_API_KEY` in the environment or repository-root `.env`:
+An interactive smoke test needs `FORWORK_API_KEY` in the environment or repository-root `.env`:
 
 ```python
 from deepseek_harness import DeepSeekHarness
@@ -59,14 +59,14 @@ Alternatively export a non-empty `DSH_HOME`. The SDK rejects a launch that would
 
 ## Run against Node source
 
-Repository contributors can select either development route; both execute the normal `dsh --profile sdk` launcher:
+Repository contributors can select either development route; both execute the normal `forwork --profile sdk` launcher:
 
 - Set `DSH_RUNTIME_MODE=node` to use the built Node carrier on system Node `>=24.9`. The build script refreshes this carrier, but distributions never include or auto-select it.
 - Set `dsh_bin` to the absolute built `apps/cli/lib/bin.js` path to exercise the checkout's CLI directly. Supply an explicit `dsh_home`, plus `profile` and ordered `patches` as needed.
 
 `python/sdk/tests/manual_sdk_agent_smoke.py` uses the internal `_launch_args` test adapter to exercise the unbuilt TypeScript CLI under tsx. Arbitrary argv replacement is intentionally absent from the public SDK.
 
-The manual [shutdown example](sdk/tests/manual_sdk_shutdown_smoke.py) uses ordinary SDK calls: run one short real-model turn, close immediately with the default 1-second budget, then open another runtime and restore the same session. Install the SDK/runtime and set `DEEPSEEK_API_KEY` before running:
+The manual [shutdown example](sdk/tests/manual_sdk_shutdown_smoke.py) uses ordinary SDK calls: run one short real-model turn, close immediately with the default 1-second budget, then open another runtime and restore the same session. Install the SDK/runtime and set `FORWORK_API_KEY` before running:
 
 ```sh
 python python/sdk/tests/manual_sdk_shutdown_smoke.py

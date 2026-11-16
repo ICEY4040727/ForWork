@@ -44,8 +44,8 @@
               - id: deepseek-v4-flash
               - id: deepseek-v4-pro
 
-- id: web-deepseek-api
-  name: '@forwork/web-deepseek-api'
+- id: web-api
+  name: '@forwork/web-api'
   config:
     searchApiKeyEnv: DSH_SNAPSHOT_UNSET_SEARCH_KEY
 

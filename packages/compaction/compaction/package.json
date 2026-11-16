@@ -1,6 +1,6 @@
 {
   "name": "@forwork/compaction",
-  "description": "Abstract compaction service seam (ctx.compaction) for the DeepSeek Harness",
+  "description": "Abstract compaction service seam (ctx.compaction) for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

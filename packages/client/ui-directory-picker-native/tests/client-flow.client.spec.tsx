@@ -195,7 +195,7 @@ describe('directory-picker-native client half', () => {
       const entry = b.slots.entries(HOLES[0])[0]!
       const injected = (entry.inject as () => { pick: () => Promise<string | null> })()
       await expect(injected.pick()).resolves.toBe('/desktop/workspace')
-      expect(desktopIpc.invoke).toHaveBeenCalledExactlyOnceWith('dsh-desktop:directory-pick')
+      expect(desktopIpc.invoke).toHaveBeenCalledExactlyOnceWith('forwork-desktop:directory-pick')
       expect(b.pickDirectory).not.toHaveBeenCalled()
     } finally {
       await fiber.dispose()

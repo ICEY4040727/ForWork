@@ -8,7 +8,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/acp` | yes | Automation-only Agent Client Protocol server for driving DeepSeek Harness agents over JSON-RPC stdio |
+| `@forwork/acp` | yes | Automation-only Agent Client Protocol server for driving ForWork agents over JSON-RPC stdio |
 
 ## api
 
@@ -71,7 +71,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/client-ui-agent-team` | no | Web shared task board for a subagent tree |
 | `@forwork/client-ui-approval` | no | Approval composer takeover over the scoped Remote Event waterfall |
 | `@forwork/client-ui-attachment` | no | Dynamic attachment presentation plugin for conversation input, message-image, and trajectory image slots |
-| `@forwork/client-ui-brand-official` | no | Official DeepSeek Harness brand artwork and click-triggered home background |
+| `@forwork/client-ui-brand-official` | no | Official ForWork brand artwork and click-triggered home background |
 | `@forwork/client-ui-chat` | no | Chat Conversation target, node definitions, renderers, and details surface |
 | `@forwork/client-ui-commands` | no | Client command surface: global directory cache, '/' source, three command UI kinds, popupSelect registry |
 | `@forwork/client-ui-context-menu` | no | Typed, plugin-extensible context menus with captured targets and shared Web presentation |
@@ -92,8 +92,8 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/client-ui-open-in-app` | no | Session application submenus and native opening controls for directories and previewed files |
 | `@forwork/client-ui-permission-presets` | no | Permission surfaces: a new-session default in General settings and a current-session /permission popup over the permissions projection |
 | `@forwork/client-ui-plan` | no | Plan mode controls, persistent transcript plan cards, and sidebar Markdown previews |
-| `@forwork/client-ui-plugin-manager` | yes | Plugin management for the dsh web client: the sidebar Plugins panel installs, enables, disables, retries, and composes installed plugin packages |
-| `@forwork/client-ui-plugin-market` | no | Discover tab of the dsh web Plugins page: browse configured plugin market indexes and install their bundles |
+| `@forwork/client-ui-plugin-manager` | yes | Plugin management for the forwork web client: the sidebar Plugins panel installs, enables, disables, retries, and composes installed plugin packages |
+| `@forwork/client-ui-plugin-market` | no | Discover tab of the forwork web Plugins page: browse configured plugin market indexes and install their bundles |
 | `@forwork/client-ui-reference` | no | Unified Web @file and @session reference source |
 | `@forwork/client-ui-renderer` | no | Browser UI renderer: React slot bindings, ctx.uiRenderer, and the assembled application root |
 | `@forwork/client-ui-schedule` | no | Host task management page and Session reminder catalog |
@@ -101,15 +101,15 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/client-ui-session` | no | Session Controller adapter for React and session-scoped slots |
 | `@forwork/client-ui-settings` | no | Settings domain base plugin: shared configuration forms and the canonical settings slot-type contract |
 | `@forwork/client-ui-settings-account` | yes | Manage DeepSeek login and open Platform billing pages |
-| `@forwork/client-ui-settings-agent-loop` | no | Settings page of the agent loop on the dsh web client's Plugins page: the parallel tool-call cap of the agent-loop namespace |
+| `@forwork/client-ui-settings-agent-loop` | no | Settings page of the agent loop on the forwork web client's Plugins page: the parallel tool-call cap of the agent-loop namespace |
 | `@forwork/client-ui-settings-general` | no | Settings ownerless-copy and product onboarding plugin: the General section, shell trigger/header chrome content, settings dictionaries, and the versioned welcome notice |
 | `@forwork/client-ui-settings-models` | yes | Models settings and shared product-onboarding dialogs over existing settings and credential joins |
 | `@forwork/client-ui-settings-plugin-inventory` | no | Read-only Cordis Loader inventory tab in Web Plugins settings |
-| `@forwork/client-ui-settings-plugins` | no | Built-in plugins settings section for the dsh web client: the Settings navigation entry and the tab chrome feature-owned tabs register into |
+| `@forwork/client-ui-settings-plugins` | no | Built-in plugins settings section for the forwork web client: the Settings navigation entry and the tab chrome feature-owned tabs register into |
 | `@forwork/client-ui-settings-session-log` | no | General settings control for Session-log upload with DeepSeek API requests |
-| `@forwork/client-ui-settings-shell` | no | Settings page of the shell executor on the dsh web client's Plugins page: the command timeout and the per-stream output cap of the shell namespace |
-| `@forwork/client-ui-settings-subagent` | no | Settings page of Subagent delegation on the dsh web client's Plugins page: recursion depth, parallel capacity, and the models agents may choose for subagents |
-| `@forwork/client-ui-settings-web-search` | no | Settings page for web search and fetch on the dsh web client's Plugins page: the Search and Fetch provider menus, the DeepSeek Search API result count, and legacy Messages search settings |
+| `@forwork/client-ui-settings-shell` | no | Settings page of the shell executor on the forwork web client's Plugins page: the command timeout and the per-stream output cap of the shell namespace |
+| `@forwork/client-ui-settings-subagent` | no | Settings page of Subagent delegation on the forwork web client's Plugins page: recursion depth, parallel capacity, and the models agents may choose for subagents |
+| `@forwork/client-ui-settings-web-search` | no | Settings page for web search and fetch on the forwork web client's Plugins page: the Search and Fetch provider menus, the DeepSeek Search API result count, and legacy Messages search settings |
 | `@forwork/client-ui-shortcuts` | no | Keyboard shortcut reference, recording, and local preference editing |
 | `@forwork/client-ui-sidebar` | no | Sidebar plugin: session multi-level tree, search, grouping, state dots |
 | `@forwork/client-ui-sidebar-browser` | no | Sandboxed Web browser tabs for the right Sidebar |
@@ -123,7 +123,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/client-ui-tool` | no | Client Tool call-tree renderer and keyed per-tool presentation slot |
 | `@forwork/client-ui-trajectory` | yes | Trajectory event ledger and timing overview with live tool-result inspection |
 | `@forwork/client-ui-user-questions` | no | Web ask_user_question composer takeover and plan-review presentation UI |
-| `@forwork/client-ui-workflow-run` | no | Durable workflow-run Conversation Node and nested member disclosure for dsh web |
+| `@forwork/client-ui-workflow-run` | no | Durable workflow-run Conversation Node and nested member disclosure for forwork web |
 | `@forwork/client-ui-workspace` | no | Workspace picker plugin: one WorkspacePicker registered into the sidebar and empty-state workspace slots |
 
 ## compaction
@@ -131,7 +131,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | Package | Config | Description |
 |---|---|---|
 | `@forwork/command-compact` | no | Human-facing slash command for explicit session compaction |
-| `@forwork/compaction-basic` | yes | Token-meter-driven compaction policy and LLM summarization backend for the DeepSeek Harness |
+| `@forwork/compaction-basic` | yes | Token-meter-driven compaction policy and LLM summarization backend for the ForWork |
 | `@forwork/compaction-image-offload` | no | Durable image offload for image-capable routes: replace over-budget request images with placeholders and retry |
 | `@forwork/compaction-tool-result-pruner` | yes | Replay-safe model-free head/middle/tail pruning for tool-result surface nodes |
 
@@ -147,7 +147,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 |---|---|---|
 | `@forwork/agent-instructions` | yes | Workspace context loader for AGENTS.md/CLAUDE.md instruction files |
 | `@forwork/file-reference-local` | yes | Local-filesystem ctx.fileReferences provider with bounded fuzzy indexes |
-| `@forwork/harness-dev-context` | no | Model context naming the DeepSeek Harness checkout and Web GUI URL without letting either change the system prompt |
+| `@forwork/harness-dev-context` | no | Model context naming the ForWork checkout and Web GUI URL without letting either change the system prompt |
 | `@forwork/session-reference` | yes | Cross-session snapshot references and durable untrusted model context (ctx.sessionReferenceResolver) |
 | `@forwork/time-context` | yes | Durable per-step context with the current time and elapsed time |
 | `@forwork/tmux-context` | yes | Opt-in durable per-step context with this agent's tmux pane and window location |
@@ -156,31 +156,31 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/agent` | no | Agent interface, registry, initiator scope, and event vocabulary for the DeepSeek Harness |
+| `@forwork/agent` | no | Agent interface, registry, initiator scope, and event vocabulary for the ForWork |
 | `@forwork/agent-default-model` | yes | Default model selection shared by Agent entry points |
-| `@forwork/agent-loop` | yes | The concrete agent loop plugin for the DeepSeek Harness |
+| `@forwork/agent-loop` | yes | The concrete agent loop plugin for the ForWork |
 | `@forwork/agent-tool-presentation` | yes | Deprecated tool presentation selector; use dsh-tool-executor-native or dsh-tool-executor-ptc directly |
-| `@forwork/session` | no | Event-sourced session store for the DeepSeek Harness |
-| `@forwork/system-prompt` | yes | System prompt assembly registry for the DeepSeek Harness |
+| `@forwork/session` | no | Event-sourced session store for the ForWork |
+| `@forwork/system-prompt` | yes | System prompt assembly registry for the ForWork |
 | `@forwork/tool-executor-native` | no | Native tool execution plugin |
 | `@forwork/tool-executor-ptc` | yes | PTC program execution, tool bindings, and generated SDK prompts |
-| `@forwork/tools` | no | Tool registry and execution pipeline for the DeepSeek Harness |
+| `@forwork/tools` | no | Tool registry and execution pipeline for the ForWork |
 
 ## credentials
 
 | Package | Config | Description |
 |---|---|---|
 | `@forwork/authorization` | no | Authorization seam (ctx.authorization): plugin-owned flows that obtain a credential through a conversation with the human |
-| `@forwork/credentials-local` | yes | File-backed credentials provider ($DSH_HOME/.env under the live process environment) for the DeepSeek Harness |
+| `@forwork/credentials-local` | yes | File-backed credentials provider ($DSH_HOME/.env under the live process environment) for the ForWork |
 | `@forwork/deepseek-account-platform` | yes | Authorize DeepSeek accounts through browser PKCE |
 
 ## deliverables
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/deliverable-file-references` | no | Shared model guidance for file links and deliverables across DeepSeek Harness hosts |
-| `@forwork/tool-present` | yes | Explicit workspace file delivery declarations for the DeepSeek Harness |
-| `@forwork/workspace-changes` | yes | Per-turn workspace file changes recorded from git working-tree snapshots and whole-file captures, with per-file comparisons, for the DeepSeek Harness |
+| `@forwork/deliverable-file-references` | no | Shared model guidance for file links and deliverables across ForWork hosts |
+| `@forwork/tool-present` | yes | Explicit workspace file delivery declarations for the ForWork |
+| `@forwork/workspace-changes` | yes | Per-turn workspace file changes recorded from git working-tree snapshots and whole-file captures, with per-file comparisons, for the ForWork |
 
 ## document
 
@@ -200,11 +200,11 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/creation-recommendations` | no | Create persistent removable interface plugins from explicit conversation needs |
 | `@forwork/cua` | no | Shared Computer Use application objects, authorization, and logged tool execution |
 | `@forwork/experimental-api-speech-to-text` | yes | Authenticated experimental speech transcription for browser clients |
-| `@forwork/experimental-auto-review` | no | Per-tool LLM authorization review for the DeepSeek Harness Auto permission preset |
+| `@forwork/experimental-auto-review` | no | Per-tool LLM authorization review for the ForWork Auto permission preset |
 | `@forwork/experimental-browser-use-chrome-devtools-mcp` | yes | Experimental per-Session Chromium browser tools through chrome-devtools-mcp |
 | `@forwork/experimental-browser-use-playwright-mcp` | yes | Experimental per-Session Chromium browser tools through @playwright/mcp |
 | `@forwork/experimental-browser-use-stagehand-native` | yes | Experimental Stagehand browser tools with separately configured native models |
-| `@forwork/experimental-claude-code-mods` | yes | Experimental bridge: load Claude Code mods (hooks modules) and run their hook chains on DeepSeek Harness extension points |
+| `@forwork/experimental-claude-code-mods` | yes | Experimental bridge: load Claude Code mods (hooks modules) and run their hook chains on ForWork extension points |
 | `@forwork/experimental-client-ui-claude-code-mods` | no | Web band above the prompt for Claude Code mods: draws each session's mod tree and sends button presses back to the bridge |
 | `@forwork/experimental-client-ui-cot-translation` | yes | Optional machine translation of expanded reasoning, preserving original Session text |
 | `@forwork/experimental-client-ui-forge` | yes | Sidebar panel for a Session's change requests, with a worktree option for new Sessions and its Host Remote |
@@ -217,7 +217,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/experimental-forge-github` | yes | GitHub provider for the experimental forge registry, read through the GitHub CLI on the host |
 | `@forwork/experimental-forge-session` | yes | Binds change requests to the Session that created, pushed, or tracked them |
 | `@forwork/experimental-inspector` | yes | Experimental cross-realm CDP hub for Host debugging and Client Runtime inspection |
-| `@forwork/experimental-ptc-runtime-python` | yes | CPython subprocess implementation of the DeepSeek Harness PTC execution seam |
+| `@forwork/experimental-ptc-runtime-python` | yes | CPython subprocess implementation of the ForWork PTC execution seam |
 | `@forwork/experimental-session-inspector` | no | Experimental virtualized Session log and live Chat group/node inspectors |
 | `@forwork/experimental-speech-to-text` | yes | Experimental speech recognition with independently selectable providers |
 | `@forwork/experimental-speech-to-text-sensevoice` | yes | Local SenseVoice ONNX transcription with a managed sherpa-onnx process |
@@ -226,16 +226,16 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/experimental-tool-worktree` | no | Model tool that creates and enters a new Git worktree |
 | `@forwork/experimental-translator` | yes | Machine translation with reusable Session results |
 | `@forwork/experimental-worktree` | yes | Creates a named Git worktree and changes the calling Session working directory |
-| `@forwork/hooks-claude-code` | yes | Bridge plugin: run a Claude Code hooks.json / settings hook config on the DeepSeek Harness interception seams |
-| `@forwork/hooks-codex` | yes | Bridge plugin: run a Codex hooks.json hook config on the DeepSeek Harness interception seams |
+| `@forwork/hooks-claude-code` | yes | Bridge plugin: run a Claude Code hooks.json / settings hook config on the ForWork interception seams |
+| `@forwork/hooks-codex` | yes | Bridge plugin: run a Codex hooks.json hook config on the ForWork interception seams |
 | `@forwork/plugin-recommendations` | no | Official plugin suggestions with explicit user activation and persistent conversation decisions |
-| `@forwork/session-title-all-prompts-llm` | yes | All-user-messages LLM provider plugin for DeepSeek Harness session titles |
-| `@forwork/skill-badge` | no | Bundled dsh badge skill provider for DeepSeek Harness |
+| `@forwork/session-title-all-prompts-llm` | yes | All-user-messages LLM provider plugin for ForWork session titles |
+| `@forwork/skill-badge` | no | Bundled dsh badge skill provider for ForWork |
 | `@forwork/tool-ralph` | yes | Model-facing fresh-agent Ralph loop over the workflow and subagent seams |
 | `@forwork/tool-session-query` | yes | Workspace-authorized model-facing session history search, trace, and event read tools |
 | `@forwork/tool-terminal` | yes | Six model-facing persistent PTY tools with owner isolation and generic background-job integration |
-| `@forwork/webhook` | no | Fire-and-forget webhook rule runtime that creates Workspace-backed DeepSeek Harness Sessions |
-| `@forwork/webhook-github` | yes | Signed GitHub HTTP webhook adapter for the DeepSeek Harness webhook runtime |
+| `@forwork/webhook` | no | Fire-and-forget webhook rule runtime that creates Workspace-backed ForWork Sessions |
+| `@forwork/webhook-github` | yes | Signed GitHub HTTP webhook adapter for the ForWork webhook runtime |
 
 ## extensions
 
@@ -257,10 +257,10 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/fs-local` | yes | Local-filesystem implementation of the DeepSeek Harness filesystem seam (ctx.fs) |
-| `@forwork/fs-observation-policy` | no | File-context policy plugin for the DeepSeek Harness — observed-state, read-before-edit, and version-guarded write/edit added over the ctx.fs provider seam through the fs/* event gate (no service API) |
-| `@forwork/fs-sandbox` | yes | Sandbox-enforcing implementation of the DeepSeek Harness filesystem seam: fences write/edit by the per-call sandbox mode (read-only denies mutation, workspace-write contains it to the workspace + temp roots) while reads pass through |
-| `@forwork/tool-fs` | yes | Model-facing filesystem tools (read, write, edit) over the DeepSeek Harness filesystem seam (ctx.fs) |
+| `@forwork/fs-local` | yes | Local-filesystem implementation of the ForWork filesystem seam (ctx.fs) |
+| `@forwork/fs-observation-policy` | no | File-context policy plugin for the ForWork — observed-state, read-before-edit, and version-guarded write/edit added over the ctx.fs provider seam through the fs/* event gate (no service API) |
+| `@forwork/fs-sandbox` | yes | Sandbox-enforcing implementation of the ForWork filesystem seam: fences write/edit by the per-call sandbox mode (read-only denies mutation, workspace-write contains it to the workspace + temp roots) while reads pass through |
+| `@forwork/tool-fs` | yes | Model-facing filesystem tools (read, write, edit) over the ForWork filesystem seam (ctx.fs) |
 | `@forwork/tool-fs-search` | yes | Model-facing filesystem discovery tools (glob, grep) backed by the packaged ripgrep binary (@vscode/ripgrep) |
 | `@forwork/tool-str-replace-editor` | yes | Model-facing view, create, literal replace, and line insert tool over the Harness filesystem service |
 
@@ -269,7 +269,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | Package | Config | Description |
 |---|---|---|
 | `@forwork/command-goal` | no | Human-facing slash command for persisted same-session goals |
-| `@forwork/goal` | yes | Event-sourced same-session goal state and lifecycle service for the DeepSeek Harness |
+| `@forwork/goal` | yes | Event-sourced same-session goal state and lifecycle service for the ForWork |
 | `@forwork/goal-round-driver` | no | Race-fenced same-session goal-round driver |
 | `@forwork/tool-goal` | yes | Model-facing same-session goal tools with execution-time authority checks |
 
@@ -284,9 +284,9 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/host-directory-picker-auto` | no | Adaptive chooser of the directory-picker seam: resolves the host situation at boot and mounts the native or browse backend for the DeepSeek Harness web GUI host |
+| `@forwork/host-directory-picker-auto` | no | Adaptive chooser of the directory-picker seam: resolves the host situation at boot and mounts the native or browse backend for the ForWork web GUI host |
 | `@forwork/host-directory-picker-browse` | yes | In-app browsing backend of the directory-picker seam (listing/creation primitives over the host filesystem) |
-| `@forwork/host-directory-picker-native` | no | Native-OS-chooser backend of the directory-picker seam for the DeepSeek Harness web GUI host |
+| `@forwork/host-directory-picker-native` | no | Native-OS-chooser backend of the directory-picker seam for the ForWork web GUI host |
 | `@forwork/host-frontend-static` | yes | SPA dist server for the Web shell: owns the webserver fallback seat, serving explicit index entries and static assets with traversal rejection and 404 misses |
 | `@forwork/host-open-in-app` | yes | Host half of open-in-app: resolved application catalog, icons, and the launch endpoint as three webServer routes |
 | `@forwork/host-plugin-inventory` | no | Read-only Remote projection of current Cordis Loader plugin state |
@@ -297,17 +297,17 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/commands` | no | Plugin-owned human command registry for DeepSeek Harness UIs |
-| `@forwork/permission-presets` | yes | User-facing permission presets (ctx.permissionPresets) for the DeepSeek Harness: one product-level Permissions select bundling the sandbox-mode and approval-policy knobs, written through to their own session events |
+| `@forwork/commands` | no | Plugin-owned human command registry for ForWork UIs |
+| `@forwork/permission-presets` | yes | User-facing permission presets (ctx.permissionPresets) for the ForWork: one product-level Permissions select bundling the sandbox-mode and approval-policy knobs, written through to their own session events |
 | `@forwork/tool-ask-user` | yes | Model-facing ask_user_question tool over the ctx.userQuestions seam |
-| `@forwork/user-approval` | yes | User-approval seam (ctx.approval) for the DeepSeek Harness: one-shot permission decisions dispatched to composed answerers over the approval/request waterfall, fail-closed by default |
+| `@forwork/user-approval` | yes | User-approval seam (ctx.approval) for the ForWork: one-shot permission decisions dispatched to composed answerers over the approval/request waterfall, fail-closed by default |
 | `@forwork/user-questions` | no | Abstract user-questions seam (ctx.userQuestions) for asking the human during agent runs |
 
 ## jobs
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/jobs-local` | yes | Process-local implementation of the DeepSeek Harness background job registry seam |
+| `@forwork/jobs-local` | yes | Process-local implementation of the ForWork background job registry seam |
 | `@forwork/tool-jobs` | yes | Model-facing background job control tools (job_output, job_list, job_kill) over the ctx.jobs registry |
 
 ## llm
@@ -315,21 +315,21 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | Package | Config | Description |
 |---|---|---|
 | `@forwork/deepseek-llm-api-extensions` | no | Additive request-field registry for the official DeepSeek LLM API adapter |
-| `@forwork/llm` | no | Provider-neutral LLM service interface for the DeepSeek Harness |
+| `@forwork/llm` | no | Provider-neutral LLM service interface for the ForWork |
 | `@forwork/llm-deepseek-account` | yes | DeepSeek account provider authentication and discovery |
 | `@forwork/llm-deepseek-api-key` | yes | DeepSeek api-key provider authentication and discovery |
-| `@forwork/llm-pi-ai` | yes | pi-ai-backed DeepSeek adapter for the DeepSeek Harness LLM seam (design-verification twin of dsh-llm-deepseek) |
-| `@forwork/llm-retry` | yes | Provider-routed LLM request retry policy for the DeepSeek Harness |
+| `@forwork/llm-pi-ai` | yes | pi-ai-backed DeepSeek adapter for the ForWork LLM seam (design-verification twin of dsh-llm-deepseek) |
+| `@forwork/llm-retry` | yes | Provider-routed LLM request retry policy for the ForWork |
 | `@forwork/plugin-package-inventory-deepseek` | yes | Active Loader-backed plugin package inventory for official DeepSeek LLM API requests |
-| `@forwork/token-meter` | yes | Replay-aware token measurement service (ctx.tokenMeter) for the DeepSeek Harness |
+| `@forwork/token-meter` | yes | Replay-aware token measurement service (ctx.tokenMeter) for the ForWork |
 
 ## lsp
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/lsp` | no | Abstract LSP capability seam (ctx.lsp) for the DeepSeek Harness — language-server provider registry keyed by branded id and extension mapping, order-independent per-query selection, normalized definition/references/implementation/hover requests and results, and the LspError taxonomy |
-| `@forwork/lsp-stdio` | yes | Generic stdio language-server provider for the DeepSeek Harness LSP capability seam (ctx.lsp) — spawns configured servers, translates JSON-RPC, and serves transient-open goToDefinition/findReferences/goToImplementation/hover queries in the host filesystem namespace |
-| `@forwork/tool-lsp` | yes | Model-facing lsp tool over the DeepSeek Harness LSP capability seam (ctx.lsp) — one read-only tool with goToDefinition/findReferences/goToImplementation/hover operations, one-based UTF-16 cursor coordinates, bounded location rendering, and hover normalization |
+| `@forwork/lsp` | no | Abstract LSP capability seam (ctx.lsp) for the ForWork — language-server provider registry keyed by branded id and extension mapping, order-independent per-query selection, normalized definition/references/implementation/hover requests and results, and the LspError taxonomy |
+| `@forwork/lsp-stdio` | yes | Generic stdio language-server provider for the ForWork LSP capability seam (ctx.lsp) — spawns configured servers, translates JSON-RPC, and serves transient-open goToDefinition/findReferences/goToImplementation/hover queries in the host filesystem namespace |
+| `@forwork/tool-lsp` | yes | Model-facing lsp tool over the ForWork LSP capability seam (ctx.lsp) — one read-only tool with goToDefinition/findReferences/goToImplementation/hover operations, one-based UTF-16 cursor coordinates, bounded location rendering, and hover normalization |
 
 ## mcp
 
@@ -351,7 +351,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 |---|---|---|
 | `@forwork/agent-preset` | yes | Declare an Agent capability composition in Cordis YAML |
 | `@forwork/agent-preset-registry` | yes | Declarative Agent preset registry and profile-backed editing |
-| `@forwork/persona` | yes | Composition-authored deployment persona section for the DeepSeek Harness |
+| `@forwork/persona` | yes | Composition-authored deployment persona section for the ForWork |
 
 ## ptc-runtime
 
@@ -363,7 +363,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/sandbox-local` | yes | Local process-sandbox backends for the DeepSeek Harness sandbox seam: bwrap, the npm-distributed landlock-run launcher, macOS Seatbelt, or the Windows ACL restricted-token runner — functionally probed, fail-closed |
+| `@forwork/sandbox-local` | yes | Local process-sandbox backends for the ForWork sandbox seam: bwrap, the npm-distributed landlock-run launcher, macOS Seatbelt, or the Windows ACL restricted-token runner — functionally probed, fail-closed |
 | `@forwork/sandbox-policy` | yes | Per-call sandbox policy resolver and current model context: deployment fallbacks plus each session's mode and workspace root, shared by every enforcing capability family |
 
 ## schedule
@@ -377,7 +377,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/sdk-jsonrpc-server` | yes | Stdio JSON-RPC server plugin for out-of-process DeepSeek Harness SDK clients |
+| `@forwork/sdk-jsonrpc-server` | yes | Stdio JSON-RPC server plugin for out-of-process ForWork SDK clients |
 
 ## session
 
@@ -386,14 +386,14 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/message-quotes` | no | Selected-text quotation and Markdown blockquote presentation |
 | `@forwork/session-checkpoint-policy` | no | Semantic session durability checkpoints before model requests and tool side effects |
 | `@forwork/session-log-deepseek` | yes | Incremental lossless session-log request extension for the official DeepSeek LLM API |
-| `@forwork/session-persistence-jsonl` | yes | JSONL durable session persistence backend for the DeepSeek Harness |
+| `@forwork/session-persistence-jsonl` | yes | JSONL durable session persistence backend for the ForWork |
 | `@forwork/session-projection` | no | Session-projection seam: the merge-extensible projection type table, the provider contract, and the ctx.sessionProjections registry serving whole current values of log-derived per-session state |
 | `@forwork/session-projection-cache` | yes | Persisted projection cache (ctx.sessionProjectionCache): durable per-session checkpoint records on the session_projcache storage domain (per-record layout), throttled write-behind, and the cached listing read |
-| `@forwork/session-stats` | no | Whole-log conversation counts and wall times projection (sessionStats) for the DeepSeek Harness |
+| `@forwork/session-stats` | no | Whole-log conversation counts and wall times projection (sessionStats) for the ForWork |
 | `@forwork/session-telemetry-otel` | yes | Feedback-authorized Session logs over byte-bounded OpenTelemetry HTTP requests |
-| `@forwork/session-title` | yes | Log-backed session title service and provider registry for the DeepSeek Harness |
-| `@forwork/session-title-first-prompt-llm` | yes | First-message LLM provider plugin for DeepSeek Harness session titles |
-| `@forwork/session-turn-outline` | no | Whole-log turn outline projection (turnOutline) for the DeepSeek Harness |
+| `@forwork/session-title` | yes | Log-backed session title service and provider registry for the ForWork |
+| `@forwork/session-title-first-prompt-llm` | yes | First-message LLM provider plugin for ForWork session titles |
+| `@forwork/session-turn-outline` | no | Whole-log turn outline projection (turnOutline) for the ForWork |
 | `@forwork/tool-working-directory` | no | Read and change the active Session working directory |
 | `@forwork/working-directory` | yes | Session working directories with durable changes and model context |
 
@@ -408,16 +408,16 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/settings` | no | Abstract user-settings seam (ctx.settings) for the DeepSeek Harness |
+| `@forwork/settings` | no | Abstract user-settings seam (ctx.settings) for the ForWork |
 
 ## shell
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/bash-local` | yes | Local-subprocess implementation of the DeepSeek Harness bash executor seam |
-| `@forwork/bash-sandbox` | yes | Sandbox-consuming implementation of the DeepSeek Harness bash executor seam (confines every command via ctx.sandbox, reports denial/enforcement result facts) |
-| `@forwork/pwsh-local` | yes | Local PowerShell implementation of the DeepSeek Harness bash executor seam |
-| `@forwork/pwsh-sandbox` | yes | Sandbox-consuming implementation of the DeepSeek Harness PowerShell executor seam (confines every command via ctx.sandbox, reports denial/enforcement result facts) |
+| `@forwork/bash-local` | yes | Local-subprocess implementation of the ForWork bash executor seam |
+| `@forwork/bash-sandbox` | yes | Sandbox-consuming implementation of the ForWork bash executor seam (confines every command via ctx.sandbox, reports denial/enforcement result facts) |
+| `@forwork/pwsh-local` | yes | Local PowerShell implementation of the ForWork bash executor seam |
+| `@forwork/pwsh-sandbox` | yes | Sandbox-consuming implementation of the ForWork PowerShell executor seam (confines every command via ctx.sandbox, reports denial/enforcement result facts) |
 | `@forwork/shell-env` | yes | Tool-independent managed DSH_* shell environment registry |
 | `@forwork/tool-bash` | yes | Model-facing bash tool with optional generic background-job and sandbox-escalation support |
 | `@forwork/tool-bash-persistent` | yes | Model-facing owner-scoped persistent Bash tool backed by the Harness PTY service |
@@ -428,17 +428,17 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/skill` | yes | Agent skill provider registry for the DeepSeek Harness |
-| `@forwork/skill-filesystem` | yes | Local filesystem skill provider for the DeepSeek Harness |
+| `@forwork/skill` | yes | Agent skill provider registry for the ForWork |
+| `@forwork/skill-filesystem` | yes | Local filesystem skill provider for the ForWork |
 | `@forwork/skill-office` | yes | Bundled Word, PowerPoint, and Excel workflows and LibreOffice Kit operations |
-| `@forwork/tool-skill` | yes | Model-facing skill loading tool for the DeepSeek Harness |
+| `@forwork/tool-skill` | yes | Model-facing skill loading tool for the ForWork |
 | `@forwork/tool-workspace-dependencies` | yes | The load_workspace_dependencies tool: absolute paths into a bundled Python, Node.js, and pnpm payload |
 
 ## spill
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/spill-local` | yes | Local-filesystem implementation of the DeepSeek Harness spill storage seam (private session-scoped files) |
+| `@forwork/spill-local` | yes | Local-filesystem implementation of the ForWork spill storage seam (private session-scoped files) |
 | `@forwork/spill-policy` | yes | Token-budgeted tool-result retention with recoverable text and image paths |
 
 ## ssh
@@ -454,10 +454,10 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/storage` | no | Storage hub (ctx.storage): named backend registry plus mounted data-form facilities for the DeepSeek Harness |
-| `@forwork/storage-domain` | yes | Domain data form (ctx.storage.domain): schema-validated, event-emitting KV domains over storage backends for the DeepSeek Harness |
-| `@forwork/storage-json` | yes | JSON file KV storage backend for the DeepSeek Harness storage hub |
-| `@forwork/storage-sqlite` | yes | SQLite storage backend (kv facet) for the DeepSeek Harness storage hub |
+| `@forwork/storage` | no | Storage hub (ctx.storage): named backend registry plus mounted data-form facilities for the ForWork |
+| `@forwork/storage-domain` | yes | Domain data form (ctx.storage.domain): schema-validated, event-emitting KV domains over storage backends for the ForWork |
+| `@forwork/storage-json` | yes | JSON file KV storage backend for the ForWork storage hub |
+| `@forwork/storage-sqlite` | yes | SQLite storage backend (kv facet) for the ForWork storage hub |
 
 ## subagent
 
@@ -467,7 +467,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 | `@forwork/subagent-acp` | yes | Out-of-process ACP subagent backend: drives a child agent in a spawned subprocess over the Agent Client Protocol |
 | `@forwork/subagent-claude-code` | yes | One-shot Claude Code subagent provider over the official Agent SDK |
 | `@forwork/subagent-codex` | yes | One-shot Codex subagent provider over the official app-server protocol |
-| `@forwork/subagent-dsh-sdk` | yes | Out-of-process SDK subagent backend: drives a child DeepSeek Harness runtime subprocess over stdio JSON-RPC through the TypeScript SDK client |
+| `@forwork/subagent-dsh-sdk` | yes | Out-of-process SDK subagent backend: drives a child ForWork runtime subprocess over stdio JSON-RPC through the TypeScript SDK client |
 | `@forwork/subagent-fork-in-process` | yes | In-process fork subagent backend: runs a child agent seeded with a prefix of the parent's log |
 | `@forwork/subagent-spawn-in-process` | yes | In-process spawn subagent backend: runs a fresh child agent on ctx.agents |
 | `@forwork/tool-subagent` | yes | Model-facing subagent delegation tool over the ctx.subagents seam |
@@ -477,7 +477,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/subprocess-local` | no | Local-subprocess implementation of the DeepSeek Harness subprocess seam |
+| `@forwork/subprocess-local` | no | Local-subprocess implementation of the ForWork subprocess seam |
 
 ## team
 
@@ -496,8 +496,8 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/terminal` | no | Persistent PTY session seam for the DeepSeek Harness — owner-scoped ids, backend registry, interactive sends, reads, signals, and awaited cleanup |
-| `@forwork/terminal-bash` | yes | Persistent shell PTY backend over the DeepSeek Harness subprocess terminal primitive |
+| `@forwork/terminal` | no | Persistent PTY session seam for the ForWork — owner-scoped ids, backend registry, interactive sends, reads, signals, and awaited cleanup |
+| `@forwork/terminal-bash` | yes | Persistent shell PTY backend over the ForWork subprocess terminal primitive |
 
 ## test-support
 
@@ -509,7 +509,7 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/tool-todo` | yes | Model-facing todo_write tool over the DeepSeek Harness event-sourced session log |
+| `@forwork/tool-todo` | yes | Model-facing todo_write tool over the ForWork event-sourced session log |
 
 ## typert
 
@@ -521,11 +521,11 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/tool-web` | yes | Model-facing web tools (web_search, web_fetch) over the DeepSeek Harness web capability seam (ctx.web) |
-| `@forwork/web` | yes | Abstract web access capability seam (ctx.web) for the DeepSeek Harness — search/fetch provider registry, registration-order-independent selection, request/result vocabulary, and the WebError taxonomy |
-| `@forwork/web-deepseek-api` | yes | DeepSeek Search and Fetch API providers for the DeepSeek Harness web capability seam (ctx.web) |
-| `@forwork/web-fetch-http` | yes | Anonymous HTTP(S) fetch provider for the DeepSeek Harness web capability seam (ctx.web) |
-| `@forwork/web-search-deepseek` | yes | DeepSeek-backed search provider (native web_search via the Anthropic-compatible API) for the DeepSeek Harness web capability seam (ctx.web) |
+| `@forwork/tool-web` | yes | Model-facing web tools (web_search, web_fetch) over the ForWork web capability seam (ctx.web) |
+| `@forwork/web` | yes | Abstract web access capability seam (ctx.web) for the ForWork — search/fetch provider registry, registration-order-independent selection, request/result vocabulary, and the WebError taxonomy |
+| `@forwork/web-api` | yes | DeepSeek Search and Fetch API providers for the ForWork web capability seam (ctx.web) |
+| `@forwork/web-fetch-http` | yes | Anonymous HTTP(S) fetch provider for the ForWork web capability seam (ctx.web) |
+| `@forwork/web-search-deepseek` | yes | DeepSeek-backed search provider (native web_search via the Anthropic-compatible API) for the ForWork web capability seam (ctx.web) |
 
 ## workflow
 
@@ -538,4 +538,4 @@ Every package below exports a Cordis plugin that a bundle patch can name in a Lo
 
 | Package | Config | Description |
 |---|---|---|
-| `@forwork/workspace` | no | Workspace entity registry (ctx.workspaceRegistry): durable workspace records with validated session attachment over the domain data form for the DeepSeek Harness |
+| `@forwork/workspace` | no | Workspace entity registry (ctx.workspaceRegistry): durable workspace records with validated session attachment over the domain data form for the ForWork |

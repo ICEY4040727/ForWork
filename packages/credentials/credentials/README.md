@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-credentials` keeps secret values out of configuration by letting settings and `cordis.yml` refer to key names such as `DEEPSEEK_API_KEY`. It also stores durable per-plugin credential records, including authorization grants and provider environment values. A rotated stored key applies to the next request without a restart or configuration edit. Configuration UIs can report whether a key or record is set, its source, and whether it is writable without exposing values. Empty key values count as absent, while an empty record remains a deliberate stored credential.
+`dsh-credentials` keeps secret values out of configuration by letting settings and `cordis.yml` refer to key names such as `FORWORK_API_KEY`. It also stores durable per-plugin credential records, including authorization grants and provider environment values. A rotated stored key applies to the next request without a restart or configuration edit. Configuration UIs can report whether a key or record is set, its source, and whether it is writable without exposing values. Empty key values count as absent, while an empty record remains a deliberate stored credential.
 
 ## Table of Contents
 
@@ -51,7 +51,7 @@ import { credentialRef } from '@forwork/credentials'
 
 declare const ctx: Context
 
-const ref = credentialRef('DEEPSEEK_API_KEY')          // POSIX shell identifier, branded
+const ref = credentialRef('FORWORK_API_KEY')          // POSIX shell identifier, branded
 const hit = await ctx.credentials.resolve(ref)         // { value, source } | undefined
 const info = await ctx.credentials.describe(ref)       // { configured, source?, writable } — never the value
 await ctx.credentials.set(ref, 'sk-…')                 // the stored value outranks environment fallbacks
@@ -85,7 +85,7 @@ await ctx.credentials.deleteRecord(key)                  // no-op when absent
 A settings section or `cordis.yml` entry names a key instead of containing it — an LLM adapter, for example, takes `apiKeyEnv`:
 
 ```yaml
-apiKeyEnv: DEEPSEEK_API_KEY
+apiKeyEnv: FORWORK_API_KEY
 ```
 
 Requests that need the key use its current stored value, so rotating the key takes effect on the very next request — no restart and no configuration edit.
@@ -102,16 +102,16 @@ declare const directory: string
 declare const key: string
 
 const store = new SafeStorageSecureStore({ safeStorage, directory })
-await store.set('DEEPSEEK_API_KEY', key)   // encrypted before it reaches disk
-const stored = await store.get('DEEPSEEK_API_KEY')
-await store.delete('DEEPSEEK_API_KEY')
+await store.set('FORWORK_API_KEY', key)   // encrypted before it reaches disk
+const stored = await store.get('FORWORK_API_KEY')
+await store.delete('FORWORK_API_KEY')
 ```
 
 When `safeStorage.isEncryptionAvailable()` is false, `get` and `set` throw `SecureStorageUnavailableError` with code `secure-storage-unavailable`; the adapter never writes plaintext as a fallback. `delete` removes an encrypted entry without needing the system key, so a locked keychain cannot block clearing a stored secret. The adapter is not part of the default composition: the desktop host constructs it with its own application-data directory.
 
 ### What can go wrong
 
-- **A stored key outranks the launching environment** — while a value is stored, `DEEPSEEK_API_KEY=… dsh` (or a CI secret, a container `-e`) does not apply; `unset` the stored key to use the exported one.
+- **A stored key outranks the launching environment** — while a value is stored, `FORWORK_API_KEY=… dsh` (or a CI secret, a container `-e`) does not apply; `unset` the stored key to use the exported one.
 - **An empty value cannot be stored** — storing an empty string is refused; remove the key instead.
 - **Key values never appear in configuration UIs or diagnostics** — the UI shows whether a key is set, where it comes from, and whether you can change it; the value itself stays in the store.
 

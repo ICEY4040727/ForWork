@@ -298,7 +298,7 @@ describe('DeepSeek web cancellation and failures', () => {
 
   it('uses the default credential reference when no resolver is configured', async () => {
     await expect(searchProvider({ ...options, apiKey: '' }).search({ query: 'q' }))
-      .rejects.toThrow('DeepSeek web access has no API key for "DEEPSEEK_API_KEY"')
+      .rejects.toThrow('DeepSeek web access has no API key for "FORWORK_API_KEY"')
   })
 
   it('observes cancellation triggered synchronously by credential resolution', async () => {
@@ -324,9 +324,9 @@ describe('DeepSeek web cancellation and failures', () => {
         code: 'WEB_PROVIDER_ERROR',
         message: 'DeepSeek API error (HTTP 429): rate limited\n\n'
           + 'The web request used endpoint "https://api.deepseek.test/v1/tools/search". '
-          + 'Search sends the API key under web-deepseek-api.searchApiKeyEnv to web-deepseek-api.searchBaseURL. If that '
-          + 'endpoint is not intended, guide the user to correct web-deepseek-api.searchBaseURL and '
-          + 'web-deepseek-api.searchApiKeyEnv, or to remove both so Search uses the DeepSeek credential of the conversation. '
+          + 'Search sends the API key under web-api.searchApiKeyEnv to web-api.searchBaseURL. If that '
+          + 'endpoint is not intended, guide the user to correct web-api.searchBaseURL and '
+          + 'web-api.searchApiKeyEnv, or to remove both so Search uses the DeepSeek credential of the conversation. '
           + 'Only the user should choose or change the endpoint.',
       }))
   })

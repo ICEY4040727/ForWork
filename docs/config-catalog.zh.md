@@ -61,12 +61,12 @@ export type Config = z.infer<typeof Config>
 ```ts config-catalog
 /** Default model selection supplied by plugin configuration. */
 export interface Config {
-  /** Registered provider route. */
-  provider: Volatile<string>
-  /** Provider-owned model id. */
-  model: Volatile<string>
+  /** Registered provider route; omitted until a deployment or saved selection supplies one. */
+  provider?: Volatile<string | undefined>
+  /** Provider-owned model id; omitted until a deployment or saved selection supplies one. */
+  model?: Volatile<string | undefined>
   /** Adapter-owned reasoning effort; omission follows the provider default. */
-  reasoningEffort: Volatile<string | undefined>
+  reasoningEffort?: Volatile<string | undefined>
 }
 ```
 <!-- END GENERATED config-catalog:@forwork/agent-default-model -->
@@ -1499,7 +1499,7 @@ export type TranslationProvider = AnonymousTranslationProvider | PaidTranslation
 export type AnonymousTranslationProvider = 'google' | 'bing'
 
 /** Explicit native DeepSeek credential route selected for paid translation. */
-export type PaidTranslationProvider = 'deepseek-account' | 'deepseek-official'
+export type PaidTranslationProvider = 'account' | 'deepseek-official'
 ```
 <!-- END GENERATED config-catalog:@forwork/experimental-translator -->
 
@@ -1941,7 +1941,7 @@ export interface Config extends Omit<ProtocolConfig, 'models'>, ModelListingConf
 ```ts config-catalog
 /** Messages configuration with a per-request API-key reference. */
 export interface Config extends ProtocolConfig, ModelListingConfig {
-  /** Credential reference resolved per request; defaults to DEEPSEEK_API_KEY. */
+  /** Credential reference resolved per request; defaults to FORWORK_API_KEY. */
   apiKeyEnv: Volatile<string>
 }
 ```
@@ -2683,7 +2683,7 @@ export interface PlanModeConfig {
 ```ts config-catalog
 /** The pnpm executable, registries, and limits for diagnostics, lookups and connection checks. */
 export interface Config {
-  /** The pnpm executable name or path; resolved through `PATH` like the `dsh plugin` command. */
+  /** The pnpm executable name or path; resolved through `PATH` like the `forwork plugin` command. */
   pnpmCommand?: string
   /** Maximum retained package-operation diagnostic bytes. */
   outputBytes?: number
@@ -3357,7 +3357,7 @@ export interface Config extends SessionTitleLlmConfig {
 ```ts config-catalog
 /** Plugin config (all optional — the built-in facts resolve without defaults). */
 export interface Config {
-  /** DeepSeek Harness home directory exposed as `DSH_HOME`; defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** ForWork home directory exposed as `DSH_HOME`; defaults to `$DSH_HOME` or `~/.dsh`. */
   dshHome?: string
 }
 ```
@@ -3394,7 +3394,7 @@ export interface Config {
   providerName?: string
   /** Whether project and user roots are included around custom roots. */
   includeDefaultRoots?: boolean
-  /** DeepSeek Harness config root. Defaults to `$DSH_HOME` or `~/.dsh`. */
+  /** ForWork config root. Defaults to `$DSH_HOME` or `~/.dsh`. */
   dshHome?: string
   /** Shared agent config root. Defaults to `$DSH_AGENTS_HOME` or `~/.agents`. */
   agentsHome?: string
@@ -3666,7 +3666,7 @@ export interface Config {
   permission: PermissionPolicy
   /**
    * Extra environment variables for the child process — e.g. the child
-   * harness's own `DEEPSEEK_API_KEY`. Forwarded on top of a credential-scrubbed
+   * harness's own `FORWORK_API_KEY`. Forwarded on top of a credential-scrubbed
    * copy of the parent env, so an explicit key here reaches the child while
    * ambient secrets do not leak implicitly.
    */
@@ -3786,7 +3786,7 @@ export interface Config {
   maxTokens?: number
   /**
    * Extra environment variables for the child process — e.g. the child
-   * runtime's own `DEEPSEEK_API_KEY`. Forwarded on top of a credential-scrubbed copy of the parent
+   * runtime's own `FORWORK_API_KEY`. Forwarded on top of a credential-scrubbed copy of the parent
    * env, so an explicit key here reaches the child while ambient secrets do
    * not leak implicitly.
    */
@@ -3849,7 +3849,7 @@ export interface Config {
 ```ts config-catalog
 /** Plugin config: the deployment-authored fragment of the system prompt (see {@link Config.personaPrefix} for its contract). */
 export interface Config {
-  /** Include the fixed DeepSeek Harness identity before the deployment persona (default true). */
+  /** Include the fixed ForWork identity before the deployment persona (default true). */
   includeHarnessIdentity?: boolean
   /** Include optional runtime-context snapshots in model history (default true); required context remains. */
   includeRuntimeContext?: boolean
@@ -4681,6 +4681,51 @@ export interface WebRuntimeConfig {
 ```
 <!-- END GENERATED config-catalog:@forwork/web -->
 
+<!-- BEGIN GENERATED config-catalog:@forwork/web-api -->
+<a id="forworkweb-api"></a>
+
+## `@forwork/web-api`
+
+- `inject`: `web`
+- `refs`: `Volatile` (`@forwork/cordis`)
+- `source`: [`packages/web/web-api/src/index.ts:58`](../packages/web/web-api/src/index.ts)
+
+```ts config-catalog
+/**
+ * Settings read by the next search or fetch without re-registering either provider. A non-empty `*BaseURL` or
+ * `*ApiKeyEnv` gives that capability its own endpoint and key; with neither, it follows the conversation's DeepSeek
+ * credential. Stored fields of earlier settings (`baseURL`, `apiKeyEnv`, `apiKey`) are not schema fields: they load
+ * without error and have no effect.
+ */
+export interface Config {
+  /** Search API results per search, from 1 through 50; a smaller request bound wins. Defaults to 10. */
+  count: Volatile<number>
+  /**
+   * Most Search requests this plugin instance sends in any one-second window; later searches wait,
+   * and the wait counts against the caller's timeout. Other processes and clients on the same account
+   * share the account limit without coordination. Defaults to 5.
+   */
+  searchRequestsPerSecond: Volatile<number>
+  /** Send the triggering user question, bounded to 128 characters, as `ori_question`. Defaults to true. */
+  sendOriginalQuestion: Volatile<boolean>
+  /**
+   * Own Search API base including its path prefix; `/search` is appended. With only {@link searchApiKeyEnv} set, the
+   * official base applies.
+   */
+  searchBaseURL: Volatile<string | undefined>
+  /** Own Search API credential reference. With only {@link searchBaseURL} set, `FORWORK_API_KEY` applies. */
+  searchApiKeyEnv: Volatile<string | undefined>
+  /**
+   * Own Fetch API base including its path prefix; `/fetch` is appended. With only {@link fetchApiKeyEnv} set, the
+   * official base applies.
+   */
+  fetchBaseURL: Volatile<string | undefined>
+  /** Own Fetch API credential reference. With only {@link fetchBaseURL} set, `FORWORK_API_KEY` applies. */
+  fetchApiKeyEnv: Volatile<string | undefined>
+}
+```
+<!-- END GENERATED config-catalog:@forwork/web-api -->
+
 <!-- BEGIN GENERATED config-catalog:@forwork/web-app -->
 <a id="forworkweb-app"></a>
 
@@ -4712,51 +4757,6 @@ export interface Config {
 }
 ```
 <!-- END GENERATED config-catalog:@forwork/web-app -->
-
-<!-- BEGIN GENERATED config-catalog:@forwork/web-deepseek-api -->
-<a id="forworkweb-deepseek-api"></a>
-
-## `@forwork/web-deepseek-api`
-
-- `inject`: `web`
-- `refs`: `Volatile` (`@forwork/cordis`)
-- `source`: [`packages/web/web-deepseek-api/src/index.ts:58`](../packages/web/web-deepseek-api/src/index.ts)
-
-```ts config-catalog
-/**
- * Settings read by the next search or fetch without re-registering either provider. A non-empty `*BaseURL` or
- * `*ApiKeyEnv` gives that capability its own endpoint and key; with neither, it follows the conversation's DeepSeek
- * credential. Stored fields of earlier settings (`baseURL`, `apiKeyEnv`, `apiKey`) are not schema fields: they load
- * without error and have no effect.
- */
-export interface Config {
-  /** Search API results per search, from 1 through 50; a smaller request bound wins. Defaults to 10. */
-  count: Volatile<number>
-  /**
-   * Most Search requests this plugin instance sends in any one-second window; later searches wait,
-   * and the wait counts against the caller's timeout. Other processes and clients on the same account
-   * share the account limit without coordination. Defaults to 5.
-   */
-  searchRequestsPerSecond: Volatile<number>
-  /** Send the triggering user question, bounded to 128 characters, as `ori_question`. Defaults to true. */
-  sendOriginalQuestion: Volatile<boolean>
-  /**
-   * Own Search API base including its path prefix; `/search` is appended. With only {@link searchApiKeyEnv} set, the
-   * official base applies.
-   */
-  searchBaseURL: Volatile<string | undefined>
-  /** Own Search API credential reference. With only {@link searchBaseURL} set, `DEEPSEEK_API_KEY` applies. */
-  searchApiKeyEnv: Volatile<string | undefined>
-  /**
-   * Own Fetch API base including its path prefix; `/fetch` is appended. With only {@link fetchApiKeyEnv} set, the
-   * official base applies.
-   */
-  fetchBaseURL: Volatile<string | undefined>
-  /** Own Fetch API credential reference. With only {@link fetchBaseURL} set, `DEEPSEEK_API_KEY` applies. */
-  fetchApiKeyEnv: Volatile<string | undefined>
-}
-```
-<!-- END GENERATED config-catalog:@forwork/web-deepseek-api -->
 
 <!-- BEGIN GENERATED config-catalog:@forwork/web-fetch-http -->
 <a id="forworkweb-fetch-http"></a>
@@ -4797,7 +4797,7 @@ export interface Config {
 export interface Config {
   /** Literal DeepSeek API key; prefer {@link apiKeyEnv} so no secret enters configuration files. */
   apiKey: Volatile<string | undefined>
-  /** Credential reference resolved for each search; defaults to `DEEPSEEK_API_KEY`. */
+  /** Credential reference resolved for each search; defaults to `FORWORK_API_KEY`. */
   apiKeyEnv: Volatile<string>
   /** Anthropic-compatible endpoint base; `/messages` is appended. */
   baseURL: Volatile<string | undefined>

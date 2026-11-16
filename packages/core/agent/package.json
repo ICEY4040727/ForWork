@@ -1,6 +1,6 @@
 {
   "name": "@forwork/agent",
-  "description": "Agent interface, registry, initiator scope, and event vocabulary for the DeepSeek Harness",
+  "description": "Agent interface, registry, initiator scope, and event vocabulary for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

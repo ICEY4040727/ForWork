@@ -11,9 +11,9 @@ function validLayout(): NpmPackageLock {
   return {
     lockfileVersion: 3,
     packages: {
-      '': { dependencies: { '@forwork/dsh': '0.2.0', 'dsh-previous': 'npm:@forwork/dsh@0.1.0' } },
+      '': { dependencies: { '@forwork/cli': '0.2.0', 'dsh-previous': 'npm:@forwork/cli@0.1.0' } },
       'node_modules/@forwork/cordis': { version: '4.0.1' },
-      'node_modules/@forwork/dsh': {
+      'node_modules/@forwork/cli': {
         version: '0.2.0',
         dependencies: { '@forwork/child': '^0.2.0' },
         peerDependencies: { '@forwork/cordis': '^4.0.1' },
@@ -24,7 +24,7 @@ function validLayout(): NpmPackageLock {
       },
       'node_modules/@forwork/leaf': { version: '0.2.0' },
       'node_modules/dsh-previous': {
-        name: '@forwork/dsh',
+        name: '@forwork/cli',
         version: '0.1.0',
         dependencies: { '@forwork/child': '^0.1.0' },
         peerDependencies: { '@forwork/cordis': '^4.0.1' },
@@ -41,8 +41,8 @@ function validLayout(): NpmPackageLock {
 describe('npm install layout verifier', () => {
   it('creates two incompatible versions of every DSH package', () => {
     const index: RegistryIndex = new Map([
-      ['@forwork/dsh', new Map([['0.1.1-rc.2', {
-        name: '@forwork/dsh',
+      ['@forwork/cli', new Map([['0.1.1-rc.2', {
+        name: '@forwork/cli',
         version: '0.1.1-rc.2',
         dependencies: { '@forwork/child': '^0.1.1-rc.2' },
         peerDependencies: { '@forwork/cordis': '^4.0.1' },
@@ -59,13 +59,13 @@ describe('npm install layout verifier', () => {
 
     const dual = buildDualDshRegistry(index, '0.1.1-rc.2')
 
-    expect([...dual.get('@forwork/dsh')?.keys() ?? []]).toEqual(['0.1.0', '0.2.0'])
-    expect(dual.get('@forwork/dsh')?.get('0.1.0')).toMatchObject({
+    expect([...dual.get('@forwork/cli')?.keys() ?? []]).toEqual(['0.1.0', '0.2.0'])
+    expect(dual.get('@forwork/cli')?.get('0.1.0')).toMatchObject({
       version: '0.1.0',
       dependencies: { '@forwork/child': '^0.1.0' },
       peerDependencies: { '@forwork/cordis': '^4.0.1' },
     })
-    expect(dual.get('@forwork/dsh')?.get('0.2.0')).toMatchObject({
+    expect(dual.get('@forwork/cli')?.get('0.2.0')).toMatchObject({
       version: '0.2.0',
       dependencies: { '@forwork/child': '^0.2.0' },
     })

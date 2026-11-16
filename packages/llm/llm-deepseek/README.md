@@ -41,7 +41,7 @@ Choose this adapter for DeepSeek's official API or a Messages-compatible gateway
 ```yaml
 - name: '@forwork/llm-deepseek-api-key'
   config:
-    apiKeyEnv: DEEPSEEK_API_KEY  # credential reference, resolved per request
+    apiKeyEnv: FORWORK_API_KEY  # credential reference, resolved per request
     reasoningEffort: high        # optional; off | low | high | max
     maxTokens: 256000            # optional per-request output cap
     maxRequestFilesBytes: 134217728
@@ -54,7 +54,7 @@ A request selects the route with `provider: deepseek-official`; the model id pas
 
 | Field | Default | Meaning |
 |---|---|---|
-| `baseURL` | `https://api.deepseek.com/anthropic` | Explicit value, then `$DEEPSEEK_BASE_URL`, then the official root |
+| `baseURL` | `https://api.deepseek.com/anthropic` | Explicit value, then `$FORWORK_BASE_URL`, then the official root |
 | `thinking` | `enabled` | Deployment policy; `disabled` locks every request to `off` |
 | `reasoningEffort` | `high` | Default effort: `off`, `low`, `high`, or `max` |
 | `maxTokens` | `256,000` | Per-request output cap; a model's own cap and explicit request values win |
@@ -80,7 +80,7 @@ When [proactive compaction](../../compaction/compaction-basic/README.md#use-this
 <a id="endpoint-and-wire-format"></a>
 ### Endpoint and wire format
 
-The official root is `https://api.deepseek.com/anthropic`. An explicit `baseURL` or `$DEEPSEEK_BASE_URL` supplies a Messages-compatible root. Model and Files requests append `/v1/messages` and `/v1/files`, except that an exact final `/v1` segment is reused. Trailing slashes do not change these results. A base URL must use HTTP(S) without credentials, query, or fragment.
+The official root is `https://api.deepseek.com/anthropic`. An explicit `baseURL` or `$FORWORK_BASE_URL` supplies a Messages-compatible root. Model and Files requests append `/v1/messages` and `/v1/files`, except that an exact final `/v1` segment is reused. Trailing slashes do not change these results. A base URL must use HTTP(S) without credentials, query, or fragment.
 
 Messages sends text, thinking, tool calls, and tool results as content blocks, reasoning effort as `output_config.effort`, and images as Files references or inline base64. Models declaring `systemPromptUpdate: in-history` retain the initial top-level system and send new system snapshots after their corresponding user/tool-result turn; undeclared models use the latest snapshot as the top-level system. Replay metadata preserves the model and thinking signatures. Invalid replay metadata emits a warning and omits signatures while retaining text and tool history. Model entries may declare `toolUpdate: addition-only` or `in-history`; the default `deepseek-flash` entry declares `addition-only`. Projected developer tool updates become system-role `tool_addition` and `tool_removal` blocks referencing declared names, and deferred declarations carry `defer_loading`. Requests containing those blocks send the `mid-conversation-tool-changes-2026-07-01` beta header. Messages omits empty assistant text blocks and skips assistant messages left without content, including saved history from other protocols. The stored Session content remains intact.
 
@@ -211,7 +211,7 @@ These limits define where the adapter stops and future work begins. They are cur
 - **Messages in-history system updates require a retained user or tool-result turn** — if all user input after an update is omitted and the preceding wire turn is assistant, serialization fails with `UNSUPPORTED_CONTENT` before the next assistant or at the end of the request. Text or an empty tool result can retain that turn. Moving the update to an earlier turn is not supported; the [input-history reference](README.md) records the ordering constraint.
 - **Images are input-only durable attachments** — direct external URLs and assistant image output are not supported; DeepSeek input normally uses the Files API and uses inline base64 only for per-request recovery.
 - The default catalog advertises `deepseek-flash` and its text/image and in-history capabilities without probing gateway availability. Requests can fail with `INVALID_REQUEST` until the gateway enables the id.
-- Real API checks in [adapter.e2e.ts](tests/adapter.e2e.ts) and [runtime.e2e.ts](tests/runtime.e2e.ts) require `DEEPSEEK_API_KEY`. Set `DEEPSEEK_IN_HISTORY_MODEL` to a supported nonempty model id to run system-update checks: the adapter suite uses `high` effort, while the runtime suite compares cache reuse with thinking disabled and can be sensitive to instruction-following instability. The runtime image cases additionally require `DEEPSEEK_FLASH_E2E=1` or `DEEPSEEK_VISION_E2E=1`.
+- Real API checks in [adapter.e2e.ts](tests/adapter.e2e.ts) and [runtime.e2e.ts](tests/runtime.e2e.ts) require `FORWORK_API_KEY`. Set `DEEPSEEK_IN_HISTORY_MODEL` to a supported nonempty model id to run system-update checks: the adapter suite uses `high` effort, while the runtime suite compares cache reuse with thinking disabled and can be sensitive to instruction-following instability. The runtime image cases additionally require `DEEPSEEK_FLASH_E2E=1` or `DEEPSEEK_VISION_E2E=1`.
 
 <a id="dev-note"></a>
 ### Dev Note

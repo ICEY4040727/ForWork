@@ -15,7 +15,7 @@ function fixture() {
   const anchor = join(root, 'apps', 'cli', 'package.json')
   mkdirSync(dirname(anchor), { recursive: true })
   writeFileSync(join(root, 'package.json'), JSON.stringify({ name: '@forwork/root' }))
-  writeFileSync(anchor, JSON.stringify({ name: '@forwork/dsh', version, dependencies: { '@forwork/app-boot': 'workspace:*' } }))
+  writeFileSync(anchor, JSON.stringify({ name: '@forwork/cli', version, dependencies: { '@forwork/app-boot': 'workspace:*' } }))
   const directory = join(root, 'packages', 'relocated', 'native-provider')
   mkdirSync(join(directory, 'lib'), { recursive: true })
   writeFileSync(join(directory, 'package.json'), JSON.stringify({ name, version, main: 'lib/index.js', dsh: { bundle: { patch: './cordis.patch.yml' } } }))
@@ -26,13 +26,13 @@ function fixture() {
 
 it('offers an exact prerelease registry target for a packed installation inside a checkout', () => {
   const { anchor } = fixture()
-  writeFileSync(anchor, JSON.stringify({ name: '@forwork/dsh', version, dependencies: { '@forwork/app-boot': version } }))
+  writeFileSync(anchor, JSON.stringify({ name: '@forwork/cli', version, dependencies: { '@forwork/app-boot': version } }))
   expect(officialBundleInstallTarget(name, anchor, version)).toEqual({ spec: `${name}@${version}`, version })
 })
 
 it('keeps an installation without workspace dependencies on the registry path', () => {
   const { anchor } = fixture()
-  writeFileSync(anchor, JSON.stringify({ name: '@forwork/dsh', version }))
+  writeFileSync(anchor, JSON.stringify({ name: '@forwork/cli', version }))
   expect(officialBundleInstallTarget(name, anchor, version)).toEqual({ spec: `${name}@${version}`, version })
 })
 
@@ -43,7 +43,7 @@ it('finds the package by manifest name rather than assuming its workspace direct
 
 it('follows the CLI directory link used by an unpackaged Desktop application', () => {
   const { root, anchor, directory } = fixture()
-  const link = join(root, 'desktop-runtime', 'node_modules', '@forwork', 'dsh')
+  const link = join(root, 'desktop-runtime', 'node_modules', '@forwork', 'cli')
   mkdirSync(dirname(link), { recursive: true })
   symlinkSync(dirname(anchor), link, process.platform === 'win32' ? 'junction' : 'dir')
   expect(officialBundleInstallTarget(name, join(link, 'package.json'), version)).toEqual({ spec: `link:${directory}`, version })

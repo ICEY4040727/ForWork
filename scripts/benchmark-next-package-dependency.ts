@@ -19,7 +19,7 @@ import {
   type WorkspacePackageManifest,
 } from './verify-package-dependencies.ts'
 
-const TARGET_PACKAGE = '@forwork/dsh'
+const TARGET_PACKAGE = '@forwork/cli'
 const CORDIS = '@forwork/cordis'
 
 interface Options {

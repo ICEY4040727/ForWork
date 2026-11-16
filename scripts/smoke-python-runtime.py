@@ -1091,8 +1091,8 @@ def smoke_sdk_plugin_manager(base_url: str, executable: Path, cache: Path) -> No
             assert result.final_response == PROFILE_PLUGIN_TEXT, result.final_response
         example = Path(__file__).resolve().parent.parent / "python/sdk/examples/manage_plugins.py"
         example_home = root / "example-home"
-        example_environment = {**os.environ, **environment, "DEEPSEEK_BASE_URL": base_url,
-                               "DEEPSEEK_API_KEY": "sk-keyless-smoke"}
+        example_environment = {**os.environ, **environment, "FORWORK_BASE_URL": base_url,
+                               "FORWORK_API_KEY": "sk-keyless-smoke"}
         example_args = [sys.executable, str(example), "--dsh-home", str(example_home),
                         "--workspace", str(root), "--dsh-bin", str(executable)]
         for decision, expected in (("n", "plugin installation rejected"), ("y", "plugin installation saved")):
@@ -1265,12 +1265,12 @@ def smoke_sdk_live() -> None:
     """Run a real-model, tool-using two-turn task through installed wheels."""
     from deepseek_harness import DeepSeekHarness
 
-    api_key = os.environ.get("DEEPSEEK_API_KEY")
-    base_url = os.environ.get("DEEPSEEK_BASE_URL")
+    api_key = os.environ.get("FORWORK_API_KEY")
+    base_url = os.environ.get("FORWORK_BASE_URL")
     if not api_key:
-        raise AssertionError("sdk-live requires DEEPSEEK_API_KEY")
+        raise AssertionError("sdk-live requires FORWORK_API_KEY")
     if not base_url:
-        raise AssertionError("sdk-live requires an explicit DEEPSEEK_BASE_URL")
+        raise AssertionError("sdk-live requires an explicit FORWORK_BASE_URL")
 
     with tempfile.TemporaryDirectory(prefix="dsh-sdk-live-") as temporary:
         root = Path(temporary).resolve()
@@ -1718,9 +1718,9 @@ def smoke_sdk_profile_plugin(base_url: str) -> None:
             )
         manifest = json.loads((dsh_home / "profiles" / "sdk" / "package.json").read_text())
         if "dsh-python-blackbox-plugin" not in manifest.get("dependencies", {}):
-            raise AssertionError(f"dsh plugin did not record the external dependency: {manifest}")
+            raise AssertionError(f"forwork plugin did not record the external dependency: {manifest}")
         if "dsh-python-blackbox-plugin" not in manifest["dsh"]["profile"]["bundles"]:
-            raise AssertionError(f"dsh plugin did not activate the external bundle: {manifest}")
+            raise AssertionError(f"forwork plugin did not activate the external bundle: {manifest}")
 
         harness = DeepSeekHarness(
             provider="deepseek-official",
@@ -2114,8 +2114,8 @@ def smoke_direct(base_url: str, executable: Path) -> None:
             "DSH_HOME": str(dsh_home),
             "DSH_PERMISSION_MODE": "danger-full-access",
             "DSH_TELEMETRY_DISABLED": "1",
-            "DEEPSEEK_API_KEY": "sk-keyless-smoke",
-            "DEEPSEEK_BASE_URL": base_url,
+            "FORWORK_API_KEY": "sk-keyless-smoke",
+            "FORWORK_BASE_URL": base_url,
         }
         peer = RuntimePeer(
             [str(executable), "--profile", "sdk", "--patch", str(patch)],

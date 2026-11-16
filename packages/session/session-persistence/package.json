@@ -1,6 +1,6 @@
 {
   "name": "@forwork/session-persistence",
-  "description": "Abstract durable session persistence seam (ctx.sessionPersistence) for the DeepSeek Harness",
+  "description": "Abstract durable session persistence seam (ctx.sessionPersistence) for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

@@ -1,6 +1,6 @@
 {
   "name": "@forwork/fs-local",
-  "description": "Local-filesystem implementation of the DeepSeek Harness filesystem seam (ctx.fs)",
+  "description": "Local-filesystem implementation of the ForWork filesystem seam (ctx.fs)",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

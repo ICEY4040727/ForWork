@@ -27,7 +27,7 @@ Share a Session with colleagues through the normal DSH browser interface. The ow
 
 ### Profile and build requirements
 
-The manifest declares an installable `dsh.bundle` layer and a browser face. The bundle stays hidden until a profile enables it, as described in [Default visibility and enabling](#default-visibility-and-enabling); supported applications still start through `dsh --profile`.
+The manifest declares an installable `dsh.bundle` layer and a browser face. The bundle stays hidden until a profile enables it, as described in [Default visibility and enabling](#default-visibility-and-enabling); supported applications still start through `forwork --profile`.
 
 Owner, viewer, and the Liveshare server must use matching protocol versions. The build includes the Owner's gateway process; the viewer page has no separate build. Package version, exports, and publication contents are declared in [package.json](package.json).
 
@@ -55,7 +55,7 @@ Replace every `<...>` placeholder with the deployment's own value: the identity 
 
 The profile can select the bundle instead of patching it: add `"@forwork/experimental-liveshare"` to `dsh.profile.bundles` in `$DSH_HOME/profiles/<profile>/package.json`, which is the write the card's switch performs once the card is listed.
 
-Either route takes effect only on a recomposition. With the profile's HMR row enabled, the change applies when the profile is re-read; without it, the next `dsh` start applies it. Once at least one row the bundle declares runs, its card appears under **Experimental plugins** and on the **More** page. Removing the entries, disabling them, or removing the bundle from `dsh.profile.bundles` stops those rows and the card leaves both lists again.
+Either route takes effect only on a recomposition. With the profile's HMR row enabled, the change applies when the profile is re-read; without it, the next `forwork` start applies it. Once at least one row the bundle declares runs, its card appears under **Experimental plugins** and on the **More** page. Removing the entries, disabling them, or removing the bundle from `dsh.profile.bundles` stops those rows and the card leaves both lists again.
 
 ### Owner configuration
 

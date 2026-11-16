@@ -1,6 +1,6 @@
 {
   "name": "@forwork/storage",
-  "description": "Storage hub (ctx.storage): named backend registry plus mounted data-form facilities for the DeepSeek Harness",
+  "description": "Storage hub (ctx.storage): named backend registry plus mounted data-form facilities for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

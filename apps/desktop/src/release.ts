@@ -6,7 +6,7 @@ import { DESKTOP_HOST_PROTOCOL_VERSION } from './host-protocol.ts'
 /** Release facts embedded in the bundled runtime descriptor. */
 export interface DesktopRelease {
   readonly schemaVersion: 1
-  /** Exact version used by both Electron and `@forwork/dsh`. */
+  /** Exact version used by both Electron and `@forwork/cli`. */
   readonly version: string
   readonly hostProtocolVersion: typeof DESKTOP_HOST_PROTOCOL_VERSION
   readonly nodeVersion: string
@@ -23,7 +23,7 @@ export function parseDesktopRelease(value: unknown): DesktopRelease {
     || valid(value.version) === null || value.hostProtocolVersion !== DESKTOP_HOST_PROTOCOL_VERSION
     || typeof value.nodeVersion !== 'string' || valid(value.nodeVersion) === null
     || typeof value.pnpmVersion !== 'string' || valid(value.pnpmVersion) === null) {
-    throw new Error('dsh desktop: invalid desktop release metadata')
+    throw new Error('forwork desktop: invalid desktop release metadata')
   }
   return {
     schemaVersion: 1,

@@ -72,7 +72,7 @@ describe('ui-settings-web-search apply', () => {
   })
 
   it('registers nothing while the web namespace is not served', async () => {
-    const { ctx, slots, describeSettings } = await bench(['shell', 'web-deepseek-api'])
+    const { ctx, slots, describeSettings } = await bench(['shell', 'web-api'])
     declareRoot(slots)
     await ctx.plugin({ inject: [...inject], apply }).await()
     await vi.waitFor(() => { expect(describeSettings).toHaveBeenCalled() })
@@ -95,7 +95,7 @@ describe('ui-settings-web-search apply', () => {
 
     // A key written on another surface changes no settings section, so this
     // event is the only thing that reaches the page.
-    remote.emit('credentials/reference-updated', ['DEEPSEEK_API_KEY'])
+    remote.emit('credentials/reference-updated', ['FORWORK_API_KEY'])
     await vi.waitFor(() => { expect(describeCredentials).toHaveBeenCalledTimes(1) })
   })
 

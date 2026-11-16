@@ -9,7 +9,7 @@ import { runtimeFixture } from './runtime-fixture.ts'
 
 const roots: string[] = []
 function temporaryRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'dsh-desktop-test-'))
+  const root = mkdtempSync(join(tmpdir(), 'forwork-desktop-test-'))
   roots.push(root)
   return root
 }
@@ -29,7 +29,7 @@ function seedPlugin(manager: DesktopProjectManager): void {
 }
 function plugins(manager: DesktopProjectManager) {
   return readProfilePlugins({ binName: 'dsh', profileDir: manager.paths.profile,
-    installAnchor: join(manager.runtime.dsh, 'node_modules/@forwork/dsh/package.json') }).dependencies
+    installAnchor: join(manager.runtime.dsh, 'node_modules/@forwork/cli/package.json') }).dependencies
     .map(({ name, version, enabled }) => ({ name, version, enabled }))
 }
 function setup(): { root: string; manager: DesktopProjectManager } {

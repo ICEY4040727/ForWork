@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import type { PluginOperationRunId } from '@forwork/plugin-manager/diagnostic'
 import { formatFatalDiagnostic } from './fatal-diagnostic.ts'
 import { loadLayeredEnv, loadProfileDirectory, reportSkippedBundles } from '@forwork/app-boot'
-import { runProfile } from '@forwork/dsh/profile-boot'
+import { runProfile } from '@forwork/cli/profile-boot'
 import type {} from '@forwork/client-connection'
 import type {} from '@forwork/host-webserver'
 import type {} from '@forwork/deepseek-account'
@@ -25,11 +25,11 @@ async function main(): Promise<void> {
   const runtimeDir = process.argv[2] as string
   const projectDir = process.argv[3] as string
   installOfficeEngineResolution(runtimeDir)
-  const installAnchor = join(runtimeDir, 'node_modules', '@forwork', 'dsh', 'package.json')
-  const profile = loadProfileDirectory('dsh', projectDir, installAnchor)
-  reportSkippedBundles('dsh', profile)
+  const installAnchor = join(runtimeDir, 'node_modules', '@forwork', 'cli', 'package.json')
+  const profile = loadProfileDirectory('forwork', projectDir, installAnchor)
+  reportSkippedBundles('forwork', profile)
   const application = runProfile({
-    environment: loadLayeredEnv('dsh'),
+    environment: loadLayeredEnv('forwork'),
     profile: 'desktop',
     resolvedProfile: { profile, installAnchor },
     patchFiles: [],

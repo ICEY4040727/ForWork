@@ -32,7 +32,7 @@ kind: "package-library"
 import { launchEnvironmentOf } from '@forwork/launch-environment'
 
 declare const ctx: import('@forwork/cordis').Context
-const endpoint = launchEnvironmentOf(ctx).get('DEEPSEEK_BASE_URL')?.value
+const endpoint = launchEnvironmentOf(ctx).get('FORWORK_BASE_URL')?.value
 ```
 
 `get(name)` 按可信度从高到低搜索所有层。`getFrom(name, sources)` 只搜索指定的层，不改变这一可信顺序——绝不能接受某一层的调用方不把它列进去，因此后续任何重新排序都无法让它回来。
@@ -47,7 +47,7 @@ const endpoint = launchEnvironmentOf(ctx).get('DEEPSEEK_BASE_URL')?.value
 | `<invocation cwd>/.env` | harness 被启动于其中的项目；产品信任它配置自己的 agent（智能体） |
 | `$DSH_HOME/.env` | 用户自己的机器级默认值 |
 
-变量名按平台自身的规则匹配：POSIX 上精确匹配，Windows 上不区分大小写。在 Windows 上做大小写敏感的查找会选错层——shell 里的 `deepseek_api_key` 与项目 `.env` 里的 `DEEPSEEK_API_KEY` 对操作系统而言是同一个变量。
+变量名按平台自身的规则匹配：POSIX 上精确匹配，Windows 上不区分大小写。在 Windows 上做大小写敏感的查找会选错层——shell 里的 `deepseek_api_key` 与项目 `.env` 里的 `FORWORK_API_KEY` 对操作系统而言是同一个变量。
 
 ### 没有启动器引导这棵树时
 

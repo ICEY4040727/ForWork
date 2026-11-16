@@ -1,6 +1,6 @@
 {
   "name": "@forwork/pwsh-local",
-  "description": "Local PowerShell implementation of the DeepSeek Harness bash executor seam",
+  "description": "Local PowerShell implementation of the ForWork bash executor seam",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

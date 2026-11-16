@@ -2,14 +2,14 @@
  * Register the DeepSeek Search and Fetch APIs in `ctx.web` as `deepseek-search-api`
  * and `deepseek-fetch-api`. Each operation is one direct API request without an
  * auxiliary model request. `web.searchProvider` and `web.fetchProvider` select them. Each capability follows the
- * DeepSeek credential of the conversation: a Session whose latest model request used the `deepseek-account` route sends
+ * DeepSeek credential of the conversation: a Session whose latest model request used the `account` route sends
  * the account token to that route's origin, and every other operation sends the API key of the DeepSeek API-key route
- * to that route's origin, or `DEEPSEEK_API_KEY` to the official base without that route. An operation that needs a
+ * to that route's origin, or `FORWORK_API_KEY` to the official base without that route. An operation that needs a
  * mounted route whose settings do not resolve fails instead of changing its endpoint or credential. A capability with
  * its own `*BaseURL` or `*ApiKeyEnv` uses only that endpoint and key instead
  * ([rationale](../../../../.agents/notes/implemented/architecture/2026-10-29-web-provider-selection.md#credential-resolution)).
  * Both providers report themselves not ready when their next operation would have no credential.
- * @module @forwork/web-deepseek-api
+ * @module @forwork/web-api
  */
 import { FiberState, type Context, type Volatile } from '@forwork/cordis'
 import type {} from '@forwork/cordis-plugin-loader'
@@ -44,7 +44,7 @@ export {
 export type { DeepSeekSearchApiOptions } from './search.ts'
 
 /** Cordis plugin name used by loader diagnostics. */
-export const name = 'web-deepseek-api'
+export const name = 'web-api'
 
 /** The web seam both providers register into. */
 export const inject = ['web']
@@ -71,14 +71,14 @@ export interface Config {
    * official base applies.
    */
   searchBaseURL: Volatile<string | undefined>
-  /** Own Search API credential reference. With only {@link searchBaseURL} set, `DEEPSEEK_API_KEY` applies. */
+  /** Own Search API credential reference. With only {@link searchBaseURL} set, `FORWORK_API_KEY` applies. */
   searchApiKeyEnv: Volatile<string | undefined>
   /**
    * Own Fetch API base including its path prefix; `/fetch` is appended. With only {@link fetchApiKeyEnv} set, the
    * official base applies.
    */
   fetchBaseURL: Volatile<string | undefined>
-  /** Own Fetch API credential reference. With only {@link fetchBaseURL} set, `DEEPSEEK_API_KEY` applies. */
+  /** Own Fetch API credential reference. With only {@link fetchBaseURL} set, `FORWORK_API_KEY` applies. */
   fetchApiKeyEnv: Volatile<string | undefined>
 }
 
@@ -122,15 +122,15 @@ interface InvalidRoute {
 const TOOLS_PATH = '/v1/tools'
 
 /** Credential reference of the official DeepSeek API key. */
-const DEEPSEEK_API_KEY = credentialRef('DEEPSEEK_API_KEY')
+const FORWORK_API_KEY = credentialRef('FORWORK_API_KEY')
 
 /** Provider id of the DeepSeek account route. */
-const ACCOUNT_PROVIDER = 'deepseek-account'
+const ACCOUNT_PROVIDER = 'account'
 
 /** Loader package that registers each model route. */
 const ROUTE_PACKAGES = {
   'deepseek-official': '@forwork/llm-deepseek-api-key',
-  'deepseek-account': '@forwork/llm-deepseek-account',
+  'account': '@forwork/llm-deepseek-account',
 } as const
 
 /** Display and configuration names of each capability. */
@@ -211,7 +211,7 @@ function resolvePlan(
   if (ownBaseURL !== undefined || ownRef !== undefined) {
     return {
       capability, kind: 'custom', baseURL: ownBaseURL ?? DEEPSEEK_WEB_API_BASE_URL,
-      key: ownRef === undefined ? DEEPSEEK_API_KEY : credentialRef(ownRef),
+      key: ownRef === undefined ? FORWORK_API_KEY : credentialRef(ownRef),
     }
   }
   const official = officialRoute(ctx)
@@ -225,7 +225,7 @@ function resolvePlan(
   return {
     capability, kind: 'session',
     baseURL: officialValid === undefined ? DEEPSEEK_WEB_API_BASE_URL : toolsBase(officialValid.baseURL),
-    key: officialValid?.apiKeyEnv ?? DEEPSEEK_API_KEY,
+    key: officialValid?.apiKeyEnv ?? FORWORK_API_KEY,
     ...account === undefined || 'invalid' in account ? {} : { account: { baseURL: toolsBase(account.baseURL) } },
     ...invalid === undefined ? {} : { invalid },
   }
@@ -338,7 +338,7 @@ function officialRoute(ctx: Context): { baseURL: string; apiKeyEnv: CredentialRe
  *   mounted and active.
  */
 function accountRoute(ctx: Context): { baseURL: string } | InvalidRoute | undefined {
-  const config = routeConfig(ctx, 'deepseek-account') as AccountRouteConfig | undefined
+  const config = routeConfig(ctx, 'account') as AccountRouteConfig | undefined
   if (config === undefined) return undefined
   try { return { baseURL: resolveAccountOptions(plainAccountOptions(config), launchEnvironmentOf(ctx)).protocol.baseURL } }
   catch (error: unknown) { return { invalid: errorMessage(error) } }

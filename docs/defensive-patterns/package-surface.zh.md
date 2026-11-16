@@ -148,9 +148,9 @@ Restating a required-devDependency package list or the field rules on this page 
 
 ## 内部依赖写法按包族保证
 
-内部依赖写法按包族决定：`@forwork/dsh` 与 `@forwork/*` 用 `workspace:*`，其余内部包用 `workspace:~`，`workspace:^` 已退出。同一个依赖名在所有 workspace 内写法一致，不一致是扫描硬失败，不是评审可以放行的警告。写法统一才能保持一条解析路径，避免同一个依赖出现重复实例以及随之而来的解析差异。
+内部依赖写法按包族决定：`@forwork/cli` 与 `@forwork/*` 用 `workspace:*`，其余内部包用 `workspace:~`，`workspace:^` 已退出。同一个依赖名在所有 workspace 内写法一致，不一致是扫描硬失败，不是评审可以放行的警告。写法统一才能保持一条解析路径，避免同一个依赖出现重复实例以及随之而来的解析差异。
 
-- 判定在 [verify-package-dependencies.ts](../../scripts/verify-package-dependencies.ts) 的 `workspaceRange()`：`@forwork/dsh` 与 `@forwork/*` 包族取 `workspace:*`，其余内部包取 `workspace:~`；扫描遍历受管清单，比对同一依赖名的每一处声明。
+- 判定在 [verify-package-dependencies.ts](../../scripts/verify-package-dependencies.ts) 的 `workspaceRange()`：`@forwork/cli` 与 `@forwork/*` 包族取 `workspace:*`，其余内部包取 `workspace:~`；扫描遍历受管清单，比对同一依赖名的每一处声明。
 - 边界：同命名空间但不是 workspace 成员的包按普通第三方版本范围声明，不受包族规则约束——`@deepseek-ai/libreoffice-kit` 在 `apps/desktop-host/package.json`（dependencies）、`packages/bundle/web-app/package.json`（devDependencies）、`packages/document/office-to-pdf/package.json`（dependencies）、`packages/skill/skill-office/package.json`（dependencies）中声明为 `^0.1.5`。
 - 分布不在此复述；下面的复算命令会打印 `workspace:*`、`workspace:~`、`workspace:^` 的当前数量，以及族规则之外的精确版本声明。
 - 例外：门禁机械判定；确需例外意味着修改扫描与策略文件，并须经对应领域专家确认、在改动上说明理由。
@@ -192,7 +192,7 @@ python3 -c "import json,glob,collections; c=collections.Counter(); [c.update([r]
 
 - 判定条件：改动是否新增 `resolve` 钩子，包括包装既有钩子、改写同一批 specifier 的等价写法？
 - 边界：本条只管能否新增钩子；解析、热更新与插件管理三者的职责划分另行治理，并不因此允许新增钩子。
-- 唯一的解析路径是 `dsh` 源码启动注册的 tsx ESM 钩子，其理由见[源码启动 Agent Note](../../.agents/notes/implemented/architecture/2026-07-29-dsh-source-launch-tsx-esm.zh.md)。
+- 唯一的解析路径是 `forwork` 源码启动注册的 tsx ESM 钩子，其理由见[源码启动 Agent Note](../../.agents/notes/implemented/architecture/2026-07-29-dsh-source-launch-tsx-esm.zh.md)。
 - 例外：只有上述两个前置条件，且都要记录在改动上。
 
 确有新的解析需求时的合规路径，按顺序。

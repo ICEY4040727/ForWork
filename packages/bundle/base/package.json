@@ -131,7 +131,7 @@
     "@forwork/user-approval": "workspace:*",
     "@forwork/user-questions": "workspace:*",
     "@forwork/web": "workspace:*",
-    "@forwork/web-deepseek-api": "workspace:*",
+    "@forwork/web-api": "workspace:*",
     "@forwork/web-fetch-http": "workspace:*",
     "@forwork/web-search-deepseek": "workspace:*",
     "@forwork/workflow-ptc": "workspace:*",

@@ -95,8 +95,8 @@ def live_smoke(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
                 raise AssertionError(state.receipt_mode)
             return state.verify_result
 
-    monkeypatch.setenv("DEEPSEEK_API_KEY", "unit-test-key")
-    monkeypatch.setenv("DEEPSEEK_BASE_URL", "https://api.invalid")
+    monkeypatch.setenv("FORWORK_API_KEY", "unit-test-key")
+    monkeypatch.setenv("FORWORK_BASE_URL", "https://api.invalid")
     monkeypatch.setattr(deepseek_harness, "DeepSeekHarness", ScriptedHarness)
     monkeypatch.setattr(globals_["secrets"], "token_hex", fresh_challenge)
     monkeypatch.setitem(globals_, "assert_zstd_session_log", state.checked_logs.append)

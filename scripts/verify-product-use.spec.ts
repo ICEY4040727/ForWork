@@ -38,7 +38,7 @@ function fixture(): string {
   const root = mkdtempSync(join(tmpdir(), 'dsh-product-use-'))
   roots.push(root)
   write(root, 'tsconfig.base.json', { compilerOptions: { moduleResolution: 'bundler', paths: {} } })
-  pkg(root, 'apps/cli', '@forwork/dsh')
+  pkg(root, 'apps/cli', '@forwork/cli')
   pkg(root, 'apps/desktop', '@fixture/desktop')
   pkg(root, 'apps/web', '@fixture/web')
   write(root, 'apps/cli/src/bin.ts', 'export {}\n')
@@ -72,7 +72,7 @@ describe('product package use', () => {
   it('rejects an orphan even when an app manifest installs it', () => {
     const root = fixture()
     pkg(root, candidateDir, candidate)
-    write(root, 'apps/cli/package.json', { name: '@forwork/dsh', dependencies: { [candidate]: '*' } })
+    write(root, 'apps/cli/package.json', { name: '@forwork/cli', dependencies: { [candidate]: '*' } })
     expect(failures(root)).toContain(`${candidateDir} (${candidate}): no product runtime use`)
     expect(failures(root, declarations())).toBe('')
   })

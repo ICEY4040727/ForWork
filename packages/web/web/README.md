@@ -39,7 +39,7 @@ Load the service and let a single mounted backend auto-select, or pin a provider
 - name: '@forwork/web'
   config:
     fetchProvider: http
-- name: '@forwork/web-deepseek-api'
+- name: '@forwork/web-api'
 - name: '@forwork/web-fetch-http'
 ```
 
@@ -98,7 +98,7 @@ ctx.remote.$on('web/providers-changed', () => { /* re-read the lists */ })
 <a id="adding-a-provider"></a>
 #### Add another provider
 
-A search or fetch backend outside the shipped composition is a plugin package that calls `ctx.web.registerSearchProvider()` or `ctx.web.registerFetchProvider()` with a unique `id`, and an optional `title`. To enable one in a profile, install the package with `dsh plugin --profile <name> add <package>` ([install rules](../../../docs/user/develop/basic/publish.md)), add its row to the profile's user patch layer `$DSH_HOME/profiles/<name>/cordis.patch.yml`, and restart DSH. That file is a top-level YAML array of patch entries; append the `insert` entry below, or replace a lone `[]` with it. The example mounts a hypothetical `@example/dsh-web-search-acme`; use the provider's real package name and add the `config` its README documents.
+A search or fetch backend outside the shipped composition is a plugin package that calls `ctx.web.registerSearchProvider()` or `ctx.web.registerFetchProvider()` with a unique `id`, and an optional `title`. To enable one in a profile, install the package with `forwork plugin --profile <name> add <package>` ([install rules](../../../docs/user/develop/basic/publish.md)), add its row to the profile's user patch layer `$DSH_HOME/profiles/<name>/cordis.patch.yml`, and restart DSH. That file is a top-level YAML array of patch entries; append the `insert` entry below, or replace a lone `[]` with it. The example mounts a hypothetical `@example/dsh-web-search-acme`; use the provider's real package name and add the `config` its README documents.
 
 ```yaml
 - insert:
@@ -106,7 +106,7 @@ A search or fetch backend outside the shipped composition is a plugin package th
       name: '@example/dsh-web-search-acme'
 ```
 
-`dsh --profile <name> --dump-config` prints the row under the patch file's layer. After the restart, the provider appears in the **Web search provider** or **Web fetch provider** menu of the [settings page](../../client/ui-settings-web-search/README.md) under its `title`, or its `id` when it has none; the page needs no change. Choosing it pins `searchProvider` or `fetchProvider` to its `id`. If the row is later removed while the provider is selected, the menu shows the stored id as **(not loaded)** and each call fails with `WEB_PROVIDER_CONFIGURED_MISSING` until another provider is chosen.
+`forwork --profile <name> --dump-config` prints the row under the patch file's layer. After the restart, the provider appears in the **Web search provider** or **Web fetch provider** menu of the [settings page](../../client/ui-settings-web-search/README.md) under its `title`, or its `id` when it has none; the page needs no change. Choosing it pins `searchProvider` or `fetchProvider` to its `id`. If the row is later removed while the provider is selected, the menu shows the stored id as **(not loaded)** and each call fails with `WEB_PROVIDER_CONFIGURED_MISSING` until another provider is chosen.
 
 <a id="search-readiness"></a>
 ### Search and fetch readiness

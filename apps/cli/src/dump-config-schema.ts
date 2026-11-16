@@ -1,7 +1,7 @@
 /**
  * Schema-dump entry: inspect the composed profile without applying its plugins.
  * Imports and lazy schema builders execute trusted module code.
- * @module @forwork/dsh/dump-config-schema
+ * @module @forwork/cli/dump-config-schema
  */
 
 /* v8 ignore file -- built-bin acceptance drives schema collection and output. */
@@ -10,7 +10,7 @@ import { generateConfigSchema, type ConfigSchemaDump } from '@forwork/app-boot'
 import { collectConfigDumpLayers } from './dump-config.ts'
 import { INSTALL_ANCHOR, prepareProfile } from './profile-boot.ts'
 
-const NAME = 'dsh'
+const NAME = 'forwork'
 
 /**
  * Print one JSON Schema document; incomplete collection or projection sets exitCode to 1.

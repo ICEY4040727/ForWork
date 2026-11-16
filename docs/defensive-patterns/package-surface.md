@@ -148,9 +148,9 @@ Restating a required-devDependency package list or the field rules on this page 
 
 ## Internal dependency syntax follows the package family
 
-Internal dependency syntax follows the package family: `@forwork/dsh` and `@forwork/*` use `workspace:*`, every other internal package uses `workspace:~`, and `workspace:^` has retired. The same dependency name is written the same way in every workspace, and a mismatch is a hard scan failure rather than a warning a reviewer can waive. The uniform syntax keeps one resolution path and prevents duplicate instances of a dependency and the resolution differences that follow them.
+Internal dependency syntax follows the package family: `@forwork/cli` and `@forwork/*` use `workspace:*`, every other internal package uses `workspace:~`, and `workspace:^` has retired. The same dependency name is written the same way in every workspace, and a mismatch is a hard scan failure rather than a warning a reviewer can waive. The uniform syntax keeps one resolution path and prevents duplicate instances of a dependency and the resolution differences that follow them.
 
-- Judged by `workspaceRange()` in [verify-package-dependencies.ts](../../scripts/verify-package-dependencies.ts): the `@forwork/dsh` and `@forwork/*` families get `workspace:*`, every other internal package gets `workspace:~`; the scan walks the managed manifests and compares every declaration of the same dependency name.
+- Judged by `workspaceRange()` in [verify-package-dependencies.ts](../../scripts/verify-package-dependencies.ts): the `@forwork/cli` and `@forwork/*` families get `workspace:*`, every other internal package gets `workspace:~`; the scan walks the managed manifests and compares every declaration of the same dependency name.
 - Boundary: a same-namespace package that is not a workspace member declares an ordinary third-party range and is outside the family rule — `@deepseek-ai/libreoffice-kit` is declared `^0.1.5` in `apps/desktop-host/package.json` (dependencies), `packages/bundle/web-app/package.json` (devDependencies), `packages/document/office-to-pdf/package.json` (dependencies), and `packages/skill/skill-office/package.json` (dependencies).
 - Distribution is not restated here; the recompute command below prints the current counts of `workspace:*`, `workspace:~`, `workspace:^`, and any exact-range declaration outside the family rule.
 - Exception: the scan decides mechanically; a genuine exception means changing the scan and the policy file with the domain owner's confirmation and the reason on the change.
@@ -192,7 +192,7 @@ A new `resolve` hook is refused by default — a definite prohibition, not a pre
 
 - Judged condition: does the change add a `resolve` hook, including a wrapper around an existing hook that rewrites the same specifiers?
 - Boundary: this rule decides whether a hook may be added at all; the separation of resolution, hot reload, and plugin management responsibilities is governed separately and does not permit a new hook.
-- The one resolution path is the tsx ESM hook registered by the `dsh` source launch, whose rationale is in the [source-launch Agent Note](../../.agents/notes/implemented/architecture/2026-07-29-dsh-source-launch-tsx-esm.md).
+- The one resolution path is the tsx ESM hook registered by the `forwork` source launch, whose rationale is in the [source-launch Agent Note](../../.agents/notes/implemented/architecture/2026-07-29-dsh-source-launch-tsx-esm.md).
 - Exception: only the two preconditions above, both recorded on the change.
 
 The compliant path when new resolution behavior is genuinely needed, in order.

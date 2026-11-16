@@ -5,30 +5,30 @@
 /:
   en: d11ca88bdc409249
   zh: d11ca88bdc409249
-/dsh-cli-help:
-  en: b7174eab3476579d
-  zh: 5ddab967320e3cff
-/dsh-cli-help/contents:
-  en: 00308bcc6dc90afd
-  zh: 16f7442b76686a02
-/dsh-cli-help/dsh:
-  en: e0695abcf7d8b521
-  zh: 712c23b3c8a115ca
-/dsh-cli-help/dsh-plugin:
-  en: adad99c125d0ac51
-  zh: f11024971184f737
-/dsh-cli-help/dsh-acp:
-  en: bcb0f84577ce5f03
-  zh: 4382e617006849db
-/dsh-cli-help/dsh-headless:
-  en: 878a1dd78017964d
-  zh: bb43d91b4beb9bda
-/dsh-cli-help/dsh-sdk:
-  en: 701f239c5157dedb
-  zh: ee11be2932b05ce4
-/dsh-cli-help/dsh-sdk-minimal:
-  en: 8f0d7548d299ffd3
-  zh: fa2262e70d6819a0
-/dsh-cli-help/dsh-web:
-  en: 5d073104e8954cc8
-  zh: 91cd28f7c6ac96ac
+/forwork-cli-help:
+  en: 0f8806581bf38d13
+  zh: 897289628b53ff03
+/forwork-cli-help/contents:
+  en: 5e95a201745e962a
+  zh: ffb53ad872002ff9
+/forwork-cli-help/forwork:
+  en: 6ed16821d42314e7
+  zh: 8b523f697d1dfd4c
+/forwork-cli-help/forwork-plugin:
+  en: 9fa46dd305c0f348
+  zh: 07e71fbaf2021134
+/forwork-cli-help/forwork-acp:
+  en: d8f309af31015b96
+  zh: 4b36398b3ef6effb
+/forwork-cli-help/forwork-headless:
+  en: 0e023f1a671bb619
+  zh: 7d84e757bef3105c
+/forwork-cli-help/forwork-sdk:
+  en: 83f0ae0eaeb55606
+  zh: 5f3da683bb9f2470
+/forwork-cli-help/forwork-sdk-minimal:
+  en: ce23c7ee423518ad
+  zh: f1b9897d376a1d33
+/forwork-cli-help/forwork-web:
+  en: 35314492fe32be30
+  zh: e47ac4e984fbc8e0

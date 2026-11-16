@@ -10,40 +10,40 @@ import type { DesktopFileDrag } from '@forwork/util-file-drag'
 
 /** IPC channel names kept private to the desktop application bundle. */
 export const DESKTOP_IPC = {
-  fileSave: 'dsh-desktop:file-save',
-  clipboardImageRead: 'dsh-desktop:clipboard-image-read',
-  shortcutsInput: 'dsh-desktop:shortcuts-input',
-  shortcutsCloseWindow: 'dsh-desktop:shortcuts-close-window',
-  shortcutsGet: 'dsh-desktop:shortcuts-get',
-  shortcutsEdit: 'dsh-desktop:shortcuts-edit',
-  shortcutsChanged: 'dsh-desktop:shortcuts-changed',
-  shortcutsRecording: 'dsh-desktop:shortcuts-recording',
-  boot: 'dsh-desktop:boot',
-  enterWorkspace: 'dsh-desktop:enter-workspace',
-  onboardingActive: 'dsh-desktop:onboarding-active',
-  onboardingApiKey: 'dsh-desktop:onboarding-api-key',
-  bootFailed: 'dsh-desktop:boot-failed',
-  browserAcquire: 'dsh-desktop:browser-acquire',
-  browserRelease: 'dsh-desktop:browser-release',
-  browserOpenRequested: 'dsh-desktop:browser-open-requested',
-  directoryPick: 'dsh-desktop:directory-pick',
-  fileDragPrepare: 'dsh-desktop:file-drag-prepare',
-  fileDragCancel: 'dsh-desktop:file-drag-cancel',
-  fileDragStart: 'dsh-desktop:file-drag-start',
-  fileDragRelease: 'dsh-desktop:file-drag-release',
-  deviceInfo: 'dsh-desktop:device-info',
-  localeBootstrap: 'dsh-desktop:locale-bootstrap',
-  localeChanged: 'dsh-desktop:locale-changed',
-  updatesChannelGet: 'dsh-desktop:updates-channel-get',
-  updatesChannelSet: 'dsh-desktop:updates-channel-set',
-  updatesChannelChanged: 'dsh-desktop:updates-channel-changed',
-  updatesStatus: 'dsh-desktop:updates-status',
-  updatesOpen: 'dsh-desktop:updates-open',
-  updatesPresentation: 'dsh-desktop:updates-presentation',
-  nativeThemeSet: 'dsh-desktop:native-theme-set',
-  windowFullscreen: 'dsh-desktop:window-fullscreen',
-  windowsAppearance: 'dsh-desktop:windows-appearance',
-  windowsMenu: 'dsh-desktop:windows-menu',
+  fileSave: 'forwork-desktop:file-save',
+  clipboardImageRead: 'forwork-desktop:clipboard-image-read',
+  shortcutsInput: 'forwork-desktop:shortcuts-input',
+  shortcutsCloseWindow: 'forwork-desktop:shortcuts-close-window',
+  shortcutsGet: 'forwork-desktop:shortcuts-get',
+  shortcutsEdit: 'forwork-desktop:shortcuts-edit',
+  shortcutsChanged: 'forwork-desktop:shortcuts-changed',
+  shortcutsRecording: 'forwork-desktop:shortcuts-recording',
+  boot: 'forwork-desktop:boot',
+  enterWorkspace: 'forwork-desktop:enter-workspace',
+  onboardingActive: 'forwork-desktop:onboarding-active',
+  onboardingApiKey: 'forwork-desktop:onboarding-api-key',
+  bootFailed: 'forwork-desktop:boot-failed',
+  browserAcquire: 'forwork-desktop:browser-acquire',
+  browserRelease: 'forwork-desktop:browser-release',
+  browserOpenRequested: 'forwork-desktop:browser-open-requested',
+  directoryPick: 'forwork-desktop:directory-pick',
+  fileDragPrepare: 'forwork-desktop:file-drag-prepare',
+  fileDragCancel: 'forwork-desktop:file-drag-cancel',
+  fileDragStart: 'forwork-desktop:file-drag-start',
+  fileDragRelease: 'forwork-desktop:file-drag-release',
+  deviceInfo: 'forwork-desktop:device-info',
+  localeBootstrap: 'forwork-desktop:locale-bootstrap',
+  localeChanged: 'forwork-desktop:locale-changed',
+  updatesChannelGet: 'forwork-desktop:updates-channel-get',
+  updatesChannelSet: 'forwork-desktop:updates-channel-set',
+  updatesChannelChanged: 'forwork-desktop:updates-channel-changed',
+  updatesStatus: 'forwork-desktop:updates-status',
+  updatesOpen: 'forwork-desktop:updates-open',
+  updatesPresentation: 'forwork-desktop:updates-presentation',
+  nativeThemeSet: 'forwork-desktop:native-theme-set',
+  windowFullscreen: 'forwork-desktop:window-fullscreen',
+  windowsAppearance: 'forwork-desktop:windows-appearance',
+  windowsMenu: 'forwork-desktop:windows-menu',
 } as const
 
 /** Desktop release update state rendered by desktop-owned UI. */
@@ -120,9 +120,9 @@ export const SCHEME = 'dsh-app'
  */
 export function assertDesktopSender(event: IpcMainInvokeEvent, hostnames: readonly string[]): void {
   const senderFrame = event.senderFrame
-  if (senderFrame === null) throw new Error('dsh desktop: rejected IPC without a sender frame')
+  if (senderFrame === null) throw new Error('forwork desktop: rejected IPC without a sender frame')
   const url = new URL(senderFrame.url)
   if (url.protocol !== `${SCHEME}:` || !hostnames.includes(url.hostname)) {
-    throw new Error('dsh desktop: rejected IPC from an unowned renderer')
+    throw new Error('forwork desktop: rejected IPC from an unowned renderer')
   }
 }

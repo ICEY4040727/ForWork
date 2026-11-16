@@ -10,8 +10,8 @@ import {
   DEEPSEEK_WEB_API_BASE_URL,
   mapSearchResponse,
   type DeepSeekSearchApiOptions,
-} from '@forwork/web-deepseek-api'
-import * as webApiPlugin from '@forwork/web-deepseek-api'
+} from '@forwork/web-api'
+import * as webApiPlugin from '@forwork/web-api'
 import { DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot } from '@forwork/launch-environment'
 import { customGuidance } from './guidance.ts'
 
@@ -211,7 +211,7 @@ describe('Search API triggering question', () => {
       await ctx.plugin(SessionProjectionRegistry)
       await ctx.plugin(AgentRegistry)
       await ctx.plugin(WebRuntime, { searchProvider: 'deepseek-search-api' })
-      ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot([{ source: 'process', values: { DEEPSEEK_API_KEY: 'ds-key' } }]))
+      ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot([{ source: 'process', values: { FORWORK_API_KEY: 'ds-key' } }]))
       await ctx.plugin(webApiPlugin, config)
       const messages = [
         userMessage('m1', { kind: 'user' }, [{ type: 'text', text: 'Earlier question' }]),
@@ -245,7 +245,7 @@ describe('Search API configuration and failures', () => {
     const ctx = new Context()
     try {
       await ctx.plugin(WebRuntime, { searchProvider: 'deepseek-search-api' })
-      ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot([{ source: 'process', values: { DEEPSEEK_API_KEY: 'ds-key' } }]))
+      ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot([{ source: 'process', values: { FORWORK_API_KEY: 'ds-key' } }]))
       await ctx.plugin(webApiPlugin, {})
       await ctx.web.search({ query: 'q' })
       expect(fetchMock.mock.calls[0]?.[0]).toBe(`${DEEPSEEK_WEB_API_BASE_URL}/search`)
@@ -259,7 +259,7 @@ describe('Search API configuration and failures', () => {
     const ctx = new Context()
     try {
       await ctx.plugin(WebRuntime, { searchProvider: 'deepseek-search-api' })
-      ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot([{ source: 'process', values: { DEEPSEEK_API_KEY: 'ds-key' } }]))
+      ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot([{ source: 'process', values: { FORWORK_API_KEY: 'ds-key' } }]))
       await ctx.plugin(webApiPlugin, { searchBaseURL: 'not a url' })
       await expect(ctx.web.search({ query: 'q' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_CONFIGURED_UNAVAILABLE' })
       expect(fetchMock).not.toHaveBeenCalled()
@@ -277,9 +277,9 @@ describe('Search API configuration and failures', () => {
       code: 'WEB_PROVIDER_ERROR',
       message: 'DeepSeek API error (HTTP 404): not found\n\n'
         + 'The web request used endpoint "https://api.deepseek.test/api/v1/tools/search". '
-        + 'Search sends the API key under web-deepseek-api.searchApiKeyEnv to web-deepseek-api.searchBaseURL. If that '
-        + 'endpoint is not intended, guide the user to correct web-deepseek-api.searchBaseURL and '
-        + 'web-deepseek-api.searchApiKeyEnv, or to remove both so Search uses the DeepSeek credential of the conversation. '
+        + 'Search sends the API key under web-api.searchApiKeyEnv to web-api.searchBaseURL. If that '
+        + 'endpoint is not intended, guide the user to correct web-api.searchBaseURL and '
+        + 'web-api.searchApiKeyEnv, or to remove both so Search uses the DeepSeek credential of the conversation. '
         + 'Only the user should choose or change the endpoint.',
     })
   })

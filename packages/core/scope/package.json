@@ -1,6 +1,6 @@
 {
   "name": "@forwork/scope",
-  "description": "Scoped-context registration primitive (scope tags, scope-filtered event dispatch) for the DeepSeek Harness",
+  "description": "Scoped-context registration primitive (scope tags, scope-filtered event dispatch) for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

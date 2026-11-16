@@ -1,5 +1,5 @@
 ---
-description: "The TypeScript SDK client for callers that spawn a DeepSeek Harness runtime subprocess and drive agent turns over stdio JSON-RPC: the DeepSeekHarness run API and the lower-level HarnessClient."
+description: "The TypeScript SDK client for callers that spawn a ForWork runtime subprocess and drive agent turns over stdio JSON-RPC: the DeepSeekHarness run API and the lower-level HarnessClient."
 kind: "package-library"
 ---
 
@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`dsh-sdk-client` lets TypeScript programs drive a complete DeepSeek Harness runtime over stdio JSON-RPC. Use `run()` for ordinary text, supported slash commands, and image content blocks, and `onNotification` to observe its notifications. `HarnessClient` provides direct protocol access. Callers may provide `dshBin`; otherwise the client resolves the same-version `@forwork/dsh` executable. The client owns the subprocess, reports typed failures, and reaps it on `close()` or `await using`.
+`dsh-sdk-client` lets TypeScript programs drive a complete ForWork runtime over stdio JSON-RPC. Use `run()` for ordinary text, supported slash commands, and image content blocks, and `onNotification` to observe its notifications. `HarnessClient` provides direct protocol access. Callers may provide `dshBin`; otherwise the client resolves the same-version `@forwork/cli` executable. The client owns the subprocess, reports typed failures, and reaps it on `close()` or `await using`.
 
 ## Table of Contents
 
@@ -161,7 +161,7 @@ Read these pages when the client contract is not enough. They move from the wire
 - [JSON-RPC serving plugin](../server/README.md) — the runtime plugin that serves this client.
 - [Python SDK](../../../python/README.md) — the design twin that shares the same runtime peer and protocol.
 - [SDK subagent backend](../../subagent/subagent-dsh-sdk/README.md) — a harness-internal consumer of this client.
-- [SDK application bundle](../../bundle/sdk-app/README.md) — the `dsh --profile sdk` runtime application this client launches.
+- [SDK application bundle](../../bundle/sdk-app/README.md) — the `forwork --profile sdk` runtime application this client launches.
 
 -----
 
@@ -181,7 +181,7 @@ None in the client process. Profile, patch, provider, model, and history choices
 
 These limits define when the client is a poor fit or needs special care. They are current package constraints, not a comparison with other SDK clients or a task backlog.
 
-- **No bundled-runtime resolution** — the client resolves the same-version `@forwork/dsh` package (or a caller-provided `dshBin`); packaged-executable discovery stays Python-side until a TypeScript distribution consumer exists.
+- **No bundled-runtime resolution** — the client resolves the same-version `@forwork/cli` package (or a caller-provided `dshBin`); packaged-executable discovery stays Python-side until a TypeScript distribution consumer exists.
 - **No runtime cancellation request** — an RPC timeout or observer failure ends local waiting without stopping runtime work. Stopping runtime work requires closing the harness (see the [protocol limitations](../protocol/README.md#known-limitations-and-deferred-work)).
 - **No exclusive model response** — prompt results cover receipt-to-idle activity and can include steering or other queued work. Concurrent calls observe the Session's actual event stream; a command result does not own a later turn.
 - **Callbacks must release their own resources** — the SDK delivers cancellation through `AbortSignal`; application work that ignores it may continue after the SDK stops awaiting its answer.

@@ -1,6 +1,6 @@
 {
   "name": "@forwork/sandbox-windows-acl",
-  "description": "Windows ACL write-restriction sandbox backend (restricted-token spawn with capability-SID write allowlist) for the DeepSeek Harness sandbox seam",
+  "description": "Windows ACL write-restriction sandbox backend (restricted-token spawn with capability-SID write allowlist) for the ForWork sandbox seam",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

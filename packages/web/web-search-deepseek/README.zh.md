@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-有了 `dsh-web-search-deepseek`，harness 可以通过 DeepSeek 原生搜索检索 web，使用 DeepSeek 账号登录或部署已有的 `DEEPSEEK_API_KEY`。当部署希望使用 DeepSeek 原生搜索、并接受一次搜索在延迟与 token 上消耗一个完整模型轮次时选择它；[dsh-web-deepseek-api](../web-deepseek-api/README.zh.md) 中的 DeepSeek Search 与 Fetch API 无需模型轮次即可检索。结果来自 DeepSeek 的结构化搜索块，绝不取自回复文本。对没有可用凭据的模型请求，提供方报告自身未就绪，因此 `dsh-tool-web` 会对该请求撤下 `web_search`；仍然到达的调用，或缺少搜索结果块的响应，都以结构化错误失败。
+有了 `dsh-web-search-deepseek`，harness 可以通过 DeepSeek 原生搜索检索 web，使用 DeepSeek 账号登录或部署已有的 `FORWORK_API_KEY`。当部署希望使用 DeepSeek 原生搜索、并接受一次搜索在延迟与 token 上消耗一个完整模型轮次时选择它；[dsh-web-api](../web-api/README.zh.md) 中的 DeepSeek Search 与 Fetch API 无需模型轮次即可检索。结果来自 DeepSeek 的结构化搜索块，绝不取自回复文本。对没有可用凭据的模型请求，提供方报告自身未就绪，因此 `dsh-tool-web` 会对该请求撤下 `web_search`；仍然到达的调用，或缺少搜索结果块的响应，都以结构化错误失败。
 
 ## 目录
 
@@ -29,24 +29,24 @@ kind: "package-reference"
 
 ### 何时选择
 
-当部署希望使用 DeepSeek 原生服务端 web 搜索、且其用户登录 DeepSeek 账号或持有 `DEEPSEEK_API_KEY` 时选择此后端——提供方按[鉴权](#authentication)所述复用这些凭据。一次搜索比专用检索端点更重：DeepSeek 在完整模型轮次内执行搜索，因此每次搜索都要预期一次 Messages 调用的延迟与生成 token，每次请求最多 `maxUses` 次服务端搜索。当单次搜索的成本或延迟占主导时避免使用它。
+当部署希望使用 DeepSeek 原生服务端 web 搜索、且其用户登录 DeepSeek 账号或持有 `FORWORK_API_KEY` 时选择此后端——提供方按[鉴权](#authentication)所述复用这些凭据。一次搜索比专用检索端点更重：DeepSeek 在完整模型轮次内执行搜索，因此每次搜索都要预期一次 Messages 调用的延迟与生成 token，每次请求最多 `maxUses` 次服务端搜索。当单次搜索的成本或延迟占主导时避免使用它。
 
 ### 最小配置
 
-加载 web 服务与本提供方；密钥在已挂载 `ctx.credentials` 服务时从其解析，否则从进程环境解析。辅助搜索调用有独立的端点设置，使用 Anthropic 兼容基址 `https://api.deepseek.com/anthropic/v1`，并追加 `/messages`。它读取 `$DEEPSEEK_SEARCH_BASE_URL`，与会话适配器的 `$DEEPSEEK_BASE_URL` 相互独立。
+加载 web 服务与本提供方；密钥在已挂载 `ctx.credentials` 服务时从其解析，否则从进程环境解析。辅助搜索调用有独立的端点设置，使用 Anthropic 兼容基址 `https://api.deepseek.com/anthropic/v1`，并追加 `/messages`。它读取 `$DEEPSEEK_SEARCH_BASE_URL`，与会话适配器的 `$FORWORK_BASE_URL` 相互独立。
 
 ```yaml
 - name: '@forwork/web'
 - name: '@forwork/web-search-deepseek'
   config:
-    apiKeyEnv: DEEPSEEK_API_KEY
+    apiKeyEnv: FORWORK_API_KEY
     baseURL: https://gateway.internal/anthropic/v1
 ```
 
 | 字段 | 默认值 | 含义 |
 |---|---|---|
 | `apiKey` | 未设置 | DeepSeek API 密钥字面值；优先使用 `apiKeyEnv`，避免密钥进入配置。非空字面值优先于 `apiKeyEnv`；账号 token 优先于两者 |
-| `apiKeyEnv` | `DEEPSEEK_API_KEY` | 每次搜索通过 `ctx.credentials` 解析的凭据引用；没有该服务时从进程环境解析。需要 API 密钥却解析不到时，搜索以 `WEB_PROVIDER_CREDENTIAL_MISSING` 失败 |
+| `apiKeyEnv` | `FORWORK_API_KEY` | 每次搜索通过 `ctx.credentials` 解析的凭据引用；没有该服务时从进程环境解析。需要 API 密钥却解析不到时，搜索以 `WEB_PROVIDER_CREDENTIAL_MISSING` 失败 |
 | `baseURL` | `https://api.deepseek.com/anthropic/v1` | Anthropic 兼容端点基址；追加 `/messages`。缺省时回退到 `$DEEPSEEK_SEARCH_BASE_URL`；无法解析时提供方不可用 |
 | `model` | `deepseek-v4-flash` | Anthropic 格式模型名称 |
 | `apiVersion` | `2023-06-01` | `anthropic-version` 标头值 |
@@ -91,7 +91,7 @@ kind: "package-reference"
 本提供方建立在两项承诺之上：
 
 - **只取结构化块。** DeepSeek 在服务端执行搜索并返回结构化的 `web_search_tool_result` 块；提供方解析这些块，绝不从模型文本中抓取 URL。严格模式下，没有此类块的响应会抛出 `WEB_PROVIDER_ERROR`，而非降级。
-- **会话凭据，逐次解析。** 提供方不新增密钥：来自账号路由会话的搜索使用该账号的 token，其余搜索复用 `DEEPSEEK_API_KEY` 引用。辅助请求端点通过 `$DEEPSEEK_SEARCH_BASE_URL` 保持独立。已挂载的凭据服务具有权威性；没有该服务时回退到启动进程的环境。按次解析意味着在 Web 的 Models 页中存储或轮换的密钥，或一次账号登录，无需重启即可用于下一次搜索。
+- **会话凭据，逐次解析。** 提供方不新增密钥：来自账号路由会话的搜索使用该账号的 token，其余搜索复用 `FORWORK_API_KEY` 引用。辅助请求端点通过 `$DEEPSEEK_SEARCH_BASE_URL` 保持独立。已挂载的凭据服务具有权威性；没有该服务时回退到启动进程的环境。按次解析意味着在 Web 的 Models 页中存储或轮换的密钥，或一次账号登录，无需重启即可用于下一次搜索。
 
 ### 源码地图
 
@@ -178,7 +178,7 @@ kind: "package-reference"
 
 这些限制说明提供方在哪些情况下昂贵或不完整。它们是当前包约束。
 
-- **一次搜索消耗一个完整的 Messages 模型轮次**——产生延迟与生成 token，最多执行 `maxUses` 次服务端搜索；[dsh-web-deepseek-api](../web-deepseek-api/README.zh.md) 改用专用的 Search API。
+- **一次搜索消耗一个完整的 Messages 模型轮次**——产生延迟与生成 token，最多执行 `maxUses` 次服务端搜索；[dsh-web-api](../web-api/README.zh.md) 改用专用的 Search API。
 - **提供方选择看不到缺失的密钥**——同步可用性检查可以确认解析器存在，但无法查询异步凭据存储，因此 `ctx.web` 仍会选中没有密钥的提供方，直接搜索会以 `WEB_PROVIDER_CREDENTIAL_MISSING` 失败；异步的 `ready()` 只影响哪些模型请求会获得 `web_search`。
 - **就绪判断只检查凭据是否存在，不检查是否有效**——错误的密钥，或不提供原生 `web_search_20250305` 服务器工具的端点，都视为就绪，因此 `web_search` 继续提供，每次调用都以结构化错误失败。
 - **搜索不跟随聊天地址**——官方路由经网关聊天时，搜索仍把密钥发往配置的搜索端点（默认是官方端点），除非该端点接受这个密钥，否则调用失败。
@@ -195,6 +195,6 @@ kind: "package-reference"
 
 #### 专用检索端点
 
-无需完整模型轮次的 DeepSeek Search 与 Fetch API 位于 [dsh-web-deepseek-api](../web-deepseek-api/README.zh.md)，由「网页搜索与获取」设置页的搜索和获取下拉框分别选择。内置配置选择 Search API，因此仅在选用 `searchProvider: deepseek-official` 时（例如网关未提供 Search API 路由）本提供方才会运行。
+无需完整模型轮次的 DeepSeek Search 与 Fetch API 位于 [dsh-web-api](../web-api/README.zh.md)，由「网页搜索与获取」设置页的搜索和获取下拉框分别选择。内置配置选择 Search API，因此仅在选用 `searchProvider: deepseek-official` 时（例如网关未提供 Search API 路由）本提供方才会运行。
 
 </details>

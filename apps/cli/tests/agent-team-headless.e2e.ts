@@ -57,7 +57,7 @@ describe('dsh run with Agent Teams enabled', () => {
           DSH_HOME: home,
           DSH_AGENTS_HOME: join(cwd, '.agents'),
           DSH_TELEMETRY_DISABLED: '1',
-          DEEPSEEK_API_KEY: '',
+          FORWORK_API_KEY: '',
           NODE_OPTIONS: [
             process.env.NODE_OPTIONS,
             '--disable-warning=ExperimentalWarning',
@@ -75,7 +75,7 @@ describe('dsh run with Agent Teams enabled', () => {
       })
       expect(
         result.exitCode,
-        `dsh headless profile exited unexpectedly.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
+        `forwork headless profile exited unexpectedly.\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
       ).toBe(0)
       expect(result.stderr).toBe('')
       expect(result.stdout).toContain('TEAM_WORKFLOW_OK')

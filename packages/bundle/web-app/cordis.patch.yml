@@ -10,7 +10,7 @@
 # Loader resolves their expressions only after it exists. The web-runtime row
 # validates the advertised public URL; Connection reads invocation authorities
 # directly from `webStartup`.
-# `dsh --profile web --help` provides no `webStartup`, so no server binds.
+# `forwork --profile web --help` provides no `webStartup`, so no server binds.
 
 # ── surface-specific values the base deliberately omits ─────────────────────
 
@@ -42,7 +42,7 @@
         timeoutMillis: 15000
         exportTimeoutMillis: 20000
         shutdownTimeoutMillis: 2000
-        serviceName: deepseek-harness-desktop
+        serviceName: forwork-desktop
         serviceVersion: !!js process.env.DSH_CLIENT_VERSION
         endpoint: !!js process.env.DSH_PRODUCT_ANALYTICS_OTLP_URL
 

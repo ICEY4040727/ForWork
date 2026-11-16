@@ -97,7 +97,7 @@ describe('provider metadata', () => {
     } } }
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     try {
-      expect((await generateProviderData([provider])).deepseek!.env).toEqual(['DEEPSEEK_API_KEY'])
+      expect((await generateProviderData([provider])).deepseek!.env).toEqual(['FORWORK_API_KEY'])
       expect(warn).toHaveBeenCalledWith('deepseek: using findEnvKeys auth metadata fallback', expect.any(Error))
       await expect(generateProviderData([{ ...provider, id: 'unknown-provider' }])).rejects.toThrow('no auth metadata fallback')
     } finally { warn.mockRestore() }

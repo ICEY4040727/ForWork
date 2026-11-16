@@ -187,7 +187,7 @@ it.each(['service', 'cli'] as const)('reports unsupported activation through %s 
   expect(result.exitCode).toBe(1)
   expect(result.output).toContain('restricted: Bundle supports Host platforms')
   expect(result.output).toContain('installed dependencies remain; bundle selection is unchanged')
-  expect(result.output).toContain('dsh plugin remove <package>')
+  expect(result.output).toContain('forwork plugin remove <package>')
   expect(readFileSync(result.logPath, 'utf8')).toContain(result.output)
   expect(messages.join('')).toContain(result.output)
   expect(readProfileManifest('test', dir).dependencies).toMatchObject({ supported: '1', restricted: '1' })
@@ -217,7 +217,7 @@ function installGuarded(dir: string, dependency: string, name = dependency, vers
 function writePathSpec(home: string, peer: string): void {
   mkdirSync(join(home, 'plugin'), { recursive: true })
   writeFileSync(join(home, 'plugin', 'package.json'), JSON.stringify({
-    name: 'plugin', version: '1.0.0', peerDependencies: { '@forwork/dsh': peer },
+    name: 'plugin', version: '1.0.0', peerDependencies: { '@forwork/cli': peer },
   }))
 }
 
@@ -237,7 +237,7 @@ it.each([
   })
   expect(outcome.exitCode).toBe(1)
   expect(outcome.incompatible).toEqual([
-    { name: 'plugin', version: '1.0.0', runtimeVersion: getDshRuntimeVersion(), requirements: { '@forwork/dsh': '999.0.0' } },
+    { name: 'plugin', version: '1.0.0', runtimeVersion: getDshRuntimeVersion(), requirements: { '@forwork/cli': '999.0.0' } },
   ])
   expect(outcome.output).toContain('installation rejected')
   expect(outcome.output).toContain('plugin@1.0.0')
@@ -256,7 +256,7 @@ it.each(['plugin@1.0.0', '@scope/plugin@1.0.0'])('rejects the registry spec %s t
   const name = spec.slice(0, spec.lastIndexOf('@'))
   pnpm.view = () => ({
     exitCode: 0,
-    stdout: JSON.stringify({ name, version: '1.0.0', peerDependencies: { '@forwork/dsh': '999.0.0' } }),
+    stdout: JSON.stringify({ name, version: '1.0.0', peerDependencies: { '@forwork/cli': '999.0.0' } }),
   })
   const manifestBefore = readFileSync(join(dir, 'package.json'), 'utf8')
   const outcome = await runProfilePnpm(context, ['add', spec], { execution: 'service', outputBytes: 8192 })
@@ -276,7 +276,7 @@ it('rejects a registry spec whose engines.dsh the pre-install lookup denies, ign
   const { context, pnpm } = fixture()
   pnpm.view = () => ({
     exitCode: 0,
-    stdout: JSON.stringify({ name: 'plugin', version: '1.0.0', engines: { dsh: '999.0.0' }, peerDependencies: { '@forwork/dsh': '*' } }),
+    stdout: JSON.stringify({ name: 'plugin', version: '1.0.0', engines: { dsh: '999.0.0' }, peerDependencies: { '@forwork/cli': '*' } }),
   })
   const outcome = await runProfilePnpm(context, ['add', 'plugin@1.0.0'], { execution: 'service', outputBytes: 8192 })
   expect(outcome).toMatchObject({ exitCode: 1 })
@@ -291,7 +291,7 @@ it('reads the last match when the registry lookup answers with several versions'
     exitCode: 0,
     stdout: JSON.stringify([
       { name: 'plugin', version: '1.0.0' },
-      { name: 'plugin', version: '2.0.0', peerDependencies: { '@forwork/dsh': '999.0.0' } },
+      { name: 'plugin', version: '2.0.0', peerDependencies: { '@forwork/cli': '999.0.0' } },
     ]),
   })
   const outcome = await runProfilePnpm(context, ['add', 'plugin@^2', '--registry=https://registry.example'], {
@@ -319,7 +319,7 @@ it('installs an incompatible path spec the profile exempts', async () => {
   pnpm.mutate = (target) => {
     install(target, 'plugin')
     writeFileSync(join(target, 'node_modules', 'plugin', 'package.json'), JSON.stringify({
-      name: 'plugin', version: '1.0.0', peerDependencies: { '@forwork/dsh': '999.0.0' },
+      name: 'plugin', version: '1.0.0', peerDependencies: { '@forwork/cli': '999.0.0' },
       dsh: { bundle: { patch: './cordis.patch.yml' } },
     }))
   }
@@ -434,7 +434,7 @@ it('reports an unrepaired node_modules when the restoring install fails', async 
   })
   expect(outcome).toMatchObject({ exitCode: 1 })
   expect(outcome.output).toContain('node_modules could not be reinstalled')
-  expect(outcome.output).toContain("run 'dsh plugin install'")
+  expect(outcome.output).toContain("run 'forwork plugin install'")
 })
 
 it('detects a version update that keeps the dependency spec and removes a lockfile the run created', async () => {
@@ -475,7 +475,7 @@ it('installs a dependency whose installed manifest declares compatible peers', a
   pnpm.mutate = (target) => {
     install(target, 'plugin')
     writeFileSync(join(target, 'node_modules', 'plugin', 'package.json'), JSON.stringify({
-      name: 'plugin', version: '1.0.0', peerDependencies: { '@forwork/dsh': '*' },
+      name: 'plugin', version: '1.0.0', peerDependencies: { '@forwork/cli': '*' },
       dsh: { bundle: { patch: './cordis.patch.yml' } },
     }))
   }
@@ -529,7 +529,7 @@ it('rejects an incompatible component declared by a newly installed bundle', asy
     const component = join(packageDir, 'node_modules', 'component')
     mkdirSync(component, { recursive: true })
     writeFileSync(join(component, 'package.json'), JSON.stringify({
-      name: 'component', version: '1.0.0', peerDependencies: { '@forwork/dsh': '>=999.0.0' },
+      name: 'component', version: '1.0.0', peerDependencies: { '@forwork/cli': '>=999.0.0' },
     }))
     writeFileSync(join(packageDir, 'cordis.patch.yml'), '- insert:\n    - id: component\n      name: component/subpath\n')
   }
@@ -738,7 +738,7 @@ it.each(['not json', 'null', '{"pid":0,"grouped":false}', '{"pid":12,"grouped":"
     writeFileSync(runRecord(dir), record)
     const outcome = await runProfilePnpm(context, ['add', './extra'], { execution: 'service', outputBytes: 8192 })
     expect(outcome).toMatchObject({ exitCode: 1 })
-    expect(outcome.output).toBe(`dsh: ${runRecord(dir)} does not name a package run; delete it once no earlier package operation is still running in this profile\n`)
+    expect(outcome.output).toBe(`forwork: ${runRecord(dir)} does not name a package run; delete it once no earlier package operation is still running in this profile\n`)
     expect(command.run).not.toHaveBeenCalled()
   },
 )
@@ -776,7 +776,7 @@ it('terminates a run that stopped printing and reports the silence bound', async
   command.run.mockImplementationOnce(() => silentChild('installing\n'))
   const outcome = await runProfilePnpm(context, ['add', './extra'], { execution: 'service', outputBytes: 100, idleTimeoutMs: 20 })
   expect(outcome).toMatchObject({ exitCode: 1, timedOut: true })
-  expect(outcome.output).toBe('installing\ndsh: pnpm printed nothing for 20ms and was terminated\n')
+  expect(outcome.output).toBe('installing\nforwork: pnpm printed nothing for 20ms and was terminated\n')
   expect(readFileSync(outcome.logPath, 'utf8')).toBe(outcome.output)
 })
 
@@ -788,7 +788,7 @@ it('settles a run whose pipes stay open past the process exit', async () => {
     execution: 'service', outputBytes: 100, activateNewBundles: false,
   })
   expect(outcome).toMatchObject({ exitCode: 0 })
-  expect(outcome.output).toBe('installed\ndsh: pnpm output was cut short after its process exited\n')
+  expect(outcome.output).toBe('installed\nforwork: pnpm output was cut short after its process exited\n')
   // The pipes never ended on their own, so the run settled by cutting them here.
   expect(child.stdout.destroyed).toBe(true)
   expect(child.stderr.destroyed).toBe(true)
@@ -931,7 +931,7 @@ it('handles manifests without dependency or bundle selections', async () => {
 
 it.each(['cli', 'service'] as const)('uses the %s environment and interaction policy', async (execution) => {
   const { context } = fixture()
-  const names = ['NPM_TOKEN', 'NODE_AUTH_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN', 'DEEPSEEK_API_KEY']
+  const names = ['NPM_TOKEN', 'NODE_AUTH_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN', 'FORWORK_API_KEY']
   const originals = names.map(name => process.env[name])
   onTestFinished(() => {
     names.forEach((name, index) => {

@@ -1,9 +1,9 @@
 /**
- * Config-dump entry for `dsh --profile <name> --dump-config`: compose the
+ * Config-dump entry for `forwork --profile <name> --dump-config`: compose the
  * profile's patch layers through the include plugin's patch algorithm without
  * booting or evaluating `!!js`, with one source layer per bundle, the
  * profile's own patch file, and each `--patch` overlay.
- * @module @forwork/dsh/dump-config
+ * @module @forwork/cli/dump-config
  */
 
 import { existsSync } from 'node:fs'
@@ -17,7 +17,7 @@ import {
 } from '@forwork/app-boot'
 import { homePatchPath, prepareProfile, PROFILE_ROOT_FILENAME } from './profile-boot.ts'
 
-const NAME = 'dsh'
+const NAME = 'forwork'
 
 /* v8 ignore start -- built-bin acceptance drives this boot-free dispatch */
 /**

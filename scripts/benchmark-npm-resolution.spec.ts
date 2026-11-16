@@ -69,7 +69,7 @@ describe('npm resolution benchmark', () => {
       devDependencies: { ignored: '^1.0.0' },
     })
     writeJson(root, 'apps/cli/package.json', {
-      name: '@forwork/dsh',
+      name: '@forwork/cli',
       version: '0.1.0',
       dependencies: { '@forwork/child': 'workspace:^', external: '^2.0.0' },
       devDependencies: { ignored: 'workspace:^' },
@@ -82,8 +82,8 @@ describe('npm resolution benchmark', () => {
     const index = buildRegistryIndex(root)
 
     expect(index.get('external')?.get('2.0.0')).toMatchObject({ dependencies: { child: '^1.0.0' } })
-    expect(index.get('@forwork/dsh')?.get('0.1.0')).toEqual({
-      name: '@forwork/dsh',
+    expect(index.get('@forwork/cli')?.get('0.1.0')).toEqual({
+      name: '@forwork/cli',
       version: '0.1.0',
       dependencies: { '@forwork/child': '^0.1.0', external: '^2.0.0' },
     })
@@ -91,8 +91,8 @@ describe('npm resolution benchmark', () => {
 
   it('runs npm against the local registry without requesting an archive', async () => {
     const index: RegistryIndex = new Map([[
-      '@forwork/dsh',
-      new Map([['0.1.0', { name: '@forwork/dsh', version: '0.1.0' }]]),
+      '@forwork/cli',
+      new Map([['0.1.0', { name: '@forwork/cli', version: '0.1.0' }]]),
     ]])
     const result = await benchmarkNpmResolution(index, '0.1.0', 10_000)
 
@@ -104,22 +104,22 @@ describe('npm resolution benchmark', () => {
 
   it('returns npm placement for two aliased package versions without requesting archives', async () => {
     const index: RegistryIndex = new Map([[
-      '@forwork/dsh',
+      '@forwork/cli',
       new Map([
-        ['0.1.0', { name: '@forwork/dsh', version: '0.1.0' }],
-        ['0.2.0', { name: '@forwork/dsh', version: '0.2.0' }],
+        ['0.1.0', { name: '@forwork/cli', version: '0.1.0' }],
+        ['0.2.0', { name: '@forwork/cli', version: '0.2.0' }],
       ]),
     ]])
 
     const result = await resolveNpmPackageLock(index, {
-      '@forwork/dsh': '0.2.0',
-      'dsh-previous': 'npm:@forwork/dsh@0.1.0',
+      '@forwork/cli': '0.2.0',
+      'dsh-previous': 'npm:@forwork/cli@0.1.0',
     }, 10_000)
 
     expect(result.archiveRequests).toBe(0)
-    expect(result.packageLock.packages['node_modules/@forwork/dsh']?.version).toBe('0.2.0')
+    expect(result.packageLock.packages['node_modules/@forwork/cli']?.version).toBe('0.2.0')
     expect(result.packageLock.packages['node_modules/dsh-previous']).toMatchObject({
-      name: '@forwork/dsh',
+      name: '@forwork/cli',
       version: '0.1.0',
     })
   })
@@ -139,8 +139,8 @@ describe('npm resolution benchmark', () => {
     process.env.npm_config_omit = 'peer'
     try {
       const index: RegistryIndex = new Map([
-        ['@forwork/dsh', new Map([['0.1.0', {
-          name: '@forwork/dsh',
+        ['@forwork/cli', new Map([['0.1.0', {
+          name: '@forwork/cli',
           version: '0.1.0',
           peerDependencies: { '@forwork/peer': '1.0.0' },
         }]])],
@@ -150,7 +150,7 @@ describe('npm resolution benchmark', () => {
         }]])],
       ])
 
-      const result = await resolveNpmPackageLock(index, { '@forwork/dsh': '0.1.0' }, 10_000)
+      const result = await resolveNpmPackageLock(index, { '@forwork/cli': '0.1.0' }, 10_000)
 
       expect(result.archiveRequests).toBe(0)
       expect(result.packageLock.packages['node_modules/@forwork/peer']?.version).toBe('1.0.0')

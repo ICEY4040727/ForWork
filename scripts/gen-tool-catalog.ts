@@ -38,7 +38,7 @@ import type { ImageAttachmentLimits, ImageAttachmentRef, SaveImageAttachment, St
 import UserQuestionService from '@forwork/user-questions'
 import PlanModeController from '@forwork/plan-mode'
 import WebRuntime from '@forwork/web'
-import * as WebDeepSeekApi from '@forwork/web-deepseek-api'
+import * as WebDeepSeekApi from '@forwork/web-api'
 import * as WebFetchLocal from '@forwork/web-fetch-http'
 import SubagentRuntime from '@forwork/subagent'
 import type { SubagentProvider } from '@forwork/subagent'

@@ -1,7 +1,7 @@
 /** Public dsh commands using the immutable runtime carried by the Desktop installation. */
 
 import { delimiter, dirname, join, resolve } from 'node:path'
-import { runCli } from '@forwork/dsh/lib/bin.js'
+import { runCli } from '@forwork/cli/lib/bin.js'
 import { installOfficeEngineResolution, runtimeArchivePath } from './office-engine.ts'
 
 /**

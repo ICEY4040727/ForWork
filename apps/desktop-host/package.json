@@ -14,7 +14,7 @@
     "koffi": "3.1.1",
     "@deepseek-ai/libreoffice-kit": "^0.1.5",
     "@forwork/cordis": "workspace:~",
-    "@forwork/dsh": "workspace:*",
+    "@forwork/cli": "workspace:*",
     "@forwork/agent": "workspace:*",
     "@forwork/app-boot": "workspace:*",
     "@forwork/client-connection": "workspace:*",

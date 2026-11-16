@@ -1,4 +1,4 @@
-/** Official DeepSeek Harness occupants: the profile-gated sidebar brand slots and the home whale frame layer. */
+/** Official ForWork occupants: the profile-gated sidebar brand slots and the home whale frame layer. */
 import type { Context as ClientContext } from '@forwork/cordis'
 import type {} from '@forwork/client-ui-renderer/client'
 import type {} from '@forwork/client-ui-sidebar/client'

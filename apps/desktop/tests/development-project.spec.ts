@@ -11,7 +11,7 @@ import type { DesktopRelease } from '../src/release.ts'
 const roots: string[] = []
 
 function temporaryRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), 'dsh-desktop-development-test-'))
+  const root = mkdtempSync(join(tmpdir(), 'forwork-desktop-development-test-'))
   roots.push(root)
   return root
 }
@@ -41,7 +41,7 @@ describe('desktop development project', () => {
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(dependency)
     mkdirSync(hoisted)
-    writeFileSync(join(cli, 'package.json'), JSON.stringify({ name: '@forwork/dsh', version: '1.2.3', dependencies: { unhoisted: 'workspace:^' } }))
+    writeFileSync(join(cli, 'package.json'), JSON.stringify({ name: '@forwork/cli', version: '1.2.3', dependencies: { unhoisted: 'workspace:^' } }))
     writeFileSync(join(host, 'package.json'), JSON.stringify({ name: '@forwork/desktop-host', version: '1.2.3' }))
     writeFileSync(join(host, 'lib/index.js'), '')
     writeFileSync(join(dependency, 'package.json'), JSON.stringify({ name: 'unhoisted', version: '1.2.3' }))
@@ -61,11 +61,11 @@ describe('desktop development project', () => {
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(join(dependencies, '@scope'), { recursive: true })
-    mkdirSync(join(dependencies, '@forwork', 'dsh'), { recursive: true })
-    writeFileSync(join(cli, 'package.json'), '{"name":"@forwork/dsh","version":"1.2.3"}\n')
+    mkdirSync(join(dependencies, '@forwork', 'cli'), { recursive: true })
+    writeFileSync(join(cli, 'package.json'), '{"name":"@forwork/cli","version":"1.2.3"}\n')
     writeFileSync(join(host, 'package.json'), '{"name":"@forwork/desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
-    writeFileSync(join(dependencies, '@forwork', 'dsh', 'package.json'), '{}\n')
+    writeFileSync(join(dependencies, '@forwork', 'cli', 'package.json'), '{}\n')
     mkdirSync(join(dependencies, 'plain-dependency'))
     writeFileSync(join(dependencies, 'plain-dependency', 'package.json'), '{}\n')
     mkdirSync(join(dependencies, '@scope', 'dependency'))
@@ -79,8 +79,8 @@ describe('desktop development project', () => {
       release: release(),
       target: 'win-x64',
     })
-    expect(realpathSync(join(project, 'node_modules', '@forwork', 'dsh'))).toBe(realpathSync(cli))
-    expect(realpathSync(join(project, 'node_modules', '@forwork', 'dsh-desktop-host'))).toBe(realpathSync(host))
+    expect(realpathSync(join(project, 'node_modules', '@forwork', 'cli'))).toBe(realpathSync(cli))
+    expect(realpathSync(join(project, 'node_modules', '@forwork', 'desktop-host'))).toBe(realpathSync(host))
     expect(realpathSync(join(project, 'node_modules', 'plain-dependency')))
       .toBe(realpathSync(join(dependencies, 'plain-dependency')))
     expect(realpathSync(join(project, 'node_modules', '@scope', 'dependency')))
@@ -88,7 +88,7 @@ describe('desktop development project', () => {
     const manifest = JSON.parse(readFileSync(join(project, 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>
     }
-    expect(manifest.dependencies['@forwork/dsh']).toBe('1.2.3')
+    expect(manifest.dependencies['@forwork/cli']).toBe('1.2.3')
     expect(manifest.dependencies['@forwork/desktop-host']).toBe('1.2.3')
     const descriptor = JSON.parse(readFileSync(join(project, 'desktop-runtime.json'), 'utf8')) as { platform: string; arch: string }
     expect(descriptor).toMatchObject({ platform: 'win32', arch: 'x64' })
@@ -97,7 +97,7 @@ describe('desktop development project', () => {
     })
     await manager.applyRelease()
     await manager.disableAllPlugins()
-    expect(readFileSync(join(cli, 'package.json'), 'utf8')).toBe('{"name":"@forwork/dsh","version":"1.2.3"}\n')
+    expect(readFileSync(join(cli, 'package.json'), 'utf8')).toBe('{"name":"@forwork/cli","version":"1.2.3"}\n')
     expect(readFileSync(join(host, 'lib', 'index.js'), 'utf8')).toBe('')
 
   })
@@ -110,7 +110,7 @@ describe('desktop development project', () => {
     mkdirSync(join(cli, 'lib'), { recursive: true })
     mkdirSync(join(host, 'lib'), { recursive: true })
     mkdirSync(dependencies, { recursive: true })
-    writeFileSync(join(cli, 'package.json'), '{"name":"@forwork/dsh","version":"2.0.0"}\n')
+    writeFileSync(join(cli, 'package.json'), '{"name":"@forwork/cli","version":"2.0.0"}\n')
     writeFileSync(join(host, 'package.json'), '{"name":"@forwork/desktop-host","version":"1.2.3"}\n')
     writeFileSync(join(host, 'lib', 'index.js'), '')
     expect(() => prepareDevelopmentProject({

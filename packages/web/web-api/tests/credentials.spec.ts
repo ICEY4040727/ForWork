@@ -8,7 +8,7 @@ import { credentialRef } from '@forwork/credentials'
 import LocalCredentialProvider from '@forwork/credentials-local'
 import { DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot } from '@forwork/launch-environment'
 import WebRuntime from '@forwork/web'
-import * as webApiPlugin from '@forwork/web-deepseek-api'
+import * as webApiPlugin from '@forwork/web-api'
 
 /** Stub the Search API and read back the bearer credential of every dispatched request. */
 function captureAuthorization(): () => (string | null)[] {
@@ -33,18 +33,18 @@ async function mount(ctx: Context, config: Record<string, unknown>, environment:
 
 afterEach(() => { vi.unstubAllGlobals() })
 
-describe('web-deepseek-api API-key resolution', () => {
+describe('web-api API-key resolution', () => {
   it('resolves the referenced credential for each request, so a stored or rotated key needs no restart', async () => {
     const authorization = captureAuthorization()
-    const dir = await mkdtemp(join(tmpdir(), 'dsh-web-deepseek-api-credentials-'))
+    const dir = await mkdtemp(join(tmpdir(), 'dsh-web-api-credentials-'))
     const ctx = new Context()
     try {
       await ctx.plugin(LocalCredentialProvider, { path: join(dir, '.credentials.yaml'), watch: false })
       await mount(ctx, {}, {})
       const missing = ctx.web.search({ query: 'missing' })
       await expect(missing).rejects.toMatchObject({ code: 'WEB_PROVIDER_CREDENTIAL_MISSING' })
-      await expect(missing).rejects.toThrow(/export "DEEPSEEK_API_KEY" in the launching environment/)
-      const ref = credentialRef('DEEPSEEK_API_KEY')
+      await expect(missing).rejects.toThrow(/export "FORWORK_API_KEY" in the launching environment/)
+      const ref = credentialRef('FORWORK_API_KEY')
       await ctx.credentials.set(ref, 'stored-key')
       await ctx.web.search({ query: 'stored' })
       await ctx.credentials.set(ref, 'rotated-key')
@@ -57,7 +57,7 @@ describe('web-deepseek-api API-key resolution', () => {
   })
 
   it.each([
-    ['the default reference', {}, { DEEPSEEK_API_KEY: 'env-key' }, 'Bearer env-key'],
+    ['the default reference', {}, { FORWORK_API_KEY: 'env-key' }, 'Bearer env-key'],
     ['a configured reference', { searchApiKeyEnv: 'SEARCH_API_KEY' }, { SEARCH_API_KEY: 'custom-key' }, 'Bearer custom-key'],
   ])('falls back to the launch environment for %s without a credentials service', async (_case, config, environment, expected) => {
     const authorization = captureAuthorization()
@@ -73,7 +73,7 @@ describe('web-deepseek-api API-key resolution', () => {
     const authorization = captureAuthorization()
     const ctx = new Context()
     try {
-      await mount(ctx, {}, { DEEPSEEK_API_KEY: '' })
+      await mount(ctx, {}, { FORWORK_API_KEY: '' })
       await expect(ctx.web.search({ query: 'q' })).rejects.toMatchObject({ code: 'WEB_PROVIDER_CREDENTIAL_MISSING' })
       expect(authorization()).toEqual([])
     } finally { await ctx.fiber.dispose() }

@@ -148,7 +148,7 @@ it.skipIf(MODE === 'record')('reuses saved native Account Flash translations acr
   scaffold.ctx.emit('llm/adapters-updated')
   const owner = [...scaffold.ctx.loader.entries()].find(entry => entry.options.id === 'llm-deepseek-account')
   expect(owner?.options.name).toBe('@forwork/llm-deepseek-account')
-  expect(await scaffold.ctx.llm.listModels('deepseek-account')).toContainEqual(expect.objectContaining({ id: 'deepseek-flash' }))
+  expect(await scaffold.ctx.llm.listModels('account')).toContainEqual(expect.objectContaining({ id: 'deepseek-flash' }))
   const browser = await chromium.launch(); resources.browser = browser
   const context = await browser.newContext({ viewport: { width: 1680, height: 1000 }, locale: ZH_BROWSER_LOCALE, timezoneId: 'Asia/Shanghai' })
   const page = await context.newPage(), settings = await context.newPage()
@@ -187,7 +187,7 @@ it.skipIf(MODE === 'record')('reuses saved native Account Flash translations acr
   await provider.getByRole('option', { name: 'DeepSeek Flash · 账号（付费）', exact: true }).waitFor({ state: 'attached' })
   expect(await provider.getByRole('option', { name: /官方 API（付费）/ }).count()).toBe(0)
   expect(calls).toEqual([])
-  await provider.selectOption('deepseek-account')
+  await provider.selectOption('account')
   await panel.getByText(COST, { exact: true }).waitFor()
   expect(calls).toEqual([])
   const save = panel.getByRole('button', { name: '保存', exact: true })
@@ -217,7 +217,7 @@ it.skipIf(MODE === 'record')('reuses saved native Account Flash translations acr
   const savedRecords = saved.filter(isTranslationRecord)
   expect(savedRecords).toHaveLength(2)
   expect(savedRecords[0]).toMatchObject({ type: 'plugin:translator/request', ignorable: true,
-    data: { provider: 'deepseek-account', text: ORIGINAL, targetLanguage: 'zh', sourceLanguage: 'auto' } })
+    data: { provider: 'account', text: ORIGINAL, targetLanguage: 'zh', sourceLanguage: 'auto' } })
   expect(savedRecords[1]).toMatchObject({ type: 'plugin:translator/result', ignorable: true,
     data: { requestSeq: savedRecords[0]?.seq, text: TRANSLATED } })
   await reasoning.locator('[data-disclosure-row]').first().click(); await translated.waitFor({ state: 'detached' })
@@ -275,8 +275,8 @@ it.skipIf(MODE === 'record')('reuses saved native Account Flash translations acr
     expect(call.body.messages).toEqual([{ role: 'user', content: [{ type: 'text', text: ORIGINAL }] }])
     expect(call.body).not.toHaveProperty('tools')
     expect(call.audit).toMatchObject({ type: 'plugin:translator/request', ignorable: true,
-      data: { provider: 'deepseek-account', text: ORIGINAL, targetLanguage, sourceLanguage: 'auto', metadata: { modelRequest: { system,
-        config: { provider: 'deepseek-account', model: 'deepseek-flash', reasoningEffort: 'off', maxTokens: 8192 },
+      data: { provider: 'account', text: ORIGINAL, targetLanguage, sourceLanguage: 'auto', metadata: { modelRequest: { system,
+        config: { provider: 'account', model: 'deepseek-flash', reasoningEffort: 'off', maxTokens: 8192 },
         messages: [{ role: 'user', content: [{ type: 'text', text: ORIGINAL }] }] } } } })
     expect(JSON.stringify(call.body.messages)).not.toContain('LIGHTHOUSE')
   }

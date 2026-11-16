@@ -11,7 +11,7 @@
 - id: llm-deepseek
   name: '@forwork/llm-deepseek-api-key'
   config:
-    apiKeyEnv: DEEPSEEK_API_KEY
+    apiKeyEnv: FORWORK_API_KEY
     streamIdleTimeoutMs: 172800000
     models:
       - id: !!js process.env.DSH_MODEL ?? 'deepseek-v4-flash'

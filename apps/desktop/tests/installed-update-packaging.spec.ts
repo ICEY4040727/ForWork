@@ -65,8 +65,8 @@ async function fixture(body: (manifest: string, root: string) => Promise<void>):
 describe('operator-driven packaging entry', () => {
   it('refuses the interlock before loading credentials, confirmation, or child allocation and preserves it byte-for-byte', async () => {
     await fixture(async (manifest, root) => {
-      const lock = join(root, '.dsh-desktop-signing/attempt.json')
-      await mkdir(join(root, '.dsh-desktop-signing'))
+      const lock = join(root, '.forwork-desktop-signing/attempt.json')
+      await mkdir(join(root, '.forwork-desktop-signing'))
       await writeFile(lock, 'retained incident record')
       const confirm = vi.fn(async () => true)
       await expect(packageInstalledUpdate(manifest, versions[0], { execute: true, confirm })).rejects.toThrow('interlock exists')
@@ -81,7 +81,7 @@ describe('operator-driven packaging entry', () => {
   it('strips unrelated secrets and preload overrides while retaining signing inputs and the Windows archive filter', () => {
     expect(installedUpdatePackagingEnvironment({ DSH_DESKTOP_TARGET_PLATFORM: 'win32', PATH: 'tool-path',
       DSH_DESKTOP_WINDOWS_TOKEN_PIN: 'pin', DSH_DESKTOP_WINDOWS_KEY_CONTAINER: 'container',
-      DEEPSEEK_API_KEY: 'llm', DOWNLOAD_TEST_COS_SECRET_KEY: 'cos', NODE_OPTIONS: 'preload', NODE_PATH: 'injected' }))
+      FORWORK_API_KEY: 'llm', DOWNLOAD_TEST_COS_SECRET_KEY: 'cos', NODE_OPTIONS: 'preload', NODE_PATH: 'injected' }))
       .toEqual({ DSH_DESKTOP_TARGET_PLATFORM: 'win32', PATH: 'tool-path', DSH_DESKTOP_WINDOWS_TOKEN_PIN: 'pin',
         DSH_DESKTOP_WINDOWS_KEY_CONTAINER: 'container', DSH_DESKTOP_UNSIGNED: '0', ELECTRON_BUILDER_7Z_FILTER: 'BCJ' })
   })
@@ -122,8 +122,8 @@ describe('operator-driven packaging entry', () => {
       await expect(packageInstalledUpdate(manifest, versions[0], { execute: true, confirm: async () => false }))
         .rejects.toThrow('did not confirm')
       await expect(packageInstalledUpdate(manifest, versions[0], { execute: true, confirm: async () => {
-        await mkdir(join(root, '.dsh-desktop-signing'))
-        await writeFile(join(root, '.dsh-desktop-signing/attempt.json'), 'another operation acquired the token')
+        await mkdir(join(root, '.forwork-desktop-signing'))
+        await writeFile(join(root, '.forwork-desktop-signing/attempt.json'), 'another operation acquired the token')
         return true
       } })).rejects.toThrow('interlock exists')
       expect(await readdir(join(manifest, '..', versions[0]))).toEqual(['dsh'])

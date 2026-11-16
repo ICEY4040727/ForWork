@@ -36,7 +36,7 @@ Choose it when a composition runs the agent loop and wants durable request recov
 ```yaml
 - name: '@forwork/llm-deepseek-api-key'
   config:
-    apiKeyEnv: DEEPSEEK_API_KEY
+    apiKeyEnv: FORWORK_API_KEY
     retryPolicy:
       mode: always
       backoff:

@@ -79,7 +79,7 @@ const standardReleaseMemberDirectory = new RegExp(
 const desktopApplicationDirectory = 'apps/desktop'
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
-  '@forwork/dsh': ['lib/*.js', 'lib/types/*.d.ts'],
+  '@forwork/cli': ['lib/*.js', 'lib/types/*.d.ts'],
   '@forwork/desktop-host': [
     'lib/index.js', 'lib/cli.js',
   ],
@@ -490,7 +490,7 @@ export function checkDshFamilyVersion(manifest: PackageManifest, expected: strin
   // The vendored framework and the native Landlock family version on their own sequences.
   const separateSequence = name !== undefined
     && (vendoredPackages.has(name) || publicNativePackages.has(name) || name === '@forwork/node-addon-system-workspace')
-  if (name !== '@forwork/dsh' && (name?.startsWith('@forwork/') !== true || separateSequence)) return undefined
+  if (name !== '@forwork/cli' && (name?.startsWith('@forwork/') !== true || separateSequence)) return undefined
   if (manifest.version !== expected) {
     return `${name}: package.json version must match root version ${expected ?? '(missing)'}`
   }
@@ -675,7 +675,7 @@ export function checkExperimentalDependencyIsolation(
   const errors: string[] = []
   for (const { dir, manifest } of manifests) {
     if (!standardReleaseMemberDirectory.test(dir) && dir !== 'python/sdk-runtime') continue
-    const offered = manifest.name === '@forwork/dsh' ? new Set(optionalBundles) : new Set<string>()
+    const offered = manifest.name === '@forwork/cli' ? new Set(optionalBundles) : new Set<string>()
     for (const section of runtimeDependencySections) {
       for (const [name, range] of Object.entries(manifest[section] ?? {})) {
         const experimental = experimentalNames.has(name) || isExperimentalPackageName(name)

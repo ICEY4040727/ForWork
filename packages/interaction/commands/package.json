@@ -1,6 +1,6 @@
 {
   "name": "@forwork/commands",
-  "description": "Plugin-owned human command registry for DeepSeek Harness UIs",
+  "description": "Plugin-owned human command registry for ForWork UIs",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

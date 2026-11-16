@@ -1,7 +1,7 @@
 /**
  * DeepSeek Search API provider: one direct request per search, without an
  * auxiliary model request.
- * @module @forwork/web-deepseek-api/search
+ * @module @forwork/web-api/search
  */
 import type { WebSearchProvider, WebSearchRequest, WebSearchResult } from '@forwork/web'
 import {

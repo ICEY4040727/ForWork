@@ -95,8 +95,8 @@ describe('next package benchmark graph', () => {
 
   it('finds reachable unconfigured packages with non-Cordis peers', () => {
     const index = new Map([
-      ['@forwork/dsh', new Map([['1.0.0', {
-        name: '@forwork/dsh', version: '1.0.0', dependencies: { '@f/a': '^1.0.0', '@f/b': '^1.0.0' },
+      ['@forwork/cli', new Map([['1.0.0', {
+        name: '@forwork/cli', version: '1.0.0', dependencies: { '@f/a': '^1.0.0', '@f/b': '^1.0.0' },
       }]])],
       ['@f/a', new Map([['1.0.0', {
         name: '@f/a', version: '1.0.0', peerDependencies: { '@f/runtime': '^1.0.0' },
@@ -117,7 +117,7 @@ describe('next package benchmark graph', () => {
 
     expect(discoverBenchmarkCandidates(
       index,
-      new Map([['@forwork/dsh', '1.0.0'], ['@f/a', '1.0.0'], ['@f/b', '1.0.0']]),
+      new Map([['@forwork/cli', '1.0.0'], ['@f/a', '1.0.0'], ['@f/b', '1.0.0']]),
       release,
       new Set(),
     )).toEqual(['@f/a'])

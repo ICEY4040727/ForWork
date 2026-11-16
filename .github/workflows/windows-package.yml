@@ -146,7 +146,7 @@ jobs:
       - name: Configure persistent pnpm store
         # PNPM_HOME belongs to this run; keep downloaded packages outside its temporary directory.
         env:
-          DSH_DESKTOP_PACKAGE_CACHE_DIR: ${{ runner.tool_cache }}/dsh-desktop-package-cache
+          DSH_DESKTOP_PACKAGE_CACHE_DIR: ${{ runner.tool_cache }}/forwork-desktop-package-cache
         run: |
           $storeRoot = Join-Path ([IO.Path]::GetPathRoot($env:GITHUB_WORKSPACE)) '.pnpm-store'
           $namespace = $env:PACKAGE_CACHE_NAMESPACE
@@ -239,7 +239,7 @@ jobs:
       - name: Configure persistent pnpm store
         # PNPM_HOME belongs to this run; keep downloaded packages outside its temporary directory.
         env:
-          DSH_DESKTOP_PACKAGE_CACHE_DIR: ${{ runner.tool_cache }}/dsh-desktop-package-cache
+          DSH_DESKTOP_PACKAGE_CACHE_DIR: ${{ runner.tool_cache }}/forwork-desktop-package-cache
         run: |
           $storeRoot = Join-Path ([IO.Path]::GetPathRoot($env:GITHUB_WORKSPACE)) '.pnpm-store'
           $namespace = $env:PACKAGE_CACHE_NAMESPACE

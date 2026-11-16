@@ -1,6 +1,6 @@
 import * as Protocol from '@forwork/llm-deepseek'
 /**
- * Real Messages round trips require credentials; tool replacement also accepts DEEPSEEK_BASE_URL.
+ * Real Messages round trips require credentials; tool replacement also accepts FORWORK_BASE_URL.
  * System-update checks additionally require DEEPSEEK_IN_HISTORY_MODEL.
  */
 import { randomUUID } from 'node:crypto'
@@ -49,10 +49,10 @@ async function boot(models?: Messages.Options['models'], baseURL = Protocol.PUBL
 }
 const tool = { name: 'lookup_value', description: 'Read the requested value. Always call this tool to obtain a value.', parameters: { type: 'object', properties: { key: { type: 'string' } }, required: ['key'] } }
 
-describe.skipIf(!process.env.DEEPSEEK_API_KEY)('DeepSeek Messages real API', () => {
+describe.skipIf(!process.env.FORWORK_API_KEY)('DeepSeek Messages real API', () => {
   it.each(['together', 'separate', 'initially empty'])('calls a tool added to an empty set, updates=%s', async (mode) => {
     const model = 'deepseek-flash'
-    const ctx = await boot([{ id: model, toolUpdate: 'addition-only' }], process.env.DEEPSEEK_BASE_URL ?? Protocol.PUBLIC_BASE_URL)
+    const ctx = await boot([{ id: model, toolUpdate: 'addition-only' }], process.env.FORWORK_BASE_URL ?? Protocol.PUBLIC_BASE_URL)
     const updates = mode === 'initially empty' ? [] : [createDeveloperMessage({ source: { kind: 'tool-registry' }, content: [
       { type: 'tool-removal', toolName: 'old_lookup' },
       ...mode !== 'together' ? [] : [{ type: 'tool-addition' as const, toolName: tool.name }],
@@ -100,7 +100,7 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('DeepSeek Messages real API', () 
     const uploads: string[] = []
     const bodies: string[] = []
     const files = new DeepSeekFilesClient({
-      baseURL: Protocol.PUBLIC_BASE_URL, headers: { 'x-api-key': process.env.DEEPSEEK_API_KEY as string }, fetch: fetchImpl,
+      baseURL: Protocol.PUBLIC_BASE_URL, headers: { 'x-api-key': process.env.FORWORK_API_KEY as string }, fetch: fetchImpl,
     })
     const ownedFiles = new Set<ReturnType<typeof Protocol.DeepSeekFileId>>()
     cleanups.push(async () => {

@@ -1,6 +1,6 @@
 {
   "name": "@forwork/llm-pi-ai",
-  "description": "pi-ai-backed DeepSeek adapter for the DeepSeek Harness LLM seam (design-verification twin of dsh-llm-deepseek)",
+  "description": "pi-ai-backed DeepSeek adapter for the ForWork LLM seam (design-verification twin of dsh-llm-deepseek)",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

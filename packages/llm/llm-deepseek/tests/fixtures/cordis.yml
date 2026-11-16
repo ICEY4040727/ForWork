@@ -14,7 +14,7 @@
     watch: false
 - name: '@forwork/llm-deepseek-api-key'
   config:
-    apiKeyEnv: DEEPSEEK_API_KEY
+    apiKeyEnv: FORWORK_API_KEY
     baseURL: {{endpoint}}
     thinking: enabled
     reasoningEffort: high

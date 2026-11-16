@@ -1,6 +1,6 @@
 {
   "name": "@forwork/llm",
-  "description": "Provider-neutral LLM service interface for the DeepSeek Harness",
+  "description": "Provider-neutral LLM service interface for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

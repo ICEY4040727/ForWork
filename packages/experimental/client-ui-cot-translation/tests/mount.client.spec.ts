@@ -356,7 +356,7 @@ it('retains an invalidation raised synchronously while a refreshed snapshot is b
 
 it('advertises eligible paid routes without changing Bing selection or sending a translation', async () => {
   const b = await fixture()
-  b.setCatalog({ maxTextChars: 12, availableProviders: ['bing', 'google', 'deepseek-account', 'deepseek-official'],
+  b.setCatalog({ maxTextChars: 12, availableProviders: ['bing', 'google', 'account', 'deepseek-official'],
     preferences: { provider: 'bing', targetLanguage: 'auto' } })
   try {
     const dispose = await mountTranslation(b.ctx, contribution)
@@ -371,10 +371,10 @@ it('advertises eligible paid routes without changing Bing selection or sending a
   } finally { await b.ctx.fiber.dispose() }
 })
 
-it.each(['deepseek-account', 'deepseek-official'] as const)('binds selected paid route %s and delegates unavailable cache lookup to the Host', async (provider) => {
+it.each(['account', 'deepseek-official'] as const)('binds selected paid route %s and delegates unavailable cache lookup to the Host', async (provider) => {
   const b = await fixture(false, { provider, targetLanguage: 'auto' })
   const catalog: CotTranslationSnapshot = { maxTextChars: 12,
-    availableProviders: ['bing', 'google', 'deepseek-account', 'deepseek-official'], preferences: { provider, targetLanguage: 'auto' } }
+    availableProviders: ['bing', 'google', 'account', 'deepseek-official'], preferences: { provider, targetLanguage: 'auto' } }
   b.setCatalog(catalog)
   try {
     const dispose = await mountTranslation(b.ctx, contribution)

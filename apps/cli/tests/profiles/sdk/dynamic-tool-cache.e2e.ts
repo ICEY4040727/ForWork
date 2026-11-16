@@ -71,7 +71,7 @@ function registryChanges(previous: ObservedRequest, request: ObservedRequest): {
   ]
 }
 
-describe.skipIf(!process.env.DEEPSEEK_API_KEY)('SDK native tool updates with real DeepSeek', () => {
+describe.skipIf(!process.env.FORWORK_API_KEY)('SDK native tool updates with real DeepSeek', () => {
   it.each([false, true])('keeps the preceding conversation cached after a tool addition (prompt update: %s)', async (updatePrompt) => {
     const root = await mkdtemp(join(tmpdir(), 'dsh-sdk-tool-cache-'))
     onTestFinished(async () => { await rm(root, { recursive: true, force: true }) })
@@ -81,7 +81,7 @@ describe.skipIf(!process.env.DEEPSEEK_API_KEY)('SDK native tool updates with rea
     const patch = join(root, 'dynamic-tool-cache.patch.yml')
     await writeFile(patch, JSON.stringify([
       { id: 'llm-deepseek', config: {
-        apiKeyEnv: 'DEEPSEEK_API_KEY', thinking: 'disabled', maxTokens: 1024,
+        apiKeyEnv: 'FORWORK_API_KEY', thinking: 'disabled', maxTokens: 1024,
         retryPolicy: { mode: 'normal', maxRetries: 0 } satisfies RetryPolicyConfig,
         models: [{ id: 'deepseek-flash', systemPromptUpdate: 'in-history', toolUpdate: 'addition-only' }],
       } },

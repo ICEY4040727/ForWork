@@ -1,6 +1,6 @@
 {
   "name": "@forwork/session-title-llm",
-  "description": "Shared LLM generation policy for DeepSeek Harness session-title providers",
+  "description": "Shared LLM generation policy for ForWork session-title providers",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

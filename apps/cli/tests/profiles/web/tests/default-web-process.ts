@@ -71,7 +71,7 @@ export async function withDefaultWeb(
         DSH_HOME: join(root, 'home'),
         DSH_AGENTS_HOME: join(root, '.agents'),
         DSH_TELEMETRY_DISABLED: '1',
-        DEEPSEEK_API_KEY: 'keyless-default-web-no-call',
+        FORWORK_API_KEY: 'keyless-default-web-no-call',
         NODE_NO_WARNINGS: '1',
       },
     })
@@ -152,9 +152,9 @@ export async function withDefaultWeb(
       await expect.poll(() => {
         test.signal.throwIfAborted()
         if (exited) throw new Error(`Web exited before readiness\n${stdout}\n${stderr}`)
-        return /dsh web: (http:\/\/[^\s]+)/u.exec(stdout)?.[1]
+        return /forwork web: (http:\/\/[^\s]+)/u.exec(stdout)?.[1]
       }, { timeout: test.task.timeout }).toBeDefined()
-      const url = /dsh web: (http:\/\/[^\s]+)/u.exec(stdout)![1]!
+      const url = /forwork web: (http:\/\/[^\s]+)/u.exec(stdout)![1]!
       await inspect({ root, url, request })
     } finally {
       const result = await close()

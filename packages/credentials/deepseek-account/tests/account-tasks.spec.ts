@@ -10,9 +10,9 @@ it('cancels running account tasks with their inboxes retained and detaches with 
   const cancelOther = vi.fn()
   const cancelIdle = vi.fn()
   const tasks = [
-    { status: 'running', session: { requestContext: () => ({ provider: 'deepseek-account' }) }, cancel: cancelAccount },
+    { status: 'running', session: { requestContext: () => ({ provider: 'account' }) }, cancel: cancelAccount },
     { status: 'running', session: { requestContext: () => ({ provider: 'deepseek-official' }) }, cancel: cancelOther },
-    { status: 'idle', session: { requestContext: () => ({ provider: 'deepseek-account' }) }, cancel: cancelIdle },
+    { status: 'idle', session: { requestContext: () => ({ provider: 'account' }) }, cancel: cancelIdle },
     { status: 'running', session: { requestContext: () => undefined }, cancel: cancelOther },
   ]
   ctx.provide('agents', { list: () => tasks } as never)

@@ -1,6 +1,6 @@
 {
   "name": "@forwork/skill-filesystem",
-  "description": "Local filesystem skill provider for the DeepSeek Harness",
+  "description": "Local filesystem skill provider for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

@@ -48,15 +48,15 @@ describe('SafeStorageSecureStore', () => {
   })
 
   it('round-trips set, get, and delete', async () => {
-    expect(await store.get('DEEPSEEK_API_KEY')).toBeUndefined()
+    expect(await store.get('FORWORK_API_KEY')).toBeUndefined()
 
-    await store.set('DEEPSEEK_API_KEY', SECRET)
+    await store.set('FORWORK_API_KEY', SECRET)
     await store.set('OTHER_API_KEY', 'other-secret')
-    expect(await store.get('DEEPSEEK_API_KEY')).toBe(SECRET)
+    expect(await store.get('FORWORK_API_KEY')).toBe(SECRET)
     expect(await store.get('OTHER_API_KEY')).toBe('other-secret')
 
-    await store.delete('DEEPSEEK_API_KEY')
-    expect(await store.get('DEEPSEEK_API_KEY')).toBeUndefined()
+    await store.delete('FORWORK_API_KEY')
+    expect(await store.get('FORWORK_API_KEY')).toBeUndefined()
     expect(await store.get('OTHER_API_KEY')).toBe('other-secret')
 
     await store.delete('ABSENT_KEY')
@@ -65,16 +65,16 @@ describe('SafeStorageSecureStore', () => {
   it('throws a typed error and writes nothing while encryption is unavailable', async () => {
     safeStorage.available = false
 
-    await expect(store.set('DEEPSEEK_API_KEY', SECRET)).rejects.toMatchObject({
+    await expect(store.set('FORWORK_API_KEY', SECRET)).rejects.toMatchObject({
       name: 'SecureStorageUnavailableError',
       code: 'secure-storage-unavailable',
     })
-    await expect(store.get('DEEPSEEK_API_KEY')).rejects.toBeInstanceOf(SecureStorageUnavailableError)
+    await expect(store.get('FORWORK_API_KEY')).rejects.toBeInstanceOf(SecureStorageUnavailableError)
     expect(await readdir(directory)).toEqual([])
   })
 
   it('persists ciphertext without the plaintext secret', async () => {
-    await store.set('DEEPSEEK_API_KEY', SECRET)
+    await store.set('FORWORK_API_KEY', SECRET)
 
     const file = await onlyFile(directory)
     const bytes = await readFile(file)
@@ -84,12 +84,12 @@ describe('SafeStorageSecureStore', () => {
   })
 
   it('propagates a read failure that is not absence', async () => {
-    await store.set('DEEPSEEK_API_KEY', SECRET)
+    await store.set('FORWORK_API_KEY', SECRET)
     const file = await onlyFile(directory)
     await rm(file)
     await mkdir(file)
 
-    await expect(store.get('DEEPSEEK_API_KEY')).rejects.toMatchObject({ code: 'EISDIR' })
+    await expect(store.get('FORWORK_API_KEY')).rejects.toMatchObject({ code: 'EISDIR' })
   })
 
   describe('stored document validation', () => {

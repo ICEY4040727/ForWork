@@ -29,8 +29,8 @@ describe('installed-update runtime preparation', () => {
         const runtime = join(run.root, version, 'dsh')
         const descriptor = await verifyDesktopRuntime(runtime, version)
         expect(descriptor.sharedPackages.find(entry => entry.name === '@forwork/cordis')?.version).toBe(source.version)
-        expect(descriptor.sharedPackages.find(entry => entry.name === '@forwork/dsh')?.version).toBe(version)
-        const metadata = JSON.parse(await readFile(join(runtime, 'node_modules/@forwork/dsh/package.json'), 'utf8')) as {
+        expect(descriptor.sharedPackages.find(entry => entry.name === '@forwork/cli')?.version).toBe(version)
+        const metadata = JSON.parse(await readFile(join(runtime, 'node_modules/@forwork/cli/package.json'), 'utf8')) as {
           dependencies: Record<string, string>
         }
         expect(metadata.dependencies['@forwork/desktop-host']).toBe(version)

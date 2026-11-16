@@ -1,6 +1,6 @@
 {
   "name": "@forwork/sdk-client",
-  "description": "TypeScript client SDK for driving a DeepSeek Harness runtime subprocess over stdio JSON-RPC: the DeepSeekHarness high-level turns API and the lower-level HarnessClient",
+  "description": "TypeScript client SDK for driving a ForWork runtime subprocess over stdio JSON-RPC: the DeepSeekHarness high-level turns API and the lower-level HarnessClient",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"
@@ -26,7 +26,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@forwork/dsh": "workspace:*"
+    "@forwork/cli": "workspace:*"
   },
   "peerDependencies": {
     "@forwork/llm": "workspace:*",

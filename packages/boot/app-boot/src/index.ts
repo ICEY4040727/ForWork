@@ -1,5 +1,5 @@
 /**
- * Shared boot glue for `dsh` profiles, including the CLI packaged by the Python runtime wheel: load the gitignored
+ * Shared boot glue for `forwork` profiles, including the CLI packaged by the Python runtime wheel: load the gitignored
  * `.env`, install the fail-loud Loader guards, resolve the config path (snapshot-aware), load the
  * optional user patch layers from the Harness home (`~/.dsh`), expose its path resolver to
  * config expressions, and drive the Cordis Loader against a leaf `cordis.yml` until the tree settles.
@@ -147,7 +147,7 @@ const BOOTSTRAP_NAMES = new Set([
   'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_SYSTEM', 'GIT_CONFIG_COUNT',
   'EDITOR', 'VISUAL', 'PAGER', 'BROWSER',
   // Network reach and trust.
-  'DEEPSEEK_BASE_URL', 'DEEPSEEK_SEARCH_BASE_URL',
+  'FORWORK_BASE_URL', 'DEEPSEEK_SEARCH_BASE_URL',
   'SSL_CERT_FILE', 'SSL_CERT_DIR',
   'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'NO_PROXY',
   'REQUESTS_CA_BUNDLE', 'CURL_CA_BUNDLE',
@@ -730,7 +730,7 @@ function groupedDump(
  * @param patches - initial app and user patches, applied in order.
  * @param bareModuleBaseUrl - optional installed-host base for bare package
  * names; relative names continue to resolve beside the configuration file.
- * @param binName - diagnostic prefix for a profile plugin denied by compatibility policy; defaults to `dsh`.
+ * @param binName - diagnostic prefix for a profile plugin denied by compatibility policy; defaults to `forwork`.
  * @returns the created root Include entry, or `undefined` when a surface
  * disposed the whole tree (taking the Loader service with it) while the
  * entry creation was in flight.

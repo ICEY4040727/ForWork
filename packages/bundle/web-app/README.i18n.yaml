@@ -3,14 +3,14 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/bundle/web-app/README.md
 /:
-  en: af2e4e5296596e8f
-  zh: 70c0b5ac93209d00
+  en: ccc5a3deb90303b8
+  zh: aaa544196ada8c0d
 /forwork-web-app:
   en: 1a23ded26665444a
   zh: a6a1f677c7822ce9
 /forwork-web-app/summary:
-  en: 0a2a9876194543e5
-  zh: ff472776a44ae260
+  en: d44887667b499164
+  zh: 9217d44a1eaf5228
 /forwork-web-app/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
@@ -18,17 +18,17 @@
   en: 1f69a4c52a27e7e5
   zh: e4431a252fb86f7c
 /forwork-web-app/use-this-package/starting-the-web-gui:
-  en: e3cac911f080d8ef
-  zh: 60749e9f5c39c1bc
+  en: 82675f307f126f55
+  zh: b87e39bfc2a463ad
 /forwork-web-app/use-this-package/configuration:
-  en: 9783408c07bb2a9e
-  zh: 1977dda1d6fb4780
+  en: faf02ad40ccb56b0
+  zh: cc6501951bfd87c3
 /forwork-web-app/use-this-package/listening-trust-and-public-deployments:
   en: e6ddea1d2fc40501
   zh: ff08b6fa3fc24136
 /forwork-web-app/use-this-package/running-over-ssh:
-  en: df205a26b6d49168
-  zh: e46ed7cf9e06248a
+  en: 78eac199e4d3b20c
+  zh: 9da7f56960c0e30b
 /forwork-web-app/use-this-package/per-session-agent-setup:
   en: fdf38cb6e1b24464
   zh: c14a8bcac9d4e5cd

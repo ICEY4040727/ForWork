@@ -1,7 +1,7 @@
 /**
  * The web search and fetch settings page, browser half: one provider menu per
  * capability, which writes the `web` provider selection, the Search API result
- * count over the `web-deepseek-api` namespace, and legacy Messages search's
+ * count over the `web-api` namespace, and legacy Messages search's
  * key, endpoint, and search limit over `web-search-deepseek`. The page
  * registers into the Plugins page's `plugins.item` slot while the Host serves
  * `web`; a provider's own controls appear only while the Host serves its

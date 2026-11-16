@@ -3,14 +3,14 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/util/home-paths/README.md
 /:
-  en: 412be6dc9650b620
-  zh: 2a8c5a9f8567823e
+  en: 4d3df0c09d82c8af
+  zh: 951f479e0480023d
 /forwork-home-paths:
   en: 56d54c268df87546
   zh: af74f199654d6a71
 /forwork-home-paths/summary:
-  en: c56f9858436a3995
-  zh: 09b97e051a2673fd
+  en: 71e92f56ad430cff
+  zh: 57de7484af3958f7
 /forwork-home-paths/table-of-contents:
   en: 80b31a934611cb4a
   zh: 05f3f7f9cb2fd881

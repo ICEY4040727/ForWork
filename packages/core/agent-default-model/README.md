@@ -29,7 +29,7 @@ Mount this package wherever agents are created without an explicit model route. 
 
 ### Configure the default
 
-The composition requires a provider and model. Consumers read the live references even when no configuration editor is mounted.
+No provider or model ships by default. Configure both here or through a saved selection; `currentSelection()` fails loudly until they are set. Consumers read the live references even when no configuration editor is mounted.
 
 ```yaml
 - name: '@forwork/agent-default-model'
@@ -40,8 +40,8 @@ The composition requires a provider and model. Consumers read the live reference
 
 | Field | Default | Meaning |
 |---|---|---|
-| `provider` | required | Registered provider route for fresh agents |
-| `model` | required | Provider-owned model id for fresh agents |
+| `provider` | required when unconfigured | Registered provider route for fresh agents |
+| `model` | required when unconfigured | Provider-owned model id for fresh agents |
 
 The generated [configuration catalog](../../../docs/config-catalog.md#forworkagent-default-model) lists every accepted field. `reasoningEffort` is optional; saving a selection without it removes that field from the profile’s complete config override.
 

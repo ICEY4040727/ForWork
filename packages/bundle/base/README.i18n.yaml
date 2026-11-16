@@ -3,14 +3,14 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/bundle/base/README.md
 /:
-  en: 21c1b63e74134d34
-  zh: 78c69828d5930a86
+  en: 6b408eec420f558c
+  zh: c6f66c16d2b1d1d9
 /forwork-base:
   en: ce65f9ddbc5e563d
   zh: 3b5eea9dddd82170
 /forwork-base/summary:
-  en: 5c15f68a65aadc7d
-  zh: 7ac9ace622e161ae
+  en: 93a48e6d9a99ba20
+  zh: 749fed606f51a74d
 /forwork-base/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
@@ -18,8 +18,8 @@
   en: 4c0d7045f95ff79c
   zh: 456bb24bd1d35db1
 /forwork-base/use-this-package/a-minimal-custom-profile:
-  en: a20695a51aa0c3ad
-  zh: 3e8a00ee9d0971cc
+  en: f22d7b8f5a249712
+  zh: 033e51cf35f53eca
 /forwork-base/use-this-package/what-you-get:
   en: c38eebf6558ef7d0
   zh: 37a4071b2912479f

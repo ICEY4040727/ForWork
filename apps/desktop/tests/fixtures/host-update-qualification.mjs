@@ -15,10 +15,10 @@ const project = join(root, 'project')
 const require = createRequire(join(project, 'package.json'))
 const { LlmAdapter, createUserMessage } = await import(pathToFileURL(require.resolve('@forwork/llm')).href)
 const observed = []
-const { runProfile } = await import(pathToFileURL(require.resolve('@forwork/dsh/profile-boot')).href)
+const { runProfile } = await import(pathToFileURL(require.resolve('@forwork/cli/profile-boot')).href)
 const { loadLayeredEnv, loadProfileDirectory } = await import(pathToFileURL(require.resolve('@forwork/app-boot')).href)
-const installAnchor = require.resolve('@forwork/dsh/package.json')
-const running = await runProfile({ environment: loadLayeredEnv('dsh'), profile: 'desktop',
+const installAnchor = require.resolve('@forwork/cli/package.json')
+const running = await runProfile({ environment: loadLayeredEnv('forwork'), profile: 'desktop',
   resolvedProfile: { profile: loadProfileDirectory('dsh', project, installAnchor), installAnchor },
   patchFiles: [], args: ['--no-open', '--port', '0'] })
 const host = { updateTasks: installDesktopUpdateTaskControl(running.ctx), dispose: () => running.shutdown.shutdown(0) }

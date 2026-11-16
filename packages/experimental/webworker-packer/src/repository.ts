@@ -4,7 +4,7 @@
  *
  * The library half takes all of this as parameters. Keeping the lookup here is what
  * lets the same library pack a different tree, and what keeps `pack.ts` free of
- * assumptions about pnpm workspaces or the `dsh` CLI.
+ * assumptions about pnpm workspaces or the `forwork` CLI.
  * @module @forwork/experimental-webworker-packer/src/repository
  */
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
@@ -27,7 +27,7 @@ export { packPreviewFixture } from './preview.ts'
  */
 const WORKSPACE_SCAN_ROOTS = ['vendor', 'packages', 'native/system/packages', 'apps']
 
-/** The `dsh` installation package: its manifest anchors bundle resolution, as the launcher's does. */
+/** The `forwork` installation package: its manifest anchors bundle resolution, as the launcher's does. */
 const CLI_PACKAGE = 'apps/cli'
 
 /** Diagnostic prefix for the app-boot readers this module calls. */

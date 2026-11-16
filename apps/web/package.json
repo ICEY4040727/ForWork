@@ -1,6 +1,6 @@
 {
   "name": "@forwork/web-frontend",
-  "description": "Web application entry: vite build over the @forwork/client-web shell library; dist/ served by apps/cli's dsh web",
+  "description": "Web application entry: vite build over the @forwork/client-web shell library; dist/ served by apps/cli's forwork web",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

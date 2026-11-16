@@ -45,8 +45,8 @@ export function generateOfficialBundleCatalog(root: string, names: readonly stri
     if (names.includes(name)) throw new Error(`${name}: on-demand providers must not be installed by the DSH distribution`)
     for (const dependency of manifests.get(name)?.runtime ?? []) checkInstallation(dependency)
   }
-  if (!manifests.has('@forwork/dsh')) throw new Error('Official catalog requires the DSH installation manifest')
-  checkInstallation('@forwork/dsh')
+  if (!manifests.has('@forwork/cli')) throw new Error('Official catalog requires the DSH installation manifest')
+  checkInstallation('@forwork/cli')
   return names.map((packageName) => {
     const entry = manifests.get(packageName)
     if (entry === undefined || !entry.path.startsWith('packages/') || !packageName.startsWith('@forwork/') || entry.private || !entry.bundle) {

@@ -57,7 +57,7 @@ async function host(origin: string, token: () => string | undefined = () => 'fix
 }
 
 it('keeps discovery and disposal independent across the two credential routes', async () => {
-  vi.stubEnv('DEEPSEEK_API_KEY', 'fixture-api-key')
+  vi.stubEnv('FORWORK_API_KEY', 'fixture-api-key')
   const server = await listing(json({ data: [FLASH, PRO] }))
   let token: string | undefined = 'fixture-account-token'
   const ctx = await host(server.origin, () => token)
@@ -65,18 +65,18 @@ it('keeps discovery and disposal independent across the two credential routes', 
   await account
   const official = ctx.plugin(ApiKey, { models: [{ id: 'api-key-model', name: 'API-key model' }] })
   await official
-  expect((await ctx.llm.listModels('deepseek-account')).map(row => [row.id, row.name])).toEqual([
+  expect((await ctx.llm.listModels('account')).map(row => [row.id, row.name])).toEqual([
     ['deepseek-flash', 'DeepSeek-V4.1-Flash'], ['deepseek-v4-pro', 'DeepSeek-V4-Pro'],
   ])
   expect((await ctx.llm.listModels('deepseek-official')).map(row => row.id)).toEqual(['api-key-model'])
   expect(ctx.llm.listConfigurableProviders().map(row => [row.provider, row.settingsNs])).toEqual([
-    ['deepseek-account', 'llm-deepseek-account'], ['deepseek-official', 'llm-deepseek-api-key'],
+    ['account', 'llm-deepseek-account'], ['deepseek-official', 'llm-deepseek-api-key'],
   ])
   expect(Account.Config({})).not.toHaveProperty('apiKeyEnv')
   token = undefined
-  expect(await ctx.llm.listModels('deepseek-account')).toEqual([])
+  expect(await ctx.llm.listModels('account')).toEqual([])
   token = 'second-account-token'
-  expect(await ctx.llm.listModels('deepseek-account')).toHaveLength(2)
+  expect(await ctx.llm.listModels('account')).toHaveLength(2)
   expect(server.requests.map(request => request.headers['x-dsh-auth-token'])).toEqual(['fixture-account-token', 'second-account-token'])
   await account.dispose()
   expect(ctx.llm.listProviders().map(row => row.id)).toEqual(['deepseek-official'])
@@ -88,12 +88,12 @@ it('resolves listed capabilities with this build\'s model knowledge', async () =
   const server = await listing(json({ data: [FLASH, PRO] }))
   const ctx = await host(server.origin)
   await ctx.plugin(Account, { baseURL: server.baseURL })
-  await expect(ctx.llm.resolveModelInfo('deepseek-account', 'deepseek-flash')).resolves.toMatchObject({
+  await expect(ctx.llm.resolveModelInfo('account', 'deepseek-flash')).resolves.toMatchObject({
     name: 'DeepSeek-V4.1-Flash', context: { contextWindow: 1_048_576 }, defaultMaxTokens: 256_000,
     systemPromptUpdate: 'in-history', toolUpdate: 'addition-only', inputModalities: ['text', 'image'],
     reasoning: { defaultEffort: ReasoningEffortId('high') },
   })
-  await expect(ctx.llm.resolveModelInfo('deepseek-account', 'deepseek-v4-pro')).resolves.not.toHaveProperty('systemPromptUpdate')
+  await expect(ctx.llm.resolveModelInfo('account', 'deepseek-v4-pro')).resolves.not.toHaveProperty('systemPromptUpdate')
   expect(server.requests).toHaveLength(1)
   expect(server.requests[0]?.headers['user-agent']).toMatch(/^deepseek-harness\//)
 })
@@ -103,7 +103,7 @@ it('advertises the badges its listing declares', async () => {
   const server = await listing(json({ data: [{ ...FLASH, client_metadata: { 'deepseek-harness': { badge } } }, PRO] }))
   const ctx = await host(server.origin)
   await ctx.plugin(Account, { baseURL: server.baseURL })
-  expect((await ctx.llm.listModels('deepseek-account')).map(row => [row.id, row.badge])).toEqual([
+  expect((await ctx.llm.listModels('account')).map(row => [row.id, row.badge])).toEqual([
     ['deepseek-flash', badge], ['deepseek-v4-pro', undefined],
   ])
 })
@@ -123,12 +123,12 @@ it('publishes an account badge removal after the default idle refresh interval',
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
   try {
     await ctx.plugin(Account, { baseURL: server.baseURL })
-    expect((await ctx.llm.listModels('deepseek-account'))[0]?.badge?.text).toBe('New')
+    expect((await ctx.llm.listModels('account'))[0]?.badge?.text).toBe('New')
     badge = undefined
     await vi.advanceTimersByTimeAsync(600_000)
     await refreshed.promise
-    expect(changes).toEqual(['deepseek-account', 'deepseek-account'])
-    expect((await ctx.llm.listModels('deepseek-account'))[0]).not.toHaveProperty('badge')
+    expect(changes).toEqual(['account', 'account'])
+    expect((await ctx.llm.listModels('account'))[0]).not.toHaveProperty('badge')
     expect(server.requests).toHaveLength(2)
   } finally {
     try { await ctx.fiber.dispose() }
@@ -141,9 +141,9 @@ it('falls back to the bundled catalog when the listing fails', async () => {
   const server = await listing((_request, response) => { response.writeHead(503).end('down') })
   const ctx = await host(server.origin)
   await ctx.plugin(Account, { baseURL: server.baseURL })
-  expect((await ctx.llm.listModels('deepseek-account')).map(row => row.id)).toEqual(['deepseek-flash', 'deepseek-v4-pro'])
+  expect((await ctx.llm.listModels('account')).map(row => row.id)).toEqual(['deepseek-flash', 'deepseek-v4-pro'])
   expect(warn).toHaveBeenCalledExactlyOnceWith('[llm-deepseek-account]', expect.stringContaining('using the bundled catalog') as string)
-  await expect(ctx.llm.resolveModelInfo('deepseek-account', 'deepseek-flash')).resolves.toMatchObject({ context: { contextWindow: 1_048_576 } })
+  await expect(ctx.llm.resolveModelInfo('account', 'deepseek-flash')).resolves.toMatchObject({ context: { contextWindow: 1_048_576 } })
 })
 
 it('hides and refuses listed models this build cannot serve before any inference request', async () => {
@@ -158,12 +158,12 @@ it('hides and refuses listed models this build cannot serve before any inference
   ] }))
   const ctx = await host(server.origin)
   await ctx.plugin(Account, { baseURL: server.baseURL })
-  expect((await ctx.llm.listModels('deepseek-account')).map(row => row.id)).toEqual(['deepseek-flash', 'deepseek-v5-open'])
-  await expect(ctx.llm.prepareCall({ provider: 'deepseek-account', model: 'deepseek-v5' })).rejects.toMatchObject({ code: 'MODEL_UNSUPPORTED' })
-  await expect(ctx.llm.prepareCall({ provider: 'deepseek-account', model: 'deepseek-v4-pro' })).rejects.toMatchObject({ code: 'MODEL_UNSUPPORTED' })
-  await expect(ctx.llm.prepareCall({ provider: 'deepseek-account', model: 'deepseek-v5-next' }))
-    .rejects.toMatchObject({ code: 'CLIENT_UPGRADE_REQUIRED', message: expect.stringMatching(/requires DeepSeek Harness 99\.0\.0-alpha\.1 or later; current version is /) as string })
-  await expect(ctx.llm.prepareCall({ provider: 'deepseek-account', model: 'unlisted-pass-through' })).resolves.toBeDefined()
+  expect((await ctx.llm.listModels('account')).map(row => row.id)).toEqual(['deepseek-flash', 'deepseek-v5-open'])
+  await expect(ctx.llm.prepareCall({ provider: 'account', model: 'deepseek-v5' })).rejects.toMatchObject({ code: 'MODEL_UNSUPPORTED' })
+  await expect(ctx.llm.prepareCall({ provider: 'account', model: 'deepseek-v4-pro' })).rejects.toMatchObject({ code: 'MODEL_UNSUPPORTED' })
+  await expect(ctx.llm.prepareCall({ provider: 'account', model: 'deepseek-v5-next' }))
+    .rejects.toMatchObject({ code: 'CLIENT_UPGRADE_REQUIRED', message: expect.stringMatching(/requires ForWork 99\.0\.0-alpha\.1 or later; current version is /) as string })
+  await expect(ctx.llm.prepareCall({ provider: 'account', model: 'unlisted-pass-through' })).resolves.toBeDefined()
   expect(server.requests.map(request => request.url)).toEqual(['/models'])
   expect(diagnostic).toHaveBeenCalledExactlyOnceWith('[llm-deepseek-account]', expect.stringContaining('loaded 5 model(s), skipped 0 row(s)') as string)
   expect(warn).toHaveBeenCalledExactlyOnceWith('[llm-deepseek-account]', 'model "deepseek-v4-pro" declares no api_capabilities.anthropic_messages')
@@ -177,15 +177,15 @@ it('applies model overrides and reports stale ones on the provider directory unt
   })
   const ctx = await host(server.origin, () => token)
   await ctx.plugin(Account, { baseURL: server.baseURL, modelOverrides: { 'deepseek-flash': { contextWindow: 524_288 }, 'deepseek-v5': { contextWindow: 9 } } })
-  await ctx.llm.listModels('deepseek-account')
-  await expect(ctx.llm.resolveModelInfo('deepseek-account', 'deepseek-flash')).resolves.toMatchObject({ context: { contextWindow: 524_288 } })
+  await ctx.llm.listModels('account')
+  await expect(ctx.llm.resolveModelInfo('account', 'deepseek-flash')).resolves.toMatchObject({ context: { contextWindow: 524_288 } })
   expect(ctx.llm.listConfigurableProviders()[0]?.error).toContain('"deepseek-v5"')
-  await ctx.llm.listModels('deepseek-account')
+  await ctx.llm.listModels('account')
   expect(ctx.llm.listConfigurableProviders()[0]?.error).toContain('"deepseek-v5"')
   token = 'second-account'
-  await ctx.llm.listModels('deepseek-account')
+  await ctx.llm.listModels('account')
   expect(ctx.llm.listConfigurableProviders()[0]).not.toHaveProperty('error')
-  await expect(ctx.llm.resolveModelInfo('deepseek-account', 'deepseek-v5')).resolves.toMatchObject({ context: { contextWindow: 9 } })
+  await expect(ctx.llm.resolveModelInfo('account', 'deepseek-v5')).resolves.toMatchObject({ context: { contextWindow: 9 } })
 })
 
 it('rejects the retired models setting at load', async () => {
@@ -200,7 +200,7 @@ it('aborts an in-flight listing request when the plugin is disposed', async () =
   const ctx = await host(server.origin)
   const account = ctx.plugin(Account, { baseURL: server.baseURL })
   await account
-  const pending = ctx.llm.listModels('deepseek-account')
+  const pending = ctx.llm.listModels('account')
   const request = await held.promise
   const closed = new Promise(resolve => request.socket.once('close', resolve))
   await account.dispose()

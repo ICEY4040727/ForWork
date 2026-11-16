@@ -1,6 +1,6 @@
 {
   "name": "@forwork/goal",
-  "description": "Event-sourced same-session goal state and lifecycle service for the DeepSeek Harness",
+  "description": "Event-sourced same-session goal state and lifecycle service for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

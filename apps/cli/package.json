@@ -1,6 +1,6 @@
 {
-  "name": "@forwork/dsh",
-  "description": "dsh CLI: profile launch, plugin management, and configuration inspection",
+  "name": "@forwork/cli",
+  "description": "forwork CLI: profile launch, plugin management, and configuration inspection",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"
@@ -12,7 +12,7 @@
   },
   "type": "module",
   "bin": {
-    "dsh": "lib/bin.js"
+    "forwork": "lib/bin.js"
   },
   "files": [
     "lib/*.js",

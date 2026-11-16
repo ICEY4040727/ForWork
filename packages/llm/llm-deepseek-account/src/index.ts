@@ -15,7 +15,7 @@ export { Config, plainAccountOptions, resolveAccountOptions } from './config.ts'
 export const name = 'llm-deepseek-account'
 export const inject = ['llm']
 
-const PROVIDER = 'deepseek-account'
+const PROVIDER = 'account'
 /** Header carrying the account token on Messages, Files, and model-listing requests. */
 const TOKEN_HEADER = 'x-dsh-auth-token'
 /** Console tag of listing diagnostics; product profiles mount no console exporter for `ctx.logger`. */

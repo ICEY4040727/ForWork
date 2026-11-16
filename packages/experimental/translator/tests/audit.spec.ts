@@ -19,7 +19,7 @@ afterEach(async () => {
   if (failures.length > 0) throw new AggregateError(failures, 'Paid storage fixture teardown failed')
 })
 
-const providers = ['deepseek-account', 'deepseek-official'] as const
+const providers = ['account', 'deepseek-official'] as const
 const requests = (events: readonly SessionEvent[]) => events.filter(event => pluginRecordOf(event)?.type === 'plugin:translator/request')
 const results = (events: readonly SessionEvent[]) => events.filter(event => pluginRecordOf(event)?.type === 'plugin:translator/result')
 

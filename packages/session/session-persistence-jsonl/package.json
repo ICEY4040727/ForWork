@@ -1,6 +1,6 @@
 {
   "name": "@forwork/session-persistence-jsonl",
-  "description": "JSONL durable session persistence backend for the DeepSeek Harness",
+  "description": "JSONL durable session persistence backend for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

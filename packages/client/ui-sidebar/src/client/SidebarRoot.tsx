@@ -345,7 +345,7 @@ export function SidebarRoot({
                 })}
               </span>
               <span className={css.brandName}>
-                {renderSlot('sidebar.brand.name', {}, {
+                {renderSlot('sidebar.brand.name', { t }, {
                   fallback: buildVersion === undefined
                     ? <span className={css.fallbackBrandName}>{t('brand.localBuild')}</span>
                     : (

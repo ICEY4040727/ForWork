@@ -52,7 +52,7 @@ const WAIT_POLL_INTERVAL_MS = 10
  * profiles offer `web_search` only while a DeepSeek search key is configured and recordings ran
  * with a real key, so a replay supplies a placeholder instead of whatever the runner exports.
  */
-export const REPLAY_CREDENTIAL_ENV: Readonly<Record<string, string>> = { DEEPSEEK_API_KEY: 'snapshot-replay-key' }
+export const REPLAY_CREDENTIAL_ENV: Readonly<Record<string, string>> = { FORWORK_API_KEY: 'snapshot-replay-key' }
 
 /**
  * One step of a scenario's deterministic input script (`input.json`). The

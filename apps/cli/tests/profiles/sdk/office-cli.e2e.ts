@@ -20,7 +20,7 @@ const carrier = process.env.DSH_OFFICE_TEST_CARRIER ?? 'npm'
 const executable = process.env.DSH_OFFICE_TEST_EXECUTABLE ?? process.execPath
 const entry = process.env.DSH_OFFICE_TEST_ENTRY ?? join(repo, 'apps/cli/lib/bin.js')
 
-it.skipIf(!process.env.DEEPSEEK_API_KEY || process.platform === 'win32')(`agent discovers and executes the ${carrier} Office CLI without Node on PATH`, async () => {
+it.skipIf(!process.env.FORWORK_API_KEY || process.platform === 'win32')(`agent discovers and executes the ${carrier} Office CLI without Node on PATH`, async () => {
   const root = await mkdtemp(join(tmpdir(), 'dsh office discovery '))
   try {
     await writeFile(join(root, 'input.docx'), zipSync({
@@ -32,7 +32,7 @@ it.skipIf(!process.env.DEEPSEEK_API_KEY || process.platform === 'win32')(`agent 
     const node = process.env.DSH_OFFICE_TEST_NODE, cli = process.env.DSH_OFFICE_TEST_CLI
     const assetRoot = process.env.DSH_OFFICE_TEST_ASSETS
     await writeFile(patch, JSON.stringify([
-      ...(process.env.DSH_OFFICE_TEST_API === 'openai-completions' ? [{ id: 'llm-deepseek', disabled: true }, { id: 'llm-pi-ai', config: { providers: { 'office-test': { api: 'openai-completions', apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: process.env.DEEPSEEK_BASE_URL, compat: { thinkingFormat: 'deepseek' }, models: [{ id: process.env.MODEL_NAME ?? 'deepseek-v4-flash', contextWindow: 128000, maxTokens: 8000 }] } } } }] : []),
+      ...(process.env.DSH_OFFICE_TEST_API === 'openai-completions' ? [{ id: 'llm-deepseek', disabled: true }, { id: 'llm-pi-ai', config: { providers: { 'office-test': { api: 'openai-completions', apiKeyEnv: 'FORWORK_API_KEY', baseURL: process.env.FORWORK_BASE_URL, compat: { thinkingFormat: 'deepseek' }, models: [{ id: process.env.MODEL_NAME ?? 'deepseek-v4-flash', contextWindow: 128000, maxTokens: 8000 }] } } } }] : []),
       { id: 'session-persistence-jsonl', config: { root: join(root, 'sessions'), compression: 'none' } },
       { id: 'skill-office', disabled: false },
       { id: 'skill-office', config: { ...assetRoot === undefined ? {} : { assetRoot }, ...node === undefined ? {} : { node }, ...cli === undefined ? {} : { cli } } },

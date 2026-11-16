@@ -1,6 +1,6 @@
 {
   "name": "@forwork/session-stats",
-  "description": "Whole-log conversation counts and wall times projection (sessionStats) for the DeepSeek Harness",
+  "description": "Whole-log conversation counts and wall times projection (sessionStats) for the ForWork",
   "version": "0.2.2-rc.1",
   "publishConfig": {
     "access": "public"

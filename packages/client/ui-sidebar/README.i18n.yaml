@@ -3,13 +3,13 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-sidebar/README.md
 /:
-  en: 7884381c2c554eca
+  en: d49e58f48b820e24
   zh: e6d7199a9bb2f0f8
 /forwork-client-ui-sidebar:
   en: 8565ed9e0d2e8934
   zh: 103028ff46bf2394
 /forwork-client-ui-sidebar/summary:
-  en: af17f03561e5372b
+  en: b0bf5994912d94bd
   zh: 91a1b9f6c7a51025
 /forwork-client-ui-sidebar/table-of-contents:
   en: d152484eb41ac6b4

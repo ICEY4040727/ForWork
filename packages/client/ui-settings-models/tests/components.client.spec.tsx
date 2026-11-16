@@ -100,7 +100,7 @@ function wireNamespaces(): SettingsNamespaceView[] {
       ns: 'llm-deepseek',
       schema: JSON.parse(JSON.stringify(DeepSeekConfig.toJSON())) as JsonValue,
       value: {
-        apiKeyEnv: 'DEEPSEEK_API_KEY',
+        apiKeyEnv: 'FORWORK_API_KEY',
         baseURL: 'https://base',
         defaultContextWindow: 1_000_000,
         maxTokens: 256_000,
@@ -166,7 +166,7 @@ type RefusalCode = 'credential/rejected' | 'gateway/internal' | 'settings/confli
 
 /** One refusal per code, each carrying the details its own code declares. */
 const REFUSALS: { [Code in RefusalCode]: (message: string) => RemoteError<Code> } = {
-  'credential/rejected': message => new RemoteError('credential/rejected', message, { ref: 'DEEPSEEK_API_KEY' }),
+  'credential/rejected': message => new RemoteError('credential/rejected', message, { ref: 'FORWORK_API_KEY' }),
   'gateway/internal': message => new RemoteError('gateway/internal', message, {}),
   'settings/conflict': message =>
     new RemoteError('settings/conflict', message, { ns: 'llm-pi-ai', expected: 4, actual: 5 }),
@@ -378,7 +378,7 @@ describe('ModelsSection', () => {
     const before = controller.store.getSnapshot().namespaces.get('llm-deepseek')!
     mirror.acceptView({
       ...before,
-      value: { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: 'https://current.example', models: DEFAULT_DEEPSEEK_MODELS },
+      value: { apiKeyEnv: 'FORWORK_API_KEY', baseURL: 'https://current.example', models: DEFAULT_DEEPSEEK_MODELS },
       user: { baseURL: 'https://current.example' },
       revision: 1,
     })
@@ -426,7 +426,7 @@ describe('ModelsSection', () => {
     const before = controller.store.getSnapshot().namespaces.get('llm-deepseek')!
     mirror.acceptView({
       ...before,
-      value: { apiKeyEnv: 'DEEPSEEK_API_KEY', baseURL: 'https://recovered.example', models: DEFAULT_DEEPSEEK_MODELS },
+      value: { apiKeyEnv: 'FORWORK_API_KEY', baseURL: 'https://recovered.example', models: DEFAULT_DEEPSEEK_MODELS },
       user: { baseURL: 'https://recovered.example' },
       revision: 2,
     })
@@ -557,7 +557,7 @@ describe('ModelsSection', () => {
   })
 
   it('waits for saved credential confirmation before removing its managed key', async () => {
-    const configured = new Set(['DEEPSEEK_API_KEY'])
+    const configured = new Set(['FORWORK_API_KEY'])
     const set = vi.fn((ref: string) => { configured.add(ref); return Promise.resolve(remoteOk(undefined)) })
     const scripted = scriptedFace({ set })
     const read = Promise.withResolvers<RemoteResult<Record<string, CredentialInfo>>>()
@@ -585,7 +585,7 @@ describe('ModelsSection', () => {
       fireEvent.click(remove)
       expect(screen.queryByRole('dialog', { name: openaiCopy(en.deleteTitle) })).toBeNull()
       holdJoin = false
-      await act(async () => { read.resolve(answer(['DEEPSEEK_API_KEY', 'OPENAI_API_KEY'])) })
+      await act(async () => { read.resolve(answer(['FORWORK_API_KEY', 'OPENAI_API_KEY'])) })
       await screen.findByText(openaiCopy(en.savedProvider))
       fireEvent.click(remove)
       const dialog = screen.getByRole('dialog', { name: openaiCopy(en.deleteTitle) })
@@ -596,7 +596,7 @@ describe('ModelsSection', () => {
       await waitFor(() => { expect(screen.queryByRole('dialog', { name: openaiCopy(en.deleteTitle) })).toBeNull() })
     } finally {
       holdJoin = false
-      await act(async () => { read.resolve(answer(['DEEPSEEK_API_KEY', 'OPENAI_API_KEY'])) })
+      await act(async () => { read.resolve(answer(['FORWORK_API_KEY', 'OPENAI_API_KEY'])) })
     }
   })
 
@@ -652,7 +652,7 @@ describe('ModelsSection', () => {
       { provider: 'deepseek-official', displayName: 'DeepSeek', settingsNs: 'llm-deepseek', settingsPath: [], error: failure },
     ]))
     scripted.face.credentials.describe.mockResolvedValue(remoteOk({
-      DEEPSEEK_API_KEY: { configured: false, writable: true },
+      FORWORK_API_KEY: { configured: false, writable: true },
     }))
     await mountFace(scripted)
 
@@ -832,7 +832,7 @@ describe('ModelsSection', () => {
     const key = screen.getByLabelText<HTMLInputElement>(en.keyInput)
     fireEvent.change(key, { target: { value: '  sk-live  ' } })
     fireEvent.click(screen.getByText(en.apply))
-    await waitFor(() => { expect(set).toHaveBeenCalledWith('DEEPSEEK_API_KEY', 'sk-live') })
+    await waitFor(() => { expect(set).toHaveBeenCalledWith('FORWORK_API_KEY', 'sk-live') })
     expect(mutate).not.toHaveBeenCalled()
     // The saved key re-loads the join; the settings answer rides the shared
     // mirror, so the reload shows as a directory read rather than a describe.
@@ -892,7 +892,7 @@ describe('ModelsSection', () => {
     fireEvent.click(save)
 
     expect(await screen.findByText(en.onboardingSaving)).toBeTruthy()
-    expect(set).toHaveBeenCalledWith('DEEPSEEK_API_KEY', 'sk-onboarding')
+    expect(set).toHaveBeenCalledWith('FORWORK_API_KEY', 'sk-onboarding')
     expect(mutate).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
 
@@ -912,7 +912,7 @@ describe('ModelsSection', () => {
     const baseURL = screen.getByLabelText<HTMLInputElement>(en.baseUrl)
     // The deepseek placeholder is pinned to the public endpoint, not the
     // effective value (which may reflect a launch-environment override).
-    expect(baseURL.placeholder).toBe('https://api.deepseek.com/anthropic (Default to use DEEPSEEK_BASE_URL)')
+    expect(baseURL.placeholder).toBe('https://api.deepseek.com/anthropic (Default to use FORWORK_BASE_URL)')
     fireEvent.change(baseURL, { target: { value: 'https://next2' } })
     fireEvent.click(screen.getByText(en.apply))
     await waitFor(() => { expect(mutate).toHaveBeenCalledTimes(1) })
@@ -964,7 +964,7 @@ describe('ModelsSection', () => {
     const namespace: SettingsNamespaceView = {
       ...wireNamespaces()[0]!,
       ns: 'llm-deepseek',
-      value: { apiKeyEnv: 'DEEPSEEK_API_KEY', models: DEFAULT_DEEPSEEK_MODELS },
+      value: { apiKeyEnv: 'FORWORK_API_KEY', models: DEFAULT_DEEPSEEK_MODELS },
       user: {},
     }
     const { face, mutate, set } = scriptedFace({
@@ -984,14 +984,14 @@ describe('ModelsSection', () => {
     />)
     fireEvent.click(screen.getByText(en.customized))
     expect(screen.getByLabelText<HTMLInputElement>(en.baseUrl).placeholder)
-      .toBe('https://api.deepseek.com/anthropic (Default to use DEEPSEEK_BASE_URL)')
+      .toBe('https://api.deepseek.com/anthropic (Default to use FORWORK_BASE_URL)')
     expect(screen.queryByLabelText(en.customApi)).toBeNull()
     expect(screen.getByText(en.deepSeekEndpointHint)).toBeTruthy()
     fireEvent.change(screen.getByLabelText(en.keyInput), { target: { value: 'sk-messages-test' } })
     fireEvent.change(screen.getByLabelText(en.baseUrl), { target: { value: 'https://messages.example/anthropic' } })
     fireEvent.change(screen.getByLabelText(`${en.modelName} 1`), { target: { value: 'Messages Flash' } })
     fireEvent.click(screen.getByText(en.apply))
-    await waitFor(() => { expect(set).toHaveBeenCalledWith('DEEPSEEK_API_KEY', 'sk-messages-test') })
+    await waitFor(() => { expect(set).toHaveBeenCalledWith('FORWORK_API_KEY', 'sk-messages-test') })
     expect(mutate.mock.calls).toEqual([[
       'llm-deepseek',
       [
@@ -1396,7 +1396,7 @@ describe('ModelsSection', () => {
     />)
     fireEvent.click(screen.getByText(en.customized))
     const baseURL = screen.getByLabelText<HTMLInputElement>(en.baseUrl)
-    expect(baseURL.placeholder).toBe('https://api.deepseek.com/anthropic (Default to use DEEPSEEK_BASE_URL)')
+    expect(baseURL.placeholder).toBe('https://api.deepseek.com/anthropic (Default to use FORWORK_BASE_URL)')
     fireEvent.change(baseURL, { target: { value: 'https://x' } })
     expect(baseURL.value).toBe('https://x')
     fireEvent.change(baseURL, { target: { value: '' } })
@@ -1591,7 +1591,7 @@ describe('ModelsSection', () => {
       renderSlot={() => null}
     />)
     const key = await screen.findByLabelText<HTMLInputElement>(en.keyInput)
-    expect(key.placeholder).toBe(en.keyPlaceholderFallback.replace('{hint}', 'DEEPSEEK_API_KEY'))
+    expect(key.placeholder).toBe(en.keyPlaceholderFallback.replace('{hint}', 'FORWORK_API_KEY'))
   })
 
   it('tells the user to reopen when another writer moved the namespace first', async () => {
@@ -2184,7 +2184,7 @@ describe('apiKeyFailure', () => {
   })
 
   it.each([
-    ['a pasted environment line', 'DEEPSEEK_API_KEY=sk-abc'],
+    ['a pasted environment line', 'FORWORK_API_KEY=sk-abc'],
     ['double quotes', '"sk-abc"'],
     ['single quotes', '\'sk-abc\''],
     ['backticks', '`sk-abc`'],
@@ -2375,13 +2375,13 @@ it('shows endpoint configuration variables without presenting them as credential
 
 it.each([true, false, undefined])('shows the confirmed fallback state without assuming a connection works: %s', (configured) => {
   renderPiAiEditor('deepseek', wireNamespaces().find(view => view.ns === 'llm-pi-ai')!, {
-    nativeAuth: { env: ['DEEPSEEK_API_KEY'], oauth: false },
-    ...configured === undefined ? {} : { credentialChecks: { DEEPSEEK_API_KEY: { configured, writable: true } } },
+    nativeAuth: { env: ['FORWORK_API_KEY'], oauth: false },
+    ...configured === undefined ? {} : { credentialChecks: { FORWORK_API_KEY: { configured, writable: true } } },
   })
   const input = screen.getByLabelText<HTMLInputElement>(en.keyInput)
-  expect(input.placeholder).toBe(en.keyPlaceholderFallback.replace('{hint}', 'DEEPSEEK_API_KEY'))
-  const hint = configured === true ? en.keyFallbackDetected.replace('{hint}', 'DEEPSEEK_API_KEY')
-    : configured === false ? en.keyFallbackMissing.replace('{hint}', 'DEEPSEEK_API_KEY') : en.keyFallbackUnchecked
+  expect(input.placeholder).toBe(en.keyPlaceholderFallback.replace('{hint}', 'FORWORK_API_KEY'))
+  const hint = configured === true ? en.keyFallbackDetected.replace('{hint}', 'FORWORK_API_KEY')
+    : configured === false ? en.keyFallbackMissing.replace('{hint}', 'FORWORK_API_KEY') : en.keyFallbackUnchecked
   expect(screen.getByText(hint).getAttribute('role')).toBeNull()
   expect(document.getElementById(input.getAttribute('aria-describedby')!)?.textContent).toBe(hint)
   fireEvent.change(input, { target: { value: 'new-key' } })
@@ -2418,7 +2418,7 @@ it('renders the localized account row as signed in without an edit action', asyn
   const { controller } = await mountFace(scripted)
   const row = controller.store.getSnapshot().rows[0]!
   await act(async () => { controller.store.update((state) => {
-    state.rows = [{ ...row, accountAvailable: true, entry: { ...row.entry, provider: 'deepseek-account' } }]
+    state.rows = [{ ...row, accountAvailable: true, entry: { ...row.entry, provider: 'account' } }]
   }) })
   const item = screen.getByText(en.deepSeekAccount).closest('li')!
   expect(within(item).getByText(en.accountSignedIn)).toBeTruthy()

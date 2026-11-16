@@ -18,11 +18,11 @@
   en: e68bfcde70f845b4
   zh: 73e5c4fb067c4fa1
 /package-surface-rules/internal-dependency-syntax-follows-the-package-family:
-  en: 8401c4ec73890a8f
-  zh: 20843f1173ff3235
+  en: 519b5c65c0154201
+  zh: 9b6afa15e98ba621
 /package-surface-rules/a-new-resolve-hook-is-refused-outright:
-  en: b420ae3e228432d5
-  zh: 0c49c4a9c3a5262c
+  en: 5ead53b03d56522f
+  zh: 0ce989202632787d
 /package-surface-rules/package-modules-do-not-await-at-module-scope:
   en: 29a58b3f804be042
   zh: 8a83a21366dac897

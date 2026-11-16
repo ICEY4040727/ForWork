@@ -851,6 +851,9 @@ importers:
       '@forwork/app-boot':
         specifier: workspace:*
         version: link:../../packages/boot/app-boot
+      '@forwork/cli':
+        specifier: workspace:*
+        version: link:../cli
       '@forwork/client-connection':
         specifier: workspace:*
         version: link:../../packages/client/connection
@@ -860,9 +863,6 @@ importers:
       '@forwork/deepseek-account':
         specifier: workspace:*
         version: link:../../packages/credentials/deepseek-account
-      '@forwork/dsh':
-        specifier: workspace:*
-        version: link:../cli
       '@forwork/home-paths':
         specifier: workspace:*
         version: link:../../packages/util/home-paths
@@ -2698,9 +2698,9 @@ importers:
       '@forwork/web':
         specifier: workspace:*
         version: link:../../web/web
-      '@forwork/web-deepseek-api':
+      '@forwork/web-api':
         specifier: workspace:*
-        version: link:../../web/web-deepseek-api
+        version: link:../../web/web-api
       '@forwork/web-fetch-http':
         specifier: workspace:*
         version: link:../../web/web-fetch-http
@@ -14397,7 +14397,7 @@ importers:
 
   packages/sdk/client:
     dependencies:
-      '@forwork/dsh':
+      '@forwork/cli':
         specifier: workspace:*
         version: link:../../../apps/cli
     devDependencies:
@@ -17969,9 +17969,9 @@ importers:
       '@forwork/web':
         specifier: workspace:*
         version: link:../web
-      '@forwork/web-deepseek-api':
+      '@forwork/web-api':
         specifier: workspace:*
-        version: link:../web-deepseek-api
+        version: link:../web-api
       '@forwork/web-fetch-http':
         specifier: workspace:*
         version: link:../web-fetch-http
@@ -17998,7 +17998,7 @@ importers:
         specifier: workspace:*
         version: link:../../llm/llm
 
-  packages/web/web-deepseek-api:
+  packages/web/web-api:
     dependencies:
       '@forwork/schemastery':
         specifier: link:../../../vendor/schemastery
@@ -18357,6 +18357,9 @@ importers:
       '@forwork/brand':
         specifier: workspace:*
         version: link:../../packages/util/brand
+      '@forwork/cli':
+        specifier: workspace:*
+        version: link:../../apps/cli
       '@forwork/client-connection':
         specifier: workspace:*
         version: link:../../packages/client/connection
@@ -18423,9 +18426,6 @@ importers:
       '@forwork/deepseek-llm-api-extensions':
         specifier: workspace:*
         version: link:../../packages/llm/deepseek-llm-api-extensions
-      '@forwork/dsh':
-        specifier: workspace:*
-        version: link:../../apps/cli
       '@forwork/file-reference':
         specifier: workspace:*
         version: link:../../packages/context/file-reference

@@ -46,7 +46,7 @@ SDK 场景会比对 `scripts/snapshots/python-sdk-single-exe/` 下已提交的�
 
 可信拉取请求与 master 推送还会在各自选定的原生目标上运行 `--scenario sdk-live --installed-wheel`。该场景面向 `https://api.deepseek.com` 执行两个使用工具的轮次：立即检查已创建文件，将其内容替换为仅宿主知道的随机挑战值，并要求第二轮将变更后的内容复制到全新的回执文件，且不修改源文件。两个轮次都必须完成、返回精确的哨兵答案并由模型请求调用工具；文件通过外部逐字节比较验证。仓库密钥缺失时失败，而不是自行 skip。Fork 与 Dependabot 拉取请求会运行完整的 keyless 安装后 wheel 路径，但不会获得密钥。
 
-交互式冒烟测试需要环境变量或仓库根目录 `.env` 中存在 `DEEPSEEK_API_KEY`：
+交互式冒烟测试需要环境变量或仓库根目录 `.env` 中存在 `FORWORK_API_KEY`：
 
 ```python
 from deepseek_harness import DeepSeekHarness
@@ -59,14 +59,14 @@ with DeepSeekHarness(dsh_home="/absolute/path/to/test-dsh-home") as harness:
 
 ## 针对 Node 源码运行
 
-仓库贡献者可以选择以下任一开发路径；两者都执行普通的 `dsh --profile sdk` 启动器：
+仓库贡献者可以选择以下任一开发路径；两者都执行普通的 `forwork --profile sdk` 启动器：
 
 - 设置 `DSH_RUNTIME_MODE=node`，在系统 Node `>=24.9` 上使用已构建的 Node 载体。构建脚本会刷新该载体，但分发物绝不会包含或自动选择它。
 - 将 `dsh_bin` 设置为已构建 `apps/cli/lib/bin.js` 的绝对路径，直接验证当前 checkout 的 CLI。请显式提供 `dsh_home`，并按需提供 `profile` 与有序 `patches`。
 
 `python/sdk/tests/manual_sdk_agent_smoke.py` 使用内部 `_launch_args` 测试适配器，通过 tsx 验证未构建的 TypeScript CLI。公开 SDK 刻意不提供任意 argv 替换。
 
-手动[关闭示例](sdk/tests/manual_sdk_shutdown_smoke.py)只使用普通 SDK 调用：运行一轮真实模型短对话，以默认 1 秒预算立即关闭，再启动另一个运行时恢复同一会话。安装 SDK／运行时并设置 `DEEPSEEK_API_KEY` 后运行：
+手动[关闭示例](sdk/tests/manual_sdk_shutdown_smoke.py)只使用普通 SDK 调用：运行一轮真实模型短对话，以默认 1 秒预算立即关闭，再启动另一个运行时恢复同一会话。安装 SDK／运行时并设置 `FORWORK_API_KEY` 后运行：
 
 ```sh
 python python/sdk/tests/manual_sdk_shutdown_smoke.py

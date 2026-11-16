@@ -13,7 +13,7 @@ it.each([false, true])('settles startup after parent IPC disconnect (boot failur
   const modules = join(root, 'node_modules', '@forwork')
   const hostDirectory = fileURLToPath(new URL('../../desktop-host/', import.meta.url))
   const manifest = JSON.parse(readFileSync(join(hostDirectory, 'package.json'), 'utf8')) as { dependencies: Record<string, string> }
-  const stubbed = new Set(['@forwork/app-boot', '@forwork/dsh', '@forwork/home-paths'])
+  const stubbed = new Set(['@forwork/app-boot', '@forwork/cli', '@forwork/home-paths'])
   for (const name of Object.keys(manifest.dependencies)) {
     const destination = join(root, 'node_modules', name)
     mkdirSync(dirname(destination), { recursive: true })

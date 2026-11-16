@@ -186,7 +186,7 @@ export async function paidFixture(cleanups: Array<() => Promise<void>>, options:
     await ctx.sessionPersistence.create(session.header)
     await ctx.sessions.flush(session)
   }
-  const translate = (provider: 'deepseek-account' | 'deepseek-official', text = 'Original paragraph', signal?: AbortSignal) =>
+  const translate = (provider: 'account' | 'deepseek-official', text = 'Original paragraph', signal?: AbortSignal) =>
     ctx.translator.translate(ctx.translator.resolve({ text, targetLanguage: 'zh', provider,
       ...session === undefined ? {} : { sessionId: session.id } }), signal)
   return { get ctx() { return ctx }, get session() { return session }, root, requests, errors, translate, readEvents,

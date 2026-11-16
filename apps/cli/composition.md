@@ -3,7 +3,7 @@
 
 # DSH Base Composition
 
-The dsh-base bundle patch shared by the web, headless, sdk, and acp profiles; their mode bundles and user layers patch over it, while sdk-minimal owns a separate standalone tree.
+The base bundle patch shared by the web, headless, sdk, and acp profiles; their mode bundles and user layers patch over it, while sdk-minimal owns a separate standalone tree.
 
 ```mermaid
 flowchart LR
@@ -182,7 +182,7 @@ flowchart LR
   cfg --> plugin_dsh_base_web
   plugin_dsh_base_web_search_deepseek["web-search-deepseek<br/>@forwork/web-search-deepseek"]
   cfg --> plugin_dsh_base_web_search_deepseek
-  plugin_dsh_base_web_deepseek_api["web-deepseek-api<br/>@forwork/web-deepseek-api"]
+  plugin_dsh_base_web_deepseek_api["web-api<br/>@forwork/web-api"]
   cfg --> plugin_dsh_base_web_deepseek_api
   plugin_dsh_base_web_fetch_http["web-fetch-http<br/>@forwork/web-fetch-http"]
   cfg --> plugin_dsh_base_web_fetch_http
@@ -297,7 +297,7 @@ flowchart LR
 | `repeat-tool-reminder` | `@forwork/repeat-tool-reminder` |
 | `web` | `@forwork/web` |
 | `web-search-deepseek` | `@forwork/web-search-deepseek` |
-| `web-deepseek-api` | `@forwork/web-deepseek-api` |
+| `web-api` | `@forwork/web-api` |
 | `web-fetch-http` | `@forwork/web-fetch-http` |
 | `tool-web` | `@forwork/tool-web` |
 | `mcp-resources` | `@forwork/mcp-resources` |

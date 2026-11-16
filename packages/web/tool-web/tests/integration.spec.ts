@@ -1,6 +1,6 @@
 /**
  * Integration: the real fetch backend (`dsh-web-fetch-http`) + a real search provider
- * (`dsh-web-deepseek-api`) + the real seam (`dsh-web`) + the model tool (`dsh-tool-web`) + the
+ * (`dsh-web-api`) + the real seam (`dsh-web`) + the model tool (`dsh-tool-web`) + the
  * tool-call timeout policy (`dsh-tool-call-timeout-policy`), exercised through `executeToolFixture()` —
  * nothing bypasses the tool registry. Fetch verifies world effects against loopback HTTP; search uses the real
  * DeepSeek Search API provider with only its network boundary stubbed.
@@ -21,7 +21,7 @@ import SystemPrompt from '@forwork/system-prompt'
 import ToolRuntime, { type ToolExecutionResult } from '@forwork/tools'
 import WebRuntime from '@forwork/web'
 import * as WebFetchLocal from '@forwork/web-fetch-http'
-import * as WebDeepSeekApi from '@forwork/web-deepseek-api'
+import * as WebDeepSeekApi from '@forwork/web-api'
 import * as ToolWeb from '@forwork/tool-web'
 import * as TimeoutPolicy from '@forwork/tool-call-timeout-policy'
 
@@ -53,7 +53,7 @@ beforeEach(async () => {
     fetchProvider: WebFetchLocal.LOCAL_FETCH_PROVIDER_ID,
   })
   await ctx.plugin(WebFetchLocal, {})
-  ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot([{ source: 'process', values: { DEEPSEEK_API_KEY: 'search-key' } }]))
+  ctx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot([{ source: 'process', values: { FORWORK_API_KEY: 'search-key' } }]))
   await ctx.plugin(WebDeepSeekApi, { searchBaseURL: SEARCH_API_BASE, sendOriginalQuestion: false })
   // The shipped deployment shape: the tool-call budget is declared by tool-web
   // config (default 30s, attached as ToolDefinition.timeoutMs) and enforced by

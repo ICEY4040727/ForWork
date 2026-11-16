@@ -32,16 +32,16 @@ function packageSetProject(): {
   base: DesktopCorePackageRecord
   host: DesktopCorePackageRecord
 } {
-  const root = mkdtempSync(join(tmpdir(), 'dsh-desktop-package-set-'))
+  const root = mkdtempSync(join(tmpdir(), 'forwork-desktop-package-set-'))
   roots.push(root)
   const packageDir = join(root, DESKTOP_PACKAGES_DIR)
   mkdirSync(packageDir)
   const dshBody = Buffer.from('dsh')
   const baseBody = Buffer.from('base')
   const hostBody = Buffer.from('host')
-  const dsh = record('@forwork/dsh', 'dsh.tgz', dshBody)
+  const dsh = record('@forwork/cli', 'dsh.tgz', dshBody)
   const base = record('@forwork/base', 'dsh-base.tgz', baseBody)
-  const host = record('@forwork/desktop-host', 'dsh-desktop-host.tgz', hostBody)
+  const host = record('@forwork/desktop-host', 'forwork-desktop-host.tgz', hostBody)
   writeFileSync(join(packageDir, dsh.file), dshBody)
   writeFileSync(join(packageDir, base.file), baseBody)
   writeFileSync(join(packageDir, host.file), hostBody)
@@ -62,9 +62,9 @@ describe('desktop core package set', () => {
     const packageSet = verifyDesktopCorePackageSet(root, '1.2.3')
     expect(desktopDshPackageSpec(packageSet)).toBe('file:./desktop-packages/dsh.tgz')
     expect(desktopCorePackageOverrides(packageSet)).toEqual({
-      '@forwork/dsh': 'file:./desktop-packages/dsh.tgz',
+      '@forwork/cli': 'file:./desktop-packages/dsh.tgz',
       '@forwork/base': 'file:./desktop-packages/dsh-base.tgz',
-      '@forwork/desktop-host': 'file:./desktop-packages/dsh-desktop-host.tgz',
+      '@forwork/desktop-host': 'file:./desktop-packages/forwork-desktop-host.tgz',
     })
   })
 
@@ -74,7 +74,7 @@ describe('desktop core package set', () => {
     expect(() => parseDesktopCorePackageSet({
       schemaVersion: 1,
       packages: [dsh, base, { ...host, version: '2.0.0' }],
-    }, '1.2.3')).toThrow(/dsh-desktop-host@2\.0\.0 does not match Desktop 1\.2\.3/u)
+    }, '1.2.3')).toThrow(/forwork-desktop-host@2\.0\.0 does not match Desktop 1\.2\.3/u)
     expect(() => parseDesktopCorePackageSet({ schemaVersion: 1, packages: [base, dsh, host] }))
       .toThrow(/sorted by name/u)
     writeFileSync(join(root, DESKTOP_PACKAGES_DIR, dsh.file), 'changed')
@@ -84,18 +84,18 @@ describe('desktop core package set', () => {
   })
 
   it('rejects registry resolutions for names supplied by the local package set', () => {
-    const dsh = record('@forwork/dsh', 'dsh.tgz', Buffer.from('dsh'))
+    const dsh = record('@forwork/cli', 'dsh.tgz', Buffer.from('dsh'))
     const host = record('@forwork/desktop-host', 'host.tgz', Buffer.from('host'))
     const packageSet = parseDesktopCorePackageSet({ schemaVersion: 1, packages: [dsh, host] })
     expect(() => {
       verifyDesktopCoreLockfile(
-        "packages:\n  '@forwork/dsh@file:desktop-packages/dsh.tgz':\n    resolution: {}\n",
+        "packages:\n  '@forwork/cli@file:desktop-packages/dsh.tgz':\n    resolution: {}\n",
         packageSet,
       )
     }).not.toThrow()
     expect(() => {
       verifyDesktopCoreLockfile(
-        "packages:\n  '@forwork/dsh@1.2.3':\n    resolution: {integrity: sha512-registry}\n",
+        "packages:\n  '@forwork/cli@1.2.3':\n    resolution: {integrity: sha512-registry}\n",
         packageSet,
       )
     }).toThrow(/outside the local package set/u)
