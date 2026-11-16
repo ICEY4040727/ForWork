@@ -22,9 +22,9 @@ Fork the MIT-licensed harness into **ForWork**, a Windows/macOS desktop product 
 
 **Project Type**: Desktop application plus workspace packages (monorepo)
 
-**Performance Goals**: Editor open under 30 s for ordinary files; agent edit visible under 2 s; conversion off the main thread
+**Performance Goals**: Editor open under 30 s for ordinary files; agent edit visible under 2 s; conversion off the renderer main thread (OOXML mapping runs in the Host's Node process via `office-exchange`, reached through the renderer command bridge)
 
-**Constraints**: Offline editing and saving; no Linux document server or cloud account; bounded conversion memory and time; lossless-by-default saves; writes confined to permitted roots; agent tools dispatch correlated commands over local IPC (no document bytes off-device); runtime undo is the editor's native stack; user saves are explicit with periodic local drafts, while an accepted agent tool call persists with one immediate save
+**Constraints**: Offline editing and saving; no Linux document server or cloud account; bounded conversion memory and time (see `office-exchange` `Config`: `maxFileBytes`, `maxCells`, `maxConversionMs`); lossless-by-default saves; writes confined to permitted roots; agent tools dispatch correlated commands over local IPC (no document bytes off-device); runtime undo is the editor's native stack; user saves are explicit with periodic local drafts, while an accepted agent tool call persists with one immediate save
 
 **Scale/Scope**: v1 edits `.docx` and `.xlsx`; `.pptx` read-only; legacy conversion; one local user plus the agent; documents persist and restore per session
 
@@ -73,7 +73,7 @@ specs/001-office-agent-framework/
 ```text
 packages/document/
 ├── office-to-pdf/       # existing: LibreOffice -> PDF (NOT used for editable legacy conversion)
-├── office-exchange/     # EXISTING (seam landed): OOXML <-> unit snapshot, feature detection
+├── office-exchange/     # this feature's seam: OOXML <-> unit snapshot, feature detection (built by T002/T008–T012)
 └── tool-office/         # NEW: model-facing structured document tools (agent)
 packages/client/
 └── ui-office-editor/    # NEW: embedded Univer editor tab + document panel

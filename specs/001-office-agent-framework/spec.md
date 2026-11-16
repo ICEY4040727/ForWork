@@ -86,7 +86,7 @@ The user opens several documents across a session. The agent can refer to them a
 
 - **FR-001**: The product MUST open `.xlsx` and `.docx` files in an editable sidebar surface.
 - **FR-002**: The product MUST save edits back to the file currently open in the editor (for a legacy source, the converted copy) without modifying content the user did not change.
-- **FR-003**: The product MUST convert legacy `.doc/.xls/.ppt` to a modern editable format on open without altering the source.
+- **FR-003**: The product MUST convert legacy `.doc/.xls/.ppt` to a modern format on open without altering the source. A converted `.ppt` opens as a read-only `.pptx` per FR-011 (PowerPoint editing is out of scope for v1).
 - **FR-004**: The product MUST expose document structure and content to the agent as structured operations, not raw bytes.
 - **FR-005**: Agent edits and user edits MUST converge on one document state, with version-guarded writes and a visible conflict report.
 - **FR-006**: The product MUST record document open/edit/save/rebind/missing/close as durable session facts so the agent can reference documents across turns.
@@ -118,9 +118,9 @@ The user opens several documents across a session. The agent can refer to them a
 
 ### Measurable Outcomes
 
-- **SC-001**: A user can open, edit one region, and save an `.xlsx` or `.docx` fixture of at most 5 MB and 10,000 cells in under 30 seconds.
+- **SC-001**: A user can open, edit one region, and save an `.xlsx` or `.docx` fixture of at most 5 MB and 10,000 cells in under 30 seconds. (Bound enforced by `office-exchange` `Config.maxFileBytes`/`maxCells`/`maxConversionMs`; exercised by the web lane T028, not a wall-clock unit test.)
 - **SC-002**: Across the fixture set, 100% of untouched regions are preserved on save (no style, formula, image, or comment loss).
-- **SC-003**: An agent edit is visible in the open editor in under 2 seconds without a manual reload.
+- **SC-003**: An agent edit is visible in the open editor in under 2 seconds without a manual reload. (Covered by the command-bridge test T062; the 2 s bound rides the Host `commandTimeoutMs`, not a flaky wall-clock assertion.)
 - **SC-004**: Every attempted save that would drop unsupported content is refused with a named reason; zero silent lossy saves in the test suite.
 - **SC-005**: The open-document set is fully restored after restart in 100% of tested sessions.
 - **SC-006**: A brand and telemetry scan of the packaged product reports zero DeepSeek-referencing product surfaces outside the declared provenance/protocol/external-dependency allowlist.
