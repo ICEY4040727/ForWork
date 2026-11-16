@@ -123,6 +123,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Read the current default model selection.',
         parameters: [],
         returns: 'a detached provider, model, and optional reasoning selection.',
+        throws: ['when no provider or model is configured; a deployment must supply one before creating agents.'],
       },
       {
         signature: 'async saveSelection(next: ModelSelection): Promise<void>',
@@ -7718,7 +7719,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'PaidTranslationProvider',
-    declaration: 'export type PaidTranslationProvider = \'deepseek-account\' | \'deepseek-official\';',
+    declaration: 'export type PaidTranslationProvider = \'account\' | \'deepseek-official\';',
   },
   {
     name: 'PaidTranslationSpec',

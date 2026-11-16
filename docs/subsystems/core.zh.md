@@ -528,6 +528,7 @@ Owns the default model selection independently of any Host or transport. Each op
 /**
  * Read the current default model selection.
  * @returns a detached provider, model, and optional reasoning selection.
+ * @throws when no provider or model is configured; a deployment must supply one before creating agents.
  */
 currentSelection(): ModelSelection
 
