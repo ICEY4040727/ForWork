@@ -35,7 +35,7 @@ The tokens remain the shipped protocol vocabulary, not identity violations. Movi
 
 - ForWork neither publishes nor vendors the engine, and `THIRD_PARTY_NOTICES.md` names exactly these package identities at MPL-2.0 with corresponding-source pointers to the kit repository.
 - The [independent kit ownership](../architecture/2026-09-14-independent-libreoffice-kit.md) decision keeps engine qualification and releases in that repository.
-- A ForWork build of the engine would mean publishing a multi-gigabyte native artifact, qualifying it for every platform, and taking over the MPL-2.0 obligations and the provenance records the packaged-artifact notice check verifies.
+- A ForWork build of the engine would mean publishing a multi-gigabyte native artifact, qualifying it for every platform, and taking over the MPL-2.0 obligations and the `THIRD_PARTY_NOTICES.md` entries that `corepack pnpm run verify-third-party-notices` requires.
 
 The identity scan's `ALLOWED_DEEPSEEK_PACKAGES` holds exactly `@deepseek-ai/libreoffice-kit`. The allowlist matches that literal and its `-<suffix>` engine packages, and nothing else in the `@deepseek-ai` scope. It stays an exact package allowlist; admitting the whole scope would let any upstream package keep its name.
 
@@ -43,7 +43,7 @@ The identity scan's `ALLOWED_DEEPSEEK_PACKAGES` holds exactly `@deepseek-ai/libr
 
 **Migrate the protocol tokens behind a session-format amendment in this release.** The release has no such amendment and no home migration, so the rename would split storage and break installed plugins for a naming gain that the protocol does not require.
 
-**Replace the Office engine with a ForWork-published or vendored kit.** Owning the build means publishing and qualifying the native artifacts for every platform and carrying their source obligations in this repository, while giving up the upstream provenance that the notice check verifies.
+**Replace the Office engine with a ForWork-published or vendored kit.** Owning the build means publishing and qualifying the native artifacts for every platform and carrying their source obligations in this repository, while giving up the upstream `THIRD_PARTY_NOTICES.md` entries and corresponding-source links that `corepack pnpm run verify-third-party-notices` verifies.
 
 **Admit the whole `@deepseek-ai` scope in the identity scan.** A scope-wide allowance stops reporting any new upstream dependency, so the scan would no longer distinguish a reviewed third-party engine from a leaked upstream package.
 

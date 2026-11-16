@@ -35,7 +35,7 @@ Status: implemented
 
 - ForWork 既不发布也不 vendor 该引擎，`THIRD_PARTY_NOTICES.md` 以 MPL-2.0 精确列出这些包身份，并附指向 kit 仓库的对应源码指针。
 - [独立的 kit 归属](../architecture/2026-09-14-independent-libreoffice-kit.zh.md)决定把引擎资格认证与发布留在该仓库。
-- 由 ForWork 自行构建引擎，意味着发布数 GB 的原生产物、为每个平台做资格认证，并接手 MPL-2.0 义务以及打包产物 notice 检查所核验的来源记录。
+- 由 ForWork 自行构建引擎，意味着发布数 GB 的原生产物、为每个平台做资格认证，并接手 MPL-2.0 义务以及 `corepack pnpm run verify-third-party-notices` 所要求的 `THIRD_PARTY_NOTICES.md` 条目。
 
 身份扫描的 `ALLOWED_DEEPSEEK_PACKAGES` 精确包含 `@deepseek-ai/libreoffice-kit`。allowlist 匹配该字面量及其 `-<suffix>` 引擎包，`@deepseek-ai` 作用域下的其他包一律不匹配。它保持为精确的包 allowlist；放行整个作用域会让任何上游包保留原名。
 
@@ -43,7 +43,7 @@ Status: implemented
 
 **在本版本内借助会话格式修订迁移协议令牌。** 本版本没有这样的修订，也没有 home 迁移，改名会分裂存储、破坏已安装的插件，而协议并不要求改名，收益只是命名。
 
-**用 ForWork 发布或 vendor 的 kit 替换 Office 引擎。** 自建意味着为每个平台发布并通过资格认证，在本仓库承担其源码义务，同时放弃 notice 检查所核验的上游来源。
+**用 ForWork 发布或 vendor 的 kit 替换 Office 引擎。** 自建意味着为每个平台发布并通过资格认证，在本仓库承担其源码义务，同时放弃 notice 检查所核验的上游 `THIRD_PARTY_NOTICES.md` 条目与对应源码链接。
 
 **在身份扫描中放行整个 `@deepseek-ai` 作用域。** 作用域级放行会不再报告任何新增上游依赖，扫描也就无法再区分经过评审的第三方引擎与泄漏的上游包。
 

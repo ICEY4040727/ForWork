@@ -92,7 +92,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **FR-006**: The product MUST record document open/edit/save/rebind/missing/close as durable session facts so the agent can reference documents across turns.
 - **FR-007**: The product MUST restore the open-document set after restart.
 - **FR-008**: The product MUST refuse and explain any save that would drop unsupported content.
-- **FR-009**: The product MUST be delivered as the ForWork desktop application under the `@forwork/*` npm scope, the `forwork-` artifact prefix, and the `forwork` CLI, with no remaining DeepSeek brand, telemetry, default model adapter, or upstream npm scope in product surfaces. Legally-required provenance notices, protocol-internal `dsh.*`/`DSH_*` tokens, and the external LibreOffice conversion dependency are the only accepted references, each enforced by `verify-forwork-identity`.
+- **FR-009**: The product MUST be delivered as the ForWork desktop application under the `@forwork/*` npm scope, the `forwork-` artifact prefix, and the `forwork` CLI, with no remaining DeepSeek brand, telemetry, default model adapter, or upstream npm scope in product surfaces. Legally required `THIRD_PARTY_NOTICES.md` entries, protocol-internal `dsh.*`/`DSH_*` tokens, and the external LibreOffice conversion dependency are the only accepted references, each enforced by `verify-forwork-identity`.
 - **FR-010**: The product MUST operate fully offline for editing and saving, with no required external document server or cloud account.
 - **FR-011**: `.pptx` MUST be viewable but not editable in v1.
 - **FR-012**: The product MUST preserve MIT and Apache-2.0 notices for the harness base and the editor core.
@@ -123,7 +123,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **SC-003**: An agent edit is visible in the open editor in under 2 seconds without a manual reload. (Covered by the command-bridge test T062; the 2 s bound rides the Host `commandTimeoutMs`, not a flaky wall-clock assertion.)
 - **SC-004**: Every attempted save that would drop unsupported content is refused with a named reason; zero silent lossy saves in the test suite.
 - **SC-005**: The open-document set is fully restored after restart in 100% of tested sessions.
-- **SC-006**: A brand and telemetry scan of the packaged product reports zero DeepSeek-referencing product surfaces outside the declared provenance/protocol/external-dependency allowlist.
+- **SC-006**: A brand and telemetry scan of the packaged product reports zero DeepSeek-referencing product surfaces outside the declared third-party-notice/protocol/external-dependency allowlist.
 - **SC-007**: Signed installers launch on Windows and macOS with the product's own identity and no unsigned-publisher warning.
 - **SC-008**: No document content or edit history leaves the device during editing, saving, or agent operation, verified by an egress check of tested flows.
 - **SC-009**: Renaming or moving an open file keeps it open in 100% of tested cases, or reports it missing without losing its identity or data.
