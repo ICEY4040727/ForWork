@@ -38,7 +38,7 @@ export async function prepareSshRelease(directory: string, version: string, comm
   const sums: string[] = []
   try {
     for (const target of SSH_HELPER_TARGETS) {
-      const archive = join(directory, `dsh-ssh-helper-${version}-${target.slice('node24-'.length)}.tar.gz`)
+      const archive = join(directory, `forwork-ssh-helper-${version}-${target.slice('node24-'.length)}.tar.gz`)
       const digest = await fileDigest(archive)
       assert.equal(digest, (await readFile(`${archive}.sha256`, 'utf8')).split(/\s/)[0])
       const destination = join(temporary, target)

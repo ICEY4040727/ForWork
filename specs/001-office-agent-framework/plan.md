@@ -12,7 +12,7 @@ Fork the MIT-licensed harness into **ForWork**, a Windows/macOS desktop product 
 
 **Language/Version**: TypeScript (strict), Node >= 24.9, ESM
 
-**Primary Dependencies**: Cordis (harness DI); Univer open-source presets (`@univerjs/presets`, `@univerjs/preset-sheets-core`, docs presets) and `@univerjs/core` (native snapshot types, also a Host dependency of `office-exchange`); ExcelJS; SheetJS CE; a docx library; `@deepseek-ai/libreoffice-kit` for legacy conversion; Electron for desktop packaging and OS secure storage
+**Primary Dependencies**: Cordis (harness DI); Univer open-source presets (`@univerjs/presets`, `@univerjs/preset-sheets-core`, docs presets) and `@univerjs/core` (native snapshot types, also a Host dependency of `office-exchange`); ExcelJS for `.xlsx`; `fast-xml-parser` and `fflate` for the `.docx` OOXML path; `@deepseek-ai/libreoffice-kit` for legacy conversion; Electron for desktop packaging and OS secure storage
 
 **Storage**: Local workspace files through the filesystem seam with version guards; the session log for document facts and change records; OS secure store for model credentials
 
@@ -61,6 +61,7 @@ specs/001-office-agent-framework/
 ├── contracts/
 │   ├── office-exchange.contract.md
 │   ├── document-events.contract.md
+│   ├── command-bridge.contract.md
 │   └── tool-office.contract.md
 ├── tasks.md
 └── checklists/
@@ -77,8 +78,7 @@ packages/document/
 packages/client/
 └── ui-office-editor/    # NEW: embedded Univer editor tab + document panel
 packages/core/session/                 # CHANGED: document/* SessionEventMap
-packages/session/session-document/     # NEW: identity, change records, projection, restore, undo
-packages/session/session-projection/   # CHANGED: fold document facts
+packages/session/session-document/     # NEW: identity, change records, document facts, projection, restore, recovery
 packages/bundle/base/                  # CHANGED: mount office capability as non-removable core
 packages/credentials/credentials/      # CHANGED (consumer only): OS secure store
 packages/test-support/tool-testkit/    # CHANGED: egress assertion helpers

@@ -5,16 +5,18 @@
  * tabs, and the existing draft-recovery offer for a restored document.
  */
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { brandString } from '@forwork/brand'
 import type { DocumentId } from '@forwork/session/src/document-events.ts'
 import type { TabId } from '@forwork/client-ui-dockkit'
 import type { SidebarRightOpenTab } from '@forwork/client-ui-sidebar-right/client'
 import type { DocumentProjectionEntry, DocumentProjectionView } from '@forwork/session-document/client'
+import type { SessionListState, SessionSummary } from '@forwork/api-session-controller/client'
+import { createSnapshotStore } from '@forwork/client-store'
 import { en } from '../src/client/locales.ts'
 import { OfficePanel } from '../src/client/OfficePanel.tsx'
 import type { OfficePanelProps } from '../src/client/OfficePanel.tsx'
-import { createOfficeRestore, restorePlan } from '../src/client/restore.ts'
+import { createOfficeRestore, restoreOnSessionActivation, restorePlan } from '../src/client/restore.ts'
 import { SESSION_ID, panelFixture, renderPanel, translate } from './panel.tsx'
 import { draftAt, makeDraftRemote, success } from './draft-fixtures.client.ts'
 
@@ -185,5 +187,87 @@ describe('useDocumentRestore', () => {
     await waitFor(() => { expect(remote.readDraft).toHaveBeenCalledOnce() })
     expect(view.queryByText(en.draftFound)).toBeNull()
     expect(view.queryByText(en.draftStale)).toBeNull()
+  })
+})
+
+function sessionList(
+  projection: DocumentProjectionView | undefined,
+  active = true,
+): SessionListState {
+  const summary: SessionSummary = {
+    id: SESSION_ID,
+    displayTitle: 'Session',
+    running: false,
+    blank: false,
+    updatedAt: 0,
+    retainedBy: active ? { mainView: 1 } : {},
+  }
+  return {
+    ids: [SESSION_ID],
+    byId: { [SESSION_ID]: summary },
+    phase: 'ready',
+    projectionsBySession: projection === undefined ? {} : {
+      [SESSION_ID]: { values: { document: projection }, state: 'ready', error: null },
+    },
+  }
+}
+
+describe('restoreOnSessionActivation', () => {
+  it('restores an active Session that has no Office tab open', () => {
+    const sessions = createSnapshotStore(sessionList(projectionOf([REPORT, GONE], [GONE])))
+    const openTabs = createSnapshotStore<readonly SidebarRightOpenTab[]>([])
+    const restore = createOfficeRestore()
+    const openResourceIn = vi.fn()
+
+    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, openResourceIn })
+
+    expect(openResourceIn).toHaveBeenCalledExactlyOnceWith(SESSION_ID, addressOf(REPORT))
+    expect(restore.source.getSnapshot().missing[SESSION_ID]).toEqual([GONE])
+    stop()
+  })
+
+  it('runs one pass per Session across repeated list notifications', () => {
+    const sessions = createSnapshotStore(sessionList(projectionOf([REPORT])))
+    const openTabs = createSnapshotStore<readonly SidebarRightOpenTab[]>([])
+    const restore = createOfficeRestore()
+    const openResourceIn = vi.fn()
+
+    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, openResourceIn })
+    sessions.set(sessionList(projectionOf([REPORT, NOTES])))
+    sessions.set(sessionList(projectionOf([REPORT, NOTES])))
+    expect(openResourceIn).toHaveBeenCalledOnce()
+    stop()
+  })
+
+  it('waits for the projection and ignores an inactive Session', () => {
+    const sessions = createSnapshotStore(sessionList(undefined))
+    const openTabs = createSnapshotStore<readonly SidebarRightOpenTab[]>([])
+    const restore = createOfficeRestore()
+    const openResourceIn = vi.fn()
+
+    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, openResourceIn })
+    expect(openResourceIn).not.toHaveBeenCalled()
+
+    sessions.set(sessionList({ order: [], documents: {} }))
+    expect(openResourceIn).not.toHaveBeenCalled()
+
+    sessions.set(sessionList(projectionOf([REPORT]), false))
+    expect(openResourceIn).not.toHaveBeenCalled()
+
+    sessions.set(sessionList(projectionOf([REPORT])))
+    expect(openResourceIn).toHaveBeenCalledExactlyOnceWith(SESSION_ID, addressOf(REPORT))
+    stop()
+  })
+
+  it('stops following activation after disposal', () => {
+    const sessions = createSnapshotStore(sessionList(projectionOf([REPORT])))
+    const openTabs = createSnapshotStore<readonly SidebarRightOpenTab[]>([])
+    const restore = createOfficeRestore()
+    const openResourceIn = vi.fn()
+
+    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, openResourceIn })
+    stop()
+    sessions.set(sessionList(projectionOf([REPORT, NOTES])))
+    expect(openResourceIn).toHaveBeenCalledOnce()
   })
 })

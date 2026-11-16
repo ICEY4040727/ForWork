@@ -5,7 +5,7 @@
 
 ## Overview
 
-Five entities carry the feature: the **Document**, the **Document Session Fact**, the **Change Record**, the **Unit Snapshot**, and the **Conversion Record**. A **Document Identity Binding** links a stable document id to its current path. All durable state is reconstructable from the session log (Principle III).
+Seven entities carry the feature: the **Document**, the **Document Session Fact**, the **Document Command**, the **Change Record**, the **Unit Snapshot**, the **Conversion Record**, and the **Document Draft**. The Document Session Fact records `open`, `edit`, `save`, `rebind`, `missing`, and `close`; the Document Command is the transport request that carries no snapshot and appends no content. A **Document Identity Binding** links a stable document id to its current path. All durable state is reconstructable from the session log (Principle III).
 
 ## Document
 
@@ -39,6 +39,20 @@ A logged, durable fact about a document. The log is the source of truth.
 | `at` | timestamp | Recorded by the log, not the caller |
 
 **Validation**: an `edit` fact is only written after its Change Record is accepted; a `save` fact records an accepted save whose in-memory changes stayed in the editor and therefore carries no operation steps or inverse; a `close` fact does not delete history.
+
+## Document Command
+
+A correlated request from the Host tool layer to the live editor unit (FR-020). It is transport, not an accepted change.
+
+| Field | Type | Rules |
+|---|---|---|
+| `requestId` | opaque string | Correlation id chosen by the Host; the editor answers with it exactly once |
+| `documentId` | string | References an open Document; another document's command is ignored |
+| `operation` | read or ordered edit steps | Names the work to perform, never a unit snapshot |
+| `fromVersion` | version | The version the caller believes the live unit holds |
+| `turn` | turn id | Owning turn for model-visible reconstruction |
+
+**Validation**: a command appends no content fact by itself; a refused, unanswered, or timed-out command writes nothing, and only the accepted save appends `document/edit` (agent steps with inverse) or `document/save` (an editor-side user save).
 
 ## Change Record
 

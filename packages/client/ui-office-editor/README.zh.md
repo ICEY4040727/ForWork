@@ -31,11 +31,11 @@ Web bundle 负责挂载这个包。在右侧 Sidebar 打开 `.docx` 或 `.xlsx` 
 
 旧版 `.doc`、`.xls` 或 `.ppt` 源文件通过同一个 Remote 转换，并在该 tab 的位置重新打开副本；原文件永远不会被写入。转换后的 tab 显示一条可关闭的提示，标注原始文件。正文还会列出该 Session 中打开的 Office 文档，点击即可聚焦。
 
-外部文件变化会重新载入干净的 tab，并在丢弃未保存编辑前询问。关闭有未保存编辑的 tab 会被 Sidebar 的清理失败路径否决，随后面板给出保存并关闭、丢弃并关闭或取消。
+外部文件变化会重新载入干净的 tab，并在丢弃未保存编辑前询问。文件移动会根据打开 tab 的文件 feed 重新绑定：当文档路径消失、而另一个观察在同一文件版本的新路径上报告时，该 tab 会请求 Session 记录 `document/rebind`。关闭有未保存编辑的 tab 会被 Sidebar 的清理失败路径否决，随后面板给出保存并关闭、丢弃并关闭或取消。
 
 当单元有未保存编辑时，停止编辑 2 秒后会写入一份恢复草稿。重新打开文档时只读取一次草稿并提供恢复：草稿来自当前文件版本时直接提供，来自更早版本时标记为过期，并且仍只在用户选择时应用。保存成功和丢弃都会删除已存储的草稿。
 
-Session 中第一个挂载的 Office 正文会读取 `document` projection，并按 projection 顺序重新打开该 Session 仍持有的文档。每个 Session 在每个窗口只执行一次；已经有 Office tab 的文档不会再次打开，projection 报告为缺失的文档会列入可关闭的提示，而不是打开死 tab。每个恢复的文档随后走上文普通的打开路径，因此其存储的草稿仍由同一套恢复界面提供。
+Session 中的第一个触发点会读取 `document` projection，并按 projection 顺序重新打开该 Session 仍持有的文档。触发点既可以是 Session 中挂载的 Office 正文，也可以是该 Session 成为主视图 Session，因此没有打开 Office tab 的 Session 也会恢复其集合。每个 Session 在每个窗口只执行一次；已经有 Office tab 的文档不会再次打开，projection 报告为缺失的文档会列入可关闭的提示，而不是打开死 tab。每个恢复的文档随后走上文普通的打开路径，因此其存储的草稿仍由同一套恢复界面提供。
 
 -----
 
@@ -92,10 +92,11 @@ Session 中第一个挂载的 Office 正文会读取 `document` projection，并
 - 编辑器界面只携带 preset 的 en-US locale。
 - `.ppt` 转换出的副本是 `.pptx`，在文档预览中仍为只读，因此演示文稿不会在此编辑器中打开。
 - 转换副本提示来自本窗口的插件状态，打开文档列表来自 Sidebar 的打开 tab 清单。
-- 恢复由 Session 中第一个挂载的 Office 正文触发，因为 Sidebar 只通过已有 tab 的 `openResource` action（或其内部按 Session 的路径）打开资源。Sidebar 会持久化每个 Session 的 tab 布局，因此重启通常已挂载这些正文并由恢复对齐持久集合；如果一个 Session 完全没有打开 Office tab，就没有正文触发恢复。
+- 恢复由 Session 中的第一个触发点执行：挂载的 Office 正文，或该 Session 成为主视图 Session。激活路径读取 Session 列表缓存的 `document` projection，并通过 Sidebar 的按 Session 打开路径打开资源，因此不需要 Office tab。Sidebar 会持久化每个 Session 的 tab 布局，因此重启通常也会挂载这些正文。
 - 单次恢复记录按 Session 保存且只存在于本窗口；恢复执行后才到达的 projection 不会重新打开任何内容。
 - 恢复草稿由 `officeDocument` Remote 存放在 `<workspaceRoot>/.dsh/office-tmp/drafts/`，只在文档打开时读取。提供恢复的时机是每次打开 tab，因此外部变化后的重新读取不会再次检查草稿。
-- 实时内容版本是 tab 局部的：挂载时为 0，每次接受的保存递增。Host 自身保存触发重载后，下一条命令可能先报告冲突，随后 agent 的读取会重新同步。
+- 移动检测需要文件 feed 对新路径的另一次观察，例如在第二个 tab 中打开它。如果没有任何打开的 feed 报告重命名，tab 会保留在旧路径，直到文档重新打开。
+- 内容版本由 Host 记录的保存、agent command 与本地保存共享。Host 自身保存触发重载时，会采用 Host 报告的版本，而不是把变化呈现为外部编辑；有未保存编辑的单元仍会询问。
 - Univer core 与 presets 使用 Apache-2.0；这个包把 `@univerjs/core`、`@univerjs/presets`、`@univerjs/preset-sheets-core` 与 `@univerjs/preset-docs-core` 固定在 1.4.0 供编辑器表面使用。
 
 <a id="dev-note"></a>

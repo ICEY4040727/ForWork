@@ -7,7 +7,7 @@ import { act, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { RemoteError } from '@forwork/typert-protocol'
 import { en } from '../src/client/locales.ts'
-import { TAB_ID, renderPanel } from './panel.tsx'
+import { TAB_ID, SESSION_ID, renderPanel } from './panel.tsx'
 import { PATH, draftAt, edited, makeDraftRemote, snapshot, success } from './draft-fixtures.client.ts'
 
 afterEach(() => {
@@ -120,5 +120,69 @@ describe('OfficePanel recovery drafts', () => {
     })
     fireEvent.click(await view.findByText(en.discardAndClose))
     await waitFor(() => { expect(remote.clearDraft).toHaveBeenCalledOnce() })
+  })
+
+  it('offers the draft an interrupted process left when the document reopens', async () => {
+    const remote = makeDraftRemote()
+    remote.readDraft.mockResolvedValueOnce(success(draftAt('v1')))
+    const view = fixture(remote)
+    expect(await view.findByText(en.draftFound)).toBeDefined()
+    fireEvent.click(view.getByText(en.recover))
+    await waitFor(() => {
+      expect(view.fixture.adapter.mounts.at(-1)?.snapshot).toBe(edited)
+    })
+  })
+
+  it('warns instead of closing a dirty tab and keeps the edits', async () => {
+    const remote = makeDraftRemote()
+    const view = fixture(remote)
+    await waitFor(() => { expect(view.fixture.adapter.mounts).toHaveLength(1) })
+
+    act(() => {
+      view.fixture.changes.markDirty(TAB_ID, true)
+      view.fixture.changes.warnClose(TAB_ID)
+    })
+
+    expect(await view.findByText(en.closeWarning)).toBeDefined()
+    expect(view.fixture.changes.isDirty(TAB_ID)).toBe(true)
+    fireEvent.click(view.getByText(en.cancel))
+    await waitFor(() => { expect(view.queryByText(en.closeWarning)).toBeNull() })
+    expect(view.fixture.changes.isDirty(TAB_ID)).toBe(true)
+  })
+
+  it('follows the open document in the move tracker', async () => {
+    const remote = makeDraftRemote()
+    const view = renderPanel({ meta: { absolutePath: PATH, version: 'v1' }, remote: remote.face })
+
+    await waitFor(() => {
+      expect(view.fixture.trackDocument).toHaveBeenCalledWith(SESSION_ID, expect.any(String), 'work/budget.xlsx')
+      expect(view.fixture.observeFile).toHaveBeenCalledWith(SESSION_ID, expect.any(String), 'work/budget.xlsx', 'v1')
+    })
+    view.unmount()
+    expect(view.fixture.forgetDocument).toHaveBeenCalledOnce()
+  })
+
+  it('reports a file resource that observed the document missing', async () => {
+    const remote = makeDraftRemote()
+    const view = renderPanel({
+      meta: { absolutePath: PATH, version: 'v1' },
+      failure: new RemoteError('workspace-file/not-found', 'gone', { path: PATH }),
+      remote: remote.face,
+    })
+
+    await waitFor(() => {
+      expect(view.fixture.observeFile).toHaveBeenCalledWith(SESSION_ID, expect.any(String), 'work/budget.xlsx', undefined)
+    })
+  })
+
+  it('ignores a failed file resource that did not report the document missing', () => {
+    const remote = makeDraftRemote()
+    const view = renderPanel({
+      meta: { absolutePath: PATH, version: 'v1' },
+      failure: new RemoteError('workspace-file/not-regular-file', 'denied', { path: PATH, kind: 'directory' }),
+      remote: remote.face,
+    })
+
+    expect(view.fixture.observeFile).not.toHaveBeenCalled()
   })
 })

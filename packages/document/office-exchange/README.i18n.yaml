@@ -1,0 +1,52 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/document/office-exchange/README.md
+/:
+  en: 7fa971b6b165fcef
+  zh: 9825bd83051febfa
+/forwork-office-exchange:
+  en: 9c86766aa68ad0a0
+  zh: b69ae6496baf1fc9
+/forwork-office-exchange/summary:
+  en: 5b6daa507e3ce34b
+  zh: 8b322ccf7926bc09
+/forwork-office-exchange/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 5ea16c73684ce99f
+/forwork-office-exchange/use-this-package:
+  en: ddefc248050dfd08
+  zh: a680525bb0a04837
+/forwork-office-exchange/use-this-package/remote-surface:
+  en: 4c3395bf310fb4fd
+  zh: c6abac84894c2051
+/forwork-office-exchange/use-this-package/failure-policy:
+  en: 900ed7f7d4a6e521
+  zh: 6f7a85406d4d3a15
+/forwork-office-exchange/understand-the-implementation:
+  en: 47541bd0f5e9fff0
+  zh: 76afdcd0f974cf05
+/forwork-office-exchange/further-exploration:
+  en: 7de3c1c580530be2
+  zh: 5db8b3bca9d7bedb
+/forwork-office-exchange/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/forwork-office-exchange/model-experience/exchange-seam:
+  en: 0488eb95fff015dd
+  zh: 0488eb95fff015dd
+/forwork-office-exchange/model-experience/exchange-seam/what-the-model-sees:
+  en: 6544d672626e01f0
+  zh: 95cd42c7090bc615
+/forwork-office-exchange/model-experience/exchange-seam/token-effect:
+  en: 8454c7c32e3df254
+  zh: 9c834b84b202652b
+/forwork-office-exchange/model-experience/exchange-seam/kv-cache-effect:
+  en: 42588da50a87c0fb
+  zh: d43c66f963848b06
+/forwork-office-exchange/known-limitations-and-deferred-work:
+  en: 3d24a6a0e27ef04f
+  zh: ce62dd099c1e873b
+/forwork-office-exchange/known-limitations-and-deferred-work/dev-note:
+  en: 7698c53166776b6f
+  zh: 2befbc69185f839c

@@ -38,14 +38,14 @@ export async function extractHelper(archive: string, directory: string): Promise
   for (const entry of entries) {
     const path = entry.path.replace(/\/$/, '')
     if (!['File', 'Directory'].includes(entry.type) || path.split('/').some(part => part === '..' || part === '.' || part === '')
-      || path.includes('\\') || !path.startsWith('dsh-ssh-helper') || (path !== 'dsh-ssh-helper' && !path.startsWith('dsh-ssh-helper/')) || seen.has(path)) {
+      || path.includes('\\') || !path.startsWith('forwork-ssh-helper') || (path !== 'forwork-ssh-helper' && !path.startsWith('forwork-ssh-helper/')) || seen.has(path)) {
       throw new Error(`Invalid SSH helper archive entry: ${entry.path} (${entry.type})`)
     }
     seen.add(path)
   }
-  if (!seen.has('dsh-ssh-helper/manifest.json')) throw new Error('SSH helper archive has no manifest.json')
+  if (!seen.has('forwork-ssh-helper/manifest.json')) throw new Error('SSH helper archive has no manifest.json')
   await extract({ file: archive, cwd: directory, strict: true })
-  return join(directory, 'dsh-ssh-helper')
+  return join(directory, 'forwork-ssh-helper')
 }
 
 /**
@@ -129,7 +129,7 @@ export async function verifySshHelper(argv: string[]): Promise<void> {
       await chmod(join(bin, 'bwrap'), 0o755)
       path = `${bin}:${path}`
     }
-    const executable = join(installed, 'dsh-ssh-helper')
+    const executable = join(installed, 'forwork-ssh-helper')
     const helperHash = await fileDigest(executable)
     const environment = {
       HOME: home, PATH: process.env.PATH, DSH_HOME: join(home, 'dsh'),

@@ -31,11 +31,11 @@ An agent command for the open document reaches this tab through the Session's `d
 
 A legacy `.doc`, `.xls`, or `.ppt` source is converted through the same Remote and reopened as a copy in that tab's place; the original is never written. The converted tab shows a dismissible banner naming the source. The body also lists the Session's open Office documents and focuses one when clicked.
 
-An external file change reloads a clean tab and prompts before discarding unsaved edits. Closing a dirty tab is vetoed by the Sidebar's cleanup-failure path, and the panel then offers save-and-close, discard-and-close, or cancel.
+An external file change reloads a clean tab and prompts before discarding unsaved edits. A file move is rebound from the open tabs' file feed: when a document's path disappears and another observation reports the same file version at a new path, the tab asks the Session to record `document/rebind`. Closing a dirty tab is vetoed by the Sidebar's cleanup-failure path, and the panel then offers save-and-close, discard-and-close, or cancel.
 
 While the unit is dirty, an edit schedules a recovery draft after 2 s without another edit. Reopening the document reads that draft once and offers recovery; a draft captured from the current file version is offered directly, while one from an older version is labelled stale and is still applied only when the user chooses it. A successful save and a discard both remove the stored draft.
 
-The first Office body that mounts in a Session reads the `document` projection and reopens the documents the Session still holds, in projection order. One pass runs per Session per window; a document that already has an Office tab is not opened again, and a document the projection reports missing is listed in a dismissible notice instead of a dead tab. Each restored document then follows the ordinary open path above, so its stored draft is offered by the same recovery surface.
+The first trigger in a Session reads the `document` projection and reopens the documents the Session still holds, in projection order. A trigger is either an Office body that mounts in the Session or the Session becoming the main-view Session, so a Session with no Office tab open still restores its set. One pass runs per Session per window; a document that already has an Office tab is not opened again, and a document the projection reports missing is listed in a dismissible notice instead of a dead tab. Each restored document then follows the ordinary open path above, so its stored draft is offered by the same recovery surface.
 
 -----
 
@@ -92,10 +92,11 @@ None; the package neither assembles nor sends a provider request.
 - The editor UI ships with the preset's en-US locale only.
 - A converted `.ppt` copy is a `.pptx`, which stays read-only in the document preview, so presentations never open in this editor.
 - Converted-copy notices come from this window's plugin state, and the open-document list comes from the Sidebar's open-tab inventory.
-- Restore runs from the first Office body mounted in a Session, because the Sidebar opens resources only through an existing tab's `openResource` action (or its own internal per-Session path). The Sidebar persists each Session's tab layout, so a restart normally mounts those bodies and restore reconciles the durable set; a Session with no Office tab open at all has no body to trigger it.
+- Restore runs from the first trigger in a Session: an Office body that mounts, or the Session becoming the main-view Session. The activation path reads the Session list's cached `document` projection and opens through the Sidebar's per-Session open path, so no Office tab is needed. The Sidebar persists each Session's tab layout, so a restart normally mounts those bodies as well.
 - The one-pass restore record is keyed by Session and lives for this window only; a projection that arrives after the pass does not reopen anything.
 - Recovery drafts are stored by the `officeDocument` Remote under `<workspaceRoot>/.dsh/office-tmp/drafts/` and are read only when a document opens. The offer is per tab open, so an external-change reload does not check for a draft again.
-- The live content version is tab-local: it starts at 0 on mount and advances for each accepted save. A reload triggered by the Host's own save can therefore make the next command report a conflict, after which the agent's read resynchronizes it.
+- Move detection needs another file-feed observation of the new path, such as opening it in a second tab. A rename that no open feed reports leaves the tab on its old path until the document is reopened.
+- The content version is shared by the Host's recorded saves, agent commands, and local saves. A Host save that reloads the tab adopts the version the Host reports instead of presenting an external change; a dirty unit still prompts.
 - Univer core and presets are Apache-2.0; the package pins `@univerjs/core`, `@univerjs/presets`, `@univerjs/preset-sheets-core`, and `@univerjs/preset-docs-core` at 1.4.0 for the editor surface.
 
 <a id="dev-note"></a>

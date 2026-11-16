@@ -73,11 +73,15 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
 export function OfficePanel({
   useTabInfo, useProjection, useResource, useSidebarTabs, useRestore, useLegacyNotice, mountEditor, attachCommandBridge,
   markTabDirty, dismissCloseWarning, markMissing, rememberLegacySource, dismissLegacyNotice, dismissRestoreNotice,
-  useOfficeTab, remote, restore, t,
+  trackDocument, forgetDocument, observeFile, useOfficeTab, remote, restore, t,
 }: OfficePanelProps): ReactNode {
   const { tab } = useTabInfo()
   const meta = useResource<'file'>(tab.contentId)
   const target = useMemo(() => openTargetOf(tab.contentId), [tab.contentId])
+  const documentId = useMemo(
+    () => officeDocumentIdentity(target.sessionId, target.path),
+    [target.sessionId, target.path],
+  )
   const workspaceRoot = useMemo(
     () => workspaceRootOf(target.path, meta.value?.absolutePath),
     [target.path, meta.value?.absolutePath],
@@ -93,6 +97,21 @@ export function OfficePanel({
     actions: tab.actions,
     restore,
   })
+  useEffect(() => {
+    trackDocument(target.sessionId, documentId, target.path)
+    return () => { forgetDocument(documentId) }
+  }, [trackDocument, forgetDocument, target.sessionId, documentId, target.path])
+  useEffect(() => {
+    if (meta.status === 'failed') {
+      if (meta.failure?.code === 'workspace-file/not-found') {
+        observeFile(target.sessionId, documentId, target.path, undefined)
+      }
+      return
+    }
+    if (meta.status === 'live' && meta.value !== undefined) {
+      observeFile(target.sessionId, documentId, target.path, meta.value.version)
+    }
+  }, [observeFile, meta.status, meta.failure?.code, meta.value?.version, target.sessionId, documentId, target.path])
   const restored = useRestore(value => value)
   const missing = restored.missing[target.sessionId] ?? NO_MISSING
   const dirty = changes[tab.id]?.dirty === true
@@ -110,6 +129,7 @@ export function OfficePanel({
     workspaceRoot,
     openConverted,
     dirty,
+    contentVersion: projection?.documents[documentId]?.contentVersion,
   })
   useEffect(() => {
     if (meta.status !== 'failed' || meta.failure?.code !== 'workspace-file/not-found') return
@@ -128,14 +148,13 @@ export function OfficePanel({
   }, [tab.actions])
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const handleRef = useRef<OfficeEditorHandle | null>(null)
-  const versionRef = useRef(0)
   const [mountFailed, setMountFailed] = useState(false)
   const name = meta.value === undefined ? tab.title : pathPartsOf(meta.value.absolutePath).name
   const docRef = useRef(doc)
   docRef.current = doc
   const commandTarget = useMemo<OfficeCommandTarget>(() => ({
-    documentId: officeDocumentIdentity(target.sessionId, target.path),
-    version: () => versionRef.current,
+    documentId,
+    version: () => docRef.current.currentContentVersion(),
     isOpen: () => handleRef.current !== null,
     isDirty: () => handleRef.current?.isDirty() ?? false,
     unsupported: () => docRef.current.unsupported,
@@ -145,11 +164,11 @@ export function OfficePanel({
         return { status: 'unsupported-feature', features: [{ kind: 'other', detail: 'editor is not mounted' }] }
       }
       const outcome = handle.apply(operation)
-      if (outcome.status === 'applied') versionRef.current += 1
+      if (outcome.status === 'applied') docRef.current.markApplied()
       return outcome
     },
     snapshot: () => handleRef.current?.getSnapshot(),
-  }), [target.sessionId, target.path])
+  }), [documentId])
   useEffect(
     () => attachCommandBridge(target.sessionId, commandTarget),
     [attachCommandBridge, commandTarget, target.sessionId],
@@ -166,7 +185,6 @@ export function OfficePanel({
     if (container === null || snapshot === undefined) return
     let live = true
     let handle: OfficeEditorHandle | undefined
-    versionRef.current = 0
     setMountFailed(false)
     void mountEditor(container, { kind: snapshot.kind, snapshot, onChange, onEdit }).then((mounted) => {
       if (!live) {
@@ -190,7 +208,6 @@ export function OfficePanel({
   const persist = useCallback((closeAfter: boolean): void => {
     void doc.save(handleRef.current?.getSnapshot()).then((outcome) => {
       if (outcome !== 'saved') return
-      versionRef.current += 1
       handleRef.current?.clearDirty()
       markTabDirty(tab.id, false)
       if (closeAfter) tab.actions.close()

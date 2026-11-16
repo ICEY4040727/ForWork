@@ -28,6 +28,26 @@ export interface OfficePanelInjected {
   /** Dismiss the close prompt without saving or closing. */
   readonly dismissCloseWarning: (tabId: TabId) => void
   /**
+   * Follow this tab's document so a file move keeps its identity.
+   * @param sessionId - Session whose workspace owns the file.
+   * @param documentId - Session-scoped document identity.
+   * @param path - the path the tab currently addresses.
+   */
+  readonly trackDocument: (sessionId: SessionId, documentId: string, path: string) => void
+  /**
+   * Stop following a document after its tab is removed.
+   * @param documentId - the closed document.
+   */
+  readonly forgetDocument: (documentId: string) => void
+  /**
+   * Report one observation from this tab's workspace file change feed.
+   * @param sessionId - Session whose workspace owns the file.
+   * @param documentId - the tab's document identity.
+   * @param path - the observed path.
+   * @param version - the observed file version, or `undefined` when the path is gone.
+   */
+  readonly observeFile: (sessionId: SessionId, documentId: string, path: string, version: string | undefined) => void
+  /**
    * Record that the open document's file no longer resolves.
    * @param sessionId - the Session whose open set holds the document.
    * @param documentId - Session-scoped identity of the missing document.
@@ -105,6 +125,11 @@ export function officePanelInjected(deps: OfficePanelDeps): OfficePanelInjected 
     attachCommandBridge,
     markTabDirty: (tabId, dirty) => { changes.markDirty(tabId, dirty) },
     dismissCloseWarning: (tabId) => { changes.dismissWarning(tabId) },
+    trackDocument: (sessionId, documentId, path) => { changes.trackDocument(sessionId, documentId, path) },
+    forgetDocument: (documentId) => { changes.forgetDocument(documentId) },
+    observeFile: (sessionId, documentId, path, version) => {
+      changes.observeFile(sessionId, documentId, path, version)
+    },
     markMissing,
     rememberLegacySource: (contentId, source) => { notices.remember(contentId, source) },
     dismissLegacyNotice: (contentId) => { notices.dismiss(contentId) },

@@ -87,6 +87,9 @@ export function panelFixture(input: PanelInput): {
   adapter: ReturnType<typeof createMockAdapter>
   attachCommandBridge: Mock<OfficePanelInjected['attachCommandBridge']>
   markMissing: Mock<OfficePanelInjected['markMissing']>
+  trackDocument: Mock<OfficePanelInjected['trackDocument']>
+  observeFile: Mock<OfficePanelInjected['observeFile']>
+  forgetDocument: Mock<OfficePanelInjected['forgetDocument']>
 } {
   const address = input.address ?? 'dsh-resource://file/session/s-1/work/budget.xlsx'
   const tabId = input.tabId ?? TAB_ID
@@ -97,6 +100,15 @@ export function panelFixture(input: PanelInput): {
   const openResource = vi.fn<SidebarRightTabActions['openResource']>()
   const attachCommandBridge = vi.fn<OfficePanelInjected['attachCommandBridge']>(() => () => {})
   const markMissing = vi.fn<OfficePanelInjected['markMissing']>()
+  const markTabDirty = vi.fn<OfficePanelInjected['markTabDirty']>((tabId, dirty) => {
+    changes.markDirty(tabId, dirty)
+  })
+  const dismissCloseWarning = vi.fn<OfficePanelInjected['dismissCloseWarning']>((tabId) => {
+    changes.dismissWarning(tabId)
+  })
+  const trackDocument = vi.fn<OfficePanelInjected['trackDocument']>()
+  const observeFile = vi.fn<OfficePanelInjected['observeFile']>()
+  const forgetDocument = vi.fn<OfficePanelInjected['forgetDocument']>()
   const actions: SidebarRightTabActions = input.actions ?? {
     bindCommands: vi.fn(() => () => {}),
     openResource,
@@ -121,8 +133,11 @@ export function panelFixture(input: PanelInput): {
     remote: input.remote,
     mountEditor: input.mount ?? ((container, mountInput) => adapter.mount(container, mountInput)),
     attachCommandBridge: input.attachCommandBridge ?? attachCommandBridge,
-    markTabDirty: vi.fn(),
-    dismissCloseWarning: vi.fn(),
+    markTabDirty,
+    dismissCloseWarning,
+    trackDocument,
+    forgetDocument,
+    observeFile,
     markMissing,
     rememberLegacySource: (contentId: string, source: string) => { notices.remember(contentId, source) },
     dismissLegacyNotice: (contentId: string) => { notices.dismiss(contentId) },
@@ -134,7 +149,10 @@ export function panelFixture(input: PanelInput): {
     useRestore: bindObservable(restore.source),
     t: translate,
   } as OfficePanelProps
-  return { props, changes, notices, restore, openTabs, openResource, adapter, attachCommandBridge, markMissing }
+  return {
+    props, changes, notices, restore, openTabs, openResource, adapter, attachCommandBridge, markMissing,
+    trackDocument, observeFile, forgetDocument,
+  }
 }
 
 /**

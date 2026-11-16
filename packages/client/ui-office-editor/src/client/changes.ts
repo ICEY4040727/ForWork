@@ -1,15 +1,20 @@
 /**
- * Unsaved-edit and external-change state for open Office tabs.
+ * Unsaved-edit, external-change, and moved-file state for open Office tabs.
  *
  * The panel and the tab close handler observe one plugin-owned snapshot store:
  * the panel marks a live unit dirty when the editor runtime reports a mutation,
  * and the close handler reads the same entry before the tab is removed. A close
  * attempt on a dirty tab is vetoed through the Sidebar's cleanup-failure path
  * and flags the entry so the panel can show the localized save-or-discard
- * prompt. The store is created in `apply` and never at module scope.
+ * prompt. The same plugin-owned surface follows the workspace file change feed:
+ * when a tracked document's path disappears and its content version reappears
+ * at another path, the document is rebound to that path so the Session records
+ * `document/rebind` instead of losing the open document. The store is created
+ * in `apply` and never at module scope.
  */
 import { createSnapshotStore, type SnapshotStore } from '@forwork/client-store'
 import type { TabId } from '@forwork/client-ui-dockkit'
+import type { SessionId } from '@forwork/session/types'
 
 /** One tab's unsaved state. */
 export interface OfficeTabChangeState {
@@ -21,6 +26,170 @@ export interface OfficeTabChangeState {
 
 /** Every tracked tab, keyed by tab id. */
 export type OfficeTabChangeSnapshot = Readonly<Record<string, OfficeTabChangeState>>
+
+/** Record one open document's new location after its file moved. */
+export type OfficeDocumentRebind = (
+  sessionId: SessionId,
+  documentId: string,
+  toPath: string,
+) => void
+
+/** One document the move tracker follows for one plugin instance. */
+interface TrackedDocument {
+  readonly sessionId: SessionId
+  readonly documentId: string
+  path: string
+  /** File version last observed at `path`, which identifies a move. */
+  version: string | undefined
+  /** The path was reported absent and the document is waiting for its new location. */
+  missing: boolean
+}
+
+/** One path a file feed reported present, keyed by Session. */
+type ObservedPaths = Map<string, string>
+
+/**
+ * Normalize a path for comparison.
+ * @param path - a workspace path from a tab address or file feed.
+ * @returns the path with `\\` folded to `/`.
+ */
+function pathKey(path: string): string {
+  return path.replace(/\\/g, '/')
+}
+
+/**
+ * The open documents a plugin instance follows across file moves.
+ *
+ * A document becomes a rebind candidate only after the feed reports its path
+ * absent. A later observation of the same file version at another path
+ * resolves it, whether the disappearance or the reappearance arrives first.
+ */
+class DocumentMoves {
+  private readonly documents = new Map<string, TrackedDocument>()
+  private readonly observed = new Map<SessionId, ObservedPaths>()
+
+  /**
+   * @param rebind - records the move for one document; absent leaves the
+   * tracker as an observation log for callers that do not record.
+   */
+  constructor(private readonly rebind: OfficeDocumentRebind | undefined) {}
+
+  /**
+   * Follow one open document at its current path.
+   * @param sessionId - Session whose workspace owns the file.
+   * @param documentId - Session-scoped document identity.
+   * @param path - the path the tab currently addresses.
+   */
+  track(sessionId: SessionId, documentId: string, path: string): void {
+    const current = this.documents.get(documentId)
+    if (current !== undefined && current.sessionId === sessionId) {
+      if (current.path !== pathKey(path)) {
+        current.path = pathKey(path)
+        current.missing = false
+      }
+      return
+    }
+    this.documents.set(documentId, {
+      sessionId,
+      documentId,
+      path: pathKey(path),
+      version: undefined,
+      missing: false,
+    })
+  }
+
+  /**
+   * Stop following one document after its tab is removed.
+   * @param documentId - the closed document.
+   */
+  forget(documentId: string): void {
+    this.documents.delete(documentId)
+  }
+
+  /**
+   * Apply one workspace file feed observation.
+   * @param sessionId - Session whose workspace owns the file.
+   * @param documentId - the tab's document identity.
+   * @param path - the path the observation names.
+   * @param version - the observed file version, or `undefined` when the path is gone.
+   */
+  observe(sessionId: SessionId, documentId: string, path: string, version: string | undefined): void {
+    const document = this.documents.get(documentId)
+    if (document === undefined || document.sessionId !== sessionId) return
+    const key = pathKey(path)
+    const seen = this.observedOf(sessionId)
+    if (version === undefined) {
+      seen.delete(key)
+      if (document.path !== key) return
+      document.missing = true
+      const candidate = document.version === undefined
+        ? undefined
+        : firstObserved(seen, document.version, key)
+      if (candidate !== undefined) this.rebindTo(document, candidate[0], candidate[1])
+      return
+    }
+    seen.set(key, version)
+    if (document.path === key) {
+      document.version = version
+      document.missing = false
+    } else if (document.missing && document.version === version) {
+      this.rebindTo(document, key, version)
+      return
+    } else if (document.missing) {
+      return
+    }
+    const moved = this.missingDocument(sessionId, documentId, version, key)
+    if (moved !== undefined) this.rebindTo(moved, key, version)
+  }
+
+  private observedOf(sessionId: SessionId): ObservedPaths {
+    let seen = this.observed.get(sessionId)
+    if (seen === undefined) {
+      seen = new Map()
+      this.observed.set(sessionId, seen)
+    }
+    return seen
+  }
+
+  private missingDocument(
+    sessionId: SessionId,
+    excludedDocumentId: string,
+    version: string,
+    path: string,
+  ): TrackedDocument | undefined {
+    for (const document of this.documents.values()) {
+      if (document.sessionId !== sessionId || document.documentId === excludedDocumentId) continue
+      if (document.missing && document.version === version && document.path !== path) return document
+    }
+    return undefined
+  }
+
+  private rebindTo(document: TrackedDocument, path: string, version: string): void {
+    document.path = path
+    document.version = version
+    document.missing = false
+    this.observedOf(document.sessionId).set(path, version)
+    this.rebind?.(document.sessionId, document.documentId, path)
+  }
+}
+
+/**
+ * The first observed path other than `except` holding `version`.
+ * @param seen - the Session's observed paths.
+ * @param version - content version the moved document holds.
+ * @param except - the path that disappeared.
+ * @returns the path and version, or `undefined` when no other path matches.
+ */
+function firstObserved(
+  seen: ObservedPaths,
+  version: string,
+  except: string,
+): readonly [string, string] | undefined {
+  for (const [path, observed] of seen) {
+    if (path !== except && observed === version) return [path, observed]
+  }
+  return undefined
+}
 
 /** The plugin-owned change surface shared by the panel and the close handler. */
 export interface OfficeTabChanges {
@@ -53,14 +222,37 @@ export interface OfficeTabChanges {
    * @returns `true` when the close handler must refuse removal.
    */
   isDirty(tabId: TabId): boolean
+  /**
+   * Follow one open document so a file move keeps its identity.
+   * @param sessionId - Session whose workspace owns the file.
+   * @param documentId - Session-scoped document identity.
+   * @param path - the path the tab currently addresses.
+   */
+  trackDocument(sessionId: SessionId, documentId: string, path: string): void
+  /**
+   * Stop following one document after its tab is removed.
+   * @param documentId - the closed document.
+   */
+  forgetDocument(documentId: string): void
+  /**
+   * Report one observation from the workspace file change feed.
+   * @param sessionId - Session whose workspace owns the file.
+   * @param documentId - the tab's document identity.
+   * @param path - the observed path.
+   * @param version - the observed file version, or `undefined` when the path is gone.
+   */
+  observeFile(sessionId: SessionId, documentId: string, path: string, version: string | undefined): void
 }
 
 /**
  * Create the change surface for one plugin instance.
+ * @param rebind - records an observed move; production supplies `officeDocument.rebindDocument`.
  * @returns the observable source and its write set.
  */
-export function createOfficeTabChanges(): OfficeTabChanges {
+export function createOfficeTabChanges(rebind?: OfficeDocumentRebind): OfficeTabChanges {
   const source = createSnapshotStore<OfficeTabChangeSnapshot>({})
+  const moves = new DocumentMoves(rebind)
+
   const write = (tabId: TabId, next: OfficeTabChangeState): void => {
     source.set({ ...source.getSnapshot(), [tabId]: next })
   }
@@ -91,6 +283,15 @@ export function createOfficeTabChanges(): OfficeTabChanges {
     },
     isDirty(tabId) {
       return source.getSnapshot()[tabId]?.dirty === true
+    },
+    trackDocument(sessionId, documentId, path) {
+      moves.track(sessionId, documentId, path)
+    },
+    forgetDocument(documentId) {
+      moves.forget(documentId)
+    },
+    observeFile(sessionId, documentId, path, version) {
+      moves.observe(sessionId, documentId, path, version)
     },
   }
 }

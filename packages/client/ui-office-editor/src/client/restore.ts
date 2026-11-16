@@ -4,10 +4,12 @@
  * The `document` projection is the only authority for which documents were
  * open, in which order, and at which path after any rebind; the Sidebar's own
  * layout storage is per-window and the Session log outlives it. Restore runs
- * once per Session per window, from the first Office tab body that mounts in
- * that Session: the body asks the plugin-owned record below whether this
- * Session still needs its set, and only then opens the missing documents in
- * projection order through the tab's own `openResource` action.
+ * once per Session per window, from the first trigger in that window: an Office
+ * tab body that mounts in the Session, or the Session becoming active in the
+ * main view, which restores a Session with no Office tab open. The trigger asks
+ * the plugin-owned record below whether this Session still needs its set, and
+ * only then opens the missing documents in projection order through an
+ * `openResource` action.
  *
  * A `missing` document keeps its place in the Session (FR-015), so restore
  * never opens a dead tab for it: its path is recorded in the same store and
@@ -19,7 +21,8 @@
  * implementation (see `useOfficeDocument`).
  */
 import { useEffect } from 'react'
-import { createSnapshotStore, type SnapshotStore } from '@forwork/client-store'
+import { createSnapshotStore, type ObservableSnapshot, type SnapshotStore } from '@forwork/client-store'
+import type { SessionListState } from '@forwork/api-session-controller/client'
 import type {
   SidebarRightOpenTab,
   SidebarRightTabActions,
@@ -126,6 +129,47 @@ export function createOfficeRestore(): OfficeRestore {
   }
 }
 
+/** One restore pass: the projection, the tabs it reconciles, and where opens land. */
+export interface DocumentRestorePassInput {
+  /** Session whose open set this pass restores. */
+  readonly sessionId: SessionId
+  /** The live `document` projection value, absent until the Host publishes it. */
+  readonly projection: DocumentProjectionView | undefined
+  /** Open tab metadata, so a document already in a tab is not opened again. */
+  readonly openTabs: readonly SidebarRightOpenTab[]
+  /**
+   * Open one missing document.
+   * @param address - the file resource address to open.
+   */
+  readonly openResource: (address: string) => void
+  /** The plugin-owned record deciding which pass runs. */
+  readonly restore: OfficeRestoreActions
+}
+
+/**
+ * Run one Session's restore pass if it still needs it.
+ *
+ * The pass is claimed before any tab opens, so later projection updates and
+ * every other trigger are no-ops. A document that already has an Office tab is
+ * skipped rather than revealed; one that is missing is reported, not opened.
+ * @param input - the Session, its projection, the open tabs, and the open action.
+ */
+export function restoreDocuments(input: DocumentRestorePassInput): void {
+  const { sessionId, projection, openTabs, openResource, restore } = input
+  if (projection === undefined) return
+  if (!restore.claim(sessionId)) return
+  const plan = restorePlan(projection)
+  const opened = new Set(openTabs
+    .filter(tab => tab.sessionId === sessionId && tab.kind === OFFICE_KIND)
+    .map(tab => tab.contentId))
+  for (const path of plan.open) {
+    const address = fileAddressFor(sessionId, undefined, path)
+    if (opened.has(address)) continue
+    openResource(address)
+  }
+  restore.reportMissing(sessionId, plan.missing)
+}
+
 /** One tab body's restore inputs. */
 export interface DocumentRestoreInput {
   /** Session whose open set this body restores. */
@@ -142,26 +186,69 @@ export interface DocumentRestoreInput {
 
 /**
  * Run this Session's one restore pass when its projection first arrives.
- *
- * The pass is claimed before any tab opens, so later projection updates and
- * further mounted bodies are no-ops. A document that already has an Office tab
- * is skipped rather than revealed; one that is missing is reported, not opened.
  * @param input - the Session, its projection, the open tabs, and the tab's actions.
  */
 export function useDocumentRestore(input: DocumentRestoreInput): void {
   const { sessionId, projection, openTabs, actions, restore } = input
   useEffect(() => {
-    if (projection === undefined) return
-    if (!restore.claim(sessionId)) return
-    const plan = restorePlan(projection)
-    const opened = new Set(openTabs
-      .filter(tab => tab.sessionId === sessionId && tab.kind === OFFICE_KIND)
-      .map(tab => tab.contentId))
-    for (const path of plan.open) {
-      const address = fileAddressFor(sessionId, undefined, path)
-      if (opened.has(address)) continue
-      actions.openResource(address)
-    }
-    restore.reportMissing(sessionId, plan.missing)
+    restoreDocuments({
+      sessionId,
+      projection,
+      openTabs,
+      openResource: (address) => { actions.openResource(address) },
+      restore,
+    })
   }, [sessionId, projection, openTabs, actions, restore])
+}
+
+/** The Session-list and open-tab sources a Session activation pass reads. */
+export interface SessionActivationRestoreInput {
+  /** Host list snapshots carrying main-view retention and cached projection values. */
+  readonly sessions: ObservableSnapshot<SessionListState>
+  /** Open tab metadata across adopted Sessions. */
+  readonly openTabs: ObservableSnapshot<readonly SidebarRightOpenTab[]>
+  /** The plugin-owned record deciding which pass runs. */
+  readonly restore: OfficeRestoreActions
+  /**
+   * Open one missing document in the Session that holds it.
+   * @param sessionId - the Session whose open set is restored.
+   * @param address - the file resource address to open.
+   */
+  readonly openResourceIn: (sessionId: SessionId, address: string) => void
+}
+
+/**
+ * Restore every active Session's open set, including one with no Office tab.
+ *
+ * The main-view Session is the active one: the Session on screen has a retained
+ * main view while the Conversation fills the main column. Its cached `document`
+ * projection carries the durable set, so no Office body is needed to learn what
+ * to reopen. Each notification reconciles every active Session; the shared
+ * restore record makes all passes after the first a no-op. A Session whose set
+ * is empty claims nothing, leaving a projection that arrives later able to run.
+ * @param input - the Session list, open tabs, restore record, and per-Session open action.
+ * @returns stops following Session activation.
+ */
+export function restoreOnSessionActivation(input: SessionActivationRestoreInput): () => void {
+  const sync = (): void => {
+    const list = input.sessions.getSnapshot()
+    const openTabs = input.openTabs.getSnapshot()
+    for (const sessionId of list.ids) {
+      if ((list.byId[sessionId]?.retainedBy.mainView ?? 0) === 0) continue
+      const projection = list.projectionsBySession[sessionId]?.values.document
+      if (projection === undefined) continue
+      const plan = restorePlan(projection)
+      if (plan.open.length === 0 && plan.missing.length === 0) continue
+      restoreDocuments({
+        sessionId,
+        projection,
+        openTabs,
+        openResource: (address) => { input.openResourceIn(sessionId, address) },
+        restore: input.restore,
+      })
+    }
+  }
+  const unsubscribe = input.sessions.subscribe(sync)
+  sync()
+  return unsubscribe
 }

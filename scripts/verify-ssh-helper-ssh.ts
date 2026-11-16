@@ -42,7 +42,7 @@ export async function verifySshTransport(argv: string[]): Promise<void> {
   const archive = resolve(values.archive)
   assert.equal(await fileDigest(archive), (await readFile(`${archive}.sha256`, 'utf8')).split(/\s/)[0], 'Archive checksum')
   const temporary = await mkdtemp(join(tmpdir(), 'dsh-helper-ssh-'))
-  const image = `dsh-helper-test:${randomUUID()}`
+  const image = `forwork-helper-test:${randomUUID()}`
   let imageBuilt = false
   let container: string | undefined
   try {
@@ -55,7 +55,7 @@ export async function verifySshTransport(argv: string[]): Promise<void> {
     const identity = join(temporary, 'identity')
     await run('ssh-keygen', ['-q', '-t', 'ed25519', '-N', '', '-f', identity])
     container = await docker('run', '--detach', '--platform', platform, '--publish', '127.0.0.1::22',
-      '--mount', `type=bind,src=${installed},dst=/opt/dsh-helper,readonly`,
+      '--mount', `type=bind,src=${installed},dst=/opt/forwork-helper,readonly`,
       '--mount', `type=bind,src=${identity}.pub,dst=/fixture-key.pub,readonly`, image)
     await sshdReady(container)
     const published = await docker('port', container, '22/tcp')
@@ -74,8 +74,8 @@ export async function verifySshTransport(argv: string[]): Promise<void> {
     const workspace = '/home/dsh/workspace'
     const config = join(temporary, 'cordis.yml')
     await writeFile(config, artifactComposition({ id: 'ssh', name: '@forwork/ssh', config: {
-      host: 'artifact', launch: { kind: 'executable' }, helper: '/opt/dsh-helper/dsh-ssh-helper',
-      helperHash: await fileDigest(join(installed, 'dsh-ssh-helper')), workspace,
+      host: 'artifact', launch: { kind: 'executable' }, helper: '/opt/forwork-helper/forwork-ssh-helper',
+      helperHash: await fileDigest(join(installed, 'forwork-ssh-helper')), workspace,
     } }, workspace))
     const home = join(temporary, 'client-home')
     await mkdir(home)

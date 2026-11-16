@@ -1,0 +1,46 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/document/tool-office/README.md
+/:
+  en: 6eb2e03a229baa04
+  zh: 3a0a97ef3ebb9dcc
+/forwork-tool-office:
+  en: 076c0d7f720761d8
+  zh: dc5bff5e85aae638
+/forwork-tool-office/summary:
+  en: 33823abbb23a4e2a
+  zh: ced9e7bb818df273
+/forwork-tool-office/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 5ea16c73684ce99f
+/forwork-tool-office/use-this-package:
+  en: 7fafcc2464cb7a5e
+  zh: 02f76967b454dd8b
+/forwork-tool-office/understand-the-implementation:
+  en: b9295d4d68be9d9f
+  zh: b18d1d65be728380
+/forwork-tool-office/further-exploration:
+  en: 778e960f9a702858
+  zh: d4e7b1d8110fc1b3
+/forwork-tool-office/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/forwork-tool-office/model-experience/document-tools:
+  en: c5524ed13b3a63cb
+  zh: 509750d2ce9efec7
+/forwork-tool-office/model-experience/document-tools/what-the-model-sees:
+  en: 7fa97f0f655c697f
+  zh: a223bdf81d014ce0
+/forwork-tool-office/model-experience/document-tools/token-effect:
+  en: 3958aee584b55379
+  zh: e31e3b2fad38861a
+/forwork-tool-office/model-experience/document-tools/kv-cache-effect:
+  en: 7593cf5d0d2cedd6
+  zh: ff48128cb67c1624
+/forwork-tool-office/known-limitations-and-deferred-work:
+  en: 95cc4a7263b1e547
+  zh: 5cdaaa4cfae38522
+/forwork-tool-office/known-limitations-and-deferred-work/dev-note:
+  en: a7c3b98ba4f436d6
+  zh: ae211309f8d9b57f

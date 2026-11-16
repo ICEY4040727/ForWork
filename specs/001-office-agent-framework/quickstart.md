@@ -103,5 +103,6 @@ corepack pnpm run doc-sync
 - Entity and state rules: [data-model.md](./data-model.md)
 - Service contract: [contracts/office-exchange.contract.md](./contracts/office-exchange.contract.md)
 - Session contract: [contracts/document-events.contract.md](./contracts/document-events.contract.md)
+- Command bridge contract: [contracts/command-bridge.contract.md](./contracts/command-bridge.contract.md)
 - Tool contract: [contracts/tool-office.contract.md](./contracts/tool-office.contract.md)
 - Upstream sync policy: [docs/development.md#upstream-sync](../../docs/development.md#upstream-sync)

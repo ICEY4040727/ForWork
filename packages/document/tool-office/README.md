@@ -5,6 +5,8 @@ kind: "package-reference"
 
 # @forwork/tool-office
 
+English | [中文](README.zh.md)
+
 ## Summary
 
 Host plugin package for the agent's Office document tools. It registers `document_read`, `document_edit_cells`, `document_edit_paragraph`, and `document_convert`. Reads and edits go through the correlated `document/command` bridge to the live editor; the Host performs the single version-guarded save for every accepted edit and records `document/edit` with its inverse.

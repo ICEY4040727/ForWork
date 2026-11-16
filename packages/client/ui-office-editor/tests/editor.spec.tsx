@@ -20,6 +20,8 @@ import type { TabId } from '@forwork/client-ui-dockkit'
 import type { SidebarRightOpenTab } from '@forwork/client-ui-sidebar-right/client'
 import { createSnapshotStore } from '@forwork/client-store'
 import { MutableSessionEventSource } from '@forwork/api-session-controller/client'
+import type { SessionListState, SessionSummary } from '@forwork/api-session-controller/client'
+import type { DocumentProjectionView } from '@forwork/session-document/client'
 import type { RemoteResult } from '@forwork/typert-protocol'
 import { RemoteError } from '@forwork/typert-protocol'
 import type { OfficeDocumentReadResult, OfficeDocumentSaveResult, OfficeDocumentSnapshot } from '@forwork/office-exchange/types'
@@ -61,7 +63,7 @@ function failure<T>(code: 'office-document/conflict' | 'office-document/out-of-s
   return { ok: false, error: new RemoteError(code, code, { path: '/work/budget.xlsx' }) }
 }
 
-function fakeRemote(options: { factFailure?: boolean } = {}): {
+function fakeRemote(options: { factFailure?: boolean; rebindFailure?: boolean } = {}): {
   read: ReturnType<typeof vi.fn>
   convert: ReturnType<typeof vi.fn>
   save: ReturnType<typeof vi.fn>
@@ -71,10 +73,12 @@ function fakeRemote(options: { factFailure?: boolean } = {}): {
   complete: ReturnType<typeof vi.fn>
   closeDocument: ReturnType<typeof vi.fn>
   markDocumentMissing: ReturnType<typeof vi.fn>
+  rebindDocument: ReturnType<typeof vi.fn>
   face: OfficeDocumentRemote & {
     completeCommand: ReturnType<typeof vi.fn>
     closeDocument: ReturnType<typeof vi.fn>
     markDocumentMissing: ReturnType<typeof vi.fn>
+    rebindDocument: ReturnType<typeof vi.fn>
   }
 } {
   const read = vi.fn(async (): Promise<RemoteResult<OfficeDocumentReadResult>> => success(readResult('v1')))
@@ -89,6 +93,9 @@ function fakeRemote(options: { factFailure?: boolean } = {}): {
     : success(undefined)
   const closeDocument = vi.fn(async (): Promise<RemoteResult<void>> => fact())
   const markDocumentMissing = vi.fn(async (): Promise<RemoteResult<void>> => fact())
+  const rebindDocument = vi.fn(async (): Promise<RemoteResult<void>> => options.rebindFailure === true
+    ? failure<undefined>('office-document/out-of-scope')
+    : success(undefined))
   return {
     read,
     convert,
@@ -99,6 +106,7 @@ function fakeRemote(options: { factFailure?: boolean } = {}): {
     complete,
     closeDocument,
     markDocumentMissing,
+    rebindDocument,
     face: {
       read,
       convertLegacy: convert,
@@ -109,6 +117,7 @@ function fakeRemote(options: { factFailure?: boolean } = {}): {
       completeCommand: complete,
       closeDocument,
       markDocumentMissing,
+      rebindDocument,
     },
   }
 }
@@ -138,10 +147,13 @@ interface Boot {
   fiber: ReturnType<Context['plugin']>
   commands: MutableSessionEventSource
   completeCommand: ReturnType<typeof vi.fn>
+  rebindDocument: ReturnType<typeof vi.fn>
+  sessionsList: ReturnType<typeof createSnapshotStore<SessionListState>>
+  openResourceIn: ReturnType<typeof vi.fn>
   warn: Mock<(message: string) => void>
 }
 
-async function boot(options: { factFailure?: boolean } = {}): Promise<Boot> {
+async function boot(options: { factFailure?: boolean; rebindFailure?: boolean } = {}): Promise<Boot> {
   const ctx = new Context()
   const warn = vi.fn<(message: string) => void>()
   ctx.logger.warn = warn
@@ -163,8 +175,10 @@ async function boot(options: { factFailure?: boolean } = {}): Promise<Boot> {
     }),
   }
   let closeHandler: Boot['closeHandler']
+  const openResourceIn = vi.fn()
   const sidebarRight = {
     openTabs: createSnapshotStore<readonly SidebarRightOpenTab[]>([]),
+    openResourceIn,
     registerCloseHandler: vi.fn((_kind: string, handler: NonNullable<Boot['closeHandler']>) => {
       closeHandler = handler
       return () => { closeHandler = undefined }
@@ -172,10 +186,13 @@ async function boot(options: { factFailure?: boolean } = {}): Promise<Boot> {
   }
   const remote = fakeRemote(options)
   const commands = new MutableSessionEventSource()
+  const sessionsList = createSnapshotStore<SessionListState>({
+    ids: [], byId: {}, phase: 'ready', projectionsBySession: {},
+  })
   ctx.provide('sidebarRightTabs', tabs as never)
   ctx.provide('slots', slots as never)
   ctx.provide('locale', locale as never)
-  ctx.provide('sessions', { binding: vi.fn(() => ({ eventSource: commands })) } as never)
+  ctx.provide('sessions', { list: sessionsList, binding: vi.fn(() => ({ eventSource: commands })) } as never)
   ctx.provide('sidebarRight', sidebarRight as never)
   ctx.provide('remote', { officeDocument: remote.face } as never)
   ctx.provide('remote.officeDocument', remote.face as never)
@@ -183,7 +200,8 @@ async function boot(options: { factFailure?: boolean } = {}): Promise<Boot> {
   onTestFinished(async () => { await fiber.dispose() })
   await fiber.await()
   return {
-    tabs, registered, dictionaries, closeHandler, fiber, commands, completeCommand: remote.complete, warn,
+    tabs, registered, dictionaries, closeHandler, fiber, commands, completeCommand: remote.complete,
+    rebindDocument: remote.rebindDocument, sessionsList, openResourceIn, warn,
   }
 }
 
@@ -227,6 +245,9 @@ function panelProps(options: PanelOptions = {}): OfficePanelProps {
     attachCommandBridge: vi.fn(() => () => {}),
     markTabDirty: options.onMarkDirty ?? vi.fn(),
     dismissCloseWarning: options.onDismissWarning ?? vi.fn(),
+    trackDocument: vi.fn(),
+    forgetDocument: vi.fn(),
+    observeFile: vi.fn(),
     markMissing: vi.fn(),
     rememberLegacySource: vi.fn(),
     dismissLegacyNotice: vi.fn(),
@@ -290,6 +311,66 @@ describe('ui-office-editor apply', () => {
       contentVersion: 2,
     })
     detach()
+  })
+
+  it('restores an active Session with no Office tab through the Session list', async () => {
+    const { sessionsList, openResourceIn } = await boot()
+    const documentId = brandString<DocumentId>(`${SESSION_ID}:work/report.docx`)
+    const projection: DocumentProjectionView = {
+      order: [documentId],
+      documents: {
+        [documentId]: {
+          documentId, path: 'work/report.docx', format: 'docx', contentVersion: 0, status: 'open', unsupported: [],
+        },
+      },
+    }
+    const summary: SessionSummary = {
+      id: SESSION_ID,
+      displayTitle: 'Main',
+      running: false,
+      blank: false,
+      updatedAt: 0,
+      retainedBy: { mainView: 1 },
+    }
+    sessionsList.set({
+      ids: [SESSION_ID],
+      byId: { [SESSION_ID]: summary },
+      phase: 'ready',
+      projectionsBySession: {
+        [SESSION_ID]: { values: { document: projection }, state: 'ready', error: null },
+      },
+    })
+
+    expect(openResourceIn).toHaveBeenCalledWith(SESSION_ID, 'dsh-resource://file/session/s-1/work/report.docx')
+  })
+
+  it('records a document move observed through the tab file feed', async () => {
+    const { registered, rebindDocument } = await boot()
+    const face = registered.find(entry => entry.name === 'sidebar.right.pane.tab')?.inject?.(SESSION_ID)
+    const documentId = `${SESSION_ID}:work/budget.xlsx`
+    face!.trackDocument(SESSION_ID, documentId, 'work/budget.xlsx')
+    face!.observeFile(SESSION_ID, documentId, 'work/budget.xlsx', 'v1')
+    face!.observeFile(SESSION_ID, documentId, 'work/budget.xlsx', undefined)
+    face!.observeFile(SESSION_ID, documentId, 'work/renamed.xlsx', 'v1')
+
+    await waitFor(() => {
+      expect(rebindDocument).toHaveBeenCalledWith(SESSION_ID, documentId, 'work/renamed.xlsx')
+    })
+  })
+
+  it('logs a refused move record without blocking the tab', async () => {
+    const { registered, rebindDocument, warn } = await boot({ rebindFailure: true })
+    const face = registered.find(entry => entry.name === 'sidebar.right.pane.tab')?.inject?.(SESSION_ID)
+    const documentId = `${SESSION_ID}:work/budget.xlsx`
+    face!.trackDocument(SESSION_ID, documentId, 'work/budget.xlsx')
+    face!.observeFile(SESSION_ID, documentId, 'work/budget.xlsx', 'v1')
+    face!.observeFile(SESSION_ID, documentId, 'work/budget.xlsx', undefined)
+    face!.observeFile(SESSION_ID, documentId, 'work/renamed.xlsx', 'v1')
+
+    await waitFor(() => {
+      expect(rebindDocument).toHaveBeenCalledOnce()
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('could not record the move'))
+    })
   })
 
   it('takes every registration back when the plugin is disposed', async () => {    const { tabs, registered, dictionaries, fiber } = await boot()

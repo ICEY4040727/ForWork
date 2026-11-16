@@ -7,6 +7,12 @@
  * an unsupported feature cannot be saved at all. An external version change
  * reloads a clean unit and prompts instead of reloading a dirty one.
  *
+ * The content version is one value shared by the Host, agent commands, and local
+ * saves. When the Host's own save advances the `document` projection's version,
+ * the hook adopts it and treats the matching file reload as the Host's write
+ * rather than an external edit, so a later command still reports the version the
+ * Host recorded.
+ *
  * Edits are captured as idle-debounced recovery drafts through the same
  * Remote. A draft found after a successful read is offered only as a recovery
  * choice: it is never applied automatically, and a draft captured from an
@@ -185,6 +191,12 @@ export interface UseOfficeDocumentInput {
   readonly openConverted: (address: string, source: string) => void
   /** Whether the live unit has unsaved edits. */
   readonly dirty: boolean
+  /**
+   * Host-reported content version for this document, from the `document`
+   * projection. It rises on a Host save, which is how the hook distinguishes
+   * the Host's own write from an external edit.
+   */
+  readonly contentVersion?: number | undefined
 }
 
 /** The hook's state plus the actions the panel calls. */
@@ -195,6 +207,11 @@ export interface UseOfficeDocumentResult {
   readonly snapshot: OfficeDocumentSnapshot | undefined
   /** Version of the displayed snapshot. */
   readonly version: string | undefined
+  /**
+   * Content version the live unit holds. Host saves, agent commands, and local
+   * saves advance this one value, so every writer reports the same version.
+   */
+  readonly contentVersion: number
   /** Features a save would drop. */
   readonly unsupported: readonly UnsupportedFeature[]
   /** Last failure. */
@@ -224,6 +241,13 @@ export interface UseOfficeDocumentResult {
   dismissDraftError(): void
   /** Drop any pending draft and remove the stored draft without closing. */
   discardDraft(): void
+  /**
+   * Read the content version without waiting for a render.
+   * @returns the live content version.
+   */
+  currentContentVersion(): number
+  /** Advance the content version after the adapter applied an agent command. */
+  markApplied(): void
   /**
    * Save the live unit at the version the read observed.
    * @param edited - the live snapshot; defaults to the read snapshot.
@@ -296,18 +320,34 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
   const [recovery, setRecovery] = useState<OfficeDraftRecovery | undefined>(undefined)
   const [draftError, setDraftError] = useState<OfficeDocumentFailure | undefined>(undefined)
   const [recovered, setRecovered] = useState(false)
+  const [contentVersionState, setContentVersionState] = useState(0)
   const savingRef = useRef(false)
   const observedRef = useRef(observedVersion)
   const observedAtRead = useRef<string | undefined>(undefined)
   const rootRef = useRef(workspaceRoot)
   const draftCheckedFor = useRef<string | undefined>(undefined)
   const statusRef = useRef(state.status)
-  const versionRef = useRef(state.version)
+  const fileVersionRef = useRef(state.version)
+  const contentVersionRef = useRef(0)
+  const hostVersionRef = useRef(input.contentVersion)
+  const lastHostVersion = useRef(input.contentVersion)
+  const hostSaved = useRef(false)
   observedRef.current = observedVersion
   rootRef.current = workspaceRoot
   statusRef.current = state.status
-  versionRef.current = state.version
+  fileVersionRef.current = state.version
+  hostVersionRef.current = input.contentVersion
   const documentId = useMemo(() => officeDocumentIdentity(sessionId, path), [sessionId, path])
+  const contentVersion = Math.max(contentVersionState, input.contentVersion ?? 0)
+  const currentContentVersion = useCallback(
+    () => Math.max(contentVersionRef.current, hostVersionRef.current ?? 0),
+    [],
+  )
+  const advanceContentVersion = useCallback((): void => {
+    const next = Math.max(contentVersionRef.current, hostVersionRef.current ?? 0) + 1
+    contentVersionRef.current = next
+    setContentVersionState(next)
+  }, [])
 
   const reportDraftError = useCallback((failure: RemoteFailure): void => {
     setDraftError(mapOfficeFailure(failure))
@@ -433,6 +473,11 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
   }, [remote, sessionId, path, signal, legacy, openConverted])
 
   useEffect(() => {
+    const reported = input.contentVersion
+    if (reported !== undefined && (lastHostVersion.current === undefined || reported > lastHostVersion.current)) {
+      hostSaved.current = true
+    }
+    lastHostVersion.current = reported
     if (state.status === 'loading') return
     const verdict = externalChangeVerdict({
       observedVersion,
@@ -440,9 +485,19 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
       observedAtRead: observedAtRead.current,
       dirty,
     })
+    if (verdict === 'none') return
+    // A version the Host advanced itself wrote the file: reload its content
+    // without presenting the change as somebody else's edit.
+    if (hostSaved.current && !dirty) {
+      hostSaved.current = false
+      setExternalChange(false)
+      setGeneration(value => value + 1)
+      return
+    }
+    hostSaved.current = false
     if (verdict === 'prompt') setExternalChange(true)
-    else if (verdict === 'reload') setGeneration(value => value + 1)
-  }, [observedVersion, state.status, state.version, dirty])
+    else setGeneration(value => value + 1)
+  }, [observedVersion, state.status, state.version, dirty, input.contentVersion])
 
   const save = useCallback(async (edited?: OfficeDocumentSnapshot): Promise<OfficeSaveOutcome> => {
     const snapshot = state.snapshot
@@ -469,6 +524,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
         error: undefined,
         status: 'ready',
       }))
+      advanceContentVersion()
       setRecovery(undefined)
       setRecovered(false)
       setDraftError(undefined)
@@ -480,12 +536,12 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     }
   }, [
     remote, sessionId, path, signal, state.snapshot, state.version, state.unsupported, externalChange,
-    clearDraftRecord,
+    clearDraftRecord, advanceContentVersion,
   ])
 
   const scheduleDraft = useCallback((snapshot: OfficeDocumentSnapshot): void => {
-    if (statusRef.current !== 'ready' || versionRef.current === undefined) return
-    scheduler.schedule(snapshot, versionRef.current)
+    if (statusRef.current !== 'ready' || fileVersionRef.current === undefined) return
+    scheduler.schedule(snapshot, fileVersionRef.current)
   }, [scheduler])
 
   const acceptRecovery = useCallback((): void => {
@@ -525,6 +581,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     status: state.status,
     snapshot: state.snapshot,
     version: state.version,
+    contentVersion,
     unsupported: state.unsupported,
     error: state.error,
     canSave,
@@ -538,6 +595,8 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     discardRecovery,
     dismissDraftError,
     discardDraft,
+    currentContentVersion,
+    markApplied: advanceContentVersion,
     save,
     reload,
     dismissExternalChange,

@@ -1,0 +1,67 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/session/session-document/README.md
+/:
+  en: 56edb0d44c464dd2
+  zh: 26aa9a17e121bf48
+/forwork-session-document:
+  en: bb7f969c6c967b65
+  zh: 07dfe2a929792f74
+/forwork-session-document/summary:
+  en: fb047afb91b5508c
+  zh: 63ceeaefe6c10730
+/forwork-session-document/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 5ea16c73684ce99f
+/forwork-session-document/use-this-package:
+  en: bbff250eba0f1b89
+  zh: e21edbd9a16225c7
+/forwork-session-document/use-this-package/when-to-use-it:
+  en: a6f1bf50f37e4cb8
+  zh: 8eccb272d35457b9
+/forwork-session-document/use-this-package/bind-an-identity:
+  en: f0c0f0dfd658b3cf
+  zh: 0010b6a88714aa81
+/forwork-session-document/use-this-package/apply-and-undo-a-change:
+  en: 8f186d5f8ecb57ee
+  zh: 9acb961b2124be4f
+/forwork-session-document/use-this-package/record-document-facts:
+  en: b607a45075240237
+  zh: 894eb836a54ef63e
+/forwork-session-document/use-this-package/read-the-open-set:
+  en: 85b40865b3ec8f84
+  zh: b69c2122818e9db7
+/forwork-session-document/use-this-package/restore-the-open-set:
+  en: 6069dcd0e8178d6b
+  zh: d0aa7417fe82e708
+/forwork-session-document/understand-the-implementation:
+  en: 8f8bd44f7f72e9dd
+  zh: 029ad5d5ac3541cd
+/forwork-session-document/understand-the-implementation/source-map:
+  en: 8b5eff48d30f285b
+  zh: 36aeb0d4df3589da
+/forwork-session-document/further-exploration:
+  en: 172afc12927bdfcf
+  zh: 2183d8e37cf6d5b1
+/forwork-session-document/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/forwork-session-document/model-experience/document-transitions:
+  en: 1ad12c0e7fb0edde
+  zh: b84bcb1541446e87
+/forwork-session-document/model-experience/document-transitions/what-the-model-sees:
+  en: 1f886f46fba72e46
+  zh: 59cf42af5350850c
+/forwork-session-document/model-experience/document-transitions/token-effect:
+  en: c339473cae5b6d08
+  zh: e59e489bb7877064
+/forwork-session-document/model-experience/document-transitions/kv-cache-effect:
+  en: 147d11b243ffd31a
+  zh: 7e83d02e6601f6bc
+/forwork-session-document/known-limitations-and-deferred-work:
+  en: 401ada8b590d2ddb
+  zh: 71e332cc8925ab24
+/forwork-session-document/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea

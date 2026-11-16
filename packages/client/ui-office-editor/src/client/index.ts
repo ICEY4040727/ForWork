@@ -11,7 +11,10 @@
  * legacy source is converted and reopened as a copy through the tab's own
  * `openResource` action, with the original path kept in the plugin's notice
  * store. The same plugin-owned store records the one restore pass each Session
- * runs and the documents it could not reopen.
+ * runs and the documents it could not reopen; that pass also runs when the
+ * Session becomes active, so a Session with no Office tab restores its set.
+ * A moved file observed through the open tabs' file resources is recorded as a
+ * `document/rebind` through the same Remote.
  */
 import type { Context as ClientContext } from '@forwork/cordis'
 import type {} from '@forwork/api-remotes/client'
@@ -30,7 +33,7 @@ import { officePanelInjected } from './face.ts'
 import { createOfficeLegacyNotices } from './notices.ts'
 import { OfficePanel } from './OfficePanel.tsx'
 import { OfficeTitle } from './OfficeTitle.tsx'
-import { createOfficeRestore } from './restore.ts'
+import { createOfficeRestore, restoreOnSessionActivation } from './restore.ts'
 import { OFFICE_ID, OFFICE_KIND, officeDefinition } from './definition.ts'
 import { en, zh } from './locales.ts'
 import { officeDocumentIdentity, openTargetOf } from './target.ts'
@@ -56,12 +59,24 @@ export const inject = ['slots', 'locale', 'sessions', 'sidebarRightTabs', 'sideb
  * @param ctx - client root context carrying the registry, slots, copy, and Remote.
  */
 export function apply(ctx: ClientContext): void {
-  const changes = createOfficeTabChanges()
+  const changes = createOfficeTabChanges((sessionId, documentId, toPath) => {
+    void ctx.remote.officeDocument.rebindDocument(sessionId, documentId, toPath).then((result) => {
+      if (!result.ok) {
+        ctx.logger.warn(`ui-office-editor: could not record the move of "${documentId}" to "${toPath}": ${result.error.message}`)
+      }
+    })
+  })
   const notices = createOfficeLegacyNotices()
   const restore = createOfficeRestore()
   const commandRemote: OfficeCommandRemote = ctx.remote.officeDocument
   ctx.effect(() => ctx.sidebarRightTabs.register(officeDefinition()), 'ui-office-editor: type')
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-office-editor: dictionaries')
+  ctx.effect(() => restoreOnSessionActivation({
+    sessions: ctx.sessions.list,
+    openTabs: ctx.sidebarRight.openTabs,
+    restore,
+    openResourceIn: (sessionId, address) => { ctx.sidebarRight.openResourceIn(sessionId, address) },
+  }), 'ui-office-editor: activation restore')
   ctx.effect(() => ctx.sidebarRight.registerCloseHandler(OFFICE_KIND, (sessionId, tab) => {
     if (changes.isDirty(tab.id)) {
       changes.warnClose(tab.id)

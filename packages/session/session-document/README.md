@@ -5,6 +5,8 @@ kind: "package-reference"
 
 # @forwork/session-document
 
+English | [中文](README.zh.md)
+
 ## Summary
 
 `dsh-session-document` keeps a document's identity stable while its path moves, makes every accepted edit attributable and reversible, and folds the durable `document/*` facts into the open-document set. Identity bindings pair a Session-local `DocumentId` with the current locator and its availability; change records pair a structured edit with the actor, the version transition, and the exact inverse; the fact writers append the lifecycle and save facts; the `document` projection and its prompt section read those facts back for the agent. Restore expands the projection into the ordered set a client reopens, and the recovery rule decides whether a stored draft matches the file it was captured from.

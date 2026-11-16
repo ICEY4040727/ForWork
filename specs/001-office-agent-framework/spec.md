@@ -88,7 +88,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **FR-003**: The product MUST convert legacy `.doc/.xls/.ppt` to a modern editable format on open without altering the source.
 - **FR-004**: The product MUST expose document structure and content to the agent as structured operations, not raw bytes.
 - **FR-005**: Agent edits and user edits MUST converge on one document state, with version-guarded writes and a visible conflict report.
-- **FR-006**: The product MUST record document open/edit/rebind/missing/close as durable session facts so the agent can reference documents across turns.
+- **FR-006**: The product MUST record document open/edit/save/rebind/missing/close as durable session facts so the agent can reference documents across turns.
 - **FR-007**: The product MUST restore the open-document set after restart.
 - **FR-008**: The product MUST refuse and explain any save that would drop unsupported content.
 - **FR-009**: The product MUST be delivered as the ForWork desktop application under the `@forwork/*` npm scope, the `forwork-` artifact prefix, and the `forwork` CLI, with no remaining DeepSeek brand, telemetry, default model adapter, or upstream npm scope in product surfaces. Legally-required provenance notices, protocol-internal `dsh.*`/`DSH_*` tokens, and the external LibreOffice conversion dependency are the only accepted references, each enforced by `verify-forwork-identity`.
@@ -107,7 +107,7 @@ The user opens several documents across a session. The agent can refer to them a
 ### Key Entities *(include if feature involves data)*
 
 - **Document**: an opened office file; identity is a stable document id scoped to the authorizing session, with the current absolute path as a rebindable locator; carries a content version and a rendered/serialized state.
-- **Document Session Fact**: a logged open/edit/rebind/missing/close fact tied to a document, turn, and content version.
+- **Document Session Fact**: a logged open/edit/save/rebind/missing/close fact tied to a document, turn, and content version.
 - **Change Record**: an attributable, reversible edit applied by the user or the agent, tied to a document version.
 - **Document Draft**: a local, version-bound snapshot of unsaved edits used for crash recovery; it never overwrites the open file and is cleared after a successful save.
 - **Unit Snapshot**: the editable state of a workbook or text document, held directly in the editor core's native workbook/document snapshot model so the editor and the agent share one model; the session log persists attributable change operations rather than raw snapshots.

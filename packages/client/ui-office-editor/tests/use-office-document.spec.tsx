@@ -371,3 +371,74 @@ describe('mapOfficeFailure', () => {
     expect(mapOfficeFailure(new RemoteError('gateway/internal', 'm', {})).code).toBe('unknown')
   })
 })
+
+describe('useOfficeDocument Host content version', () => {
+  it('adopts a Host save before the file reload instead of treating it as external', async () => {
+    const remote = makeRemote()
+    remote.read.mockResolvedValueOnce(success(readResult('v1')))
+    remote.read.mockResolvedValueOnce(success(readResult('v2')))
+    const { result, rerender } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face, { contentVersion: 0 }),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+
+    rerender(input(remote.face, { contentVersion: 1 }))
+    expect(result.current.contentVersion).toBe(1)
+    expect(remote.read).toHaveBeenCalledOnce()
+
+    rerender(input(remote.face, { contentVersion: 1, observedVersion: 'v2' }))
+    await waitFor(() => { expect(result.current.version).toBe('v2') })
+    expect(result.current.externalChange).toBe(false)
+    expect(remote.read).toHaveBeenCalledTimes(2)
+  })
+
+  it('adopts a Host save that arrives after the file version changed', async () => {
+    const remote = makeRemote()
+    remote.read.mockResolvedValueOnce(success(readResult('v1')))
+    remote.read.mockResolvedValueOnce(success(readResult('v2')))
+    const { result, rerender } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face, { contentVersion: 0 }),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+
+    rerender(input(remote.face, { contentVersion: 0, observedVersion: 'v2' }))
+    await waitFor(() => { expect(result.current.version).toBe('v2') })
+
+    rerender(input(remote.face, { contentVersion: 1, observedVersion: 'v2' }))
+    expect(result.current.contentVersion).toBe(1)
+    expect(result.current.externalChange).toBe(false)
+    expect(remote.read).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps one content version across Host saves, commands, and local saves', async () => {
+    const remote = makeRemote()
+    const { result } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face, { contentVersion: 4 }),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    expect(result.current.contentVersion).toBe(4)
+    expect(result.current.currentContentVersion()).toBe(4)
+
+    act(() => { result.current.markApplied() })
+    expect(result.current.contentVersion).toBe(5)
+    expect(result.current.currentContentVersion()).toBe(5)
+
+    let outcome: string | undefined
+    await act(async () => { outcome = await result.current.save(edited) })
+    expect(outcome).toBe('saved')
+    expect(result.current.contentVersion).toBe(6)
+    expect(result.current.currentContentVersion()).toBe(6)
+  })
+
+  it('still prompts for an external change while dirty', async () => {
+    const remote = makeRemote()
+    const { result, rerender } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face, { contentVersion: 0 }),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+
+    rerender(input(remote.face, { contentVersion: 1, observedVersion: 'v2', dirty: true }))
+    await waitFor(() => { expect(result.current.externalChange).toBe(true) })
+    expect(remote.read).toHaveBeenCalledOnce()
+  })
+})

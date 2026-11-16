@@ -378,9 +378,10 @@ describe('gate graph validation', () => {
 
     expect(ids).toEqual([
       'rescope-vendor', 'publint', 'constraints', 'default-product-isolation', 'product-use', 'official-bundle-catalog', 'provider-data', 'package-dependencies', 'application-entrypoints',
-      'dsh-package-licenses', 'node-next-types',
+      'forwork-package-licenses', 'node-next-types',
       'optional-dependency-imports', 'client-packages', 'installer-locales', 'locale-metadata', 'client-ui-i18n', 'client-route-resolution', 'no-bare-dispatcher',
       'plugin-record-callers', 'no-unknown-casts', 'no-top-level-await',
+      'forwork-identity',
       'cordis-config', 'runtime-closure',
     ])
   })
@@ -428,11 +429,11 @@ describe('gate graph validation', () => {
   })
 
   it.each(['ci-primary', 'ci-static', 'check-all'] as const)(
-    'keeps the DSH package license policy in %s',
+    'keeps the ForWork package license policy in %s',
     (mode) => {
       const ids = withPnpmEntrypoint(() => gatesForMode(mode).map(subject => subject.id))
 
-      expect(ids).toContain('dsh-package-licenses')
+      expect(ids).toContain('forwork-package-licenses')
     },
   )
 

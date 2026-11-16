@@ -211,6 +211,10 @@ const packageFileExtras: Readonly<Record<string, readonly string[]>> = {
   // unpublished, as everywhere else in the repository.
   '@forwork/client-ui-primitives': ['lib/**/*.css'],
   '@forwork/client-ui-dockkit': ['lib/**/*.css'],
+  // The Univer editor mounts its runtime through one lazy package-local chunk
+  // and loads each locale pack as a further dynamic chunk; the entry reaches
+  // them through the module table's require.async, so both ship beside it.
+  '@forwork/client-ui-office-editor': ['lib/client.*.js'],
   '@forwork/client-ui-sidebar-documentpreview': ['lib/client.*.js'],
   '@forwork/client-ui-sidebar-terminal': ['lib/client.*.js'],
   '@forwork/client-web': ['lib/**/*.css', 'lib/apply-injections.js'],
