@@ -76,7 +76,7 @@ Provider packages depend on `dsh-web`, Cordis, and their credential/configuratio
 ```ts
 import type {
   WebFetchRequest, WebFetchResult, WebProviderInfo, WebProviderList, WebSearchRequest, WebSearchResult,
-} from '@deepseek-ai/dsh-web'
+} from '@forwork/web'
 
 interface WebSearchProvider {
   readonly id: string

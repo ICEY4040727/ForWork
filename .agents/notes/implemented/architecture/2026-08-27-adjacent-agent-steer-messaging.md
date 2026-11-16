@@ -25,7 +25,7 @@ Every accepted message uses `Agent.steer()`. A running target receives it at the
 Every direction uses one durable source. The service derives `senderSessionId` from the exact live sender and frames content as `Agent <sender-id> sent a message:`.
 
 ```ts
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import type { SessionId } from '@forwork/session'
 
 interface AgentMessageSource {
   readonly kind: 'agent-message'

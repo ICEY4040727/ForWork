@@ -25,7 +25,7 @@ child 专属工具与系统提示词 section 还位于每个继承 fork 轮次�
 所有方向使用同一种持久 source。服务从确切在线发送方推导 `senderSessionId`，并以 `Agent <sender-id> sent a message:` 包装内容。
 
 ```ts
-import type { SessionId } from '@deepseek-ai/dsh-session'
+import type { SessionId } from '@forwork/session'
 
 interface AgentMessageSource {
   readonly kind: 'agent-message'
