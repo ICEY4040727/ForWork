@@ -17,8 +17,13 @@ export const WELCOME_IPC = {
   takeNotice: 'dsh-welcome:take-notice',
 } as const
 
+/** Stable reasons a credential write can be refused without exposing provider diagnostics. */
+export type WelcomeSaveFailureCode = 'secure-storage-unavailable'
+
 /** Credential writes return a safe outcome without exposing Host diagnostics. */
-export type WelcomeSaveResult = { readonly ok: true } | { readonly ok: false }
+export type WelcomeSaveResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly code?: WelcomeSaveFailureCode }
 
 /** One-time notification retained by the main process until Welcome receives it. */
 export type WelcomeNotice = 'session-expired'

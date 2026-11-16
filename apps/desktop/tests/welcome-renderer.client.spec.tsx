@@ -106,6 +106,18 @@ describe('desktop welcome presentation', () => {
     await vi.waitFor(() => { expect(view.input.value).toBe('') })
   })
 
+  it('reports an unavailable system secure store distinctly and keeps the draft', async () => {
+    const view = mount()
+    view.api.saveApiKey.mockResolvedValue({ ok: false, code: 'secure-storage-unavailable' })
+    fireEvent.click(view.button('#api-key'))
+    view.enterKey('sk-secure-store-locked')
+    view.submit()
+    await vi.waitFor(() => { expect(view.button('#save-key').disabled).toBe(false) })
+    expect(view.input.value).toBe('sk-secure-store-locked')
+    expect(view.document.querySelector('#key-error')!.textContent)
+      .toBe(view.api.messages.welcomeKeySecureStorageUnavailable)
+  })
+
   it('skips without saving and starts a fresh renderer at the entry again', async () => {
     const view = mount()
     const skipped = Promise.withResolvers<undefined>()

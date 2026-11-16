@@ -21,6 +21,7 @@ import {
   nativeImage,
   nativeTheme,
   protocol,
+  safeStorage,
   session,
   shell,
   type IpcMainInvokeEvent,
@@ -29,6 +30,7 @@ import {
 import { resolveDesktopPaths } from './paths.ts'
 import { DesktopProjectManager } from './project-manager.ts'
 import { DesktopHostFatalError, DesktopHostProcess, DesktopHostUncleanExitError } from './host-process.ts'
+import { DesktopSecureCredentials } from './secure-credentials.ts'
 import { DesktopPlatformView, PLATFORM_IPC, platformBounds } from './platform-view.ts'
 import { installDesktopFileDrag } from './file-drag.ts'
 import { installDesktopDirectoryPicker } from './directory-picker.ts'
@@ -371,6 +373,8 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
 
 async function main(): Promise<void> {
   const desktopSettings = await readDesktopSettings(app.getPath('userData'))
+  // Model credentials live only in the OS secure store; the Host reaches it over private IPC.
+  const secureCredentials = new DesktopSecureCredentials(safeStorage, app.getPath('userData'))
   void pruneCrashReports(app.getPath('logs'))
   const journalDirectory = process.env.DSH_DESKTOP_UPDATE_JOURNAL_DIR
   const updateJournal = journalDirectory === undefined ? undefined : new DesktopUpdateJournal(journalDirectory, app.getVersion())
@@ -532,7 +536,7 @@ async function main(): Promise<void> {
           segmentBytes: 256 * 1024, recordBytes: 4096, queuedBytes: 64 * 1024,
         })
         operationJournal.enqueue(JSON.stringify(record))
-      })
+      }, request => secureCredentials.handle(request))
     return {
       start: async () => {
         const ready = await host.start()
@@ -1397,6 +1401,7 @@ async function main(): Promise<void> {
         },
         saveApiKey: async (apiKey) => {
           if (backend.host === undefined || welcomeBackend === undefined) return { ok: false }
+          if (!secureCredentials.available()) return { ok: false, code: 'secure-storage-unavailable' }
           const saved = await welcomeBackend.save(apiKey)
           if (!saved.ok) return saved
           await enterWorkspace()

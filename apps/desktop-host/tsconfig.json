@@ -16,6 +16,10 @@
     { "path": "../../packages/skill/skill-office" },
     { "path": "../../packages/util/home-paths" },
     { "path": "../../packages/skill/tool-workspace-dependencies" },
+    { "path": "../../packages/util/launch-environment" },
+    { "path": "../../vendor/schemastery" },
+    { "path": "../../packages/credentials/credentials" },
+    { "path": "../../packages/credentials/credentials-local" },
     {
       "path": "../cli"
     },

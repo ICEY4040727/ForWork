@@ -8,7 +8,8 @@
   "main": "lib/index.js",
   "files": [
     "lib/index.js",
-    "lib/cli.js"
+    "lib/cli.js",
+    "lib/secure-credentials.js"
   ],
   "dependencies": {
     "koffi": "3.1.1",
@@ -18,10 +19,14 @@
     "@forwork/agent": "workspace:*",
     "@forwork/app-boot": "workspace:*",
     "@forwork/client-connection": "workspace:*",
+    "@forwork/credentials": "workspace:*",
+    "@forwork/credentials-local": "workspace:*",
     "@forwork/host-webserver": "workspace:*",
     "@forwork/home-paths": "workspace:*",
     "@forwork/jobs": "workspace:*",
+    "@forwork/launch-environment": "workspace:*",
     "@forwork/schedule": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
     "@forwork/tool-workspace-dependencies": "workspace:*",
     "@forwork/skill-office": "workspace:*",
     "@forwork/deepseek-account": "workspace:*",

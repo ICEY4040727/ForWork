@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { z } from 'zod'
 import type { PlatformSession } from '@forwork/deepseek-account'
 import { desktopNodeEnvironment } from './node-environment.ts'
+import { isSecureStoreRequest, type SecureStoreRequest, type SecureStoreResponse } from './secure-credentials.ts'
 import { parsePluginOperationRecord, type PluginOperationRecord, type PluginOperationRunId } from '@forwork/plugin-manager/diagnostic'
 
 interface ReadyEvent {
@@ -44,7 +45,7 @@ type DesktopHostEvent = ReadyEvent | FatalEvent | PlatformSessionEvent | {
   readonly activeTasks: boolean
   readonly scheduledTasks: boolean
   readonly error?: string
-}
+} | SecureStoreRequest
 
 /** Correlated answer to one shell control request. */
 type DesktopHostControlResponse = Extract<DesktopHostEvent, { readonly requestId: number }>
@@ -105,6 +106,8 @@ function isDesktopHostEvent(message: unknown): message is DesktopHostEvent {
     case 'quit-inspection':
       return Number.isSafeInteger(candidate.requestId) && typeof candidate.activeTasks === 'boolean'
         && typeof candidate.scheduledTasks === 'boolean' && (candidate.error === undefined || typeof candidate.error === 'string')
+    case 'secure-store-request':
+      return isSecureStoreRequest(candidate)
     default:
       return false
   }
@@ -187,6 +190,7 @@ export class DesktopHostProcess {
    * @param packageManager - Bundled pnpm entry and Node launcher directory, scoped to package operations.
    * @param onPlatformSession - Private credential updates for embedded Platform views.
    * @param onPluginOperation - Optional diagnostic sink; malformed records are ignored without failing the Host.
+   * @param onSecureStore - Electron-main secure-store handler for Desktop model credentials.
    */
   constructor(
     private readonly node: string,
@@ -200,6 +204,7 @@ export class DesktopHostProcess {
 
     private readonly onPlatformSession?: (session: PlatformSession | null) => void,
     private readonly onPluginOperation?: (record: PluginOperationRecord) => void,
+    private readonly onSecureStore?: (request: SecureStoreRequest) => Promise<SecureStoreResponse>,
   ) {}
 
   /**
@@ -251,6 +256,7 @@ export class DesktopHostProcess {
         else this.fail(new Error('forwork desktop host acknowledged an unrequested shutdown'))
       }
       else if (message.type === 'fatal') this.fail(new DesktopHostFatalError(message.message, message.diagnostic))
+      else if (message.type === 'secure-store-request') void this.answerSecureStore(message)
       else {
         const request = this.controlRequests.get(message.requestId)
         if (message.error === undefined) request?.resolve(message)
@@ -303,6 +309,32 @@ export class DesktopHostProcess {
     const response = await this.control({ type: 'file-drag-resource', address }, 12_000, 'File drag authorization timed out', 'file drag', signal)
     if (response.type !== 'file-drag-resource') throw new Error('Host returned a different control response')
     return response.resource
+  }
+
+  /**
+   * Answer one Host secure-store request from the Electron main process.
+   * @param request - validated operation and correlation id.
+   */
+  private async answerSecureStore(request: SecureStoreRequest): Promise<void> {
+    const child = this.child
+    if (child === undefined || !child.connected) return
+    let response: SecureStoreResponse
+    try {
+      if (this.onSecureStore === undefined) throw new Error('secure-store handler is unavailable')
+      response = await this.onSecureStore(request)
+    } catch (error) {
+      // The handler's own diagnostics name paths and keys, never secret values.
+      console.error('desktop secure credentials: secure-store request failed', error)
+      response = { type: 'secure-store-response', requestId: request.requestId, ok: false, code: 'secure-store-failed' }
+    }
+    try {
+      child.send(response, (error) => {
+        if (error !== null) console.error('desktop secure credentials: could not deliver the secure-store response')
+      })
+    } catch (error) {
+      // The Host can disconnect while the main-process store is still answering.
+      console.error('desktop secure credentials: could not deliver the secure-store response', error)
+    }
   }
 
   private async control(

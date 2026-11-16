@@ -103,7 +103,7 @@ export function Welcome({ api }: { api: WelcomeApi }) {
       const result = await api.saveApiKey(value)
       if (!mounted.current) return
       if (result.ok) setDraft('')
-      else setError(m.welcomeKeyFailed)
+      else setError(result.code === 'secure-storage-unavailable' ? m.welcomeKeySecureStorageUnavailable : m.welcomeKeyFailed)
     } catch {
       if (mounted.current) setError(m.welcomeKeyFailed)
     } finally {

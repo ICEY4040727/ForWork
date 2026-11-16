@@ -860,6 +860,12 @@ importers:
       '@forwork/cordis':
         specifier: workspace:~
         version: link:../../vendor/cordis
+      '@forwork/credentials':
+        specifier: workspace:*
+        version: link:../../packages/credentials/credentials
+      '@forwork/credentials-local':
+        specifier: workspace:*
+        version: link:../../packages/credentials/credentials-local
       '@forwork/deepseek-account':
         specifier: workspace:*
         version: link:../../packages/credentials/deepseek-account
@@ -872,12 +878,18 @@ importers:
       '@forwork/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs/jobs
+      '@forwork/launch-environment':
+        specifier: workspace:*
+        version: link:../../packages/util/launch-environment
       '@forwork/plugin-manager':
         specifier: workspace:*
         version: link:../../packages/boot/plugin-manager
       '@forwork/schedule':
         specifier: workspace:*
         version: link:../../packages/schedule/schedule
+      '@forwork/schemastery':
+        specifier: link:../../vendor/schemastery
+        version: link:../../vendor/schemastery
       '@forwork/skill-office':
         specifier: workspace:*
         version: link:../../packages/skill/skill-office

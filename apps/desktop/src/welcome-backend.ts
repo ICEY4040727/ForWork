@@ -3,6 +3,7 @@ import type { ProductEvent } from '@forwork/client-product-analytics/types'
 
 import { randomUUID } from 'node:crypto'
 import { desktopAccountBackend, type DesktopAccountBackend } from './account-backend.ts'
+import type { WelcomeSaveResult } from './welcome-api.ts'
 
 /** Metadata needed before the native entry or workspace becomes visible. */
 export interface WelcomeState {
@@ -27,7 +28,15 @@ export interface DesktopWelcomeBackend {
    * @param apiKey - User-entered official provider key.
    * @returns A safe write outcome without provider diagnostics.
    */
-  save(apiKey: string): Promise<{ ok: boolean }>
+  save(apiKey: string): Promise<WelcomeSaveResult>
+}
+
+/** One failed Host RPC with its wire code, retained only for safe outcome mapping. */
+class DesktopWelcomeRpcError extends Error {
+  constructor(readonly code: string | undefined, message: string) {
+    super(message)
+    this.name = 'DesktopWelcomeRpcError'
+  }
 }
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -61,8 +70,16 @@ export function connectDesktopWelcome(
     if (!response.ok) throw new Error('desktop welcome: Web request failed')
     const envelope: unknown = await response.json()
     if (!record(envelope) || envelope.type !== 'server-response' || envelope.rpcId !== rpcId
-      || !record(envelope.result) || envelope.result.ok !== true) {
+      || !record(envelope.result)) {
       throw new Error('desktop welcome: Web RPC failed')
+    }
+    if (envelope.result.ok !== true) {
+      const failure = record(envelope.result.error) ? envelope.result.error : undefined
+      const code = failure !== undefined && typeof failure.code === 'string' ? failure.code : undefined
+      const message = failure !== undefined && typeof failure.message === 'string'
+        ? failure.message
+        : 'desktop welcome: Web RPC failed'
+      throw new DesktopWelcomeRpcError(code, message)
     }
     return envelope.result.value
   }
@@ -139,8 +156,12 @@ export function connectDesktopWelcome(
         if (ref === undefined) return { ok: false }
         await invoke({ namespace: 'credentials', method: 'set', args: { ref, value: apiKey } })
         return { ok: true }
-      } catch {
-        // Provider diagnostics may contain credentials; the native form owns failure copy.
+      } catch (error) {
+        // Provider diagnostics may contain credentials; only the stable code reaches the native form.
+        if (error instanceof DesktopWelcomeRpcError
+          && (error.code === 'secure-storage-unavailable' || error.message.includes('secure-storage-unavailable'))) {
+          return { ok: false, code: 'secure-storage-unavailable' }
+        }
         return { ok: false }
       }
     },

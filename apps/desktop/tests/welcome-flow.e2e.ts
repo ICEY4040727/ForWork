@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DesktopHostProcess } from '../src/host-process.ts'
+import { DesktopSecureCredentials } from '../src/secure-credentials.ts'
 import { DesktopProjectManager } from '../src/project-manager.ts'
 import { resolveDesktopPaths } from '../src/paths.ts'
 import { desktopClientMetadata } from '../src/client-metadata.ts'
@@ -125,9 +126,15 @@ describe.skipIf(!existsSync(builtHost))('built Desktop welcome flow', () => {
       writeFileSync(join(paths.profile, 'cordis.patch.yml'), `- id: webserver\n  config:\n    host: 127.0.0.1\n    port: 0\n- id: deepseek-account\n  config:\n${process.platform === 'linux' ? '    desktopPlatform: darwin\n' : ''}    platformOrigin: ${platform.origin}\n    allowLoopbackHttp: true\n    requestHeaders:\n      Cookie: test_gate=synthetic\n`)
       let backend: DesktopWelcomeBackend
       let hostOrigin = ''
+      const secureCredentials = new DesktopSecureCredentials({
+        isEncryptionAvailable: () => true,
+        encryptString: plainText => Buffer.from(Buffer.from(plainText, 'utf8').map(byte => byte ^ 0x31)),
+        decryptString: encrypted => Buffer.from(encrypted.map(byte => byte ^ 0x31)).toString('utf8'),
+      }, join(root, 'user-data'))
       const restart = async (): Promise<void> => {
         await host?.stop()
-        host = new DesktopHostProcess(process.execPath, project, paths.profile)
+        host = new DesktopHostProcess(process.execPath, project, paths.profile, undefined, undefined, undefined,
+          undefined, undefined, undefined, undefined, request => secureCredentials.handle(request))
         const { url } = await host.start()
         hostOrigin = new URL(url).origin
         backend = connectDesktopWelcome(url, await authenticateWebHost(url))
@@ -145,6 +152,8 @@ describe.skipIf(!existsSync(builtHost))('built Desktop welcome flow', () => {
       expect(await status()).toMatchObject({ hasApiKey: false, localePreference: 'zh' })
       expect(fingerprint()).toBe(before)
       expect(await backend!.save('sk-local-onboarding-test')).toEqual({ ok: true })
+      const secureFile = readFileSync(join(root, 'user-data', 'desktop', 'secure-credentials.json'), 'utf8')
+      expect(secureFile).not.toContain('sk-local-onboarding-test')
       expect(await status()).toMatchObject({ hasApiKey: true, localePreference: 'zh' })
       await restart()
       expect(await status()).toMatchObject({ hasApiKey: true })

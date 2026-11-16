@@ -17,6 +17,7 @@ export const DESKTOP_HOST_PACKAGE = '@forwork/desktop-host'
 export const DESKTOP_HOST_RUNTIME_FILES = [
   'lib/index.js',
   'lib/cli.js',
+  'lib/secure-credentials.js',
 ] as const
 
 /** One immutable npm tarball in the Desktop core package set. */
