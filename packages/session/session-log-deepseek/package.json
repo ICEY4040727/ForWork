@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-log-deepseek",
+  "name": "@forwork/session-log-deepseek",
   "description": "Incremental lossless session-log request extension for the official DeepSeek LLM API",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -34,27 +34,27 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:*",
-    "@deepseek-ai/dsh-util-values": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/brand": "workspace:*",
+    "@forwork/util-values": "workspace:*",
+    "@forwork/schemastery": "workspace:~"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-deepseek-llm-api-extensions": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/deepseek-llm-api-extensions": "workspace:*",
+    "@forwork/session": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/cordis-plugin-include": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-command-feedback": "workspace:*",
-    "@deepseek-ai/dsh-deepseek-llm-api-extensions": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-llm-deepseek": "workspace:*",
-    "@deepseek-ai/dsh-llm-deepseek-api-key": "workspace:*",
-    "@deepseek-ai/dsh-llm-mock-server": "workspace:*",
-    "@deepseek-ai/dsh-message-feedback": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/cordis-plugin-include": "workspace:~",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/command-feedback": "workspace:*",
+    "@forwork/deepseek-llm-api-extensions": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/llm-deepseek": "workspace:*",
+    "@forwork/llm-deepseek-api-key": "workspace:*",
+    "@forwork/llm-mock-server": "workspace:*",
+    "@forwork/message-feedback": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-persistence-jsonl": "workspace:*"
   }
 }

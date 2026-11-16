@@ -1,23 +1,23 @@
 // @vitest-environment jsdom
-import { apply as applyMenus, inject as injectMenus } from '@deepseek-ai/dsh-client-ui-context-menu/client'
+import { apply as applyMenus, inject as injectMenus } from '@forwork/client-ui-context-menu/client'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent } from '@testing-library/react'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { createSnapshotStore } from '@forwork/client-store'
 import type {
   ChatSnapshot, StartedToolCall, ToolCallBlock, ToolResultNode,
-} from '@deepseek-ai/dsh-client-ui-chat/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { SlotTestRuntime, stubConfigForm } from '@deepseek-ai/dsh-client-test-runtime'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
+} from '@forwork/client-ui-chat/client'
+import type { SessionId } from '@forwork/session/types'
+import { SlotTestRuntime, stubConfigForm } from '@forwork/client-test-runtime'
+import { LocaleRuntime } from '@forwork/client-locale/client'
+import type { PropsRenderSlots } from '@forwork/client-ui-slots'
 import {
   ConversationEventRegistry, ConversationViewRegistry, EMPTY_CONVERSATION_SNAPSHOT, type ConvViewOwnerProps,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { ConversationInteractionRegistry } from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation/interaction-registry.ts'
-import { en as conversationEn, NS as CONVERSATION_NS, zh as conversationZh } from '@deepseek-ai/dsh-client-ui-conversation/src/client/locales.ts'
-import { apply as applyChat, inject as injectChat } from '@deepseek-ai/dsh-client-ui-chat/client'
-import { PartialArguments } from '@deepseek-ai/dsh-util-values'
+} from '@forwork/client-ui-conversation/client'
+import { ConversationInteractionRegistry } from '@forwork/client-ui-conversation/src/client/conversation/interaction-registry.ts'
+import { en as conversationEn, NS as CONVERSATION_NS, zh as conversationZh } from '@forwork/client-ui-conversation/src/client/locales.ts'
+import { apply as applyChat, inject as injectChat } from '@forwork/client-ui-chat/client'
+import { PartialArguments } from '@forwork/util-values'
 import { apply as applyTool, inject as injectTool } from '../src/client/apply.ts'
 import { toolChatSnapshot } from './tool-fixtures.client.ts'
 
@@ -104,7 +104,7 @@ const ROOT_CHILDREN = {
  */
 async function bench(snapshot: ChatSnapshot) {
   const runtime = await SlotTestRuntime.create()
-  runtime.ctx.provide('fileDrag', { actions: { prepare: async () => ({ start: () => true, release: () => {} }), reportFailure: () => {} }, read: () => undefined } satisfies import('@deepseek-ai/cordis').Context['fileDrag'])
+  runtime.ctx.provide('fileDrag', { actions: { prepare: async () => ({ start: () => true, release: () => {} }), reportFailure: () => {} }, read: () => undefined } satisfies import('@forwork/cordis').Context['fileDrag'])
   runtimes.push(runtime)
   const ctx = runtime.ctx
   const chat = createSnapshotStore(snapshot)

@@ -6,13 +6,13 @@
  * the registering handle for the session of the Agent being assembled and
  * renders nothing when the assembly has no Agent or no document is open.
  *
- * @module @deepseek-ai/dsh-session-document/plugin
+ * @module @forwork/session-document/plugin
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-system-prompt'
+import type { Context } from '@forwork/cordis'
+import type {} from '@forwork/agent'
+import type {} from '@forwork/session-projection'
+import type {} from '@forwork/system-prompt'
 import { documentProjectionDefinition } from './document-projection.ts'
 import type { DocumentProjectionEntry, DocumentProjectionState } from './document-projection.ts'
 

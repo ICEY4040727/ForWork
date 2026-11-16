@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DocumentId, type DocumentEditOperation } from '@deepseek-ai/dsh-session'
+import { DocumentId, type DocumentEditOperation } from '@forwork/session'
 import {
   applyChange,
   OfficeDocumentError,

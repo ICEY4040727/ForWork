@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type {
   ChatConversationViewNode, ChatSnapshot,
-} from '@deepseek-ai/dsh-client-ui-chat/client'
+} from '@forwork/client-ui-chat/client'
 import type {
   SessionEventLikeEntry, SessionLiveEventEntry,
-} from '@deepseek-ai/dsh-api-session-controller/client'
+} from '@forwork/api-session-controller/client'
 import {
   ConversationNodeAssembler,
   type ConversationNodeDefinition,
   type ConversationViewDefinition,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+} from '@forwork/client-ui-conversation/client'
+import type { SessionEvent } from '@forwork/session/types'
 import { inspectSystemPrompt } from '../../ui-conversation/src/client/contract/system-prompt.ts'
-import { AssistantStreamAccumulator } from '@deepseek-ai/dsh-llm/assistant-stream'
-import { LlmAttemptId, ToolCallId } from '@deepseek-ai/dsh-llm/brand'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm'
+import { AssistantStreamAccumulator } from '@forwork/llm/assistant-stream'
+import { LlmAttemptId, ToolCallId } from '@forwork/llm/brand'
+import type { StreamChunk } from '@forwork/llm'
 import { hasAssistantReplyContent } from '../src/client/contract/assistant-content.ts'
 import { assistantDefinition } from '../src/client/conversation-nodes/assistant.ts'
 import { chatViewDefinition } from '../src/client/conversation-nodes/chat-snapshot-builder.ts'
@@ -23,7 +23,7 @@ import { compactionDefinition } from '../src/client/conversation-nodes/compactio
 import { unknownFallbackDefinition } from '../src/client/conversation-nodes/fallback.ts'
 import { nextStepInboxDefinition, nextTurnInboxDefinition } from '../src/client/conversation-nodes/inbox.ts'
 import { developerMessageDefinition, messageDefinition } from '../src/client/conversation-nodes/message.ts'
-import { inspectRequestPrompt } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import { inspectRequestPrompt } from '@forwork/client-ui-conversation/client'
 import { requestPromptDefinition, systemMessageDefinition } from '../src/client/conversation-nodes/request-prompt.ts'
 import { retryDefinition } from '../src/client/conversation-nodes/retry.ts'
 import { toolDefinition } from '../src/client/conversation-nodes/tool.ts'

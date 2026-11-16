@@ -1,18 +1,18 @@
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+import { executeToolFixture } from '@forwork/tool-testkit'
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { createUserMessage, ToolCallId  } from '@deepseek-ai/dsh-llm'
-import type { ContextFormed } from '@deepseek-ai/dsh-llm'
-import { SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
-import { defineContentToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
-import * as RepeatToolGuard from '@deepseek-ai/dsh-repeat-tool-reminder'
-import type { Config } from '@deepseek-ai/dsh-repeat-tool-reminder'
+import { Context } from '@forwork/cordis'
+import { createUserMessage, ToolCallId  } from '@forwork/llm'
+import type { ContextFormed } from '@forwork/llm'
+import { SessionId, type SessionEvent } from '@forwork/session'
+import { defineContentToolFixture } from '@forwork/tool-testkit'
+import type { Agent } from '@forwork/agent'
+import AgentLoop from '@forwork/agent-loop'
+import { mountAgentLoopTestDependencies } from '@forwork/agent-loop-testkit'
+import * as RepeatToolGuard from '@forwork/repeat-tool-reminder'
+import type { Config } from '@forwork/repeat-tool-reminder'
 import { MockAdapter, textResponse, toolCallResponse } from '../../../core/agent-loop/tests/mock-adapter.ts'
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@forwork/llm' {
   interface MessageSourceMap {
     'test': { kind: 'test' } & ContextFormed
   }

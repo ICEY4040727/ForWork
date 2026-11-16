@@ -3,8 +3,8 @@
  * plus the tab-address translation. No DOM and no editor runtime.
  */
 import { describe, expect, it } from 'vitest'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
+import { brandString } from '@forwork/brand'
+import type { TabId } from '@forwork/client-ui-dockkit'
 import { createOfficeTabChanges, externalChangeVerdict } from '../src/client/changes.ts'
 import { openTargetOf } from '../src/client/target.ts'
 

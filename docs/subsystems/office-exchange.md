@@ -49,7 +49,7 @@ The Remote maps seam and filesystem failures onto stable Remote codes: `unsuppor
 
 ## Mount and composition
 
-`LocalOfficeExchange` validates its `Config` and mounts `OfficeDocumentRemote` with `maxBytes` set to `maxFileBytes`. The [base bundle](../../packages/bundle/base/README.md) mounts the provider in an `office-exchange` row with `maxFileBytes: 26214400`, `maxCells: 2000000`, and `maxConversionMs: 60000`. The Client assembly mounts the generated descriptor from `@deepseek-ai/dsh-office-exchange/remote` through [api/remotes](../../packages/api/remotes/README.md), which exposes it as `remote.officeDocument`.
+`LocalOfficeExchange` validates its `Config` and mounts `OfficeDocumentRemote` with `maxBytes` set to `maxFileBytes`. The [base bundle](../../packages/bundle/base/README.md) mounts the provider in an `office-exchange` row with `maxFileBytes: 26214400`, `maxCells: 2000000`, and `maxConversionMs: 60000`. The Client assembly mounts the generated descriptor from `@forwork/office-exchange/remote` through [api/remotes](../../packages/api/remotes/README.md), which exposes it as `remote.officeDocument`.
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 

@@ -19,14 +19,14 @@
  * implementation (see `useOfficeDocument`).
  */
 import { useEffect } from 'react'
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { createSnapshotStore, type SnapshotStore } from '@forwork/client-store'
 import type {
   SidebarRightOpenTab,
   SidebarRightTabActions,
-} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { DocumentProjectionView } from '@deepseek-ai/dsh-session-document/client'
-import { fileAddressFor } from '@deepseek-ai/dsh-util-workspace-path'
+} from '@forwork/client-ui-sidebar-right/client'
+import type { SessionId } from '@forwork/session/types'
+import type { DocumentProjectionView } from '@forwork/session-document/client'
+import { fileAddressFor } from '@forwork/util-workspace-path'
 import { OFFICE_KIND } from './definition.ts'
 
 /** The documents one restore pass acts on, split by what the tab layer can show. */

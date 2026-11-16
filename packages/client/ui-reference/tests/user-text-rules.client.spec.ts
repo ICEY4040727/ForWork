@@ -1,7 +1,7 @@
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@forwork/cordis'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import type { UserTextRule } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { UserTextRegistry } from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation/user-text-registry.ts'
+import type { UserTextRule } from '@forwork/client-ui-conversation/client'
+import { UserTextRegistry } from '@forwork/client-ui-conversation/src/client/conversation/user-text-registry.ts'
 import { fileReferenceRule, folderReferenceRule } from '../src/client/user-text-rules.ts'
 
 function setup(rules: readonly UserTextRule[] = [folderReferenceRule, fileReferenceRule]) {

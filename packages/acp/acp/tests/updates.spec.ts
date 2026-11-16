@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Context } from '@deepseek-ai/cordis'
-import { ToolCallId, MessageId } from '@deepseek-ai/dsh-llm'
-import { SessionSeq, type Session, type SessionEvent } from '@deepseek-ai/dsh-session'
+import type { Context } from '@forwork/cordis'
+import { ToolCallId, MessageId } from '@forwork/llm'
+import { SessionSeq, type Session, type SessionEvent } from '@forwork/session'
 import { assistantUpdates, toolCallUpdate, toolResultUpdate } from '../src/updates.ts'
 
 /** Minimal committed assistant event for pure update projection tests. */

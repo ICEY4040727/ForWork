@@ -10,7 +10,7 @@
  * the fact that the Session still holds the document; the caller opens a tab
  * only for `open` entries and reports the missing ones instead.
  *
- * @module @deepseek-ai/dsh-session-document/document-restore
+ * @module @forwork/session-document/document-restore
  */
 
 import type { DocumentProjectionEntry, DocumentProjectionView } from './types.ts'

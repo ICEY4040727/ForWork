@@ -7,23 +7,23 @@
  * `session/projections` admitted per Session through the Gateway.
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import { AttachmentId } from '@deepseek-ai/dsh-attachment'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
-import TypertGatewayService from '@deepseek-ai/dsh-api-gateway'
-import type { RemoteAccessBinding, RemoteAccessRole } from '@deepseek-ai/dsh-api-remote-access'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import { remoteMethods, type PeerId, type PeerScope, type Principal, type RemoteInvocation } from '@deepseek-ai/dsh-typert-protocol'
-import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
+import { Context } from '@forwork/cordis'
+import { AttachmentId } from '@forwork/attachment'
+import type { Agent } from '@forwork/agent'
+import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@forwork/agent-loop-testkit'
+import TypertGatewayService from '@forwork/api-gateway'
+import type { RemoteAccessBinding, RemoteAccessRole } from '@forwork/api-remote-access'
+import { createUserMessage } from '@forwork/llm'
+import { SessionId } from '@forwork/session'
+import { remoteMethods, type PeerId, type PeerScope, type Principal, type RemoteInvocation } from '@forwork/typert-protocol'
+import TypertRegistry from '@forwork/typert-registry'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type SessionController from '../src/index.ts'
 import { ApiSessionList } from '../src/list.ts'
 import type { SessionControlFrame, SessionRequestId, SessionSearchValue } from '../src/types.ts'
 import { createSessionTestController } from './test-remote.ts'
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@forwork/typert-protocol' {
   interface PrincipalMap {
     /** Test-only non-owner caller shared by the access specs. */
     'test-guest': { readonly kind: 'test-guest'; readonly guest: string }

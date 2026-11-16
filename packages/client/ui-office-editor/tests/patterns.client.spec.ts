@@ -7,10 +7,10 @@
  * fallback viewer.
  */
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
-import { SidebarRightTabRegistry } from '@deepseek-ai/dsh-client-ui-sidebar-right/src/client/tab-registry.ts'
-import { TEXTPREVIEW_KIND, textDefinition } from '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/src/client/definition.ts'
+import { Context } from '@forwork/cordis'
+import { sessionFileAddress } from '@forwork/util-workspace-path'
+import { SidebarRightTabRegistry } from '@forwork/client-ui-sidebar-right/src/client/tab-registry.ts'
+import { TEXTPREVIEW_KIND, textDefinition } from '@forwork/client-ui-sidebar-documentpreview/src/client/definition.ts'
 import { OFFICE_KIND, basenameOf, officeDefinition } from '../src/client/definition.ts'
 
 function registry() {
@@ -33,7 +33,7 @@ describe('office tab patterns', () => {
     const definition = officeDefinition()
     expect(definition.patterns).toEqual(['*.docx', '*.xlsx', '*.doc', '*.xls', '*.ppt'])
     expect(definition.priority).toBe('builtin')
-    expect(definition.id).toBe('@deepseek-ai/dsh-client-ui-office-editor')
+    expect(definition.id).toBe('@forwork/client-ui-office-editor')
     expect(definition.kind).toBe(OFFICE_KIND)
   })
 

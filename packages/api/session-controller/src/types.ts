@@ -1,20 +1,20 @@
 /** Browser-safe request, result, and lifecycle vocabulary for the Session Remote service. */
 
-import type {} from '@deepseek-ai/dsh-agent/types'
-import type { NativeFileApplication } from '@deepseek-ai/dsh-native-command/types'
+import type {} from '@forwork/agent/types'
+import type { NativeFileApplication } from '@forwork/native-command/types'
 import type {
   ImageAttachmentLimits, ImageAttachmentRef, ImageMediaType,
-} from '@deepseek-ai/dsh-attachment'
-import type { Branded } from '@deepseek-ai/dsh-brand'
-import type { LlmAttemptId, MessageId } from '@deepseek-ai/dsh-llm/brand'
-import type { LlmModelBadge, TextBlock } from '@deepseek-ai/dsh-llm'
-import type { SessionId, SessionSeq, SessionSeqCursor } from '@deepseek-ai/dsh-session/types'
-import type { SessionProjectionMap, SessionProjectionSummaryExcluded, SessionProjectionSummaryValues } from '@deepseek-ai/dsh-session-projection/types'
-import type { Principal } from '@deepseek-ai/dsh-typert-protocol'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+} from '@forwork/attachment'
+import type { Branded } from '@forwork/brand'
+import type { LlmAttemptId, MessageId } from '@forwork/llm/brand'
+import type { LlmModelBadge, TextBlock } from '@forwork/llm'
+import type { SessionId, SessionSeq, SessionSeqCursor } from '@forwork/session/types'
+import type { SessionProjectionMap, SessionProjectionSummaryExcluded, SessionProjectionSummaryValues } from '@forwork/session-projection/types'
+import type { Principal } from '@forwork/typert-protocol'
+import type { JsonValue } from '@forwork/util-values'
+import type { WorkspaceId } from '@forwork/workspace/types'
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@forwork/session-projection/types' {
   interface SessionProjectionMap {
     /** Eligible latest failed turn/end for an empty prompt, or null. */
     conversationContinuation: SessionSeq | null
@@ -178,7 +178,7 @@ export const SESSION_SEARCH_RESULT_LIMIT = 20
 /** Maximum search snippet length in Unicode code points. */
 export const SESSION_SEARCH_SNIPPET_MAX_CODE_POINTS = 240
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@forwork/typert-protocol' {
   interface RemoteErrorDetailsMap {
     /** A wait observation ended before a stopping state; the caller should reread. */
     'session/observation-ended': Record<string, never>
@@ -390,7 +390,7 @@ export interface SessionOpenWorkspacePathValue {
 /** Client-minted prompt identity used to reconcile optimistic and durable messages. */
 export type SessionRequestId = Branded<'session-request-id'>
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@forwork/llm' {
   interface MessageSourceMap {
     /**
      * Browser prompt correlation, optional Host-validated time zone, and the
@@ -674,7 +674,7 @@ export type SessionProjectionFrame =
   | { readonly type: 'ready' }
   | SessionProjectionChange
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Events {
     /**
      * A Session became visible or its Agent was created or disposed.

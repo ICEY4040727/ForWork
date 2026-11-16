@@ -1,10 +1,10 @@
 /** Explicitly enabled billed Flash smoke through the actual native official provider. */
-import type { ModuleLoaderV2 } from '@deepseek-ai/cordis-plugin-loader'
-import { boot } from '@deepseek-ai/dsh-app-boot'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import * as JsonlPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import * as Official from '@deepseek-ai/dsh-llm-deepseek-api-key'
+import type { ModuleLoaderV2 } from '@forwork/cordis-plugin-loader'
+import { boot } from '@forwork/app-boot'
+import LlmRuntime from '@forwork/llm'
+import SessionStore, { SessionId } from '@forwork/session'
+import * as JsonlPersistence from '@forwork/session-persistence-jsonl'
+import * as Official from '@forwork/llm-deepseek-api-key'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -21,16 +21,16 @@ it.skipIf(!enabled)('translates a small independent billed query with exact Flas
   try {
     const configPath = join(root, 'cordis.yml')
     await writeFile(configPath, JSON.stringify([
-      { id: 'llm', name: '@deepseek-ai/dsh-llm' },
-      { id: 'sessions', name: '@deepseek-ai/dsh-session' },
-      { id: 'storage', name: '@deepseek-ai/dsh-session-persistence-jsonl', config: { root: join(root, 'sessions'), compression: 'none' } },
-      { id: 'official-live-owner', name: '@deepseek-ai/dsh-llm-deepseek-api-key' },
-      { id: 'translator', name: '@deepseek-ai/dsh-experimental-translator', config: { deepseekMaxOutputTokens: 128 } },
+      { id: 'llm', name: '@forwork/llm' },
+      { id: 'sessions', name: '@forwork/session' },
+      { id: 'storage', name: '@forwork/session-persistence-jsonl', config: { root: join(root, 'sessions'), compression: 'none' } },
+      { id: 'official-live-owner', name: '@forwork/llm-deepseek-api-key' },
+      { id: 'translator', name: '@forwork/experimental-translator', config: { deepseekMaxOutputTokens: 128 } },
     ]))
     const modules = new Map<string, unknown>([
-      ['@deepseek-ai/dsh-llm', LlmRuntime], ['@deepseek-ai/dsh-session', SessionStore],
-      ['@deepseek-ai/dsh-session-persistence-jsonl', JsonlPersistence],
-      ['@deepseek-ai/dsh-llm-deepseek-api-key', Official], ['@deepseek-ai/dsh-experimental-translator', Translator],
+      ['@forwork/llm', LlmRuntime], ['@forwork/session', SessionStore],
+      ['@forwork/session-persistence-jsonl', JsonlPersistence],
+      ['@forwork/llm-deepseek-api-key', Official], ['@forwork/experimental-translator', Translator],
     ])
     const ctx = await boot('paid-translation-live', configPath, [], (host) => {
       const source: ModuleLoaderV2 = {

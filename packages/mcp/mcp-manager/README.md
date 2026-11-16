@@ -3,7 +3,7 @@ description: "MCP server manager for deployments, plugins, and management surfac
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-mcp-manager
+# @forwork/mcp-manager
 
 English | [中文](README.zh.md)
 
@@ -37,7 +37,7 @@ One `cordis.yml` row mounts the manager; `servers` in its config is optional and
 
 ```yaml
 - id: mcp
-  name: '@deepseek-ai/dsh-mcp-manager'
+  name: '@forwork/mcp-manager'
   inject: [credentials]
   config:
     servers:
@@ -73,7 +73,7 @@ A profile’s `cordis.patch.yml` replaces the entry’s complete `servers` map. 
 | `startupTimeoutMs` | `30,000` | Budget for template resolution, negotiation, connection, and initial tool discovery |
 | `toolCallTimeoutMs` / `closeTimeoutMs` / `reconnect` | mcp-client defaults | Per-server overrides |
 
-The generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-mcp-manager) is the exhaustive source for every accepted field.
+The generated [configuration catalog](../../../docs/config-catalog.md#forworkmcp-manager) is the exhaustive source for every accepted field.
 
 ### Managing configured servers
 
@@ -86,8 +86,8 @@ Settings writes persist through ConfigEditor with revision checks; Loader update
 A plugin that integrates an MCP service registers its server instead of writing configuration:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-mcp-manager'
+import type { Context } from '@forwork/cordis'
+import type {} from '@forwork/mcp-manager'
 
 export const name = 'example-app'
 export const inject = ['mcpManager']
@@ -155,7 +155,7 @@ Read these pages when the package-level contract is not enough.
 - [mcp-client README](../mcp-client/README.md) — the per-instance bridge: naming, reconnect policy, tool execution, status surface.
 - [Settings package README](../../settings/settings/README.md) — the Config forms, inheritance, revision checks, and profile writes the manager uses.
 - [Credentials group README](../../credentials/README.md) — the credential references `${credential:…}` templates resolve.
-- [Generated configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-mcp-manager) — every accepted config field.
+- [Generated configuration catalog](../../../docs/config-catalog.md#forworkmcp-manager) — every accepted config field.
 - [MCP manager Agent Note](../../../.agents/notes/implemented/feature/2026-08-31-mcp-manager-plugin.md) — the design decisions, peer-product survey, and rejected alternatives.
 
 -----

@@ -25,15 +25,15 @@
  * with the rest of the form, so one save covers everything the page shows.
  */
 
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { Context as ClientContext } from '@forwork/cordis'
 // Type-only: pulls the ctx.remote merge into this program.
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type { WebProviderInfo, WebProviderList as ProviderList } from '@deepseek-ai/dsh-web/types'
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
+import type {} from '@forwork/api-remotes/client'
+import type { WebProviderInfo, WebProviderList as ProviderList } from '@forwork/web/types'
+import { createSnapshotStore, type SnapshotStore } from '@forwork/client-store'
 import {
   SettingsFormModel, settingsNumberField, settingsTextField,
   type SettingsFieldState, type SettingsFormActions, type SettingsFormShell, type SettingsFormScope,
-} from '@deepseek-ai/dsh-client-ui-primitives'
+} from '@forwork/client-ui-primitives'
 
 /**
  * Namespaces this page edits. Spelled here rather than imported: a client

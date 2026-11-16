@@ -1,11 +1,11 @@
 /** Original-file menu contributions owned by the file-action capability. */
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-client-ui-context-menu/client'
-import type {} from '@deepseek-ai/dsh-api-workspace-files/remote'
-import type {} from '@deepseek-ai/dsh-api-session-controller/remote'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { Context } from '@forwork/cordis'
+import type {} from '@forwork/client-ui-context-menu/client'
+import type {} from '@forwork/api-workspace-files/remote'
+import type {} from '@forwork/api-session-controller/remote'
+import type { SessionId } from '@forwork/session/types'
 import type { FileActions, FileActionSource } from '../types.ts'
-import { fileMediaUrl } from '@deepseek-ai/dsh-util-workspace-path'
+import { fileMediaUrl } from '@forwork/util-workspace-path'
 import mime from 'mime'
 import type { FileActionKey } from './locales.ts'
 

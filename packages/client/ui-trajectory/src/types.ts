@@ -1,6 +1,6 @@
 /** Ephemeral result inspection shared by Trajectory's Host and Client. */
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { SessionId } from '@forwork/session/types'
+import type { JsonValue } from '@forwork/util-values'
 
 /** Live-only tool result inspection; never part of Session history or projections. */
 export interface SessionToolResultRequest {

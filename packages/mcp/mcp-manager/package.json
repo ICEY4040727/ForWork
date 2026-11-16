@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-mcp-manager",
+  "name": "@forwork/mcp-manager",
   "description": "MCP server manager: a settings-driven fleet of mcp-client instances with runtime status, restart, and probe",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -46,32 +46,32 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-mcp-client": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-util-values": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*"
+    "@forwork/mcp-client": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/util-values": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/typert-protocol": "workspace:*"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-timeout": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~",
+    "@forwork/timeout": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.2.0",
-    "@deepseek-ai/dsh-credentials": "workspace:*",
-    "@deepseek-ai/dsh-mcp-client": "workspace:*",
-    "@deepseek-ai/dsh-settings": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-util-values": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-app-boot": "workspace:*",
-    "@deepseek-ai/dsh-config-editor": "workspace:*",
-    "@deepseek-ai/dsh-hmr": "workspace:*",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/cordis-plugin-timer": "workspace:~",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*"
+    "@forwork/credentials": "workspace:*",
+    "@forwork/mcp-client": "workspace:*",
+    "@forwork/settings": "workspace:*",
+    "@forwork/system-prompt": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/util-values": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/app-boot": "workspace:*",
+    "@forwork/config-editor": "workspace:*",
+    "@forwork/hmr": "workspace:*",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/cordis-plugin-timer": "workspace:~",
+    "@forwork/typert-protocol": "workspace:*"
   }
 }

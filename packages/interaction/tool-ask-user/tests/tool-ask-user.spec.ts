@@ -1,22 +1,22 @@
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
-import { unsupportedModel } from '@deepseek-ai/dsh-agent-loop-testkit'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+import { executeToolFixture } from '@forwork/tool-testkit'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
+import { unsupportedModel } from '@forwork/agent-loop-testkit'
+import SessionProjectionRegistry from '@forwork/session-projection'
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { createToolResultMessage, ToolCallId, type ToolSchema } from '@deepseek-ai/dsh-llm'
-import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
-import { Session, SessionId, SessionSeq, SESSION_FORMAT_VERSION, type SessionEvent } from '@deepseek-ai/dsh-session'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
+import { Context } from '@forwork/cordis'
+import { createToolResultMessage, ToolCallId, type ToolSchema } from '@forwork/llm'
+import AgentRegistry, { type Agent } from '@forwork/agent'
+import { Session, SessionId, SessionSeq, SESSION_FORMAT_VERSION, type SessionEvent } from '@forwork/session'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
 import UserQuestionService, {
   isTimedAskUserQuestionSchema,
   type AskUserQuestionAnswer,
   type AskUserQuestionRequest,
-} from '@deepseek-ai/dsh-user-questions'
+} from '@forwork/user-questions'
 // The fold is the projection's own reader of a recorded result, not a service method.
-import { foldUserQuestions } from '@deepseek-ai/dsh-user-questions/src/projection.ts'
-import * as toolAskUser from '@deepseek-ai/dsh-tool-ask-user'
+import { foldUserQuestions } from '@forwork/user-questions/src/projection.ts'
+import * as toolAskUser from '@forwork/tool-ask-user'
 
 const testToolSignal = new AbortController().signal
 

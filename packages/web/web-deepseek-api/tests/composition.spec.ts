@@ -7,16 +7,16 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { Context } from '@deepseek-ai/cordis'
-import type { ModuleLoaderV2 } from '@deepseek-ai/cordis-plugin-loader'
-import { boot } from '@deepseek-ai/dsh-app-boot'
-import type { DeepSeekAccount } from '@deepseek-ai/dsh-deepseek-account'
-import { createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
-import * as Account from '@deepseek-ai/dsh-llm-deepseek-account'
-import * as Official from '@deepseek-ai/dsh-llm-deepseek-api-key'
-import WebRuntime from '@deepseek-ai/dsh-web'
-import * as webApiPlugin from '@deepseek-ai/dsh-web-deepseek-api'
+import type { Context } from '@forwork/cordis'
+import type { ModuleLoaderV2 } from '@forwork/cordis-plugin-loader'
+import { boot } from '@forwork/app-boot'
+import type { DeepSeekAccount } from '@forwork/deepseek-account'
+import { createLaunchEnvironmentSnapshot } from '@forwork/launch-environment'
+import LlmRuntime from '@forwork/llm'
+import * as Account from '@forwork/llm-deepseek-account'
+import * as Official from '@forwork/llm-deepseek-api-key'
+import WebRuntime from '@forwork/web'
+import * as webApiPlugin from '@forwork/web-deepseek-api'
 
 const cleanups: Array<() => Promise<void>> = []
 
@@ -26,11 +26,11 @@ afterEach(async () => {
 })
 
 const MODULES = new Map<string, unknown>([
-  ['@deepseek-ai/dsh-llm', LlmRuntime],
-  ['@deepseek-ai/dsh-llm-deepseek-api-key', Official],
-  ['@deepseek-ai/dsh-llm-deepseek-account', Account],
-  ['@deepseek-ai/dsh-web', WebRuntime],
-  ['@deepseek-ai/dsh-web-deepseek-api', webApiPlugin],
+  ['@forwork/llm', LlmRuntime],
+  ['@forwork/llm-deepseek-api-key', Official],
+  ['@forwork/llm-deepseek-account', Account],
+  ['@forwork/web', WebRuntime],
+  ['@forwork/web-deepseek-api', webApiPlugin],
 ])
 
 /** One dispatched Search or Fetch API request. */
@@ -63,11 +63,11 @@ async function bootComposition(web: Record<string, unknown>, environment: Record
   })
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, JSON.stringify([
-    { id: 'llm', name: '@deepseek-ai/dsh-llm' },
-    { id: 'llm-deepseek', name: '@deepseek-ai/dsh-llm-deepseek-api-key' },
-    { id: 'llm-deepseek-account', name: '@deepseek-ai/dsh-llm-deepseek-account' },
-    { id: 'web', name: '@deepseek-ai/dsh-web', config: { searchProvider: 'deepseek-search-api', fetchProvider: 'deepseek-fetch-api' } },
-    { id: 'web-deepseek-api', name: '@deepseek-ai/dsh-web-deepseek-api', config: web },
+    { id: 'llm', name: '@forwork/llm' },
+    { id: 'llm-deepseek', name: '@forwork/llm-deepseek-api-key' },
+    { id: 'llm-deepseek-account', name: '@forwork/llm-deepseek-account' },
+    { id: 'web', name: '@forwork/web', config: { searchProvider: 'deepseek-search-api', fetchProvider: 'deepseek-fetch-api' } },
+    { id: 'web-deepseek-api', name: '@forwork/web-deepseek-api', config: web },
   ]))
   const ctx: Context = await boot('web-deepseek-api-composition', configPath, [], (host) => {
     const modules: ModuleLoaderV2 = {

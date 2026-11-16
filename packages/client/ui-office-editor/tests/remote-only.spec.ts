@@ -33,8 +33,8 @@ describe('useOfficeDocument Remote boundary', () => {
 
   it('imports only the generated wire types from the Exchange package', () => {
     const exchangeImports = importSpecifiers(source).filter(specifier =>
-      specifier.startsWith('@deepseek-ai/dsh-office-exchange'))
-    expect(exchangeImports).toEqual(['@deepseek-ai/dsh-office-exchange/types'])
+      specifier.startsWith('@forwork/office-exchange'))
+    expect(exchangeImports).toEqual(['@forwork/office-exchange/types'])
   })
 
   it('names no Host service', () => {

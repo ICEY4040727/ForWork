@@ -9,7 +9,7 @@ import { performance } from 'node:perf_hooks'
 import type { Browser, CDPSession, Locator, Page } from 'playwright'
 import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm'
+import type { StreamChunk } from '@forwork/llm'
 import {
   ToolCallId,
   createAssistantMessage,
@@ -17,16 +17,16 @@ import {
   createToolResultMessage,
   createUserMessage,
   expandAssistantStream,
-} from '@deepseek-ai/dsh-llm'
-import type { ReplayEntry, ReplayOverrideDoc } from '@deepseek-ai/dsh-llm-replay'
-import type { SessionEvent, SessionSeq } from '@deepseek-ai/dsh-session'
+} from '@forwork/llm'
+import type { ReplayEntry, ReplayOverrideDoc } from '@forwork/llm-replay'
+import type { SessionEvent, SessionSeq } from '@forwork/session'
 import {
   SESSION_FORMAT_VERSION,
   Session,
   SessionId,
-} from '@deepseek-ai/dsh-session'
+} from '@forwork/session'
 // Carries the session/title event declaration into the fixture builder.
-import type {} from '@deepseek-ai/dsh-session-title'
+import type {} from '@forwork/session-title'
 import {
   launchWebScaffold,
   seedSession,

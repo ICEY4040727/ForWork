@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-attachment-local",
+  "name": "@forwork/attachment-local",
   "description": "Private content-addressed DSH_HOME attachment storage",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,18 +29,18 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-attachment": "workspace:*",
-    "@deepseek-ai/dsh-home-paths": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/attachment": "workspace:*",
+    "@forwork/home-paths": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-lazy-require": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~",
+    "@forwork/lazy-require": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
     "sharp": "0.35.5"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-attachment": "workspace:*",
-    "@deepseek-ai/dsh-home-paths": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/attachment": "workspace:*",
+    "@forwork/home-paths": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   }
 }

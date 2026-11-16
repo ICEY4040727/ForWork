@@ -1,29 +1,29 @@
 /** Real Loader composition preserves retrievable source text outside the bounded preview. */
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+import { executeToolFixture } from '@forwork/tool-testkit'
 
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, ToolCallId } from '@deepseek-ai/dsh-llm'
-import * as systemPromptPlugin from '@deepseek-ai/dsh-system-prompt'
-import * as toolsPlugin from '@deepseek-ai/dsh-tools'
-import * as fsPlugin from '@deepseek-ai/dsh-fs-local'
-import * as toolFsPlugin from '@deepseek-ai/dsh-tool-fs'
-import * as sessionPlugin from '@deepseek-ai/dsh-session'
-import * as sessionProjectionPlugin from '@deepseek-ai/dsh-session-projection'
-import * as workingDirectoryPlugin from '@deepseek-ai/dsh-working-directory'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
-import * as queryPlugin from '@deepseek-ai/dsh-session-query-sqlite'
-import * as referencePlugin from '@deepseek-ai/dsh-session-reference'
-import * as spillPlugin from '@deepseek-ai/dsh-spill-local'
-import { sessionDir } from '@deepseek-ai/dsh-spill-local'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import Include from '@forwork/cordis-plugin-include'
+import { agentEvents, type Agent } from '@forwork/agent'
+import { createUserMessage, ToolCallId } from '@forwork/llm'
+import * as systemPromptPlugin from '@forwork/system-prompt'
+import * as toolsPlugin from '@forwork/tools'
+import * as fsPlugin from '@forwork/fs-local'
+import * as toolFsPlugin from '@forwork/tool-fs'
+import * as sessionPlugin from '@forwork/session'
+import * as sessionProjectionPlugin from '@forwork/session-projection'
+import * as workingDirectoryPlugin from '@forwork/working-directory'
+import { Session, SessionId } from '@forwork/session'
+import * as queryPlugin from '@forwork/session-query-sqlite'
+import * as referencePlugin from '@forwork/session-reference'
+import * as spillPlugin from '@forwork/spill-local'
+import { sessionDir } from '@forwork/spill-local'
 import * as sourcePlugin from './fixtures/source-session.ts'
 
 let context: Context | undefined
@@ -48,17 +48,17 @@ describe('session-reference real Loader composition', () => {
     await ctx.plugin(Loader)
     ctx.loader.builtins.include = Include
     const modules = new Map<string, unknown>([
-      ['@deepseek-ai/dsh-session', sessionPlugin],
-      ['@deepseek-ai/dsh-session-projection', sessionProjectionPlugin],
-      ['@deepseek-ai/dsh-working-directory', workingDirectoryPlugin],
-      ['@deepseek-ai/dsh-system-prompt', systemPromptPlugin],
-      ['@deepseek-ai/dsh-tools', toolsPlugin],
-      ['@deepseek-ai/dsh-tool-executor-native', NativeToolExecutor],
-      ['@deepseek-ai/dsh-fs-local', fsPlugin],
-      ['@deepseek-ai/dsh-tool-fs', toolFsPlugin],
-      ['@deepseek-ai/dsh-session-query-sqlite', queryPlugin],
-      ['@deepseek-ai/dsh-session-reference', referencePlugin],
-      ['@deepseek-ai/dsh-spill-local', spillPlugin],
+      ['@forwork/session', sessionPlugin],
+      ['@forwork/session-projection', sessionProjectionPlugin],
+      ['@forwork/working-directory', workingDirectoryPlugin],
+      ['@forwork/system-prompt', systemPromptPlugin],
+      ['@forwork/tools', toolsPlugin],
+      ['@forwork/tool-executor-native', NativeToolExecutor],
+      ['@forwork/fs-local', fsPlugin],
+      ['@forwork/tool-fs', toolFsPlugin],
+      ['@forwork/session-query-sqlite', queryPlugin],
+      ['@forwork/session-reference', referencePlugin],
+      ['@forwork/spill-local', spillPlugin],
       ['./source-session.ts', sourcePlugin],
     ])
     ctx.loader.internal = {

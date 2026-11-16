@@ -39,9 +39,9 @@ import clsx from 'clsx'
 import {
   Button, IconCheckOutlineRegular, IconChevronRightOutlineRegular, IconEditOutlineRegular, IconFolderCloseRegular, IconFolderOpenRegular,
   IconPlusOutlineRegular, Modal,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { DirectoryEntry, DirectoryListing } from '@deepseek-ai/dsh-api-remotes/client'
-import type { Translate } from '@deepseek-ai/dsh-client-locale/client'
+} from '@forwork/client-ui-primitives'
+import type { DirectoryEntry, DirectoryListing } from '@forwork/api-remotes/client'
+import type { Translate } from '@forwork/client-locale/client'
 import css from './DirectoryBrowser.module.css'
 
 /** Owner-supplied browser props: browse calls, pick semantics, and copy. */

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-subagent-fork-in-process",
+  "name": "@forwork/subagent-fork-in-process",
   "description": "In-process fork subagent backend: runs a child agent seeded with a prefix of the parent's log",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,24 +29,24 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-subagent": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/agent": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/subagent": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/schemastery": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-subagent": "workspace:*",
-    "@deepseek-ai/dsh-subagent-spawn-in-process": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-session-projection": "workspace:*"
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/agent-loop": "workspace:*",
+    "@forwork/agent-loop-testkit": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/subagent": "workspace:*",
+    "@forwork/subagent-spawn-in-process": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/session-projection": "workspace:*"
   }
 }

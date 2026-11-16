@@ -5,48 +5,48 @@
 /:
   en: d5ef8fa5a5ebfbc2
   zh: 9870b3f207a248cc
-/deepseek-ai-dsh-client-ui-tool:
-  en: 03bfcfbf7f1cea76
-  zh: 142abbf07affee63
-/deepseek-ai-dsh-client-ui-tool/summary:
+/forwork-client-ui-tool:
+  en: 0e4d0fab0f510865
+  zh: e86c1246665d30ec
+/forwork-client-ui-tool/summary:
   en: e7ef510d1764f9b2
   zh: 236bc66607211f0f
-/deepseek-ai-dsh-client-ui-tool/table-of-contents:
+/forwork-client-ui-tool/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
-/deepseek-ai-dsh-client-ui-tool/use-this-package:
+/forwork-client-ui-tool/use-this-package:
   en: 09231e7cc6515a01
   zh: c306bb141cf9bf9d
-/deepseek-ai-dsh-client-ui-tool/use-this-package/registering-a-business-tool-view:
+/forwork-client-ui-tool/use-this-package/registering-a-business-tool-view:
   en: e458aff61e634190
   zh: 650e417f450b3edf
-/deepseek-ai-dsh-client-ui-tool/use-this-package/built-in-views:
+/forwork-client-ui-tool/use-this-package/built-in-views:
   en: 4f141937224a0390
   zh: b3b8a22df4936742
-/deepseek-ai-dsh-client-ui-tool/understand-the-implementation:
+/forwork-client-ui-tool/understand-the-implementation:
   en: 00bc7b0c84edc603
   zh: 1cfcf5b435248a91
-/deepseek-ai-dsh-client-ui-tool/understand-the-implementation/rendering-contract:
+/forwork-client-ui-tool/understand-the-implementation/rendering-contract:
   en: 672e63b2f92e689b
   zh: ba950ecb480325a6
-/deepseek-ai-dsh-client-ui-tool/understand-the-implementation/cards:
-  en: cf7e57801571d443
-  zh: fee3b0b00c6aab69
-/deepseek-ai-dsh-client-ui-tool/understand-the-implementation/declared-optional-capabilities:
+/forwork-client-ui-tool/understand-the-implementation/cards:
+  en: 6301073a8c96296d
+  zh: b168afd0011ab9e9
+/forwork-client-ui-tool/understand-the-implementation/declared-optional-capabilities:
   en: c1926deb4e5f3734
   zh: c5845f465b94a459
-/deepseek-ai-dsh-client-ui-tool/further-exploration:
+/forwork-client-ui-tool/further-exploration:
   en: b37600769951cbca
   zh: 816589549d21d176
-/deepseek-ai-dsh-client-ui-tool/model-experience:
+/forwork-client-ui-tool/model-experience:
   en: 1e5e72dd269855d5
   zh: 81a4756d460e3af9
-/deepseek-ai-dsh-client-ui-tool/model-experience/kv-cache-effect:
+/forwork-client-ui-tool/model-experience/kv-cache-effect:
   en: ca75c51c89c2c9b0
   zh: de54f3467ef3b9be
-/deepseek-ai-dsh-client-ui-tool/known-limitations-and-deferred-work:
+/forwork-client-ui-tool/known-limitations-and-deferred-work:
   en: 49f7008105e804df
   zh: e773f101126b01b4
-/deepseek-ai-dsh-client-ui-tool/known-limitations-and-deferred-work/dev-note:
+/forwork-client-ui-tool/known-limitations-and-deferred-work/dev-note:
   en: e67f633dc6fe7773
   zh: 3bb0c20c93f16f98

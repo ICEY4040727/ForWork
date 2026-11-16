@@ -9,13 +9,13 @@
  * request. The transport and the Remote callback are injected, so the bridge
  * owns no Context and no module state.
  */
-import type { DocumentEditOperation } from '@deepseek-ai/dsh-session/src/document-events.ts'
+import type { DocumentEditOperation } from '@forwork/session/src/document-events.ts'
 import type {
   OfficeCommandOperation,
   OfficeCommandResult,
   OfficeDocumentSnapshot,
   UnsupportedFeature,
-} from '@deepseek-ai/dsh-office-exchange/types'
+} from '@forwork/office-exchange/types'
 
 /** One `document/command` payload as the Host appends it to the Session. */
 export interface DocumentCommandRequest {

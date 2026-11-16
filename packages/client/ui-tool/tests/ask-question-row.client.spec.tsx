@@ -9,17 +9,17 @@
  * results.
  */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { useDisclosure } from '@deepseek-ai/dsh-client-ui-chat/src/client/chat/use-disclosure.ts'
+import { useDisclosure } from '@forwork/client-ui-chat/src/client/chat/use-disclosure.ts'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ToolCallBlock, ToolResultNode } from '@deepseek-ai/dsh-client-ui-chat/client'
-import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
-import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
+import type { ToolCallBlock, ToolResultNode } from '@forwork/client-ui-chat/client'
+import { makeTranslate } from '@forwork/client-test-runtime'
+import { zh as commonZh } from '@forwork/client-locale/src/locales/zh.ts'
 // Export discipline: packages/client/AGENTS.md.
 import { AskQuestionRow, askQuestionToolview } from '../src/client/tool/toolviews/ask-question-row.tsx'
 import type { UserQuestionPanels } from '../src/client/contract/slots.ts'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { zh } from '@deepseek-ai/dsh-client-ui-conversation/src/client/locales.ts'
-import { PartialArguments } from '@deepseek-ai/dsh-util-values'
+import type { SessionId } from '@forwork/session/types'
+import { zh } from '@forwork/client-ui-conversation/src/client/locales.ts'
+import { PartialArguments } from '@forwork/util-values'
 
 afterEach(cleanup)
 

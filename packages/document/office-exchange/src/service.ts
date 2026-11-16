@@ -3,14 +3,14 @@
  * Office files to and from unit snapshots and report features the editable
  * model cannot preserve; the editor and agent tools consume the seam without
  * importing a concrete conversion library.
- * @module @deepseek-ai/dsh-office-exchange/service
+ * @module @forwork/office-exchange/service
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context, Service } from '@forwork/cordis'
 import type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
 import type { OfficeFormat, UnsupportedFeature } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     /** Office file to unit-snapshot conversion and legacy-format handling. */
     officeExchange: OfficeExchange

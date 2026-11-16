@@ -1,8 +1,8 @@
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { Fiber } from '@deepseek-ai/cordis'
-import LlmRuntime, { createUserMessage, ToolCallId, EMPTY_RESPONSE_CODE, LlmAdapter, LlmError, expandAssistantStream, resolveRetryPolicy  } from '@deepseek-ai/dsh-llm'
+import { Context } from '@forwork/cordis'
+import type { Fiber } from '@forwork/cordis'
+import LlmRuntime, { createUserMessage, ToolCallId, EMPTY_RESPONSE_CODE, LlmAdapter, LlmError, expandAssistantStream, resolveRetryPolicy  } from '@forwork/llm'
 import type {
   AlwaysRetryPolicyConfig,
   BackoffConfig,
@@ -11,17 +11,17 @@ import type {
   ResolvedRetryPolicy,
   RetryPolicyConfig,
   StreamChunk,
-} from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type { SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session'
-import type { LlmRetryEventData } from '@deepseek-ai/dsh-llm-retry/types'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import { defineContentToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent, RequestErrorAction } from '@deepseek-ai/dsh-agent'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
+} from '@forwork/llm'
+import SessionStore, { SessionId } from '@forwork/session'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import type { SessionEvent, SessionEventMap } from '@forwork/session'
+import type { LlmRetryEventData } from '@forwork/llm-retry/types'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
+import { defineContentToolFixture } from '@forwork/tool-testkit'
+import AgentRegistry from '@forwork/agent'
+import type { Agent, RequestErrorAction } from '@forwork/agent'
+import AgentLoop from '@forwork/agent-loop'
 import type { Config as retryConfig, RetryInternals as retryRetryInternals } from '../src/index.ts'
 import * as retry from '../src/index.ts'
 

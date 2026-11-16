@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-session-snapshot",
+  "name": "@forwork/session-snapshot",
   "description": "Session-log snapshot core with an ACP protocol adapter, expected-output normalization, and fixture invariants",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -28,34 +28,34 @@
   "license": "MIT",
   "dependencies": {
     "@agentclientprotocol/sdk": "1.4.0",
-    "@deepseek-ai/cordis-plugin-include": "workspace:~",
-    "@deepseek-ai/dsh-llm-replay": "workspace:*",
-    "@deepseek-ai/dsh-loader-smoke": "workspace:*",
-    "@deepseek-ai/dsh-session-format": "workspace:*",
+    "@forwork/cordis-plugin-include": "workspace:~",
+    "@forwork/llm-replay": "workspace:*",
+    "@forwork/loader-smoke": "workspace:*",
+    "@forwork/session-format": "workspace:*",
     "js-yaml": "^4.3.2",
     "vitest": "^4.1.11"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-http-proxy": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/session": "workspace:*",
+    "@forwork/http-proxy": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop": "workspace:*",
-    "@deepseek-ai/dsh-agent-preset-registry": "workspace:*",
-    "@deepseek-ai/dsh-compaction": "workspace:*",
-    "@deepseek-ai/dsh-fs": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-sandbox": "workspace:*",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-subagent": "workspace:*",
-    "@deepseek-ai/dsh-tool-testkit": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-user-questions": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/agent-loop": "workspace:*",
+    "@forwork/agent-preset-registry": "workspace:*",
+    "@forwork/compaction": "workspace:*",
+    "@forwork/fs": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/sandbox": "workspace:*",
+    "@forwork/sandbox-policy": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/subagent": "workspace:*",
+    "@forwork/tool-testkit": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/user-questions": "workspace:*",
     "@types/js-yaml": "^4.0.9",
-    "@deepseek-ai/dsh-http-proxy": "workspace:*"
+    "@forwork/http-proxy": "workspace:*"
   }
 }

@@ -4,7 +4,7 @@
  * editable model cannot preserve; the editor and agent tools consume it without
  * importing a concrete conversion library. The package also hosts the
  * `officeDocument` Remote surface over that seam.
- * @module @deepseek-ai/dsh-office-exchange
+ * @module @forwork/office-exchange
  */
 
 export { assertWithinRoots } from './authority.ts'

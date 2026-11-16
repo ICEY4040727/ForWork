@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-message-feedback",
+  "name": "@forwork/message-feedback",
   "description": "Canonical Session-log ratings and notes for finalized assistant messages",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -46,28 +46,28 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-persistence": "workspace:*",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-command-feedback": "workspace:*"
+    "@forwork/brand": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-persistence": "workspace:*",
+    "@forwork/typert-protocol": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/command-feedback": "workspace:*"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:~",
+    "@forwork/schemastery": "workspace:~",
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis-plugin-include": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-brand": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-persistence": "workspace:*",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:*",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-command-feedback": "workspace:*"
+    "@forwork/cordis-plugin-include": "workspace:~",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/brand": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-persistence": "workspace:*",
+    "@forwork/session-persistence-jsonl": "workspace:*",
+    "@forwork/typert-protocol": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/command-feedback": "workspace:*"
   }
 }

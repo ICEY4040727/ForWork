@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-command-feedback",
+  "name": "@forwork/command-feedback",
   "description": "Log-only session feedback: the record event, the sessionFeedback Host Remote, and the human-facing slash command",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -46,25 +46,25 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-commands": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-anonymous-user-id": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*"
+    "@forwork/commands": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/anonymous-user-id": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/typert-protocol": "workspace:*"
   },
   "dependencies": {
     "zod": "4.4.3"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis-plugin-include": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:*",
-    "@deepseek-ai/dsh-commands": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-anonymous-user-id": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*"
+    "@forwork/cordis-plugin-include": "workspace:~",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/agent-loop-testkit": "workspace:*",
+    "@forwork/commands": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/anonymous-user-id": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/typert-protocol": "workspace:*"
   }
 }

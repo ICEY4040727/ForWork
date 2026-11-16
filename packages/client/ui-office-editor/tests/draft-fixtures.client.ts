@@ -1,15 +1,15 @@
 /** Shared fake Remote and draft values for the recovery-draft specs. */
 import { vi } from 'vitest'
 import type { Mock } from 'vitest'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+import { brandString } from '@forwork/brand'
+import type { SessionId } from '@forwork/session/types'
+import type { RemoteResult } from '@forwork/typert-protocol'
 import type {
   OfficeDocumentDraft,
   OfficeDocumentReadResult,
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,
-} from '@deepseek-ai/dsh-office-exchange/types'
+} from '@forwork/office-exchange/types'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
 
 /** The Session every fixture addresses. */

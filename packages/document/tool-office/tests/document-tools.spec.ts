@@ -1,16 +1,16 @@
 /** Office document tools: bridge success paths, refusals, save counts, and edit facts. */
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { Context } from '@deepseek-ai/cordis'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
-import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { OfficeDocumentRemote } from '@deepseek-ai/dsh-office-exchange'
-import type { OfficeDocumentSnapshot, OfficeDocumentReadResult } from '@deepseek-ai/dsh-office-exchange'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import { Context } from '@forwork/cordis'
+import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@forwork/agent-loop-testkit'
+import { LocalFileSystem } from '@forwork/fs-local'
+import { ToolCallId } from '@forwork/llm'
+import { OfficeDocumentRemote } from '@forwork/office-exchange'
+import type { OfficeDocumentSnapshot, OfficeDocumentReadResult } from '@forwork/office-exchange'
+import { SessionId } from '@forwork/session'
+import { executeToolFixture } from '@forwork/tool-testkit'
+import { RemoteError } from '@forwork/typert-protocol'
+import type { JsonValue } from '@forwork/util-values'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   apply,
@@ -93,7 +93,7 @@ function editFacts(): number {
 }
 
 /** The first `document/edit` fact in the calling Session. */
-function firstEdit(): Extract<import('@deepseek-ai/dsh-session').SessionEvent, { type: 'document/edit' }> {
+function firstEdit(): Extract<import('@forwork/session').SessionEvent, { type: 'document/edit' }> {
   const edit = h.events.find(event => event.type === 'document/edit')
   if (edit?.type !== 'document/edit') throw new Error('missing edit fact')
   return edit

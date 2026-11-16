@@ -3,18 +3,18 @@
  * Post-execute policies settle before retention; canonical program values
  * remain intact. Missing recovery storage or image pricing keeps the original
  * content and reports the reason through the logger.
- * @module @deepseek-ai/dsh-spill-policy
+ * @module @forwork/spill-policy
  */
-import type {} from '@deepseek-ai/dsh-tool-executor-ptc'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { createUserMessage, resolveImageAttachmentAccess } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, ImageBlock, LlmImageRequestPrice, ToolCallId } from '@deepseek-ai/dsh-llm'
-import { estimateContent } from '@deepseek-ai/dsh-token-meter/estimate'
-import type { SpillRef } from '@deepseek-ai/dsh-spill'
-import type { PostToolDecision, ToolExecution } from '@deepseek-ai/dsh-tools'
-import type {} from '@deepseek-ai/dsh-attachment'
-import type {} from '@deepseek-ai/dsh-fs'
+import type {} from '@forwork/tool-executor-ptc'
+import type { Context } from '@forwork/cordis'
+import z from '@forwork/schemastery'
+import { createUserMessage, resolveImageAttachmentAccess } from '@forwork/llm'
+import type { ContentBlock, ImageBlock, LlmImageRequestPrice, ToolCallId } from '@forwork/llm'
+import { estimateContent } from '@forwork/token-meter/estimate'
+import type { SpillRef } from '@forwork/spill'
+import type { PostToolDecision, ToolExecution } from '@forwork/tools'
+import type {} from '@forwork/attachment'
+import type {} from '@forwork/fs'
 import type { SpillPolicyExec } from './types.ts'
 import { formatSpillNotice } from './notice.ts'
 import { retainContent } from './retention.ts'

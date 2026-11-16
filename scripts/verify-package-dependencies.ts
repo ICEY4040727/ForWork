@@ -36,13 +36,23 @@ import {
 } from './source-parse-uses.ts'
 
 const GATE = 'verify-package-dependencies'
-const CORDIS = '@deepseek-ai/cordis'
+const CORDIS = '@forwork/cordis'
+const ROOT = resolve(import.meta.dirname, '..')
+/** Vendored and native workspace packages keep tilde ranges so patch updates are permitted. */
+const TILDE_PACKAGES = new Set(
+  ['vendor/*/package.json', 'native/system/package.json', 'native/system/packages/*/package.json']
+    .flatMap(pattern => globSync(pattern, { cwd: ROOT }))
+    .flatMap((file) => {
+      const manifest = JSON.parse(readFileSync(resolve(ROOT, file), 'utf8')) as { name?: string }
+      return typeof manifest.name === 'string' ? [manifest.name] : []
+    }),
+)
 /**
  * Type packages declared only in the root devDependencies. Each package-local pnpm link is one more
  * location that TypeScript scans when it computes module specifiers for every JSX file.
  */
 function workspaceRange(name: string): 'workspace:*' | 'workspace:~' {
-  return name === '@deepseek-ai/dsh' || name.startsWith('@deepseek-ai/dsh-') ? 'workspace:*' : 'workspace:~'
+  return name.startsWith('@forwork/') && !TILDE_PACKAGES.has(name) ? 'workspace:*' : 'workspace:~'
 }
 const RELEASE_MANIFEST_GLOB = 'packages/!(experimental)/*/package.json'
 /** Every package group, experimental included, follows the same published dependency policy. */
@@ -231,7 +241,7 @@ export function collectRuntimeSourceExportUses(path: string, source: string): Ru
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement)
       || !ts.isStringLiteralLike(statement.moduleSpecifier)
-      || statement.moduleSpecifier.text !== '@deepseek-ai/dsh-lazy-require') continue
+      || statement.moduleSpecifier.text !== '@forwork/lazy-require') continue
     const bindings = statement.importClause?.namedBindings
     if (bindings !== undefined && ts.isNamespaceImport(bindings)) {
       lazyRequireNamespaces.add(bindings.name.text)

@@ -1,9 +1,9 @@
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { createAssistantMessage } from '@deepseek-ai/dsh-llm'
-import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session'
-import { parseSessionLog, prepareSessionSnapshotFixtureForComparison } from '@deepseek-ai/dsh-llm-replay'
-import { scrubSessionSnapshot } from '@deepseek-ai/dsh-session-snapshot'
+import { createAssistantMessage } from '@forwork/llm'
+import { SESSION_FORMAT_VERSION, SessionSeq, type SessionEvent } from '@forwork/session'
+import { parseSessionLog, prepareSessionSnapshotFixtureForComparison } from '@forwork/llm-replay'
+import { scrubSessionSnapshot } from '@forwork/session-snapshot'
 import {
   canonicalSessionFixture,
   inspectSessionFixtureLayouts,

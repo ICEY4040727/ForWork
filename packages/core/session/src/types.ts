@@ -1,4 +1,4 @@
-import { brandNumber, brandString, type Branded, type BrandedNumber } from '@deepseek-ai/dsh-brand'
+import { brandNumber, brandString, type Branded, type BrandedNumber } from '@forwork/brand'
 import type {
   AssistantMessage,
   DeveloperMessage,
@@ -13,12 +13,12 @@ import type {
   ToolResultMessage,
   ToolSchema,
   UserMessage,
-} from '@deepseek-ai/dsh-llm'
-import type { TypertResource } from '@deepseek-ai/dsh-typert-protocol'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+} from '@forwork/llm'
+import type { TypertResource } from '@forwork/typert-protocol'
+import type { JsonValue } from '@forwork/util-values'
 
 // Core-owned document facts extend this map in their own module; importing it
-// here keeps the `@deepseek-ai/dsh-session/types` subpath a complete vocabulary
+// here keeps the `@forwork/session/types` subpath a complete vocabulary
 // for consumers that never load the package barrel.
 import type {} from './document-events.ts'
 
@@ -561,7 +561,7 @@ export interface PluginRecord {
   readonly data: unknown
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@forwork/typert-protocol' {
   interface TypertResourceMap {
     /** One Session; the Session Controller registers its default `sessionId` wire field. */
     session: TypertResource<SessionId>

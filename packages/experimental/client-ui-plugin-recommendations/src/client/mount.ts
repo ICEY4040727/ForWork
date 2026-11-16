@@ -1,17 +1,17 @@
 /** Register the official plugin card body, its catalog-text Remote and its localized copy. */
 import { createElement } from 'react'
-import type { Context } from '@deepseek-ai/cordis'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
-import type {} from '@deepseek-ai/dsh-client-ui-action-cards/client'
-import type {} from '@deepseek-ai/dsh-plugin-recommendations/remote'
-import type { TypertRemoteContribution } from '@deepseek-ai/dsh-typert-protocol'
+import type { Context } from '@forwork/cordis'
+import { createSnapshotStore } from '@forwork/client-store'
+import type {} from '@forwork/api-remotes/client'
+import type {} from '@forwork/client-locale/client'
+import type {} from '@forwork/client-ui-plugin-manager/client'
+import type {} from '@forwork/client-ui-action-cards/client'
+import type {} from '@forwork/plugin-recommendations/remote'
+import type { TypertRemoteContribution } from '@forwork/typert-protocol'
 import { PluginCardBody, type CatalogDetails, type PluginCardServices } from './Card.tsx'
 import { de, en, es, fr, ja, pt, ru, zh, type RecommendationKey } from './locales.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@forwork/client-ui-slots' {
   interface LocaleNamespaceMap { pluginRecommendations: RecommendationKey }
 }
 

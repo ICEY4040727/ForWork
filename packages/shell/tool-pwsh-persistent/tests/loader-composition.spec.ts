@@ -1,31 +1,31 @@
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import { executeToolFixture } from '@forwork/tool-testkit'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { spawnSync } from 'node:child_process'
-import { unsupportedModel, provideWorkingDirectoryFixture, unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { unsupportedModel, provideWorkingDirectoryFixture, unsupportedInbox } from '@forwork/agent-loop-testkit'
 import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises'
 import { release, tmpdir, version } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, onTestFailed, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { SESSION_FORMAT_VERSION, Session, SessionId } from '@deepseek-ai/dsh-session'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import TerminalSessionService from '@deepseek-ai/dsh-terminal'
-import type { TerminalWaitReason } from '@deepseek-ai/dsh-terminal'
-import * as TerminalBash from '@deepseek-ai/dsh-terminal-bash'
-import SandboxProvider from '@deepseek-ai/dsh-sandbox'
-import type { ConfinedArgv, SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
-import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
-import LocalSubprocessService from '@deepseek-ai/dsh-subprocess-local'
-import { resolvePwshPath } from '@deepseek-ai/dsh-pwsh-local/src/resolve.ts'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRegistry from '@deepseek-ai/dsh-tools'
-import * as ToolPwshPersistent from '@deepseek-ai/dsh-tool-pwsh-persistent'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import Include from '@forwork/cordis-plugin-include'
+import { ToolCallId } from '@forwork/llm'
+import { SESSION_FORMAT_VERSION, Session, SessionId } from '@forwork/session'
+import AgentRegistry from '@forwork/agent'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import type { Agent } from '@forwork/agent'
+import TerminalSessionService from '@forwork/terminal'
+import type { TerminalWaitReason } from '@forwork/terminal'
+import * as TerminalBash from '@forwork/terminal-bash'
+import SandboxProvider from '@forwork/sandbox'
+import type { ConfinedArgv, SandboxPolicy } from '@forwork/sandbox'
+import SandboxPolicyService from '@forwork/sandbox-policy'
+import LocalSubprocessService from '@forwork/subprocess-local'
+import { resolvePwshPath } from '@forwork/pwsh-local/src/resolve.ts'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRegistry from '@forwork/tools'
+import * as ToolPwshPersistent from '@forwork/tool-pwsh-persistent'
 import { ReadinessTimeline, TIMELINE_HEADER } from './readiness-timeline.ts'
 
 const pwshPath = resolvePwshPath()
@@ -110,19 +110,19 @@ describe.skipIf(!hasPwsh)('persistent pwsh through a real cordis.yml Loader comp
     root = await realpath(await mkdtemp(join(tmpdir(), 'dsh-persistent-pwsh-loader-')))
     const configPath = join(root, 'cordis.yml')
     await writeFile(configPath, [
-      "- name: '@deepseek-ai/dsh-agent'",
-      "- name: '@deepseek-ai/dsh-system-prompt'",
-      "- name: '@deepseek-ai/dsh-tools'",
-      "- name: '@deepseek-ai/dsh-tool-executor-native'",
-      "- name: '@deepseek-ai/dsh-terminal'",
-      "- name: '@deepseek-ai/dsh-test-sandbox'",
-      "- name: '@deepseek-ai/dsh-session-projection'",
-      "- name: '@deepseek-ai/dsh-sandbox-policy'",
+      "- name: '@forwork/agent'",
+      "- name: '@forwork/system-prompt'",
+      "- name: '@forwork/tools'",
+      "- name: '@forwork/tool-executor-native'",
+      "- name: '@forwork/terminal'",
+      "- name: '@forwork/test-sandbox'",
+      "- name: '@forwork/session-projection'",
+      "- name: '@forwork/sandbox-policy'",
       '  config:',
       '    mode: danger-full-access',
       `    workspaceRoot: ${JSON.stringify(root)}`,
-      "- name: '@deepseek-ai/dsh-subprocess-local'",
-      "- name: '@deepseek-ai/dsh-terminal-bash'",
+      "- name: '@forwork/subprocess-local'",
+      "- name: '@forwork/terminal-bash'",
       '  config:',
       '    shellDialect: pwsh',
       '    pollIntervalMs: 10',
@@ -145,7 +145,7 @@ describe.skipIf(!hasPwsh)('persistent pwsh through a real cordis.yml Loader comp
       // would not).
       '    timeoutMs: 300000',
       '    disposeGraceMs: 500',
-      "- name: '@deepseek-ai/dsh-tool-pwsh-persistent'",
+      "- name: '@forwork/tool-pwsh-persistent'",
       '  config:',
       '    timeoutMs: 300000',
       '',
@@ -158,17 +158,17 @@ describe.skipIf(!hasPwsh)('persistent pwsh through a real cordis.yml Loader comp
     await context.plugin(Loader)
     context.loader.builtins.include = Include
     const modules = new Map<string, unknown>([
-      ['@deepseek-ai/dsh-agent', AgentRegistry],
-      ['@deepseek-ai/dsh-system-prompt', SystemPrompt],
-      ['@deepseek-ai/dsh-tools', ToolRegistry],
-      ['@deepseek-ai/dsh-tool-executor-native', NativeToolExecutor],
-      ['@deepseek-ai/dsh-terminal', TerminalSessionService],
-      ['@deepseek-ai/dsh-test-sandbox', PassthroughSandbox],
-      ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
-      ['@deepseek-ai/dsh-sandbox-policy', SandboxPolicyService],
-      ['@deepseek-ai/dsh-subprocess-local', LocalSubprocessService],
-      ['@deepseek-ai/dsh-terminal-bash', TerminalBash],
-      ['@deepseek-ai/dsh-tool-pwsh-persistent', ToolPwshPersistent],
+      ['@forwork/agent', AgentRegistry],
+      ['@forwork/system-prompt', SystemPrompt],
+      ['@forwork/tools', ToolRegistry],
+      ['@forwork/tool-executor-native', NativeToolExecutor],
+      ['@forwork/terminal', TerminalSessionService],
+      ['@forwork/test-sandbox', PassthroughSandbox],
+      ['@forwork/session-projection', SessionProjectionRegistry],
+      ['@forwork/sandbox-policy', SandboxPolicyService],
+      ['@forwork/subprocess-local', LocalSubprocessService],
+      ['@forwork/terminal-bash', TerminalBash],
+      ['@forwork/tool-pwsh-persistent', ToolPwshPersistent],
     ])
     context.loader.internal = {
       version: 'v2',

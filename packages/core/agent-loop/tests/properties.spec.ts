@@ -9,19 +9,19 @@
  * idle→running→idle, while teardown is a registry lifecycle.
  */
 
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
-import { createUserMessage, LlmAdapter } from '@deepseek-ai/dsh-llm'
-import type { GenerateOptions, StreamChunk } from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
+import { Context } from '@forwork/cordis'
+import LlmRuntime from '@forwork/llm'
+import { createUserMessage, LlmAdapter } from '@forwork/llm'
+import type { GenerateOptions, StreamChunk } from '@forwork/llm'
+import SessionStore, { SessionId } from '@forwork/session'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
+import AgentRegistry, { type Agent } from '@forwork/agent'
 
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+import AgentLoop from '@forwork/agent-loop'
+import SessionProjectionRegistry from '@forwork/session-projection'
 import fc from 'fast-check'
 
 /** A never-exhausting adapter: every model call returns the same short reply. */

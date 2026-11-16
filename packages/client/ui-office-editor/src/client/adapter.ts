@@ -7,8 +7,8 @@
  * editor runtime chunk only when a document actually mounts. Component tests
  * replace the factory so jsdom never loads Univer.
  */
-import type { OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange/types'
-import type { DocumentEditOperation } from '@deepseek-ai/dsh-session/src/document-events.ts'
+import type { OfficeDocumentSnapshot } from '@forwork/office-exchange/types'
+import type { DocumentEditOperation } from '@forwork/session/src/document-events.ts'
 import type { OfficeApplyOutcome } from './command-bridge.ts'
 import { loadOfficeRuntime } from './editor/load.ts'
 

@@ -2,7 +2,7 @@
 
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { entryListSchema } from '@deepseek-ai/cordis-plugin-include'
+import { entryListSchema } from '@forwork/cordis-plugin-include'
 import * as yaml from 'js-yaml'
 
 describe('Inspector profile bundle', () => {
@@ -15,19 +15,19 @@ describe('Inspector profile bundle', () => {
     expect(manifest.publishConfig.access).toBe('public')
     expect(manifest.dsh.bundle.patch).toBe('./cordis.patch.yml')
     expect(manifest.dependencies).toEqual({
-      '@deepseek-ai/dsh-experimental-client-ui-stats': 'workspace:*',
-      '@deepseek-ai/dsh-experimental-inspector': 'workspace:*',
-      '@deepseek-ai/dsh-experimental-session-inspector': 'workspace:*',
+      '@forwork/experimental-client-ui-stats': 'workspace:*',
+      '@forwork/experimental-inspector': 'workspace:*',
+      '@forwork/experimental-session-inspector': 'workspace:*',
     })
     expect(yaml.load(readFileSync(new URL(`../${manifest.dsh.bundle.patch}`, import.meta.url), 'utf8'), {
       schema: entryListSchema,
     })).toEqual([{ insert: [
       {
-        id: 'experimental-inspector', name: '@deepseek-ai/dsh-experimental-inspector',
+        id: 'experimental-inspector', name: '@forwork/experimental-inspector',
         disabled: false, config: { captureFetch: true },
       },
-      { id: 'session-inspector', name: '@deepseek-ai/dsh-experimental-session-inspector' },
-      { id: 'client-ui-stats', name: '@deepseek-ai/dsh-experimental-client-ui-stats' },
+      { id: 'session-inspector', name: '@forwork/experimental-session-inspector' },
+      { id: 'client-ui-stats', name: '@forwork/experimental-client-ui-stats' },
     ] }])
   })
 })

@@ -1,19 +1,19 @@
-import type {} from '@deepseek-ai/dsh-client-ui-context-menu/client'
+import type {} from '@forwork/client-ui-context-menu/client'
 /** Registers the target-neutral Conversation assembly, shell, input, and docks. */
-import type {} from '@deepseek-ai/dsh-client-product-analytics/client'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { ISessions, SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
-import { IconPaperclipOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
-import { createSnapshotStore, type BoundActions } from '@deepseek-ai/dsh-client-store'
-import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type {} from '@forwork/client-product-analytics/client'
+import type { Context } from '@forwork/cordis'
+import z from '@forwork/schemastery'
+import type { ISessions, SessionBinding } from '@forwork/api-session-controller/client'
+import { IconPaperclipOutlineRegular } from '@forwork/client-ui-primitives'
+import { createSnapshotStore, type BoundActions } from '@forwork/client-store'
+import { resolveSlotLabel } from '@forwork/client-ui-slots'
+import type { SessionId } from '@forwork/session/types'
 // Type-only service and declaration merges used by this assembly.
-import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { ShortcutCommandId, ShortcutFixedCommand } from '@deepseek-ai/dsh-client-shortcuts/client'
+import type {} from '@forwork/client-locale/client'
+import type {} from '@forwork/client-ui-renderer/client'
+import type {} from '@forwork/client-ui-session/client'
+import type {} from '@forwork/client-ui-settings/client'
+import type { ShortcutCommandId, ShortcutFixedCommand } from '@forwork/client-shortcuts/client'
 import { UiConversation } from './conversation/assembly.ts'
 import { UserText, PlainUserText, SessionReference } from './user-text/UserText.tsx'
 import { sessionReferenceRule } from './user-text/session-reference-rule.ts'
@@ -26,8 +26,8 @@ import type {
 import type { InputNotice } from './contract/input.ts'
 import type { ReferenceInsert } from './contract/draft-editor.ts'
 import { createConversationStore, readConversationViewPreference } from './stores.ts'
-import { formatFileMention } from '@deepseek-ai/dsh-file-reference/grammar'
-import { relativizeToCwd, workspaceTitleOf } from '@deepseek-ai/dsh-util-workspace-path'
+import { formatFileMention } from '@forwork/file-reference/grammar'
+import { relativizeToCwd, workspaceTitleOf } from '@forwork/util-workspace-path'
 import { ConversationController, UnsupportedImageMediaTypeError, isImageMediaType } from './service.ts'
 import type { IConversation } from './service.ts'
 import { ComposerBlockRegistry } from './input/blocks.ts'
@@ -50,7 +50,7 @@ import { createViewPins } from './view-pins.ts'
 import { en, ja, es, fr, de, ru, pt, NS, zh, type ConversationKey } from './locales.ts'
 import { CONVERSATION_SETTINGS_NAMESPACE, type ConversationSettings } from '../submission-settings.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@forwork/client-ui-slots' {
   interface LocaleNamespaceMap {
     /** Conversation shell, composer, queue, and dock copy. */
     conversation: ConversationKey

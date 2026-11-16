@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-pwsh-persistent",
+  "name": "@forwork/tool-pwsh-persistent",
   "description": "Model-facing owner-scoped persistent PowerShell tool backed by the Harness PTY service",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -28,38 +28,38 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-output-retention": "workspace:*",
-    "@deepseek-ai/dsh-terminal": "workspace:*",
-    "@deepseek-ai/dsh-timeout": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-working-directory": "workspace:*"
+    "@forwork/agent": "workspace:*",
+    "@forwork/output-retention": "workspace:*",
+    "@forwork/terminal": "workspace:*",
+    "@forwork/timeout": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/working-directory": "workspace:*"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/schemastery": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis-plugin-include": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-output-retention": "workspace:*",
-    "@deepseek-ai/dsh-terminal": "workspace:*",
-    "@deepseek-ai/dsh-terminal-bash": "workspace:*",
-    "@deepseek-ai/dsh-pwsh-local": "workspace:*",
-    "@deepseek-ai/dsh-sandbox": "workspace:*",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-projection": "workspace:*",
-    "@deepseek-ai/dsh-subprocess-local": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
-    "@deepseek-ai/dsh-timeout": "workspace:*",
-    "@deepseek-ai/dsh-tool-executor-native": "workspace:*",
-    "@deepseek-ai/dsh-tool-testkit": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-working-directory": "workspace:*"
+    "@forwork/cordis-plugin-include": "workspace:~",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/agent-loop-testkit": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/output-retention": "workspace:*",
+    "@forwork/terminal": "workspace:*",
+    "@forwork/terminal-bash": "workspace:*",
+    "@forwork/pwsh-local": "workspace:*",
+    "@forwork/sandbox": "workspace:*",
+    "@forwork/sandbox-policy": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-projection": "workspace:*",
+    "@forwork/subprocess-local": "workspace:*",
+    "@forwork/system-prompt": "workspace:*",
+    "@forwork/timeout": "workspace:*",
+    "@forwork/tool-executor-native": "workspace:*",
+    "@forwork/tool-testkit": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/working-directory": "workspace:*"
   }
 }

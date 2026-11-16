@@ -6,8 +6,8 @@
  * exercised without a live editor or a Host.
  */
 import { describe, expect, it, vi } from 'vitest'
-import type { DocumentEditOperation } from '@deepseek-ai/dsh-session/src/document-events.ts'
-import type { OfficeDocumentSnapshot, UnsupportedFeature } from '@deepseek-ai/dsh-office-exchange/types'
+import type { DocumentEditOperation } from '@forwork/session/src/document-events.ts'
+import type { OfficeDocumentSnapshot, UnsupportedFeature } from '@forwork/office-exchange/types'
 import {
   attachSessionCommandBridge,
   createCommandBridge,

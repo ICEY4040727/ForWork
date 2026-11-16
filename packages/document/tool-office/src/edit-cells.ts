@@ -1,11 +1,11 @@
 /**
  * `document_edit_cells`: replace spreadsheet cell values or formulas in the
  * live unit, then persist the accepted result with one guarded save.
- * @module @deepseek-ai/dsh-tool-office/edit-cells
+ * @module @forwork/tool-office/edit-cells
  */
 
-import type { DocumentEditStep } from '@deepseek-ai/dsh-session'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { DocumentEditStep } from '@forwork/session'
+import type { JsonValue } from '@forwork/util-values'
 import { priorCell, runEdit, sheetCells } from './edit.ts'
 import type { EditOutput, EditPlan } from './edit.ts'
 import { failure } from './errors.ts'

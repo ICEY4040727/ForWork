@@ -1,9 +1,9 @@
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import type {} from '@deepseek-ai/dsh-commands/types'
+import type { SessionEvent } from '@forwork/session/types'
+import type { CommandId } from '@forwork/commands/brand'
+import type {} from '@forwork/commands/types'
 import type {
   ConversationNodeDefinition,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@forwork/client-ui-conversation/client'
 
 /** The command name whose runs this projection owns. */
 export const GOAL_COMMAND = 'goal'
@@ -15,7 +15,7 @@ export interface GoalCommandInputData {
   readonly time: number
 }
 
-declare module '@deepseek-ai/dsh-client-ui-chat/client' {
+declare module '@forwork/client-ui-chat/client' {
   interface ChatNodeDataMap {
     /** Human-entered `/goal` command input. */
     'command-input': GoalCommandInputData

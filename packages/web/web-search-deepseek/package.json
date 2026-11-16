@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-web-search-deepseek",
+  "name": "@forwork/web-search-deepseek",
   "description": "DeepSeek-backed search provider (native web_search via the Anthropic-compatible API) for the DeepSeek Harness web capability seam (ctx.web)",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,32 +29,32 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-credentials": "workspace:*",
-    "@deepseek-ai/dsh-deepseek-account": "workspace:*",
-    "@deepseek-ai/dsh-launch-environment": "workspace:*",
-    "@deepseek-ai/dsh-llm-deepseek": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-web": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/agent": "workspace:*",
+    "@forwork/credentials": "workspace:*",
+    "@forwork/deepseek-account": "workspace:*",
+    "@forwork/launch-environment": "workspace:*",
+    "@forwork/llm-deepseek": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/web": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/schemastery": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-credentials": "workspace:*",
-    "@deepseek-ai/dsh-credentials-local": "workspace:*",
-    "@deepseek-ai/dsh-deepseek-account": "workspace:*",
-    "@deepseek-ai/dsh-launch-environment": "workspace:*",
-    "@deepseek-ai/dsh-llm-deepseek": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-web": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-http-proxy": "workspace:*"
+    "@forwork/agent": "workspace:*",
+    "@forwork/credentials": "workspace:*",
+    "@forwork/credentials-local": "workspace:*",
+    "@forwork/deepseek-account": "workspace:*",
+    "@forwork/launch-environment": "workspace:*",
+    "@forwork/llm-deepseek": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/web": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/http-proxy": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@deepseek-ai/dsh-deepseek-account": {
+    "@forwork/deepseek-account": {
       "optional": true
     }
   }

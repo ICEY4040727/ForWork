@@ -1,20 +1,20 @@
 /** Host Remote of the forge panel: checkout, code host, sign-in, change request, and worktree state per Session. */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-api-remote-access'
-import { changeRequestKey } from '@deepseek-ai/dsh-experimental-forge'
-import type { ChangeRequestSnapshot, ForgeActionFailure, ForgeFailure, ForgeReviewRequest, ForgeReviewResult, MergeMethod } from '@deepseek-ai/dsh-experimental-forge'
-import type { SessionChangeRequest } from '@deepseek-ai/dsh-experimental-forge-session'
-import type {} from '@deepseek-ai/dsh-experimental-worktree'
-import { appendPluginRecord } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent } from '@deepseek-ai/dsh-session'
-import type { ProjectionHandle } from '@deepseek-ai/dsh-session-projection'
-import type {} from '@deepseek-ai/dsh-session-projection-cache'
-import type {} from '@deepseek-ai/dsh-session-query'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
-import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
+import { Context, Service } from '@forwork/cordis'
+import z from '@forwork/schemastery'
+import type { Agent } from '@forwork/agent'
+import type {} from '@forwork/api-remote-access'
+import { changeRequestKey } from '@forwork/experimental-forge'
+import type { ChangeRequestSnapshot, ForgeActionFailure, ForgeFailure, ForgeReviewRequest, ForgeReviewResult, MergeMethod } from '@forwork/experimental-forge'
+import type { SessionChangeRequest } from '@forwork/experimental-forge-session'
+import type {} from '@forwork/experimental-worktree'
+import { appendPluginRecord } from '@forwork/session'
+import type { Session, SessionEvent } from '@forwork/session'
+import type { ProjectionHandle } from '@forwork/session-projection'
+import type {} from '@forwork/session-projection-cache'
+import type {} from '@forwork/session-query'
+import { MAX_TIMER_DELAY_MS } from '@forwork/timeout'
+import { Remote, RemoteError, TypertRemoteService } from '@forwork/typert-protocol'
 import { gitIn, inspectCheckout, listBranches } from './git.ts'
 import type { Inspection } from './git.ts'
 import { parseDiff } from './diff.ts'
@@ -34,7 +34,7 @@ import type { HeldWork } from './worktree.ts'
 
 export type * from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     /** Remote that serves the forge panel of the GUI. */
     forgePanel: ForgePanelController

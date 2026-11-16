@@ -1,25 +1,25 @@
 /** Loader composition with a real stdio child and a scripted external model. */
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import { executeToolFixture } from '@forwork/tool-testkit'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context, FiberState } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import ComputerUse from '@deepseek-ai/dsh-computer-use'
-import { ComputerUseProviderName } from '@deepseek-ai/dsh-computer-use/brand'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import LlmRuntime, { LlmAdapter, ToolCallId, createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import LocalAttachmentStore from '@deepseek-ai/dsh-attachment-local'
+import { Context, FiberState } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import Include from '@forwork/cordis-plugin-include'
+import ComputerUse from '@forwork/computer-use'
+import { ComputerUseProviderName } from '@forwork/computer-use/brand'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
+import LlmRuntime, { LlmAdapter, ToolCallId, createUserMessage } from '@forwork/llm'
+import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@forwork/llm'
+import SessionStore, { SessionId } from '@forwork/session'
+import AgentRegistry from '@forwork/agent'
+import AgentLoop from '@forwork/agent-loop'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import LocalAttachmentStore from '@forwork/attachment-local'
 import * as Provider from '../src/index.ts'
 
 const TOOL = 'mcp__cua-driver-mcp__screenshot'
@@ -62,33 +62,33 @@ async function load(mode?: string): Promise<{ ctx: Context; root: string; model:
   roots.push(root)
   const model = new ScreenshotModel()
   const modules = new Map<string, unknown>([
-    ['@deepseek-ai/dsh-computer-use', ComputerUse],
-    ['@deepseek-ai/dsh-system-prompt', SystemPrompt],
-    ['@deepseek-ai/dsh-tools', ToolRuntime],
-    ['@deepseek-ai/dsh-tool-executor-native', NativeToolExecutor],
-    ['@deepseek-ai/dsh-llm', LlmRuntime],
-    ['@deepseek-ai/dsh-session', SessionStore],
-    ['@deepseek-ai/dsh-agent', AgentRegistry],
-    ['@deepseek-ai/dsh-agent-loop', AgentLoop],
-    ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
+    ['@forwork/computer-use', ComputerUse],
+    ['@forwork/system-prompt', SystemPrompt],
+    ['@forwork/tools', ToolRuntime],
+    ['@forwork/tool-executor-native', NativeToolExecutor],
+    ['@forwork/llm', LlmRuntime],
+    ['@forwork/session', SessionStore],
+    ['@forwork/agent', AgentRegistry],
+    ['@forwork/agent-loop', AgentLoop],
+    ['@forwork/session-projection', SessionProjectionRegistry],
 
-    ['@deepseek-ai/dsh-attachment-local', LocalAttachmentStore],
+    ['@forwork/attachment-local', LocalAttachmentStore],
     ['@fixture/model', { inject: ['llm'], apply(ctx: Context) { ctx.effect(() => ctx.llm.registerAdapter(['fixture'], model)) } }],
-    ['@deepseek-ai/dsh-experimental-computer-use-cua-driver-mcp', Provider],
+    ['@forwork/experimental-computer-use-cua-driver-mcp', Provider],
   ])
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, JSON.stringify([...modules.keys()].map(name => ({
-    id: name === '@deepseek-ai/dsh-experimental-computer-use-cua-driver-mcp' ? 'computer-use-driver' : undefined,
+    id: name === '@forwork/experimental-computer-use-cua-driver-mcp' ? 'computer-use-driver' : undefined,
     name,
-    config: name === '@deepseek-ai/dsh-experimental-computer-use-cua-driver-mcp'
+    config: name === '@forwork/experimental-computer-use-cua-driver-mcp'
       ? {
         command: process.execPath,
         args: [fixture, root, ...(mode === undefined ? [] : [mode])],
         reconnect: { initialDelayMs: 20, maxDelayMs: 40, maxAttempts: 2 },
       }
-      : name === '@deepseek-ai/dsh-attachment-local'
+      : name === '@forwork/attachment-local'
         ? { dshHome: root }
-        : name === '@deepseek-ai/dsh-agent-loop' ? { agents: [] } : {},
+        : name === '@forwork/agent-loop' ? { agents: [] } : {},
   }))))
   const ctx = new Context()
   contexts.push(ctx)

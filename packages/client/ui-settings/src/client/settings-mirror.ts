@@ -9,9 +9,9 @@
  * through {@link SettingsDescribeMirror.acceptView}.
  */
 
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type { SettingsNamespaceView } from '@deepseek-ai/dsh-api-remotes/client'
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
+import type { Context as ClientContext } from '@forwork/cordis'
+import type { SettingsNamespaceView } from '@forwork/api-remotes/client'
+import { createSnapshotStore, type SnapshotStore } from '@forwork/client-store'
 
 /** The full `settings.describe` answer the mirror serves. */
 export interface SettingsDescribeView {

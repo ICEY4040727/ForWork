@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-settings",
+  "name": "@forwork/client-ui-settings",
   "description": "Settings domain base plugin: shared configuration forms and the canonical settings slot-type contract",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,7 +29,7 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-api-remotes"
+        "@forwork/api-remotes"
       ],
       "platform": "web"
     }
@@ -40,17 +40,17 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-api-remotes": "workspace:*",
-    "@deepseek-ai/dsh-client-store": "workspace:*",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:*",
-    "@deepseek-ai/dsh-settings": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/api-remotes": "workspace:*",
+    "@forwork/client-store": "workspace:*",
+    "@forwork/client-test-runtime": "workspace:*",
+    "@forwork/client-ui-slots": "workspace:*",
+    "@forwork/settings": "workspace:*",
     "react": "^18.2.0",
-    "@deepseek-ai/dsh-util-values": "workspace:*"
+    "@forwork/util-values": "workspace:*"
   },
   "files": [
     "locale/*.json",
@@ -59,6 +59,6 @@
     "lib/types/**/*.d.ts"
   ],
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/schemastery": "workspace:~"
   }
 }

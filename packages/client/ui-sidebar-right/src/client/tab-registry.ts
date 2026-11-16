@@ -24,11 +24,11 @@
  * Thunked copy (`title`, `guide[].title`, `guide[].description`) is read again
  * on every use, so a language change needs no re-registration.
  */
-import type { ShortcutCommandId } from '@deepseek-ai/dsh-client-shortcuts/client'
+import type { ShortcutCommandId } from '@forwork/client-shortcuts/client'
 import type { ComponentType } from 'react'
-import type { Context } from '@deepseek-ai/cordis'
-import type { IconProps } from '@deepseek-ai/dsh-client-ui-primitives'
-import { notifySubscribers } from '@deepseek-ai/dsh-client-store'
+import type { Context } from '@forwork/cordis'
+import type { IconProps } from '@forwork/client-ui-primitives'
+import { notifySubscribers } from '@forwork/client-store'
 // The POSIX build: the browser bundle must not reach for node's `path`, and
 // addresses are `/`-separated regardless of the host platform.
 import picomatch from 'picomatch/posix'

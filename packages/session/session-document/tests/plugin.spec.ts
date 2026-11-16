@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { Fiber } from '@deepseek-ai/cordis'
-import { assembleContextFor } from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { DocumentId, SessionId } from '@deepseek-ai/dsh-session'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@forwork/cordis'
+import type { Fiber } from '@forwork/cordis'
+import { assembleContextFor } from '@forwork/agent'
+import type { Agent } from '@forwork/agent'
+import { DocumentId, SessionId } from '@forwork/session'
+import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@forwork/agent-loop-testkit'
 import * as DocumentPlugin from '../src/index.ts'
 
 const FIRST = DocumentId('plugin:first.xlsx')

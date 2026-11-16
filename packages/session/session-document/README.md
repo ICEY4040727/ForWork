@@ -3,7 +3,7 @@ description: "Host document session primitives: stable identity bindings, versio
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-session-document
+# @forwork/session-document
 
 ## Summary
 

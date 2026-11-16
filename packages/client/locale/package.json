@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-locale",
+  "name": "@forwork/client-locale",
   "description": "Locale plugin: Host-backed preference, extensible language catalog, browser fallback, and typed built-in dictionaries",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,10 +29,10 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-connection",
-        "@deepseek-ai/dsh-client-ui-renderer",
-        "@deepseek-ai/dsh-client-ui-settings",
-        "@deepseek-ai/dsh-api-remotes"
+        "@forwork/client-connection",
+        "@forwork/client-ui-renderer",
+        "@forwork/client-ui-settings",
+        "@forwork/api-remotes"
       ],
       "platform": "web",
       "immediately": true
@@ -40,24 +40,24 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-api-remotes": "workspace:*",
-    "@deepseek-ai/dsh-client-store": "workspace:*",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-renderer": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-settings": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:*",
-    "@deepseek-ai/dsh-package-manifest": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/api-remotes": "workspace:*",
+    "@forwork/client-store": "workspace:*",
+    "@forwork/client-test-runtime": "workspace:*",
+    "@forwork/client-ui-primitives": "workspace:*",
+    "@forwork/client-ui-renderer": "workspace:*",
+    "@forwork/client-ui-settings": "workspace:*",
+    "@forwork/client-ui-slots": "workspace:*",
+    "@forwork/package-manifest": "workspace:*",
     "react": "^18.2.0",
-    "@deepseek-ai/dsh-client-connection": "workspace:*",
-    "@deepseek-ai/dsh-settings": "workspace:*"
+    "@forwork/client-connection": "workspace:*",
+    "@forwork/settings": "workspace:*"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/schemastery": "workspace:~"
   },
   "files": [
     "locale/*.json",

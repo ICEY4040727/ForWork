@@ -1,4 +1,4 @@
-{  "name": "@deepseek-ai/dsh-session-document",
+{  "name": "@forwork/session-document",
   "description": "Host document session primitives: stable identity bindings, version-guarded attributable change records, durable document facts, and the open-document projection and prompt section",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -38,18 +38,18 @@
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-projection": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-projection": "workspace:*",
+    "@forwork/system-prompt": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-projection": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/agent-loop-testkit": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-projection": "workspace:*",
+    "@forwork/system-prompt": "workspace:*"
   }
 }

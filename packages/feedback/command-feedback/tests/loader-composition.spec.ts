@@ -3,17 +3,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent, AgentStatus } from '@deepseek-ai/dsh-agent'
-import CommandRuntime from '@deepseek-ai/dsh-commands'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import * as CommandFeedback from '@deepseek-ai/dsh-command-feedback'
-import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
-import { unsupportedModel, unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import Include from '@forwork/cordis-plugin-include'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import AgentRegistry from '@forwork/agent'
+import type { Agent, AgentStatus } from '@forwork/agent'
+import CommandRuntime from '@forwork/commands'
+import SessionStore, { SessionId } from '@forwork/session'
+import * as CommandFeedback from '@forwork/command-feedback'
+import { getOrCreateAnonymousUserId } from '@forwork/anonymous-user-id'
+import { unsupportedModel, unsupportedInbox } from '@forwork/agent-loop-testkit'
 
 let root: string | undefined
 let context: Context | undefined
@@ -58,12 +58,12 @@ describe('/feedback real Loader composition through cordis.yml', () => {
     vi.stubEnv('DSH_HOME', root)
     const configPath = join(root, 'cordis.yml')
     await writeFile(configPath, [
-      "- name: '@deepseek-ai/dsh-session-projection'",
-      "- name: '@deepseek-ai/dsh-agent'",
-      "- name: '@deepseek-ai/dsh-session-projection'",
-      "- name: '@deepseek-ai/dsh-session'",
-      "- name: '@deepseek-ai/dsh-commands'",
-      "- name: '@deepseek-ai/dsh-command-feedback'",
+      "- name: '@forwork/session-projection'",
+      "- name: '@forwork/agent'",
+      "- name: '@forwork/session-projection'",
+      "- name: '@forwork/session'",
+      "- name: '@forwork/commands'",
+      "- name: '@forwork/command-feedback'",
       '',
     ].join('\n'))
 
@@ -72,12 +72,12 @@ describe('/feedback real Loader composition through cordis.yml', () => {
     await context.plugin(Loader)
     context.loader.builtins.include = Include
     const modules = new Map<string, unknown>([
-      ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
-      ['@deepseek-ai/dsh-agent', AgentRegistry],
-      ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
-      ['@deepseek-ai/dsh-session', SessionStore],
-      ['@deepseek-ai/dsh-commands', CommandRuntime],
-      ['@deepseek-ai/dsh-command-feedback', CommandFeedback],
+      ['@forwork/session-projection', SessionProjectionRegistry],
+      ['@forwork/agent', AgentRegistry],
+      ['@forwork/session-projection', SessionProjectionRegistry],
+      ['@forwork/session', SessionStore],
+      ['@forwork/commands', CommandRuntime],
+      ['@forwork/command-feedback', CommandFeedback],
     ])
     context.loader.internal = {
       version: 'v2',

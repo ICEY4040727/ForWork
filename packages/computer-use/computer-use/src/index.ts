@@ -1,12 +1,12 @@
 /**
  * Exclusive named registration for the computer-use capability.
- * @module @deepseek-ai/dsh-computer-use
+ * @module @forwork/computer-use
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context, Service } from '@forwork/cordis'
 import type { ComputerUseProviderName } from './brand.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     computerUse: ComputerUseRegistry
   }

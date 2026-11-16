@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { WorkspaceId, WorkspaceSnapshot, WorkspaceView } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { createSnapshotStore } from '@forwork/client-store'
+import type { WorkspaceId, WorkspaceSnapshot, WorkspaceView } from '@forwork/api-workspace-controller/client'
+import type { SessionId } from '@forwork/session/types'
 import { browserWorkspace } from '../src/client/electron/workspace.ts'
 
 const SESSION = 'session' as SessionId

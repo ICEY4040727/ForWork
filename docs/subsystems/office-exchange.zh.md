@@ -49,7 +49,7 @@ Remote 将 seam 与文件系统失败映射为稳定的 Remote 代码：`unsuppo
 
 ## 挂载与组合
 
-`LocalOfficeExchange` 校验其 `Config`，并以 `maxBytes` 等于 `maxFileBytes` 挂载 `OfficeDocumentRemote`。[base bundle](../../packages/bundle/base/README.zh.md) 在 `office-exchange` 行中挂载该提供方，配置为 `maxFileBytes: 26214400`、`maxCells: 2000000` 与 `maxConversionMs: 60000`。Client 组合通过 [api/remotes](../../packages/api/remotes/README.zh.md) 挂载来自 `@deepseek-ai/dsh-office-exchange/remote` 的生成描述符，并将其暴露为 `remote.officeDocument`。
+`LocalOfficeExchange` 校验其 `Config`，并以 `maxBytes` 等于 `maxFileBytes` 挂载 `OfficeDocumentRemote`。[base bundle](../../packages/bundle/base/README.zh.md) 在 `office-exchange` 行中挂载该提供方，配置为 `maxFileBytes: 26214400`、`maxCells: 2000000` 与 `maxConversionMs: 60000`。Client 组合通过 [api/remotes](../../packages/api/remotes/README.zh.md) 挂载来自 `@forwork/office-exchange/remote` 的生成描述符，并将其暴露为 `remote.officeDocument`。
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 

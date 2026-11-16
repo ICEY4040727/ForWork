@@ -1,52 +1,52 @@
-# Agent preset ptc: one `@deepseek-ai/dsh-agent-preset` declaration inserted
+# Agent preset ptc: one `@forwork/agent-preset` declaration inserted
 # after the web patch. Edits saved from the Web editor override this row's
 # `config.plugins` by id from the profile patch.
 - insert:
     - id: preset-ptc
-      name: '@deepseek-ai/dsh-agent-preset'
+      name: '@forwork/agent-preset'
       config:
         id: ptc
         order: 2
         plugins:
           - id: persona
-            name: '@deepseek-ai/dsh-persona'
+            name: '@forwork/persona'
             config:
               prefix: You are a coding agent powered by the {{model}} model.
           - id: agent-instructions
-            name: '@deepseek-ai/dsh-agent-instructions'
+            name: '@forwork/agent-instructions'
             config:
               maxBytes: 65536
           - id: time-context
-            name: '@deepseek-ai/dsh-time-context'
+            name: '@forwork/time-context'
           - id: tool-bash
-            name: '@deepseek-ai/dsh-tool-bash'
+            name: '@forwork/tool-bash'
             disabled: !!js process.platform === 'win32'
           - id: tool-pwsh
-            name: '@deepseek-ai/dsh-tool-pwsh'
+            name: '@forwork/tool-pwsh'
             disabled: !!js process.platform !== 'win32'
           - id: tool-fs
-            name: '@deepseek-ai/dsh-tool-fs'
+            name: '@forwork/tool-fs'
             config:
               # Set true to add the apply_patch tool beside edit.
               applyPatch: false
           - id: tool-fs-search
-            name: '@deepseek-ai/dsh-tool-fs-search'
+            name: '@forwork/tool-fs-search'
             config:
               sampleOverCapGlobResults: false
           - id: tool-office
-            name: '@deepseek-ai/dsh-tool-office'
+            name: '@forwork/tool-office'
           - id: tool-jobs
-            name: '@deepseek-ai/dsh-tool-jobs'
+            name: '@forwork/tool-jobs'
           - id: tool-schedule
-            name: '@deepseek-ai/dsh-tool-schedule'
+            name: '@forwork/tool-schedule'
           - id: skill-filesystem
-            name: '@deepseek-ai/dsh-skill-filesystem'
+            name: '@forwork/skill-filesystem'
           - id: tool-skill
-            name: '@deepseek-ai/dsh-tool-skill'
+            name: '@forwork/tool-skill'
           - id: command-goal
-            name: '@deepseek-ai/dsh-command-goal'
+            name: '@forwork/command-goal'
           - id: tool-goal
-            name: '@deepseek-ai/dsh-tool-goal'
+            name: '@forwork/tool-goal'
           - id: planning
             name: cordis:group
             group: true
@@ -54,7 +54,7 @@
               planMode: true
             config:
               - id: plan-mode
-                name: '@deepseek-ai/dsh-plan-mode'
+                name: '@forwork/plan-mode'
                 config:
                   section: |
                     You are in plan mode. Stay in plan mode until the user approves your plan through exit_plan_mode or switches the session mode. Imperative language to implement changes means plan the implementation, not execute it. A user's conversational agreement — including an answer confirming something you asked — approves nothing and does not end plan mode; fold the confirmed decision into the plan and submit it through exit_plan_mode.
@@ -76,11 +76,11 @@
               toolResultPruner: true
             config:
               - id: compaction-basic
-                name: '@deepseek-ai/dsh-compaction-basic'
+                name: '@forwork/compaction-basic'
               - id: command-compact
-                name: '@deepseek-ai/dsh-command-compact'
+                name: '@forwork/command-compact'
               - id: tool-result-pruner
-                name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+                name: '@forwork/compaction-tool-result-pruner'
                 config:
                   thresholdChars: 8192
                   headChars: 4096
@@ -92,45 +92,45 @@
               workflowEngine: true
             config:
               - id: tool-subagent-control
-                name: '@deepseek-ai/dsh-tool-subagent-control'
+                name: '@forwork/tool-subagent-control'
               - id: tool-subagent
-                name: '@deepseek-ai/dsh-tool-subagent'
+                name: '@forwork/tool-subagent'
                 config:
                   provider: spawn
                   toolName: subagent
                   modelSelection: true
                   modelDiscovery: true
               - id: tool-subagent-fork
-                name: '@deepseek-ai/dsh-tool-subagent'
+                name: '@forwork/tool-subagent'
                 config:
                   provider: fork
                   toolName: subagent_fork
               - id: workflow-ptc
-                name: '@deepseek-ai/dsh-workflow-ptc'
+                name: '@forwork/workflow-ptc'
                 disabled: true
                 config:
                   provider: spawn
               - id: tool-workflow
-                name: '@deepseek-ai/dsh-tool-workflow'
+                name: '@forwork/tool-workflow'
                 disabled: true
           - id: tool-ask-user
-            name: '@deepseek-ai/dsh-tool-ask-user'
+            name: '@forwork/tool-ask-user'
           - id: tool-todo
-            name: '@deepseek-ai/dsh-tool-todo'
+            name: '@forwork/tool-todo'
             config:
               allowParallelInProgress: true
           - id: tool-web
-            name: '@deepseek-ai/dsh-tool-web'
+            name: '@forwork/tool-web'
             config:
               fetch: true
               searchTimeoutMs: 60000
           - id: tool-executor-ptc
-            name: '@deepseek-ai/dsh-tool-executor-ptc'
+            name: '@forwork/tool-executor-ptc'
           - id: present
-            name: '@deepseek-ai/dsh-tool-present'
+            name: '@forwork/tool-present'
           - id: tool-plugin-manager
-            name: '@deepseek-ai/dsh-plugin-manager/tools'
+            name: '@forwork/plugin-manager/tools'
             disabled: true
           - id: tool-plugin-market
-            name: '@deepseek-ai/dsh-plugin-market/tools'
+            name: '@forwork/plugin-market/tools'
             disabled: true

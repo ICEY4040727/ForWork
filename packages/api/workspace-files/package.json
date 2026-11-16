@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-api-workspace-files",
+  "name": "@forwork/api-workspace-files",
   "description": "Workspace file service and Client resource provider: bounded reads, directory listing, and live metadata over the workspaceFiles Remote namespace",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -41,8 +41,8 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-api-gateway",
-        "@deepseek-ai/dsh-client-resources"
+        "@forwork/api-gateway",
+        "@forwork/client-resources"
       ],
       "platform": "web"
     }
@@ -53,27 +53,27 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-deque": "workspace:*",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~",
+    "@forwork/deque": "workspace:*",
+    "@forwork/typert-protocol": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-api-gateway": "workspace:*",
-    "@deepseek-ai/dsh-api-remote-access": "workspace:*",
-    "@deepseek-ai/dsh-client-connection": "workspace:*",
-    "@deepseek-ai/dsh-client-resources": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:*",
-    "@deepseek-ai/dsh-fs": "workspace:*",
-    "@deepseek-ai/dsh-remote-mock": "workspace:*",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-persistence": "workspace:*",
-    "@deepseek-ai/dsh-util-workspace-path": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/api-gateway": "workspace:*",
+    "@forwork/api-remote-access": "workspace:*",
+    "@forwork/client-connection": "workspace:*",
+    "@forwork/client-resources": "workspace:*",
+    "@forwork/client-ui-slots": "workspace:*",
+    "@forwork/fs": "workspace:*",
+    "@forwork/remote-mock": "workspace:*",
+    "@forwork/sandbox-policy": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-persistence": "workspace:*",
+    "@forwork/util-workspace-path": "workspace:*"
   },
   "files": [
     "locale/*.json",

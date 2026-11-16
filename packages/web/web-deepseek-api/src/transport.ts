@@ -2,10 +2,10 @@
  * Authentication and redirect-rejecting transport shared by the Search and
  * Fetch API providers in this package
  * ([rationale](../../../../.agents/notes/implemented/feature/2026-10-15-deepseek-search-fetch-api.md)).
- * @module @deepseek-ai/dsh-web-deepseek-api/transport
+ * @module @forwork/web-deepseek-api/transport
  */
-import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
-import { WebError } from '@deepseek-ai/dsh-web'
+import type { CredentialRef } from '@forwork/credentials'
+import { WebError } from '@forwork/web'
 
 const USER_AGENT = 'deepseek-harness/0.0.1'
 

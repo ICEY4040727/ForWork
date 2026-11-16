@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-time-context",
+  "name": "@forwork/time-context",
   "description": "Durable per-step context with the current time and elapsed time",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,35 +29,35 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-util-values": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~",
+    "@forwork/util-values": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-projection": "workspace:*",
-    "@deepseek-ai/dsh-util-time": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-projection": "workspace:*",
+    "@forwork/util-time": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:*",
-    "@deepseek-ai/dsh-app-boot": "workspace:*",
-    "@deepseek-ai/dsh-bash-local": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-loader-smoke": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-checkpoint-policy": "workspace:*",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:*",
-    "@deepseek-ai/dsh-session-projection": "workspace:*",
-    "@deepseek-ai/dsh-subprocess-local": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
-    "@deepseek-ai/dsh-tool-testkit": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-util-time": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/agent-loop": "workspace:*",
+    "@forwork/agent-loop-testkit": "workspace:*",
+    "@forwork/app-boot": "workspace:*",
+    "@forwork/bash-local": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/loader-smoke": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-checkpoint-policy": "workspace:*",
+    "@forwork/session-persistence-jsonl": "workspace:*",
+    "@forwork/session-projection": "workspace:*",
+    "@forwork/subprocess-local": "workspace:*",
+    "@forwork/system-prompt": "workspace:*",
+    "@forwork/tool-testkit": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/util-time": "workspace:*"
   }
 }

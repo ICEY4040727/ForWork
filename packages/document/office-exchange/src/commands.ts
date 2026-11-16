@@ -7,19 +7,19 @@
  * The broker is a service, not a module global: pending requests, their
  * timeouts, and the last observed content version belong to the composition
  * that mounted it and are released with it.
- * @module @deepseek-ai/dsh-office-exchange/commands
+ * @module @forwork/office-exchange/commands
  */
 
 import { randomUUID } from 'node:crypto'
-import { Context, Service } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { WorkspaceFileScope } from '@deepseek-ai/dsh-api-workspace-files'
-import type { DocumentCommandOperation, DocumentId, Session } from '@deepseek-ai/dsh-session'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { Context, Service } from '@forwork/cordis'
+import z from '@forwork/schemastery'
+import type { WorkspaceFileScope } from '@forwork/api-workspace-files'
+import type { DocumentCommandOperation, DocumentId, Session } from '@forwork/session'
+import type { SessionId } from '@forwork/session/types'
 import { DEFAULT_OFFICE_EXCHANGE_CONFIG } from './config.ts'
 import type { OfficeCommandOutcome, OfficeCommandResult } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     /** Correlated command transport between Host document tools and the live editor. */
     officeCommandBroker: OfficeCommandBroker

@@ -8,8 +8,8 @@ import { connectDesktopWelcome } from '../../desktop/src/welcome-backend.ts'
 import { authenticateWebHost } from '../../desktop/src/web-document.ts'
 import { chromium, type Browser, type Page } from 'playwright'
 import { afterEach, beforeEach, describe, expect, it, onTestFailed } from 'vitest'
-import { credentialKey, credentialRef } from '@deepseek-ai/dsh-credentials'
-import type {} from '@deepseek-ai/dsh-settings'
+import { credentialKey, credentialRef } from '@forwork/credentials'
+import type {} from '@forwork/settings'
 import {
   acknowledgeReloadConnectionLoss, captureStableAria, compareOrRefreshGolden,
   launchWebScaffold, watchConsole, webSnapshotMode, type WebScaffold,
@@ -20,7 +20,7 @@ const MODE = webSnapshotMode()
 const EXPECTED = fileURLToPath(new URL('./expected/desktop-onboarding', import.meta.url))
 const NS = 'ui-settings-account'
 const INITIAL = { version: 1, step: 'welcome', purpose: null, process: null, completion: null, usage: 'compact', developerTools: false }
-const ACCOUNT_ASSET = /\/plugins\/@deepseek-ai\/dsh-client-ui-settings-account\/assets\/onboarding-[a-z-]+-[0-9a-f]{12}\.(?:svg|webp)$/
+const ACCOUNT_ASSET = /\/plugins\/@forwork\/client-ui-settings-account\/assets\/onboarding-[a-z-]+-[0-9a-f]{12}\.(?:svg|webp)$/
 
 describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () => {
   let root: string
@@ -430,7 +430,7 @@ describe.skipIf(MODE === 'record')('web e2e: App-only desktop onboarding', () =>
       .evaluate(element => getComputedStyle(element).backgroundColor)).toBe('rgb(72, 73, 76)')
     await snapshot('credit-en-dark')
     expect(await page.locator('[class*="backIcon"]').evaluate(element => getComputedStyle(element).maskImage))
-      .toMatch(/^url\("[^"]*\/plugins\/@deepseek-ai\/dsh-client-ui-settings-account\/assets\/onboarding-back-[0-9a-f]{12}\.svg"\)$/)
+      .toMatch(/^url\("[^"]*\/plugins\/@forwork\/client-ui-settings-account\/assets\/onboarding-back-[0-9a-f]{12}\.svg"\)$/)
     await page.getByRole('button', { name: 'Next', exact: true }).click()
     await page.getByRole('button', { name: 'Got it', exact: true }).click()
     await page.getByRole('checkbox', { name: 'Coding & development', exact: true }).locator('..').click()

@@ -5,18 +5,18 @@
  * task named by navigation parameters rather than by an address, and is opened
  * by kind. `builtin` is the ordinary band for a type shipped with the product.
  */
-import type { TranslateNS } from '@deepseek-ai/dsh-client-locale/client'
-import type { SidebarRightTabDefinition, SidebarRightTabParamsMap, SidebarRightNavigationParams } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
-import type { ScheduleId } from '@deepseek-ai/dsh-schedule/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { TranslateNS } from '@forwork/client-locale/client'
+import type { SidebarRightTabDefinition, SidebarRightTabParamsMap, SidebarRightNavigationParams } from '@forwork/client-ui-sidebar-right/client'
+import type { ScheduleId } from '@forwork/schedule/client'
+import type { SessionId } from '@forwork/session/types'
 
 /** This implementation's identity in the tab system: the key its body and title register under. */
-export const SCHEDULE_TASK_ID = '@deepseek-ai/dsh-client-ui-schedule/task'
+export const SCHEDULE_TASK_ID = '@forwork/client-ui-schedule/task'
 
 /** The tab kind this package owns. */
 export const SCHEDULE_TASK_KIND = 'scheduleTask'
 
-declare module '@deepseek-ai/dsh-client-ui-sidebar-right/client' {
+declare module '@forwork/client-ui-sidebar-right/client' {
   interface SidebarRightTabParamsMap {
     /** One retained task, named by its original Session and its own identity. */
     scheduleTask: { sessionId: SessionId; id: ScheduleId }

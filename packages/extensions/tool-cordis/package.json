@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-cordis",
+  "name": "@forwork/tool-cordis",
   "description": "Read-only runtime API inspection for Harness plugin development",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -36,23 +36,23 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-app-boot": "workspace:*",
-    "@deepseek-ai/dsh-cordis-host-runner": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/app-boot": "workspace:*",
+    "@forwork/cordis-host-runner": "workspace:*",
+    "@forwork/tools": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/cordis-plugin-group": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-app-boot": "workspace:*",
-    "@deepseek-ai/dsh-cordis-host-runner": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
-    "@deepseek-ai/dsh-tool-executor-native": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/cordis-plugin-group": "workspace:~",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/app-boot": "workspace:*",
+    "@forwork/cordis-host-runner": "workspace:*",
+    "@forwork/system-prompt": "workspace:*",
+    "@forwork/tool-executor-native": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/schemastery": "workspace:~"
   }
 }

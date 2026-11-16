@@ -9,11 +9,11 @@
  * The module is pure. It performs no filesystem access; callers report path
  * existence and observation times.
  *
- * @module @deepseek-ai/dsh-session-document/document-identity
+ * @module @forwork/session-document/document-identity
  */
 
-import { DocumentId as brandDocumentId } from '@deepseek-ai/dsh-session'
-import type { DocumentId, SessionId } from '@deepseek-ai/dsh-session'
+import { DocumentId as brandDocumentId } from '@forwork/session'
+import type { DocumentId, SessionId } from '@forwork/session'
 
 /**
  * Build the Session-scoped identity of one open document.

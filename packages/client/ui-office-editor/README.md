@@ -3,7 +3,7 @@ description: "Embedded Office document editor tab for the right Sidebar, with Cl
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-office-editor
+# @forwork/client-ui-office-editor
 
 English | [中文](README.zh.md)
 

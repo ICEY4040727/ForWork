@@ -3,7 +3,7 @@ description: "The credential seam for users and maintainers resolving, describin
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-credentials
+# @forwork/credentials
 
 English | [中文](README.zh.md)
 
@@ -36,18 +36,18 @@ Use a credential store whenever configuration must stay free of secret values: s
 Load the local store package with a document path:
 
 ```yaml
-- name: '@deepseek-ai/dsh-credentials-local'
+- name: '@forwork/credentials-local'
   config:
     path: /absolute/path/to/.credentials.yaml
 ```
 
-The local store README owns the full configuration surface; the generated [configuration catalog](../../../docs/config-catalog.md#deepseek-aidsh-credentials-local) is the exhaustive field list.
+The local store README owns the full configuration surface; the generated [configuration catalog](../../../docs/config-catalog.md#forworkcredentials-local) is the exhaustive field list.
 
 ### Storing, checking, and removing keys
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
+import type { Context } from '@forwork/cordis'
+import { credentialRef } from '@forwork/credentials'
 
 declare const ctx: Context
 
@@ -65,8 +65,8 @@ Store a key with `set`, remove it with `unset`, check its status with `describe`
 A plugin addresses each record by `<scope>/<id>` — its own registered name plus an id it chooses, such as a provider route key — and reads, modifies, or removes what it holds:
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { Context } from '@forwork/cordis'
+import { credentialKey } from '@forwork/credentials'
 
 declare const ctx: Context
 
@@ -95,7 +95,7 @@ Requests that need the key use its current stored value, so rotating the key tak
 `SafeStorageSecureStore` protects values at rest for a desktop host. Inject Electron's `safeStorage` and the directory the application already owns; only base64 ciphertext reaches the file:
 
 ```ts
-import { SafeStorageSecureStore, type SafeStorageLike } from '@deepseek-ai/dsh-credentials'
+import { SafeStorageSecureStore, type SafeStorageLike } from '@forwork/credentials'
 
 declare const safeStorage: SafeStorageLike
 declare const directory: string

@@ -1,10 +1,10 @@
 /**
  * `document_edit_paragraph`: replace text-document paragraphs in the live unit,
  * then persist the accepted result with one guarded save.
- * @module @deepseek-ai/dsh-tool-office/edit-paragraph
+ * @module @forwork/tool-office/edit-paragraph
  */
 
-import type { DocumentEditStep } from '@deepseek-ai/dsh-session'
+import type { DocumentEditStep } from '@forwork/session'
 import { priorParagraph, runEdit } from './edit.ts'
 import type { EditOutput, EditPlan } from './edit.ts'
 import { failure } from './errors.ts'

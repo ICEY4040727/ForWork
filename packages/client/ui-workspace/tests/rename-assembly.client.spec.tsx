@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { apply as applyMenus, inject as injectMenus } from '@deepseek-ai/dsh-client-ui-context-menu/client'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { apply as applyMenus, inject as injectMenus } from '@forwork/client-ui-context-menu/client'
+import { createSnapshotStore } from '@forwork/client-store'
 /**
  * The session-rename assembly chain on SlotTestRuntime (real apply, real
  * WorkspaceBrowser occupying the sidebar hole, the shipped row actions and
@@ -17,14 +17,14 @@ import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
  */
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import { act, cleanup, fireEvent, waitFor, within } from '@testing-library/react'
-import type { ISession } from '@deepseek-ai/dsh-api-session-controller/client'
-import type { WorkspaceId } from '@deepseek-ai/dsh-api-workspace-controller/client'
-import { SessionSeq, type SessionId } from '@deepseek-ai/dsh-session/types'
-import type { PropsRenderSlots, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { RemoteError, SlotTestRuntime, usePinnedBrowserLanguages } from '@deepseek-ai/dsh-client-test-runtime'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import { MenuItemButton } from '@deepseek-ai/dsh-client-ui-primitives'
-import { apply, inject } from '@deepseek-ai/dsh-client-ui-workspace/client'
+import type { ISession } from '@forwork/api-session-controller/client'
+import type { WorkspaceId } from '@forwork/api-workspace-controller/client'
+import { SessionSeq, type SessionId } from '@forwork/session/types'
+import type { PropsRenderSlots, PropsRuntime } from '@forwork/client-ui-slots'
+import { RemoteError, SlotTestRuntime, usePinnedBrowserLanguages } from '@forwork/client-test-runtime'
+import { LocaleRuntime } from '@forwork/client-locale/client'
+import { MenuItemButton } from '@forwork/client-ui-primitives'
+import { apply, inject } from '@forwork/client-ui-workspace/client'
 import { SECTION_HOOK_CONTEXT, SECTION_INJECT } from './section-scroller.client.ts'
 
 // The service reads its initial locale from the browser; these specs assert

@@ -2,17 +2,17 @@
  * Agent service: live registry, factory delegation, and process-local
  * initiator scope. Concrete creation and driving belong to the loop.
  *
- * @module @deepseek-ai/dsh-agent
+ * @module @forwork/agent
  */
 
-import { Context, FiberState, getTraceable, Service, symbols } from '@deepseek-ai/cordis'
-import type { Fiber } from '@deepseek-ai/cordis'
+import { Context, FiberState, getTraceable, Service, symbols } from '@forwork/cordis'
+import type { Fiber } from '@forwork/cordis'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { isPromise } from 'node:util/types'
-import { scopeTarget } from '@deepseek-ai/dsh-scope'
-import type { Scoped } from '@deepseek-ai/dsh-scope'
-import type { Session, SessionEvent, SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type { ProjectionHandle } from '@deepseek-ai/dsh-session-projection'
+import { scopeTarget } from '@forwork/scope'
+import type { Scoped } from '@forwork/scope'
+import type { Session, SessionEvent, SessionId, SessionLogOffset } from '@forwork/session'
+import type { ProjectionHandle } from '@forwork/session-projection'
 import { installTurnArchiveAdmission } from './archive-admission.ts'
 import type { Agent, TurnBoundaryProjection } from './types.ts'
 import type { AgentOptions, SessionStartSource } from './runtime-types.ts'
@@ -27,7 +27,7 @@ export * from './consumed-work.ts'
 export { agentCarrier, agentEvents, assembleContextFor, emitAgentEvent } from './dispatch.ts'
 export type { AgentEventDispatch, AgentSubjectEvent } from './dispatch.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     agents: AgentRegistry
   }
@@ -235,7 +235,7 @@ interface FactorySlot {
  * Agent service (`ctx.agents`): tracks live agents and carries the initiating
  * Agent through one process-local asynchronous driver chain. Agent *creation*
  * is provided by whichever plugin implements the {@link AgentFactory}
- * (`@deepseek-ai/dsh-agent-loop`), registered via {@link setFactory}.
+ * (`@forwork/agent-loop`), registered via {@link setFactory}.
  *
  * Initiator methods provide same-process causal attribution only. Ambient
  * presence is neither liveness proof nor authorization; subjects and owners
@@ -263,13 +263,13 @@ export class AgentRegistry extends Service {
         parameter: 'agent',
         wire: 'agentId',
         resource: 'session',
-        hostTypeSymbol: '@deepseek-ai/dsh-agent#Agent',
-        wireTypeSymbol: '@deepseek-ai/dsh-session/types#SessionId',
+        hostTypeSymbol: '@forwork/agent#Agent',
+        wireTypeSymbol: '@forwork/session/types#SessionId',
         resolve: sessionId => this.get(sessionId),
       })
       typeCtx.typert.contexts.registerHost('agent', {
         wire: 'agentId',
-        wireTypeSymbol: '@deepseek-ai/dsh-session/types#SessionId',
+        wireTypeSymbol: '@forwork/session/types#SessionId',
         resource: 'session',
         resolve: sessionId => this.get(sessionId)?.ctx,
       })

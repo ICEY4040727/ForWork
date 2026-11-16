@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-api-terminal-controller",
+  "name": "@forwork/api-terminal-controller",
   "description": "Session-owned interactive terminals with shell discovery, screen recovery and typed Remote control",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -41,10 +41,10 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-api-gateway"
+        "@forwork/api-gateway"
       ],
       "external": [
-        "@deepseek-ai/dsh-api-gateway/client"
+        "@forwork/api-gateway/client"
       ],
       "platform": "web"
     }
@@ -55,36 +55,36 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-deque": "workspace:*",
-    "@deepseek-ai/dsh-lazy-require": "workspace:*",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*",
-    "@deepseek-ai/dsh-util-values": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~",
+    "@forwork/deque": "workspace:*",
+    "@forwork/lazy-require": "workspace:*",
+    "@forwork/typert-protocol": "workspace:*",
+    "@forwork/util-values": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
     "@xterm/addon-serialize": "^0.14.0",
     "@xterm/headless": "^6.0.0",
     "zod": "4.4.3"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-subprocess": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/subprocess": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-api-gateway": "workspace:*",
-    "@deepseek-ai/dsh-brand": "workspace:*",
-    "@deepseek-ai/dsh-client-connection": "workspace:*",
-    "@deepseek-ai/dsh-client-store": "workspace:*",
-    "@deepseek-ai/dsh-fs": "workspace:*",
-    "@deepseek-ai/dsh-remote-mock": "workspace:*",
-    "@deepseek-ai/dsh-sandbox": "workspace:*",
-    "@deepseek-ai/dsh-sandbox-policy": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-projection": "workspace:*",
-    "@deepseek-ai/dsh-subprocess": "workspace:*",
-    "@deepseek-ai/dsh-subprocess-local": "workspace:*",
-    "@deepseek-ai/dsh-util-crypto": "workspace:*",
-    "@deepseek-ai/dsh-working-directory": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/api-gateway": "workspace:*",
+    "@forwork/brand": "workspace:*",
+    "@forwork/client-connection": "workspace:*",
+    "@forwork/client-store": "workspace:*",
+    "@forwork/fs": "workspace:*",
+    "@forwork/remote-mock": "workspace:*",
+    "@forwork/sandbox": "workspace:*",
+    "@forwork/sandbox-policy": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-projection": "workspace:*",
+    "@forwork/subprocess": "workspace:*",
+    "@forwork/subprocess-local": "workspace:*",
+    "@forwork/util-crypto": "workspace:*",
+    "@forwork/working-directory": "workspace:*"
   },
   "files": [
     "locale/*.json",

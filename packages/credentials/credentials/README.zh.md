@@ -3,7 +3,7 @@ description: "面向用户与维护者的凭据 seam：在不把机密值写进�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-credentials
+# @forwork/credentials
 
 [English](README.md) | 中文
 
@@ -36,18 +36,18 @@ kind: "package-reference"
 加载本地存储包并给出文档路径：
 
 ```yaml
-- name: '@deepseek-ai/dsh-credentials-local'
+- name: '@forwork/credentials-local'
   config:
     path: /absolute/path/to/.credentials.yaml
 ```
 
-本地存储 README 拥有完整配置面；生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-credentials-local)是穷尽式字段清单。
+本地存储 README 拥有完整配置面；生成的[配置目录](../../../docs/config-catalog.zh.md#forworkcredentials-local)是穷尽式字段清单。
 
 ### 存储、检查与移除密钥
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
+import type { Context } from '@forwork/cordis'
+import { credentialRef } from '@forwork/credentials'
 
 declare const ctx: Context
 
@@ -65,8 +65,8 @@ await ctx.credentials.unset(ref)                       // no-op when absent; an 
 插件按 `<scope>/<id>` 寻址每条记录——自身注册名加一个自选 id，例如提供方路由键——并读取、修改或移除它所持有的内容：
 
 ```ts
-import type { Context } from '@deepseek-ai/cordis'
-import { credentialKey } from '@deepseek-ai/dsh-credentials'
+import type { Context } from '@forwork/cordis'
+import { credentialKey } from '@forwork/credentials'
 
 declare const ctx: Context
 
@@ -95,7 +95,7 @@ apiKeyEnv: DEEPSEEK_API_KEY
 `SafeStorageSecureStore` 为桌面 Host 提供静态值保护。注入 Electron 的 `safeStorage` 与应用已经拥有的目录；只有 base64 密文会写入文件：
 
 ```ts
-import { SafeStorageSecureStore, type SafeStorageLike } from '@deepseek-ai/dsh-credentials'
+import { SafeStorageSecureStore, type SafeStorageLike } from '@forwork/credentials'
 
 declare const safeStorage: SafeStorageLike
 declare const directory: string

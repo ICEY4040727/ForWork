@@ -2,12 +2,12 @@
 
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import type { Context } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-api-remote-access'
-import type {} from '@deepseek-ai/dsh-api-session-controller'
-import type {} from '@deepseek-ai/dsh-client-connection'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-workspace'
+import type { Context } from '@forwork/cordis'
+import type {} from '@forwork/api-remote-access'
+import type {} from '@forwork/api-session-controller'
+import type {} from '@forwork/client-connection'
+import { SessionId } from '@forwork/session'
+import type {} from '@forwork/workspace'
 import {
   loadOwnerState,
   writeOwnerState,
@@ -43,11 +43,11 @@ import {
 import { readViewerAsset } from './viewer-assets.ts'
 import type { ForkShareState } from './fork-policy.ts'
 import type { ForkToolExecution } from './fork-tool-guard.ts'
-import type { ShareRpcActor } from '@deepseek-ai/dsh-experimental-liveshare-protocol'
+import type { ShareRpcActor } from '@forwork/experimental-liveshare-protocol'
 import {
   identityKeyOf,
   type IdentityActor,
-} from '@deepseek-ai/dsh-experimental-liveshare-protocol'
+} from '@forwork/experimental-liveshare-protocol'
 
 export const name = 'liveshare-share-host'
 export const inject = ['connection']

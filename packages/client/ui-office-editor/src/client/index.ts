@@ -13,16 +13,16 @@
  * store. The same plugin-owned store records the one restore pass each Session
  * runs and the documents it could not reopen.
  */
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-api-remotes/client'
-import type {} from '@deepseek-ai/dsh-api-session-controller/client'
-import type {} from '@deepseek-ai/dsh-client-locale/client'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
+import type { Context as ClientContext } from '@forwork/cordis'
+import type {} from '@forwork/api-remotes/client'
+import type {} from '@forwork/api-session-controller/client'
+import type {} from '@forwork/client-locale/client'
+import type {} from '@forwork/client-ui-renderer/client'
+import type {} from '@forwork/client-ui-sidebar-right/client'
 // Type-only: pulls the Session standard useProjection seat and its identity.
-import type {} from '@deepseek-ai/dsh-client-ui-session/client'
-import type {} from '@deepseek-ai/dsh-client-ui-slots'
-import type {} from '@deepseek-ai/dsh-office-exchange/remote'
+import type {} from '@forwork/client-ui-session/client'
+import type {} from '@forwork/client-ui-slots'
+import type {} from '@forwork/office-exchange/remote'
 import { officeAdapter } from './adapter.ts'
 import { createOfficeTabChanges } from './changes.ts'
 import { attachSessionCommandBridge, type OfficeCommandRemote } from './command-bridge.ts'
@@ -40,7 +40,7 @@ export type { OfficeEditorKey } from './locales.ts'
 /** This package's copy namespace. */
 const NS = 'officeEditor'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@forwork/client-ui-slots' {
   interface LocaleNamespaceMap {
     /** Editor body, save, refusal, external-change, and close-prompt copy. */
     officeEditor: import('./locales.ts').OfficeEditorKey

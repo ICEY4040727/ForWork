@@ -4,27 +4,27 @@
  * policy-service dependency. Assertions read files back byte-for-byte rather than trusting tool
  * messages.
  */
-import { executeToolFixture, executeModelToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+import { executeToolFixture, executeModelToolFixture } from '@forwork/tool-testkit'
 
-import * as PtcToolExecutor from '@deepseek-ai/dsh-tool-executor-ptc'
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
-import { mountAgentLoopTestDependencies, provideWorkingDirectoryFixture } from '@deepseek-ai/dsh-agent-loop-testkit'
+import * as PtcToolExecutor from '@forwork/tool-executor-ptc'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
+import { mountAgentLoopTestDependencies, provideWorkingDirectoryFixture } from '@forwork/agent-loop-testkit'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Context } from '@deepseek-ai/cordis'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { PtcRuntime, type PtcRunRequest, type PtcRunResult, type PtcRunSpec } from '@deepseek-ai/dsh-ptc-runtime'
-import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import type { FsVersion } from '@deepseek-ai/dsh-fs'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@deepseek-ai/dsh-tools'
-import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
-import * as FsPolicy from '@deepseek-ai/dsh-fs-observation-policy'
-import * as ToolFs from '@deepseek-ai/dsh-tool-fs'
+import { Context } from '@forwork/cordis'
+import { SessionId } from '@forwork/session'
+import AgentLoop from '@forwork/agent-loop'
+import { PtcRuntime, type PtcRunRequest, type PtcRunResult, type PtcRunSpec } from '@forwork/ptc-runtime'
+import SandboxPolicyService from '@forwork/sandbox-policy'
+import { ToolCallId } from '@forwork/llm'
+import type { FsVersion } from '@forwork/fs'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime, { TOOL_ABORTED_BEFORE_DISPATCH } from '@forwork/tools'
+import { LocalFileSystem } from '@forwork/fs-local'
+import * as FsPolicy from '@forwork/fs-observation-policy'
+import * as ToolFs from '@forwork/tool-fs'
 
 const testToolSignal = new AbortController().signal
 

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-plugin-market-index",
+  "name": "@forwork/plugin-market-index",
   "description": "Plugin market index format 1: JSON validation, relative icon resolution, and pinned install arguments",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -27,14 +27,14 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-package-manifest": "workspace:*",
+    "@forwork/package-manifest": "workspace:*",
     "semver": "^7.8.5"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
+    "@forwork/cordis": "workspace:~",
     "@types/semver": "^7.8.0"
   }
 }

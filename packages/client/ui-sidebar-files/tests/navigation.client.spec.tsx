@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 /** Target-tab navigation through the real files face, store, and snapshot sources. */
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { SnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { PaneId, TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
-import type { SidebarRightTabNavigation } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
+import { createSnapshotStore } from '@forwork/client-store'
+import type { SnapshotStore } from '@forwork/client-store'
+import type { PaneId, TabId } from '@forwork/client-ui-dockkit'
+import type { SidebarRightTabNavigation } from '@forwork/client-ui-sidebar-right/client'
+import type { SessionId } from '@forwork/session/types'
+import { sessionFileAddress } from '@forwork/util-workspace-path'
 import { filesFace } from '../src/client/face.ts'
 import type { ListWorkspaceDirectory, WatchWorkspaceDirectory } from '../src/client/face.ts'
 import { createFilesStore } from '../src/client/store.ts'

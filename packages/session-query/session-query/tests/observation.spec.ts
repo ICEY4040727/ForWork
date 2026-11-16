@@ -1,13 +1,13 @@
-import { Context } from '@deepseek-ai/cordis'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionLogOffset, SessionSeq, SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionHeader, SessionId as SessionIdType } from '@deepseek-ai/dsh-session'
+import { Context } from '@forwork/cordis'
+import { createUserMessage } from '@forwork/llm'
+import SessionStore, { SessionLogOffset, SessionSeq, SESSION_FORMAT_VERSION, SessionId } from '@forwork/session'
+import type { SessionEvent, SessionHeader, SessionId as SessionIdType } from '@forwork/session'
 import SessionPersistence, {
   SessionPersistenceCorruptionError,
   SessionPersistenceNotFoundError,
   SessionPersistenceRevision,
   SessionReadOnlyError,
-} from '@deepseek-ai/dsh-session-persistence'
+} from '@forwork/session-persistence'
 import type {
   SessionAccess,
   SessionHandle,
@@ -15,8 +15,8 @@ import type {
   SessionHandleReadResult,
   SessionPersistenceSnapshot,
   SessionPersistenceStatOptions,
-} from '@deepseek-ai/dsh-session-persistence'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+} from '@forwork/session-persistence'
+import SessionProjectionRegistry from '@forwork/session-projection'
 import { describe, expect, it, vi } from 'vitest'
 import { SessionObservationReader } from '../src/observation.ts'
 

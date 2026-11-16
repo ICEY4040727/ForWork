@@ -1,29 +1,29 @@
 /** Built bridge imports and retained objects from a project outside the Harness installation. */
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+import { executeToolFixture } from '@forwork/tool-testkit'
 import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
-import LocalAttachmentStore from '@deepseek-ai/dsh-attachment-local'
-import ComputerUseRegistry from '@deepseek-ai/dsh-computer-use'
-import FileSystem from '@deepseek-ai/dsh-fs-local'
-import { LlmAdapter, ToolCallId, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm'
-import NodeRuntime from '@deepseek-ai/dsh-ptc-runtime-node'
-import Sandbox from '@deepseek-ai/dsh-sandbox-local'
-import SandboxPolicy from '@deepseek-ai/dsh-sandbox-policy'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import Subprocess from '@deepseek-ai/dsh-subprocess-local'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@forwork/agent-loop-testkit'
+import LocalAttachmentStore from '@forwork/attachment-local'
+import ComputerUseRegistry from '@forwork/computer-use'
+import FileSystem from '@forwork/fs-local'
+import { LlmAdapter, ToolCallId, type LlmResolvedModelInfo, type StreamChunk } from '@forwork/llm'
+import NodeRuntime from '@forwork/ptc-runtime-node'
+import Sandbox from '@forwork/sandbox-local'
+import SandboxPolicy from '@forwork/sandbox-policy'
+import { SessionId } from '@forwork/session'
+import Subprocess from '@forwork/subprocess-local'
 import { expect, it } from 'vitest'
 import * as Cua from '../src/index.ts'
 import { installNativeFixture, startFixtureHost } from './native-fixture.ts'
-import { Request } from '@deepseek-ai/dsh-cua/protocol'
+import { Request } from '@forwork/cua/protocol'
 
 const bridge = fileURLToPath(new URL('../../cua/lib/bridge.js', import.meta.url))
-const bootstrap = join(dirname(fileURLToPath(import.meta.resolve('@deepseek-ai/dsh-ptc-runtime-node/package.json'))), 'lib/persistent-process.js')
+const bootstrap = join(dirname(fileURLToPath(import.meta.resolve('@forwork/ptc-runtime-node/package.json'))), 'lib/persistent-process.js')
 
 class VisualAdapter extends LlmAdapter {
   override resolveModel(provider: string, model: string): Promise<LlmResolvedModelInfo> {
@@ -70,7 +70,7 @@ it.skipIf(process.platform === 'win32' || !existsSync(bridge) || !existsSync(boo
           return result.value ?? null
         } } }],
       }))
-      expect((await run('await import("@deepseek-ai/dsh-cua/bridge")', 'unresolved')).error?.message).toContain('Cannot find package')
+      expect((await run('await import("@forwork/cua/bridge")', 'unresolved')).error?.message).toContain('Cannot find package')
       const section = (await ctx.systemPrompt.assemble()).sections.find(value => value.name === 'computer-use:dsh-cua')
       const initialization = section?.text.match(/Persistent PTC initialization:\n\n```ts\n([\s\S]*?)\n```/u)?.[1]
       expect(initialization).toContain('/lib/bridge.js')

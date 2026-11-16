@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-official-bundles",
+  "name": "@forwork/official-bundles",
   "description": "Installation-owned lists of official dsh bundles (shipped profile templates, optional, on-demand, and retired bundles) and the plugin manager's protected and presented packages",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -27,12 +27,12 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-package-manifest": "workspace:*"
+    "@forwork/package-manifest": "workspace:*"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   }
 }

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-office-exchange",
+  "name": "@forwork/office-exchange",
   "description": "Office Exchange capability seam (ctx.officeExchange): OOXML-to-unit-snapshot mapping, unsupported-feature detection, and legacy conversion for the office editor and agent tools",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -44,25 +44,25 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
+    "@forwork/cordis": "workspace:~",
     "@univerjs/core": "1.4.0"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-api-workspace-files": "workspace:*",
-    "@deepseek-ai/dsh-fs": "workspace:*",
-    "@deepseek-ai/dsh-fs-local": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-document": "workspace:*",
-    "@deepseek-ai/dsh-util-values": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/api-workspace-files": "workspace:*",
+    "@forwork/fs": "workspace:*",
+    "@forwork/fs-local": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-document": "workspace:*",
+    "@forwork/util-values": "workspace:*",
     "@univerjs/core": "1.4.0"
   },
   "dependencies": {
     "@deepseek-ai/libreoffice-kit": "^0.1.5",
-    "@deepseek-ai/schemastery": "workspace:~",
-    "@deepseek-ai/dsh-brand": "workspace:*",
-    "@deepseek-ai/dsh-session-document": "workspace:*",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
+    "@forwork/brand": "workspace:*",
+    "@forwork/session-document": "workspace:*",
+    "@forwork/typert-protocol": "workspace:*",
     "exceljs": "4.4.0",
     "fast-xml-parser": "5.11.1",
     "fast-xml-validator": "1.4.2",

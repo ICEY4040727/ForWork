@@ -1,22 +1,22 @@
-import { FsError } from '@deepseek-ai/dsh-fs'
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import { FsError } from '@forwork/fs'
+import { executeToolFixture } from '@forwork/tool-testkit'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { chmod, mkdtemp, mkdir, rm, stat, symlink, utimes, writeFile } from 'node:fs/promises'
-import { provideWorkingDirectoryFixture } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { provideWorkingDirectoryFixture } from '@forwork/agent-loop-testkit'
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { tmpdir } from 'node:os'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import type { Config as AgentInstructionsConfig } from '@deepseek-ai/dsh-agent-instructions'
-import * as AgentInstructions from '@deepseek-ai/dsh-agent-instructions'
-import LlmRuntime, { createUserMessage, ToolCallId, type Message, type MessageSource, type StreamChunk } from '@deepseek-ai/dsh-llm'
-import type { ContextFormed } from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionId, SessionSeq, type SessionEvent, type SurfaceIntent, type UserMessage } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import AgentRegistry, { agentEvents, type Agent } from '@deepseek-ai/dsh-agent'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { FileSystem, FsTargetKey, FsVersion } from '@deepseek-ai/dsh-fs'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import type { Config as AgentInstructionsConfig } from '@forwork/agent-instructions'
+import * as AgentInstructions from '@forwork/agent-instructions'
+import LlmRuntime, { createUserMessage, ToolCallId, type Message, type MessageSource, type StreamChunk } from '@forwork/llm'
+import type { ContextFormed } from '@forwork/llm'
+import SessionStore, { SessionId, SessionSeq, type SessionEvent, type SurfaceIntent, type UserMessage } from '@forwork/session'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import AgentRegistry, { agentEvents, type Agent } from '@forwork/agent'
+import AgentLoop from '@forwork/agent-loop'
+import { FileSystem, FsTargetKey, FsVersion } from '@forwork/fs'
 import type {
   FsDirEntry,
   FsEditOutcome,
@@ -26,21 +26,21 @@ import type {
   FsTarget,
   FsWriteIntent,
   FsWriteOutcome,
-} from '@deepseek-ai/dsh-fs'
-import LocalFileSystem from '@deepseek-ai/dsh-fs-local'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import { defineContentToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+} from '@forwork/fs'
+import LocalFileSystem from '@forwork/fs-local'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
+import { defineContentToolFixture } from '@forwork/tool-testkit'
 import type {
   ToolExecution,
   ToolExecutionToken,
-} from '@deepseek-ai/dsh-tools'
-import * as ToolFs from '@deepseek-ai/dsh-tool-fs'
+} from '@forwork/tools'
+import * as ToolFs from '@forwork/tool-fs'
 import {
   discoverBaselineInstructionFiles,
   loadBaselineInstructions,
   renderAgentInstructions,
-} from '@deepseek-ai/dsh-agent-instructions'
+} from '@forwork/agent-instructions'
 import {
   applyInstructionVersionUpdates,
   baselineInstructionState,
@@ -61,9 +61,9 @@ import { MockAdapter, textResponse, toolCallResponse } from '../../../core/agent
 import {
   mountAgentLoopTestDependencies,
   mountAgentLoopTestHarness,
-} from '@deepseek-ai/dsh-agent-loop-testkit'
+} from '@forwork/agent-loop-testkit'
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@forwork/llm' {
   interface MessageSourceMap {
     'downstream': { kind: 'downstream' } & ContextFormed
     'other': { kind: 'other' } & ContextFormed
@@ -863,7 +863,7 @@ describe('workspace context instruction discovery', () => {
       vi.stubEnv('DSH_AGENTS_HOME', '')
       vi.resetModules()
       vi.doMock('node:os', () => ({ homedir: () => home }))
-      const isolated = await import('@deepseek-ai/dsh-agent-instructions')
+      const isolated = await import('@forwork/agent-instructions')
       const files = await isolated.discoverBaselineInstructionFiles({ cwd: root })
 
       expect(files.map(file => file.displayPath)).toEqual(['~/.agents/AGENTS.md'])
@@ -886,7 +886,7 @@ describe('workspace context instruction discovery', () => {
       vi.stubEnv('DSH_HOME', '')
       vi.resetModules()
       vi.doMock('node:os', () => ({ homedir: () => home }))
-      const isolated = await import('@deepseek-ai/dsh-agent-instructions')
+      const isolated = await import('@forwork/agent-instructions')
       const files = await isolated.discoverBaselineInstructionFiles({ cwd: root })
 
       expect(files.map(file => file.displayPath)).toEqual(['~/.dsh/AGENTS.md'])
@@ -907,7 +907,7 @@ describe('workspace context instruction discovery', () => {
 
       vi.resetModules()
       vi.doMock('node:os', () => ({ homedir: () => home }))
-      const isolated = await import('@deepseek-ai/dsh-agent-instructions')
+      const isolated = await import('@forwork/agent-instructions')
       pinHarnessHome('~/.dsh')
       const files = await isolated.discoverBaselineInstructionFiles({ cwd: root })
 
@@ -4174,7 +4174,7 @@ describe('workspace context request injection', () => {
           },
         }
       })
-      const isolated = await import('@deepseek-ai/dsh-agent-instructions')
+      const isolated = await import('@forwork/agent-instructions')
       pinHarnessHome(home)
       await isolated.loadBaselineInstructions({ cwd: root, maxBytes: 65536 })
       observedStats.clear()
@@ -4210,7 +4210,7 @@ describe('workspace context request injection', () => {
           },
         }
       })
-      const isolated = await import('@deepseek-ai/dsh-agent-instructions')
+      const isolated = await import('@forwork/agent-instructions')
 
       pinHarnessHome(home)
       const rendered = await isolated.loadBaselineInstructions({ cwd: root, maxBytes: 65536 })
@@ -4249,7 +4249,7 @@ describe('workspace context request injection', () => {
           },
         }
       })
-      const isolated = await import('@deepseek-ai/dsh-agent-instructions')
+      const isolated = await import('@forwork/agent-instructions')
 
       pinHarnessHome(home)
       await expect(isolated.loadBaselineInstructions({ cwd, maxBytes: 65536 }))

@@ -4,8 +4,8 @@
  * `sidebar.right.pane.tab.title`; without it the chip would show the bare name.
  */
 import type { ReactNode } from 'react'
-import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import { FileTypeIcon, classifyFileType } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { PropsRuntime } from '@forwork/client-ui-slots'
+import { FileTypeIcon, classifyFileType } from '@forwork/client-ui-primitives'
 import css from './OfficePanel.module.css'
 
 /** The title's composed props: the tab information hook. */

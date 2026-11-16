@@ -1,8 +1,8 @@
 /** Official DeepSeek Harness occupants: the profile-gated sidebar brand slots and the home whale frame layer. */
-import type { Context as ClientContext } from '@deepseek-ai/cordis'
-import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
-import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type { Context as ClientContext } from '@forwork/cordis'
+import type {} from '@forwork/client-ui-renderer/client'
+import type {} from '@forwork/client-ui-sidebar/client'
+import type {} from '@forwork/client-ui-conversation/client'
 import { PixelWhale } from './home-whale/PixelWhale.tsx'
 import { OfficialBrandMark, OfficialBrandName } from './Brand.tsx'
 

@@ -7,10 +7,10 @@
  * Host keeps its value modules (`./document-projection.ts` and the fact
  * writers) behind the package root.
  *
- * @module @deepseek-ai/dsh-session-document/types
+ * @module @forwork/session-document/types
  */
 
-import type { Branded } from '@deepseek-ai/dsh-brand'
+import type { Branded } from '@forwork/brand'
 
 /**
  * One feature a source file holds that the editable model cannot preserve.
@@ -61,7 +61,7 @@ export interface DocumentProjectionState {
  */
 export type DocumentProjectionView = DocumentProjectionState
 
-declare module '@deepseek-ai/dsh-session-projection/types' {
+declare module '@forwork/session-projection/types' {
   interface SessionProjectionMap {
     /** Open office documents in this Session, folded from `document/*` facts. */
     document: DocumentProjectionView

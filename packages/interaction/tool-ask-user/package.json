@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-ask-user",
+  "name": "@forwork/tool-ask-user",
   "description": "Model-facing ask_user_question tool over the ctx.userQuestions seam",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,22 +29,22 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-user-questions": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/agent": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/user-questions": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
-    "@deepseek-ai/dsh-tool-executor-native": "workspace:*",
-    "@deepseek-ai/dsh-tool-testkit": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-user-questions": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/agent": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/system-prompt": "workspace:*",
+    "@forwork/tool-executor-native": "workspace:*",
+    "@forwork/tool-testkit": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/user-questions": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/schemastery": "workspace:~"
   }
 }

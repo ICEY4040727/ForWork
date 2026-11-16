@@ -7,8 +7,8 @@ import type {
   ReadBlockLabels,
   SearchBlockLabels,
   WebBlockLabels,
-} from '@deepseek-ai/dsh-client-ui-primitives'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+} from '@forwork/client-ui-primitives'
+import type { TranslateNS } from '@forwork/client-ui-slots'
 
 type T = TranslateNS<'conversation'>
 

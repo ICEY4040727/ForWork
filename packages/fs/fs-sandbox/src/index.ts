@@ -1,6 +1,6 @@
 /**
  * `SandboxedFileSystem`: the sandbox-enforcing implementation of the
- * `@deepseek-ai/dsh-fs` Service Definition. It extends `LocalFileSystem` so all
+ * `@forwork/fs` Service Definition. It extends `LocalFileSystem` so all
  * text-storage mechanics — resolve, stat, read/stream, list, the atomic
  * write and the read-match-write edit critical section — are the local
  * implementation's, verbatim; this package adds only the per-call POLICY fence
@@ -12,7 +12,7 @@
  * and only the target path is untrusted, so canonicalize-then-contain is the
  * complete answer to this surface. This is containment, not a security
  * boundary; kernel-grade isolation of untrusted CODE stays `ctx.shell`'s job
- * (`@deepseek-ai/dsh-bash-sandbox`). The residual
+ * (`@forwork/bash-sandbox`). The residual
  * TOCTOU (an ancestor symlink swapped between the containment re-check and the
  * syscall) is narrowed by re-canonicalizing immediately before delegating and
  * is accepted for this threat model.
@@ -23,17 +23,17 @@
  * shared `writableRoots` policy; `danger-full-access` delegates unfenced. A
  * denial throws the structured `FS_SANDBOX_DENIED`.
  *
- * @module @deepseek-ai/dsh-fs-sandbox
+ * @module @forwork/fs-sandbox
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import { LocalFileSystem } from '@deepseek-ai/dsh-fs-local'
-import type { Config as LocalConfig } from '@deepseek-ai/dsh-fs-local'
-import { FsError } from '@deepseek-ai/dsh-fs'
-import type { FsBytesWriteOutcome, FsDeleteOutcome, FsMoveOutcome, FsEditOutcome, FsEditRequest, FsTarget, FsVersion, FsWriteIntent, FsWriteOutcome } from '@deepseek-ai/dsh-fs'
-import { writableRoots } from '@deepseek-ai/dsh-sandbox'
-import type { SandboxExecutionPolicy, SandboxMode } from '@deepseek-ai/dsh-sandbox'
-import type {} from '@deepseek-ai/dsh-sandbox-policy'
+import { Context } from '@forwork/cordis'
+import { LocalFileSystem } from '@forwork/fs-local'
+import type { Config as LocalConfig } from '@forwork/fs-local'
+import { FsError } from '@forwork/fs'
+import type { FsBytesWriteOutcome, FsDeleteOutcome, FsMoveOutcome, FsEditOutcome, FsEditRequest, FsTarget, FsVersion, FsWriteIntent, FsWriteOutcome } from '@forwork/fs'
+import { writableRoots } from '@forwork/sandbox'
+import type { SandboxExecutionPolicy, SandboxMode } from '@forwork/sandbox'
+import type {} from '@forwork/sandbox-policy'
 import { isPathUnder } from './containment.ts'
 
 /**

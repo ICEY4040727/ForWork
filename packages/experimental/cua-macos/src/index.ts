@@ -1,9 +1,9 @@
 /** macOS native CUA provider using the shared application and window API. */
 import { isAbsolute, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { Context } from '@deepseek-ai/cordis'
-import Schema from '@deepseek-ai/schemastery'
-import { CuaConfig, installCua } from '@deepseek-ai/dsh-cua'
+import type { Context } from '@forwork/cordis'
+import Schema from '@forwork/schemastery'
+import { CuaConfig, installCua } from '@forwork/cua'
 import { createPermissionParameters } from './permission-guide.ts'
 import { nativeHostArchitecture, prepareNativeExecutable, type SourceSigning } from './native-build.ts'
 import { createSharedNativeChannel } from './shared-native.ts'

@@ -1,7 +1,7 @@
 /** Exercise task writes after retired Team records through the headless profile. */
 
-import type { Context } from '@deepseek-ai/cordis'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import type { Context } from '@forwork/cordis'
+import { SessionId } from '@forwork/session'
 import { TeamId, TeamMessageId } from '../src/types.ts'
 
 /** Services used to append historical records and exercise the task board. */

@@ -1,7 +1,7 @@
-import { Context } from '@deepseek-ai/cordis'
-import Sessions, { SessionId } from '@deepseek-ai/dsh-session'
-import SandboxPolicy, { setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
-import SessionProjections from '@deepseek-ai/dsh-session-projection'
+import { Context } from '@forwork/cordis'
+import Sessions, { SessionId } from '@forwork/session'
+import SandboxPolicy, { setSandboxMode } from '@forwork/sandbox-policy'
+import SessionProjections from '@forwork/session-projection'
 import { expect, it, onTestFinished, vi } from 'vitest'
 import { PolicyProcesses } from '../src/policy-processes.ts'
 

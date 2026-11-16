@@ -2,27 +2,27 @@
  * JSON-RPC methods and notifications for out-of-process harness SDKs.
  * The surrounding context owns plugins, persistence, and configured adapters.
  *
- * @module @deepseek-ai/dsh-sdk-jsonrpc-server/server
+ * @module @forwork/sdk-jsonrpc-server/server
  */
 
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@forwork/cordis'
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { resolve } from 'node:path'
 import { QueryActivity } from './query-activity.ts'
 import { SdkUserQuestionBridge } from './user-questions.ts'
 import { queryCommand } from './query-input.ts'
 import { queryCommandImages, queryContent } from './query-content.ts'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { Agent, AgentHandle } from '@deepseek-ai/dsh-agent'
-import { admitEncodedImages, type EncodedImageAttachment, type ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import { createUserMessage, ReasoningEffortId, type ContentBlock, type LlmRuntime } from '@deepseek-ai/dsh-llm'
-import type { SessionId, SessionLogOffset } from '@deepseek-ai/dsh-session'
-import type {} from '@deepseek-ai/dsh-working-directory'
-import type {} from '@deepseek-ai/dsh-user-approval'
+import { brandString } from '@forwork/brand'
+import type { Agent, AgentHandle } from '@forwork/agent'
+import { admitEncodedImages, type EncodedImageAttachment, type ImageAttachmentRef } from '@forwork/attachment'
+import { createUserMessage, ReasoningEffortId, type ContentBlock, type LlmRuntime } from '@forwork/llm'
+import type { SessionId, SessionLogOffset } from '@forwork/session'
+import type {} from '@forwork/working-directory'
+import type {} from '@forwork/user-approval'
 
-import type {} from '@deepseek-ai/dsh-schedule'
-import type { SubagentRunEndInfo } from '@deepseek-ai/dsh-subagent'
-import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek-api-key'
+import type {} from '@forwork/schedule'
+import type { SubagentRunEndInfo } from '@forwork/subagent'
+import * as LlmDeepSeek from '@forwork/llm-deepseek-api-key'
 import type {
   ApprovalRequestParams,
   CommandExecution,
@@ -42,7 +42,7 @@ import type {
   SdkEncodedImageBlock,
   SubagentFinishedNotification,
   SubagentStartedNotification,
-} from '@deepseek-ai/dsh-sdk-protocol'
+} from '@forwork/sdk-protocol'
 
 interface SessionRecord {
   handle: AgentHandle
@@ -568,7 +568,7 @@ export class HarnessSdkJsonRpcServer {
     // No preset composition: this server's compositions keep the model-facing
     // rows in the host plane, so this agent reads them from the global layer. A
     // deployment that configures a roster has to join one here first
-    // (@deepseek-ai/dsh-agent-preset-registry README, "Composing a child agent").
+    // (@forwork/agent-preset-registry README, "Composing a child agent").
     const agentOptions = {
       provider: this.provider,
       model: this.model,

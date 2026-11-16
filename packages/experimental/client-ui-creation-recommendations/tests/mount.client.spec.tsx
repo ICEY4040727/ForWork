@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 /** The body registers into the shared card registry with its copy and leaves both on unload. */
 import { cleanup, render, screen } from '@testing-library/react'
-import { Context } from '@deepseek-ai/cordis'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import { ToolCallId } from '@deepseek-ai/dsh-llm/brand'
-import { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { ActionCardDescriptor } from '@deepseek-ai/dsh-client-ui-action-cards/client'
-import { FoldedText } from '@deepseek-ai/dsh-client-ui-action-cards/src/client/Card.tsx'
+import { Context } from '@forwork/cordis'
+import { LocaleRuntime } from '@forwork/client-locale/client'
+import { ToolCallId } from '@forwork/llm/brand'
+import { SessionId } from '@forwork/session/types'
+import type { ActionCardDescriptor } from '@forwork/client-ui-action-cards/client'
+import { FoldedText } from '@forwork/client-ui-action-cards/src/client/Card.tsx'
 import { afterEach, expect, it, onTestFinished, vi } from 'vitest'
 import { apply, inject } from '../src/client/mount.ts'
 import { apply as hostApply } from '../src/index.ts'

@@ -1,25 +1,25 @@
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
-import { createUserMessage, ReasoningEffortId } from '@deepseek-ai/dsh-llm'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
+import { createUserMessage, ReasoningEffortId } from '@forwork/llm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@forwork/cordis'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
-import type { ContextFormed } from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
-import type { SessionHandle } from '@deepseek-ai/dsh-session-persistence'
+import LlmRuntime from '@forwork/llm'
+import type { ContextFormed } from '@forwork/llm'
+import SessionStore, { SessionId } from '@forwork/session'
+import type { SessionEvent } from '@forwork/session'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
+import AgentRegistry, { type Agent } from '@forwork/agent'
+import type { SessionHandle } from '@forwork/session-persistence'
 
-import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import AgentLoop, { CONFIGURED_AGENT_IDENTITIES_KEY } from '@deepseek-ai/dsh-agent-loop'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+import * as JsonlSessionPersistence from '@forwork/session-persistence-jsonl'
+import AgentLoop, { CONFIGURED_AGENT_IDENTITIES_KEY } from '@forwork/agent-loop'
+import SessionProjectionRegistry from '@forwork/session-projection'
 import { MockAdapter, textResponse } from './mock-adapter.ts'
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@forwork/llm' {
   interface MessageSourceMap {
     'test': { kind: 'test' } & ContextFormed
   }

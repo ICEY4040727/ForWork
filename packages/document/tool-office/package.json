@@ -1,4 +1,4 @@
-{  "name": "@deepseek-ai/dsh-tool-office",
+{  "name": "@forwork/tool-office",
   "description": "Model-facing Office document tools backed by Office Exchange",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -26,31 +26,31 @@
     "lib/types/**/*.d.ts"
   ],
   "dependencies": {
-    "@deepseek-ai/schemastery": "workspace:~",
-    "@deepseek-ai/dsh-session-document": "workspace:*",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*",
-    "@deepseek-ai/dsh-util-values": "workspace:*"
+    "@forwork/schemastery": "workspace:~",
+    "@forwork/session-document": "workspace:*",
+    "@forwork/typert-protocol": "workspace:*",
+    "@forwork/util-values": "workspace:*"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-api-workspace-files": "workspace:*",
-    "@deepseek-ai/dsh-office-exchange": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/api-workspace-files": "workspace:*",
+    "@forwork/office-exchange": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/tools": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-agent-loop-testkit": "workspace:*",
-    "@deepseek-ai/dsh-api-workspace-files": "workspace:*",
-    "@deepseek-ai/dsh-fs-local": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-office-exchange": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-document": "workspace:*",
-    "@deepseek-ai/dsh-tool-executor-native": "workspace:*",
-    "@deepseek-ai/dsh-tool-testkit": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-util-values": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/agent-loop-testkit": "workspace:*",
+    "@forwork/api-workspace-files": "workspace:*",
+    "@forwork/fs-local": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/office-exchange": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-document": "workspace:*",
+    "@forwork/tool-executor-native": "workspace:*",
+    "@forwork/tool-testkit": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/util-values": "workspace:*"
   }
 }

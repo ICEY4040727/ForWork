@@ -9,7 +9,7 @@ English | [中文](guide.zh.md)
 
 ## Change
 
-`@deepseek-ai/dsh-session-telemetry-otel` now defaults `mode` to `DISABLED`. Mounting the backend without `mode` constructs no coordinator, processor, or exporter, so neither live feedback nor stored history produces an upload. The shipped base profile also falls back to `DISABLED`; `DSH_TELEMETRY_MODE` still overrides the row. Previously the omitted mode selected `FEEDBACK_ONLY`, which uploaded the canonical Session prefix after new feedback. A profile or entry that already sets `mode: FEEDBACK_ONLY` keeps its behavior.
+`@forwork/session-telemetry-otel` now defaults `mode` to `DISABLED`. Mounting the backend without `mode` constructs no coordinator, processor, or exporter, so neither live feedback nor stored history produces an upload. The shipped base profile also falls back to `DISABLED`; `DSH_TELEMETRY_MODE` still overrides the row. Previously the omitted mode selected `FEEDBACK_ONLY`, which uploaded the canonical Session prefix after new feedback. A profile or entry that already sets `mode: FEEDBACK_ONLY` keeps its behavior.
 
 ## Migration
 
@@ -17,7 +17,7 @@ English | [中文](guide.zh.md)
 
    ```yaml
    - id: sessionTelemetry-otel
-     name: '@deepseek-ai/dsh-session-telemetry-otel'
+     name: '@forwork/session-telemetry-otel'
      config:
        mode: FEEDBACK_ONLY
        exporter:

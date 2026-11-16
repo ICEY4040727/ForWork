@@ -9,8 +9,8 @@
  * with the projection's open-document set, so nothing here holds its own copy.
  */
 import type { ReactNode } from 'react'
-import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { TabId } from '@forwork/client-ui-dockkit'
+import type { TranslateNS } from '@forwork/client-ui-slots'
 import css from './OfficePanel.module.css'
 
 /** One listed document. */

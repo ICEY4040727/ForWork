@@ -1,8 +1,8 @@
 /** The Host's last known state of every change request that a listed Session binds. */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { changeRequestKey } from '@deepseek-ai/dsh-experimental-forge'
-import type { ChangeRequestListener, ChangeRequestRef, ChangeRequestSnapshot } from '@deepseek-ai/dsh-experimental-forge/types'
-import { SessionId } from '@deepseek-ai/dsh-session/types'
+import { changeRequestKey } from '@forwork/experimental-forge'
+import type { ChangeRequestListener, ChangeRequestRef, ChangeRequestSnapshot } from '@forwork/experimental-forge/types'
+import { SessionId } from '@forwork/session/types'
 import { ChangeRequestStates, storedKey, type ChangeRequestStateSources, type ListedSession, type StoredStates } from '../src/states.ts'
 import type { ForgeChangeRequestListState, ForgeChangeRequestStatesFrame } from '../src/types.ts'
 import { demo, pullUrl, snapshot as openSnapshot } from './harness.ts'

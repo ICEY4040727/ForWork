@@ -1,8 +1,8 @@
 /** A real registry, controller and adopted Session store; each spec decides when to show it. */
 import { vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { LayoutState, TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
+import { Context } from '@forwork/cordis'
+import type { SessionId } from '@forwork/session/types'
+import type { LayoutState, TabId } from '@forwork/client-ui-dockkit'
 import { createSidebarRightController } from '../src/client/service.ts'
 import { SidebarRightTabRegistry } from '../src/client/tab-registry.ts'
 import { createSidebarRightStore } from '../src/client/stores.ts'

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { DocumentId, SessionId } from '@deepseek-ai/dsh-session'
-import SessionStore from '@deepseek-ai/dsh-session'
+import { Context } from '@forwork/cordis'
+import { DocumentId, SessionId } from '@forwork/session'
+import SessionStore from '@forwork/session'
 import {
   documentProjectionDefinition,
   foldDocumentProjection,

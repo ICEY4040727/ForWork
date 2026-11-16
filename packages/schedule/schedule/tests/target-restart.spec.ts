@@ -2,9 +2,9 @@
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { Context } from '@deepseek-ai/cordis'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import { JsonStorageBackend } from '@deepseek-ai/dsh-storage-json'
+import type { Context } from '@forwork/cordis'
+import { SessionId } from '@forwork/session'
+import { JsonStorageBackend } from '@forwork/storage-json'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { harness, storedUnit } from './harness.ts'
 

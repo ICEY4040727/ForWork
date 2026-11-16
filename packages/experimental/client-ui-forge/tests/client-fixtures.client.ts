@@ -2,8 +2,8 @@
 
 import type {
   ChangeRequestCheck, ChangeRequestKey, ChangeRequestRef, ChangeRequestSnapshot, ForgeFailure,
-} from '@deepseek-ai/dsh-experimental-forge/types'
-import type { BindingOrigin } from '@deepseek-ai/dsh-experimental-forge-session/types'
+} from '@forwork/experimental-forge/types'
+import type { BindingOrigin } from '@forwork/experimental-forge-session/types'
 import type {
   ForgeChangeRequestListState, ForgeCheckout, ForgePanelChangeRequest, ForgePanelState, ForgePanelWorktree, ForgeSessionWorktree,
   ForgeWorktreeCreation, ForgeWorktreeFailure,

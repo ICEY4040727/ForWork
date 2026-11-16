@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-experimental-plugin-market-bundle",
+  "name": "@forwork/experimental-plugin-market-bundle",
   "description": "Experimental custom plugin indexes: a Discover tab that browses and installs bundles from plugin indexes",
   "version": "0.2.2-rc.1",
   "icon": "./icon.svg",
@@ -34,14 +34,14 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-client-ui-plugin-market": "workspace:*",
-    "@deepseek-ai/dsh-plugin-market": "workspace:*"
+    "@forwork/client-ui-plugin-market": "workspace:*",
+    "@forwork/plugin-market": "workspace:*"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "dsh": {
     "bundle": {

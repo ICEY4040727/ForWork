@@ -5,11 +5,11 @@
  * sheet, cell, formula, paragraph, and table structure without receiving raw
  * file bytes or the complete unit. Cell previews are bounded; counts describe
  * the complete unit so a truncated preview is never mistaken for a small one.
- * @module @deepseek-ai/dsh-tool-office/summary
+ * @module @forwork/tool-office/summary
  */
 
-import type { OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { OfficeDocumentSnapshot } from '@forwork/office-exchange'
+import type { JsonValue } from '@forwork/util-values'
 import { OfficeToolResultError } from './errors.ts'
 
 /** One spreadsheet cell in a bounded preview. */

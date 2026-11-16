@@ -5,7 +5,7 @@
  */
 import { act, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
+import { RemoteError } from '@forwork/typert-protocol'
 import { en } from '../src/client/locales.ts'
 import { TAB_ID, renderPanel } from './panel.tsx'
 import { PATH, draftAt, edited, makeDraftRemote, snapshot, success } from './draft-fixtures.client.ts'

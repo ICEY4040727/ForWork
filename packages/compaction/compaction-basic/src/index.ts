@@ -1,21 +1,21 @@
 /**
  * Basic replay-aware compaction backend.
  *
- * @module @deepseek-ai/dsh-compaction-basic
+ * @module @forwork/compaction-basic
  */
 
-import { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { CompactionEngine, ManualCompactionError } from '@deepseek-ai/dsh-compaction'
-import type { CompactionResult, CompactionTrigger } from '@deepseek-ai/dsh-compaction'
-import type { EpochHeader, Session, SessionSeq } from '@deepseek-ai/dsh-session'
-import { CONTEXT_WINDOW_EXCEEDED_CODE, LlmError } from '@deepseek-ai/dsh-llm'
-import type { LlmCallConfig } from '@deepseek-ai/dsh-llm'
-import { assertNever } from '@deepseek-ai/dsh-util-values'
-import type { Agent, PreStepDecision } from '@deepseek-ai/dsh-agent'
-import type { CommandId } from '@deepseek-ai/dsh-commands/brand'
+import { Context } from '@forwork/cordis'
+import z from '@forwork/schemastery'
+import { CompactionEngine, ManualCompactionError } from '@forwork/compaction'
+import type { CompactionResult, CompactionTrigger } from '@forwork/compaction'
+import type { EpochHeader, Session, SessionSeq } from '@forwork/session'
+import { CONTEXT_WINDOW_EXCEEDED_CODE, LlmError } from '@forwork/llm'
+import type { LlmCallConfig } from '@forwork/llm'
+import { assertNever } from '@forwork/util-values'
+import type { Agent, PreStepDecision } from '@forwork/agent'
+import type { CommandId } from '@forwork/commands/brand'
 // Type-only: makes the optional sibling service available to `ctx.get()`.
-import type {} from '@deepseek-ai/dsh-compaction-tool-result-pruner'
+import type {} from '@forwork/compaction-tool-result-pruner'
 import {
   resolveCompactSpec,
   resolveConfig,

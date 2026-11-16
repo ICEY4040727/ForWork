@@ -2,10 +2,10 @@
  * Narrow seams the Office document tools consume. Production wiring backs the
  * document port with `ctx.officeDocument` and the command executor with its
  * Host-only `dispatchCommand`; tests supply fakes without a renderer.
- * @module @deepseek-ai/dsh-tool-office/runtime
+ * @module @forwork/tool-office/runtime
  */
 
-import type { WorkspaceFileScope } from '@deepseek-ai/dsh-api-workspace-files'
+import type { WorkspaceFileScope } from '@forwork/api-workspace-files'
 import type {
   DocumentCommandRequest,
   OfficeCommandOutcome,
@@ -13,8 +13,8 @@ import type {
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,
   OfficeFormat,
-} from '@deepseek-ai/dsh-office-exchange'
-import type { DocumentId, Session } from '@deepseek-ai/dsh-session'
+} from '@forwork/office-exchange'
+import type { DocumentId, Session } from '@forwork/session'
 
 /** File reads, saves, and legacy conversion over the `officeDocument` Remote. */
 export interface OfficeDocumentPort {

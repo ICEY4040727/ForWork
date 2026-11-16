@@ -1,8 +1,8 @@
 /** The panel's injected business face, shared by the registration and its tests. */
-import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
-import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { SidebarRightOpenTab } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
+import type { HostObservable } from '@forwork/client-ui-slots'
+import type { TabId } from '@forwork/client-ui-dockkit'
+import type { SessionId } from '@forwork/session/types'
+import type { SidebarRightOpenTab } from '@forwork/client-ui-sidebar-right/client'
 import type { OfficeAdapter, OfficeEditorHandle, OfficeMountInput } from './adapter.ts'
 import type { OfficeCommandTarget } from './command-bridge.ts'
 import type { OfficeTabChangeSnapshot, OfficeTabChanges } from './changes.ts'

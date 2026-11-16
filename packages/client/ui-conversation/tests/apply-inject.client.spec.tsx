@@ -1,36 +1,36 @@
 // @vitest-environment jsdom
-import { apply as applyMenus, inject as injectMenus } from '@deepseek-ai/dsh-client-ui-context-menu/client'
+import { apply as applyMenus, inject as injectMenus } from '@forwork/client-ui-context-menu/client'
 import { render, cleanup } from '@testing-library/react'
 import { $getRoot, $isTextNode, PASTE_COMMAND } from 'lexical'
 import { createUserTextFixture } from './user-text-component-fixture.client.tsx'
 import { registerComposerKeymap } from '../src/client/input/editor/keymap.ts'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { createSnapshotStore } from '@forwork/client-store'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import type { CommandContribution, CommandUiContract } from '@deepseek-ai/dsh-client-ui-commands/client'
-import type { SessionRequestId } from '@deepseek-ai/dsh-api-session-controller/types'
-import type { ISession, SessionReference } from '@deepseek-ai/dsh-api-session-controller/client'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import * as messageQuotes from '@deepseek-ai/dsh-message-quotes/client'
-import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
+import type { CommandContribution, CommandUiContract } from '@forwork/client-ui-commands/client'
+import type { SessionRequestId } from '@forwork/api-session-controller/types'
+import type { ISession, SessionReference } from '@forwork/api-session-controller/client'
+import { LocaleRuntime } from '@forwork/client-locale/client'
+import * as messageQuotes from '@forwork/message-quotes/client'
+import type { ObservableSnapshot } from '@forwork/client-store'
 import {
   SlotTestRuntime, stubConfigForm, usePinnedBrowserLanguages,
-} from '@deepseek-ai/dsh-client-test-runtime'
-import type { SessionBehaviorOverrides } from '@deepseek-ai/dsh-client-test-runtime'
+} from '@forwork/client-test-runtime'
+import type { SessionBehaviorOverrides } from '@forwork/client-test-runtime'
 import {
   apply, inject, type ComposerBarInjected, type ConversationInjected,
   type ConversationSessionHeaderInjected, type ConversationSessionInjected, type ViewTab,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
+} from '@forwork/client-ui-conversation/client'
+import type { SessionId } from '@forwork/session/types'
+import type { WorkspaceId } from '@forwork/workspace/types'
 import { createConversationStore } from '../src/client/stores.ts'
 import type { SessionInputShell } from '../src/client/input/facade.ts'
-import { RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
-import { SessionSeq } from '@deepseek-ai/dsh-session/types'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { InboxWireState } from '@deepseek-ai/dsh-agent/types'
+import { RemoteError } from '@forwork/client-test-runtime'
+import { SessionSeq } from '@forwork/session/types'
+import { createUserMessage } from '@forwork/llm'
+import type { InboxWireState } from '@forwork/agent/types'
 import { continuationTurn } from './continuation-fixture.ts'
 
-declare module '@deepseek-ai/dsh-client-ui-slots' {
+declare module '@forwork/client-ui-slots' {
   interface SlotMap {
     'quote-probe': { kind: 'single'; scope: 'session' }
   }

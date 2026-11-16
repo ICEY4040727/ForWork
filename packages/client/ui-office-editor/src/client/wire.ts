@@ -4,7 +4,7 @@
  * direction validates the envelope at this boundary instead of asserting it.
  */
 import type { IDocumentData, ILanguagePack, IWorkbookData } from '@univerjs/core'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { JsonValue } from '@forwork/util-values'
 
 /**
  * Admit a preset's locale default export as a language pack.

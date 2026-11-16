@@ -2,14 +2,14 @@
  * Local Office Exchange provider. Reads and writes Office files on disk through
  * the pure OOXML provider modules, reports unsupported features, and converts
  * legacy binary formats through the LibreOffice kit.
- * @module @deepseek-ai/dsh-office-exchange/provider
+ * @module @forwork/office-exchange/provider
  */
 
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@forwork/cordis'
+import z from '@forwork/schemastery'
 import { DEFAULT_OFFICE_EXCHANGE_CONFIG, resolveConfig, type OfficeExchangeConfig } from '../config.ts'
 import { detectUnsupportedFeatures } from '../detect.ts'
 import { OfficeExchangeError } from '../errors.ts'

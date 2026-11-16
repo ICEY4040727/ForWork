@@ -7,16 +7,16 @@
  * editor; the editor applies the operation and the Host performs the single
  * version-guarded save. Without a live editor the call refuses instead of
  * editing a detached copy.
- * @module @deepseek-ai/dsh-tool-office
+ * @module @forwork/tool-office
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import type { DocumentCommandRequest, OfficeCommandOutcome } from '@deepseek-ai/dsh-office-exchange'
-import type { Session } from '@deepseek-ai/dsh-session'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import type { ToolDefinition } from '@deepseek-ai/dsh-tools'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { Context } from '@forwork/cordis'
+import z from '@forwork/schemastery'
+import type { DocumentCommandRequest, OfficeCommandOutcome } from '@forwork/office-exchange'
+import type { Session } from '@forwork/session'
+import { defineTool } from '@forwork/tools'
+import type { ToolDefinition } from '@forwork/tools'
+import type { JsonValue } from '@forwork/util-values'
 import { convertDocument } from './convert.ts'
 import type { ConvertOutput } from './convert.ts'
 import { editCells } from './edit-cells.ts'
@@ -274,7 +274,7 @@ export function registerDocumentTools(
 function runtimeOf(ctx: Context): DocumentToolRuntime {
   const documents = ctx.get('officeDocument')
   if (documents === undefined) {
-    throw new Error('tool-office: officeDocument is absent: mount @deepseek-ai/dsh-office-exchange')
+    throw new Error('tool-office: officeDocument is absent: mount @forwork/office-exchange')
   }
   const broker = ctx.get('officeCommandBroker')
   return {

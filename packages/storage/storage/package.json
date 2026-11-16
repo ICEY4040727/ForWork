@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-storage",
+  "name": "@forwork/storage",
   "description": "Storage hub (ctx.storage): named backend registry plus mounted data-form facilities for the DeepSeek Harness",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,9 +29,9 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   }
 }

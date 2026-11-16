@@ -2,14 +2,14 @@
  * Wire and seam vocabulary for the Office Exchange capability. This module is
  * the package's JSON-safe surface: it carries no Univer snapshot types, so the
  * generated Remote Client can import it without loading the editor core.
- * @module @deepseek-ai/dsh-office-exchange/types
+ * @module @forwork/office-exchange/types
  */
 
 // Import the protocol module so the declaration at the end of this file
 // augments its error map rather than defining an unrelated ambient module.
-import type { DocumentCommandOperation } from '@deepseek-ai/dsh-session/types'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type {} from '@deepseek-ai/dsh-typert-protocol'
+import type { DocumentCommandOperation } from '@forwork/session/types'
+import type { JsonValue } from '@forwork/util-values'
+import type {} from '@forwork/typert-protocol'
 
 /** Office document formats handled by the Exchange layer. */
 export type OfficeFormat = 'docx' | 'xlsx' | 'pptx' | 'doc' | 'xls' | 'ppt'
@@ -173,7 +173,7 @@ export type OfficeCommandOutcome = OfficeCommandResult | {
   readonly status: 'timeout'
 }
 
-declare module '@deepseek-ai/dsh-typert-protocol' {
+declare module '@forwork/typert-protocol' {
   interface RemoteErrorDetailsMap {
     /** The extension or file content is not an editable Office format. */
     'office-document/unsupported-format': { readonly path: string }

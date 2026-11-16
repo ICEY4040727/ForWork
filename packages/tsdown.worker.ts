@@ -8,6 +8,6 @@
  */
 export function profileWorkerBanner(format: 'cjs' | 'esm'): string {
   return format === 'cjs'
-    ? '"use strict";\nrequire("@deepseek-ai/dsh-app-boot/worker/profile-resolution-bootstrap");'
-    : 'import "@deepseek-ai/dsh-app-boot/worker/profile-resolution-bootstrap";'
+    ? '"use strict";\nrequire("@forwork/app-boot/worker/profile-resolution-bootstrap");'
+    : 'import "@forwork/app-boot/worker/profile-resolution-bootstrap";'
 }

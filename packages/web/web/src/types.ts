@@ -2,13 +2,13 @@
  * Vocabulary for the web capability seam (`ctx.web`). Search and fetch deliberately share one
  * seam so provider selection, cancellation, errors, and product configuration have one owner,
  * while retaining separate request and result types.
- * @module @deepseek-ai/dsh-web/types
+ * @module @forwork/web/types
  */
 
-import { HarnessError } from '@deepseek-ai/dsh-llm'
-import type { LocalizedText } from '@deepseek-ai/dsh-package-manifest'
+import { HarnessError } from '@forwork/llm'
+import type { LocalizedText } from '@forwork/package-manifest'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Events {
     /**
      * The set of registered search or fetch providers changed: one provider

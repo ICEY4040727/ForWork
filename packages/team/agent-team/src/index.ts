@@ -1,12 +1,12 @@
 /** Shared task boards owned by subagent tree roots. */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import type { ProjectionHandle } from '@deepseek-ai/dsh-session-projection'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type {} from '@deepseek-ai/dsh-session-persistence'
-import type {} from '@deepseek-ai/dsh-subagent'
+import { Context, Service } from '@forwork/cordis'
+import z from '@forwork/schemastery'
+import { Remote, TypertRemoteService } from '@forwork/typert-protocol'
+import type { ProjectionHandle } from '@forwork/session-projection'
+import type { Agent } from '@forwork/agent'
+import type {} from '@forwork/session-persistence'
+import type {} from '@forwork/subagent'
 import { TeamError } from './error.ts'
 import { TeamJournal } from './journal.ts'
 import { teamProjectionDefinition, type TeamProjectionState } from './projection.ts'
@@ -23,7 +23,7 @@ export type * from './types.ts'
 export { TeamId, TeamMessageId, TeamTaskId } from './types.ts'
 export { TeamError } from './error.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     agentTeams: TeamService
   }

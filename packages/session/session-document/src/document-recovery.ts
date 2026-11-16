@@ -7,7 +7,7 @@
  * currently holds, labelled stale otherwise, and never applied without the
  * user's explicit choice.
  *
- * @module @deepseek-ai/dsh-session-document/document-recovery
+ * @module @forwork/session-document/document-recovery
  */
 
 /** What the editor may do with one stored draft. */

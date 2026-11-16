@@ -9,19 +9,19 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry, { agentEvents } from '@deepseek-ai/dsh-agent'
-import type { Agent, AgentStatus } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { ContextFormed } from '@deepseek-ai/dsh-llm'
-import SessionStore from '@deepseek-ai/dsh-session'
-import type { Session } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import GoalService, { GoalId, applyGoalProjection, foldGoal, goalProjectionDefinition } from '@deepseek-ai/dsh-goal'
-import type { GoalProjection, GoalProjectionState, GoalRef } from '@deepseek-ai/dsh-goal'
-import { unsupportedModel, unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { Context } from '@forwork/cordis'
+import AgentRegistry, { agentEvents } from '@forwork/agent'
+import type { Agent, AgentStatus } from '@forwork/agent'
+import { createUserMessage } from '@forwork/llm'
+import type { ContextFormed } from '@forwork/llm'
+import SessionStore from '@forwork/session'
+import type { Session } from '@forwork/session'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import GoalService, { GoalId, applyGoalProjection, foldGoal, goalProjectionDefinition } from '@forwork/goal'
+import type { GoalProjection, GoalProjectionState, GoalRef } from '@forwork/goal'
+import { unsupportedModel, unsupportedInbox } from '@forwork/agent-loop-testkit'
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@forwork/llm' {
   interface MessageSourceMap {
     'test': { kind: 'test' } & ContextFormed
   }

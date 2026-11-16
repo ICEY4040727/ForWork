@@ -1,22 +1,22 @@
 /**
- * Unit + real-load-path coverage for @deepseek-ai/dsh-tool-call-timeout-policy. The
+ * Unit + real-load-path coverage for @forwork/tool-call-timeout-policy. The
  * timeout-wins cases drive the deadline under fake timers (deterministic — no
  * wall-clock race) and use a COOPERATIVE tool that settles only when its
  * `exec.signal` aborts, mirroring how a real capability forwards the signal and
  * reaches quiescence.
  */
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+import { executeToolFixture } from '@forwork/tool-testkit'
 
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import { ToolCallId, HarnessError } from '@deepseek-ai/dsh-llm'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime, { TOOL_ABORTED, type ToolExecutionInput, type PostToolDecision } from '@deepseek-ai/dsh-tools'
-import { defineContentToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import * as timeoutPolicy from '@deepseek-ai/dsh-tool-call-timeout-policy'
-import { TOOL_TIMEOUT } from '@deepseek-ai/dsh-tool-call-timeout-policy'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import { ToolCallId, HarnessError } from '@forwork/llm'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime, { TOOL_ABORTED, type ToolExecutionInput, type PostToolDecision } from '@forwork/tools'
+import { defineContentToolFixture } from '@forwork/tool-testkit'
+import * as timeoutPolicy from '@forwork/tool-call-timeout-policy'
+import { TOOL_TIMEOUT } from '@forwork/tool-call-timeout-policy'
 
 const testToolSignal = new AbortController().signal
 

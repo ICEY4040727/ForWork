@@ -1,10 +1,10 @@
 /** Projection that folds shell results and binding records into one Session's change request bindings, and shows clients the bindings. */
 
 import { z } from 'zod'
-import { pluginRecordOf, SessionSeq } from '@deepseek-ai/dsh-session'
-import type { SessionEvent, SessionEventMap } from '@deepseek-ai/dsh-session'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
-import { assertNever } from '@deepseek-ai/dsh-util-values'
+import { pluginRecordOf, SessionSeq } from '@forwork/session'
+import type { SessionEvent, SessionEventMap } from '@forwork/session'
+import type { ProjectionDefinition } from '@forwork/session-projection'
+import { assertNever } from '@forwork/util-values'
 import { changeRequestUrls, commandEvidence, commandOf, ownChangeRequestUrls, pushedBranches, sameChangeRequestUrl } from './commands.ts'
 import type { PushedRef } from './commands.ts'
 import type { BindingOrigin, BindingRecord, BindingState, ForgeChangeRequestsState, PushedBranch } from './types.ts'

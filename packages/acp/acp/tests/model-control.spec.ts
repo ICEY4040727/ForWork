@@ -1,10 +1,10 @@
-import { Context } from '@deepseek-ai/cordis'
-import { AgentModel, modelSelectionProjectionDefinition } from '@deepseek-ai/dsh-agent'
-import AgentRegistry, { type ModelSelection } from '@deepseek-ai/dsh-agent'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
+import { Context } from '@forwork/cordis'
+import { AgentModel, modelSelectionProjectionDefinition } from '@forwork/agent'
+import AgentRegistry, { type ModelSelection } from '@forwork/agent'
+import SessionStore, { SessionId } from '@forwork/session'
+import SessionProjectionRegistry from '@forwork/session-projection'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { ReasoningEffortId, type LlmRuntime } from '@deepseek-ai/dsh-llm'
+import { ReasoningEffortId, type LlmRuntime } from '@forwork/llm'
 import { AcpModelControl } from '../src/model-control.ts'
 
 /** Minimal LLM catalog/runtime double for pure standard-option tests. */

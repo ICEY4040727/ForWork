@@ -1,7 +1,7 @@
 /** Remote form operations over real Cordis profile configuration. */
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { remoteErrorOf, remoteMethods } from '@deepseek-ai/dsh-typert-protocol'
+import { Context } from '@forwork/cordis'
+import { remoteErrorOf, remoteMethods } from '@forwork/typert-protocol'
 import SettingsController from '../src/index.ts'
 import { configurationFixture } from '../../../settings/settings/tests/configuration-fixture.ts'
 

@@ -3,7 +3,7 @@ description: "web 访问服务（ctx.web）：部署方与插件作者如何通�
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-web
+# @forwork/web
 
 [English](README.md) | 中文
 
@@ -36,11 +36,11 @@ kind: "package-reference"
 加载服务并让唯一挂载的后端自动选择，或用 `searchProvider`／`fetchProvider` 固定提供方 id。环境变量 `$DSH_WEB_SEARCH_PROVIDER` 与 `$DSH_WEB_FETCH_PROVIDER` 提供相同字段，不是另一条优先级链。下面两个后端都注册了抓取提供方，因此示例固定 `fetchProvider: http`。
 
 ```yaml
-- name: '@deepseek-ai/dsh-web'
+- name: '@forwork/web'
   config:
     fetchProvider: http
-- name: '@deepseek-ai/dsh-web-deepseek-api'
-- name: '@deepseek-ai/dsh-web-fetch-http'
+- name: '@forwork/web-deepseek-api'
+- name: '@forwork/web-fetch-http'
 ```
 
 | 字段 | 默认值 | 含义 |
@@ -48,7 +48,7 @@ kind: "package-reference"
 | `searchProvider` | （未设置） | 固定的搜索提供方 id；未设置时仅在恰好一个可用时自动选择 |
 | `fetchProvider` | （未设置） | 固定的抓取提供方 id；未设置时仅在恰好一个可用时自动选择 |
 
-生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-web)是每个受支持字段及其 JSDoc 的穷尽式真源。
+生成的[配置目录](../../../docs/config-catalog.zh.md#forworkweb)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
 ### 搜索与抓取
 
@@ -169,7 +169,7 @@ const fetchOffered = await ctx.web.fetchReady('deepseek-official')
 - [web 包映射](../README.zh.md)——五包家族与各角色。
 - [dsh-tool-web](../tool-web/README.zh.md)——构建于本服务之上的面向模型 `web_search` 与 `web_fetch` 工具。
 - [dsh-web-fetch-http](../web-fetch-http/README.zh.md)——已交付的匿名 HTTP(S) 抓取后端。
-- [生成配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-web)——每个受支持配置字段及其源声明。
+- [生成配置目录](../../../docs/config-catalog.zh.md#forworkweb)——每个受支持配置字段及其源声明。
 - [web 能力 seam 决策](../../../.agents/notes/implemented/architecture/2026-06-24-web-capability-seam.zh.md)——搜索与抓取为何共用一项提供方选择服务。
 - [搜索就绪决策](../../../.agents/notes/implemented/architecture/2026-09-27-web-search-offered-by-provider-readiness.zh.md)——seam 为何为 `dsh-tool-web` 按路由回答搜索与抓取就绪。
 

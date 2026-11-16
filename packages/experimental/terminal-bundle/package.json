@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-experimental-terminal-bundle",
+  "name": "@forwork/experimental-terminal-bundle",
   "description": "Keep shell processes alive across tool calls.",
   "version": "0.2.2-rc.1",
   "icon": "./icon.svg",
@@ -39,14 +39,14 @@
     }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-tool-terminal": "workspace:*",
-    "@deepseek-ai/dsh-terminal": "workspace:*",
-    "@deepseek-ai/dsh-terminal-bash": "workspace:*"
+    "@forwork/tool-terminal": "workspace:*",
+    "@forwork/terminal": "workspace:*",
+    "@forwork/terminal-bash": "workspace:*"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   }
 }

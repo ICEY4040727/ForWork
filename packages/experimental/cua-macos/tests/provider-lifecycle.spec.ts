@@ -1,38 +1,38 @@
 /** Native helper replacement is synchronized with Agent and provider disposal. */
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+import { executeToolFixture } from '@forwork/tool-testkit'
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { setImmediate } from 'node:timers/promises'
-import { Context, FiberState } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Timer from '@deepseek-ai/cordis-plugin-timer'
-import { initProfile, mountRootInclude, readProfilePatches, type ProfileContext } from '@deepseek-ai/dsh-app-boot'
-import ConfigEditor from '@deepseek-ai/dsh-config-editor'
-import Settings from '@deepseek-ai/dsh-settings'
-import Storage from '@deepseek-ai/dsh-storage'
-import * as StorageJson from '@deepseek-ai/dsh-storage-json'
-import * as StorageDomain from '@deepseek-ai/dsh-storage-domain'
-import Hmr from '@deepseek-ai/dsh-hmr'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
-import ComputerUseRegistry from '@deepseek-ai/dsh-computer-use'
-import { CuaConfig } from '@deepseek-ai/dsh-cua'
-import { createConfigProjector } from '@deepseek-ai/dsh-app-boot/src/config-schema/projector.ts'
-import LocalAttachmentStore from '@deepseek-ai/dsh-attachment-local'
-import FileSystem from '@deepseek-ai/dsh-fs-local'
-import UserQuestions from '@deepseek-ai/dsh-user-questions'
-import NodeRuntime from '@deepseek-ai/dsh-ptc-runtime-node'
-import Sandbox from '@deepseek-ai/dsh-sandbox-local'
-import SandboxPolicy from '@deepseek-ai/dsh-sandbox-policy'
-import { LlmAdapter, ToolCallId, type LlmResolvedModelInfo, type StreamChunk } from '@deepseek-ai/dsh-llm'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import Subprocess from '@deepseek-ai/dsh-subprocess'
+import { Context, FiberState } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import Timer from '@forwork/cordis-plugin-timer'
+import { initProfile, mountRootInclude, readProfilePatches, type ProfileContext } from '@forwork/app-boot'
+import ConfigEditor from '@forwork/config-editor'
+import Settings from '@forwork/settings'
+import Storage from '@forwork/storage'
+import * as StorageJson from '@forwork/storage-json'
+import * as StorageDomain from '@forwork/storage-domain'
+import Hmr from '@forwork/hmr'
+import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@forwork/agent-loop-testkit'
+import ComputerUseRegistry from '@forwork/computer-use'
+import { CuaConfig } from '@forwork/cua'
+import { createConfigProjector } from '@forwork/app-boot/src/config-schema/projector.ts'
+import LocalAttachmentStore from '@forwork/attachment-local'
+import FileSystem from '@forwork/fs-local'
+import UserQuestions from '@forwork/user-questions'
+import NodeRuntime from '@forwork/ptc-runtime-node'
+import Sandbox from '@forwork/sandbox-local'
+import SandboxPolicy from '@forwork/sandbox-policy'
+import { LlmAdapter, ToolCallId, type LlmResolvedModelInfo, type StreamChunk } from '@forwork/llm'
+import { SessionId } from '@forwork/session'
+import Subprocess from '@forwork/subprocess'
 import { expect, it, onTestFinished, vi } from 'vitest'
 import sharp from 'sharp'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
+import type { ImageAttachmentRef } from '@forwork/attachment'
 import * as NativeProvider from '../src/index.ts'
-import type { NativeClient } from '@deepseek-ai/dsh-cua/native-client'
+import type { NativeClient } from '@forwork/cua/native-client'
 import type { NativeBuildSpec } from '../src/native-build.ts'
 
 const native = vi.hoisted(() => ({
@@ -46,8 +46,8 @@ vi.mock('../src/native-build.ts', async importOriginal => ({
   nativeHostArchitecture: native.architecture,
   prepareNativeExecutable: native.prepare,
 }))
-vi.mock('@deepseek-ai/dsh-cua/native-client', async importOriginal => ({
-  ...await importOriginal<typeof import('@deepseek-ai/dsh-cua/native-client')>(),
+vi.mock('@forwork/cua/native-client', async importOriginal => ({
+  ...await importOriginal<typeof import('@forwork/cua/native-client')>(),
   NativeClient: class {
     disposed = false
     constructor(...args: ConstructorParameters<typeof NativeClient>) {
@@ -587,7 +587,7 @@ it.each([
     let closed = false
     closing = (owner === 'provider' ? f.provider.dispose()
       : owner === 'agent' ? f.handle.dispose()
-        : f.ctx.cuaAccess.revoke('a'.repeat(64) as import('@deepseek-ai/dsh-cua/types').CuaApplicationId)).then(() => { closed = true })
+        : f.ctx.cuaAccess.revoke('a'.repeat(64) as import('@forwork/cua/types').CuaApplicationId)).then(() => { closed = true })
     await setImmediate()
     expect(admissionSignal?.aborted).toBe(true)
     expect(closed).toBe(false)
@@ -731,7 +731,7 @@ it('stores revocation without entering the HMR configuration queue', async () =>
   onTestFinished(() => { release.resolve(undefined) })
   const blocked = f.ctx.hmr.runExclusive(async () => { acquired.resolve(undefined); await release.promise })
   await acquired.promise
-  await f.ctx.cuaAccess.revoke(grant.id as import('@deepseek-ai/dsh-cua/types').CuaApplicationId)
+  await f.ctx.cuaAccess.revoke(grant.id as import('@forwork/cua/types').CuaApplicationId)
   expect((await f.ctx.cuaAccess.applications()).allowedApps).toEqual([])
   expect(await readFile(f.profile.patchPath, 'utf8')).toBe(before)
   release.resolve(undefined)

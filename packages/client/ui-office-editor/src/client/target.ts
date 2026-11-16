@@ -1,8 +1,8 @@
 /** Translation from a tab address to the Session and workspace path the Remote reads. */
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { LegacyOfficeFormat } from '@deepseek-ai/dsh-office-exchange/types'
-import { fileAddressFor, isAbsoluteWorkspacePath, parseFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
+import { brandString } from '@forwork/brand'
+import type { SessionId } from '@forwork/session/types'
+import type { LegacyOfficeFormat } from '@forwork/office-exchange/types'
+import { fileAddressFor, isAbsoluteWorkspacePath, parseFileAddress } from '@forwork/util-workspace-path'
 
 /** One open document target: the Session whose workspace owns it and the path handed to the Remote. */
 export interface OfficeOpenTarget {

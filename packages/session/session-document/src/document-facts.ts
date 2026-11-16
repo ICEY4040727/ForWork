@@ -7,7 +7,7 @@
  * one. The `document` projection is the only reader that decides what the open
  * set means.
  *
- * @module @deepseek-ai/dsh-session-document/document-facts
+ * @module @forwork/session-document/document-facts
  */
 
 import type {
@@ -20,7 +20,7 @@ import type {
   DocumentSaveEventData,
   Session,
   SessionEvent,
-} from '@deepseek-ai/dsh-session'
+} from '@forwork/session'
 
 /** One document that became open in a Session. */
 export interface DocumentOpenFact {

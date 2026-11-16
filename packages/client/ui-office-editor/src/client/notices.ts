@@ -10,7 +10,7 @@
  * switches. Records live only for this window's session, keyed by the address
  * the converted tab was opened under.
  */
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { createSnapshotStore, type SnapshotStore } from '@forwork/client-store'
 
 /** One converted tab's notice. */
 export interface OfficeLegacyNotice {

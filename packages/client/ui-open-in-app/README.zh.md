@@ -3,7 +3,7 @@ description: "通过应用子菜单打开会话目录，并通过原生应用打
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-open-in-app
+# @forwork/client-ui-open-in-app
 
 [English](README.md) | 中文
 
@@ -57,7 +57,7 @@ kind: "package-reference"
 <details>
 <summary>实现内幕——点击展开</summary>
 
-[`session-open-with.ts`](src/client/session-open-with.ts) 为共享右键菜单包声明的 `session` 和 `sessionHeader` 目标共用一个解析器；其他贡献不会在这两种目标间扩散。文件树插槽通过所属组件的 `absolutePath` 使用 `OpenInAppAction`；会话头部没有独立打开按钮插槽。页面生命周期的 [`controller`](src/client/controller.ts) 持有可用性、持久化偏好与启动 POST 状态。菜单观察器和组件注入 hooks 读取同一组源。文档相对路由与载荷类型来自 Host 的浏览器安全子路径 `@deepseek-ai/dsh-host-open-in-app/shared`。适配器将原生操作及传输失败解析为具名结果；跳过的请求不播报。
+[`session-open-with.ts`](src/client/session-open-with.ts) 为共享右键菜单包声明的 `session` 和 `sessionHeader` 目标共用一个解析器；其他贡献不会在这两种目标间扩散。文件树插槽通过所属组件的 `absolutePath` 使用 `OpenInAppAction`；会话头部没有独立打开按钮插槽。页面生命周期的 [`controller`](src/client/controller.ts) 持有可用性、持久化偏好与启动 POST 状态。菜单观察器和组件注入 hooks 读取同一组源。文档相对路由与载荷类型来自 Host 的浏览器安全子路径 `@forwork/host-open-in-app/shared`。适配器将原生操作及传输失败解析为具名结果；跳过的请求不播报。
 
 目录和文件适配器把应用信息与操作交给 [`OpenTargetButton`](src/client/OpenTargetButton.tsx)，由它统一管理菜单顺序、默认标记、图标和尺寸。注入的回调将结果交给本功能在 `shell.overlay` 中持有的唯一 toast，因此切换会话或关闭发起操作的预览不会丢失结果。文件标题栏和空态共用 `FileOpenTarget`，`OpenPathInjected.applications` 通过 [`open-path.ts`](src/client/open-path.ts) 查询 `session.workspacePathApplications`。打开操作使用 `session.openWorkspacePath`，Host 在启动前重新验证指定的关联应用。`FileRouteAction` 通过 `deliverables.file.actions` 和 `deliverables.review.file.actions` 为交付卡片和变更对比页提供同一控件，其认证路由保留会话文件校验。目录适配器继续使用已有的应用列表路由，文件查询失败或不可用时无需增加平台专用的界面实现。
 

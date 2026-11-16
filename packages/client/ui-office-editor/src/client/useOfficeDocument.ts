@@ -19,8 +19,8 @@
  * conversion state until the new tab takes over.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { RemoteFailure, RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+import type { SessionId } from '@forwork/session/types'
+import type { RemoteFailure, RemoteResult } from '@forwork/typert-protocol'
 import type {
   OfficeDocumentDraft,
   OfficeDocumentDraftWriteResult,
@@ -29,7 +29,7 @@ import type {
   OfficeDocumentSnapshot,
   OfficeFormat,
   UnsupportedFeature,
-} from '@deepseek-ai/dsh-office-exchange/types'
+} from '@forwork/office-exchange/types'
 import { externalChangeVerdict } from './changes.ts'
 import { createDraftScheduler, draftRecoveryDecision } from './drafts.ts'
 import { convertedAddress, legacyFormatOf, officeDocumentIdentity } from './target.ts'

@@ -4,13 +4,13 @@
  * The service owns scoped dispatch and listener containment; the manager
  * supplies event payloads from each activation.
  *
- * @module @deepseek-ai/dsh-subagent/lifecycle
+ * @module @forwork/subagent/lifecycle
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { foldConsumedWork } from '@deepseek-ai/dsh-agent'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import type { Context } from '@forwork/cordis'
+import type { Agent } from '@forwork/agent'
+import { foldConsumedWork } from '@forwork/agent'
+import type { SessionEvent } from '@forwork/session'
 import type { SubagentResult, SubagentRunEndInfo, SubagentRunInfo } from './types.ts'
 
 /**

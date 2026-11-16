@@ -3,18 +3,18 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Context } from '@deepseek-ai/cordis'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import LocalFileReference from '@deepseek-ai/dsh-file-reference-local'
-import Selection from '@deepseek-ai/dsh-tool-subagent/model-selection-settings'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { ContextFormed } from '@deepseek-ai/dsh-llm'
+import { Context } from '@forwork/cordis'
+import AgentLoop from '@forwork/agent-loop'
+import * as JsonlSessionPersistence from '@forwork/session-persistence-jsonl'
+import { mountAgentLoopTestDependencies } from '@forwork/agent-loop-testkit'
+import { SessionId } from '@forwork/session'
+import LocalFileReference from '@forwork/file-reference-local'
+import Selection from '@forwork/tool-subagent/model-selection-settings'
+import type { Agent } from '@forwork/agent'
+import { createUserMessage } from '@forwork/llm'
+import type { ContextFormed } from '@forwork/llm'
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@forwork/llm' {
   interface MessageSourceMap {
     'due-work': { kind: 'due-work'; plugin: string } & ContextFormed
   }

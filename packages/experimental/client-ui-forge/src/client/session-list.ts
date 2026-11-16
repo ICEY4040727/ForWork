@@ -1,11 +1,11 @@
 /** The forge facts a Session row shows, from the Session list and the change request states every row shares. */
 
 import { useMemo } from 'react'
-import type { HostObservable, SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-import type { UseSessions } from '@deepseek-ai/dsh-client-ui-session/client'
-import type {} from '@deepseek-ai/dsh-experimental-forge-session/types'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { SessionProjectionSummaryValues } from '@deepseek-ai/dsh-session-projection/types'
+import type { HostObservable, SnapshotSelectorHook } from '@forwork/client-ui-slots'
+import type { UseSessions } from '@forwork/client-ui-session/client'
+import type {} from '@forwork/experimental-forge-session/types'
+import type { SessionId } from '@forwork/session/types'
+import type { SessionProjectionSummaryValues } from '@forwork/session-projection/types'
 import type { ForgeChangeRequestListState, ForgeSessionWorktree } from '../types.ts'
 import type { StreamSnapshot } from './source.ts'
 import { toneOf, type ChangeRequestTone } from './status.ts'

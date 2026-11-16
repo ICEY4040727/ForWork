@@ -3,21 +3,21 @@
  * deterministic ordering and labels, quoted-path suppression, pick projections, codec
  * round-trip, and registration lifecycle.
  */
-import { Context, Service } from '@deepseek-ai/cordis'
+import { Context, Service } from '@forwork/cordis'
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
-import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
-import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type { PropsRenderSlots } from '@deepseek-ai/dsh-client-ui-slots'
-import { UiConversation } from '@deepseek-ai/dsh-client-ui-conversation/src/client/conversation/assembly.ts'
+import { LocaleRuntime } from '@forwork/client-locale/client'
+import { SlotRegistry } from '@forwork/client-ui-renderer/client'
+import type { PropsRenderSlots } from '@forwork/client-ui-slots'
+import { UiConversation } from '@forwork/client-ui-conversation/src/client/conversation/assembly.ts'
 import { FileReference, FolderReference, type FileReferenceInjected } from '../src/client/FileReference.tsx'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { RemoteError, TestSessions } from '@deepseek-ai/dsh-client-test-runtime'
-import type { SessionFixture } from '@deepseek-ai/dsh-client-test-runtime'
+import type { SessionId } from '@forwork/session/types'
+import { RemoteError, TestSessions } from '@forwork/client-test-runtime'
+import type { SessionFixture } from '@forwork/client-test-runtime'
 import type {
   CandidateRequest, ClientSessionContext, InputTriggerCandidate, InputTriggerSource,
-} from '@deepseek-ai/dsh-client-ui-input-trigger/client'
-import type { FileReferenceCandidate } from '@deepseek-ai/dsh-file-reference/types'
-import type { SessionReferenceMentionCandidate } from '@deepseek-ai/dsh-session-reference/types'
+} from '@forwork/client-ui-input-trigger/client'
+import type { FileReferenceCandidate } from '@forwork/file-reference/types'
+import type { SessionReferenceMentionCandidate } from '@forwork/session-reference/types'
 import { apply, inject } from '../src/client/index.ts'
 import { apply as nodeApply } from '../src/index.ts'
 

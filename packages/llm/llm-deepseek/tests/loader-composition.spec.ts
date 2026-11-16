@@ -5,26 +5,26 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import LlmRuntime from '@deepseek-ai/dsh-llm'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import { credentialRef } from '@deepseek-ai/dsh-credentials'
-import LocalCredentialProvider from '@deepseek-ai/dsh-credentials-local'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import Include from '@forwork/cordis-plugin-include'
+import LlmRuntime from '@forwork/llm'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import AgentRegistry from '@forwork/agent'
+import SessionStore, { SessionId } from '@forwork/session'
+import { credentialRef } from '@forwork/credentials'
+import LocalCredentialProvider from '@forwork/credentials-local'
 import { profileComposition } from '../../../settings/settings/tests/profile-composition.ts'
-import { getOrCreateAnonymousUserId } from '@deepseek-ai/dsh-anonymous-user-id'
-import DeepSeekLlmApiExtensionRegistry from '@deepseek-ai/dsh-deepseek-llm-api-extensions'
-import * as SessionLogDeepSeek from '@deepseek-ai/dsh-session-log-deepseek'
-import * as DeepSeekPluginPackageInventory from '@deepseek-ai/dsh-plugin-package-inventory-deepseek'
-import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek-api-key'
+import { getOrCreateAnonymousUserId } from '@forwork/anonymous-user-id'
+import DeepSeekLlmApiExtensionRegistry from '@forwork/deepseek-llm-api-extensions'
+import * as SessionLogDeepSeek from '@forwork/session-log-deepseek'
+import * as DeepSeekPluginPackageInventory from '@forwork/plugin-package-inventory-deepseek'
+import * as LlmDeepSeek from '@forwork/llm-deepseek-api-key'
 import { assemble } from './assemble.ts'
 import { closeMockServers, mockServer, textEvents } from './mock-server.ts'
 import { sourceModuleLoader } from './helpers.ts'
 
-declare module '@deepseek-ai/dsh-llm/types' {
+declare module '@forwork/llm/types' {
   interface LlmRequestPurposeMap {
     'test-upload-exclusion': true
   }
@@ -71,36 +71,36 @@ async function loadComposition(
   const configPath = join(root, 'cordis.yml')
   await writeFile(configPath, [
     '- id: llm',
-    "  name: '@deepseek-ai/dsh-llm'",
+    "  name: '@forwork/llm'",
     '- id: session',
-    "  name: '@deepseek-ai/dsh-session'",
+    "  name: '@forwork/session'",
     '- id: session-projection',
-    "  name: '@deepseek-ai/dsh-session-projection'",
+    "  name: '@forwork/session-projection'",
     '- id: agents',
-    "  name: '@deepseek-ai/dsh-agent'",
-    "- name: '@deepseek-ai/dsh-session-projection'",
+    "  name: '@forwork/agent'",
+    "- name: '@forwork/session-projection'",
     '- id: deepseek-llm-api-extensions',
-    "  name: '@deepseek-ai/dsh-deepseek-llm-api-extensions'",
+    "  name: '@forwork/deepseek-llm-api-extensions'",
     ...options.exclusionFirst === true ? ["- name: '@test/upload-exclusion'"] : [],
     '- id: session-log-deepseek',
-    "  name: '@deepseek-ai/dsh-session-log-deepseek'",
+    "  name: '@forwork/session-log-deepseek'",
     ...options.enableSessionLog !== undefined
       ? ['  config:', `    enabled: ${String(options.enableSessionLog)}`]
       : [],
     ...options.exclusionFirst === false ? ["- name: '@test/upload-exclusion'"] : [],
     '- id: plugin-package-inventory-deepseek',
-    "  name: '@deepseek-ai/dsh-plugin-package-inventory-deepseek'",
+    "  name: '@forwork/plugin-package-inventory-deepseek'",
     ...options.withDynamic
       ? [
         '- id: credentials',
-        "  name: '@deepseek-ai/dsh-credentials-local'",
+        "  name: '@forwork/credentials-local'",
         '  config:',
         `    path: ${JSON.stringify(credentialsPath)}`,
         '    debounceMs: 10',
       ]
       : [],
     '- id: llm-deepseek',
-    "  name: '@deepseek-ai/dsh-llm-deepseek-api-key'",
+    "  name: '@forwork/llm-deepseek-api-key'",
     '  config:',
     `    baseURL: ${JSON.stringify(options.baseURL)}`,
     '',
@@ -113,16 +113,16 @@ async function loadComposition(
   ctx.loader.builtins.include = Include
   const modules = new Map<string, unknown>([
     ['@test/upload-exclusion', uploadExclusion],
-    ['@deepseek-ai/dsh-llm', LlmRuntime],
-    ['@deepseek-ai/dsh-session', SessionStore],
-    ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
-    ['@deepseek-ai/dsh-agent', AgentRegistry],
-    ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
-    ['@deepseek-ai/dsh-deepseek-llm-api-extensions', DeepSeekLlmApiExtensionRegistry],
-    ['@deepseek-ai/dsh-session-log-deepseek', SessionLogDeepSeek],
-    ['@deepseek-ai/dsh-plugin-package-inventory-deepseek', DeepSeekPluginPackageInventory],
-    ['@deepseek-ai/dsh-credentials-local', LocalCredentialProvider],
-    ['@deepseek-ai/dsh-llm-deepseek-api-key', LlmDeepSeek],
+    ['@forwork/llm', LlmRuntime],
+    ['@forwork/session', SessionStore],
+    ['@forwork/session-projection', SessionProjectionRegistry],
+    ['@forwork/agent', AgentRegistry],
+    ['@forwork/session-projection', SessionProjectionRegistry],
+    ['@forwork/deepseek-llm-api-extensions', DeepSeekLlmApiExtensionRegistry],
+    ['@forwork/session-log-deepseek', SessionLogDeepSeek],
+    ['@forwork/plugin-package-inventory-deepseek', DeepSeekPluginPackageInventory],
+    ['@forwork/credentials-local', LocalCredentialProvider],
+    ['@forwork/llm-deepseek-api-key', LlmDeepSeek],
   ])
   // The custom importer bypasses Node resolution; mirror the package manifests
   // a deployed cordis.yml has beside its declared dependencies.
@@ -230,9 +230,9 @@ describe('llm-deepseek real dynamic composition', () => {
     const request = server.requests[0] as { dsh_plugin_packages: { version: number; packages: unknown[] } }
     expect(request).not.toHaveProperty('dsh_session_log')
     expect(request.dsh_plugin_packages.packages).toEqual(expect.arrayContaining([
-      { name: '@deepseek-ai/dsh-deepseek-llm-api-extensions', version: '0.1.0-rc.8' },
-      { name: '@deepseek-ai/dsh-llm-deepseek-api-key', version: '0.1.0-rc.8' },
-      { name: '@deepseek-ai/dsh-session-log-deepseek', version: '0.1.0-rc.8' },
+      { name: '@forwork/deepseek-llm-api-extensions', version: '0.1.0-rc.8' },
+      { name: '@forwork/llm-deepseek-api-key', version: '0.1.0-rc.8' },
+      { name: '@forwork/session-log-deepseek', version: '0.1.0-rc.8' },
     ]))
     expect(request.dsh_plugin_packages.version).toBe(1)
     expect(SessionLogDeepSeek.acceptedThrough(session)).toBe(-1)

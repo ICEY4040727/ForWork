@@ -1,6 +1,6 @@
 # Office Exchange fixtures
 
-Deterministic binary fixtures for `@deepseek-ai/dsh-office-exchange` round-trip, mapping, and
+Deterministic binary fixtures for `@forwork/office-exchange` round-trip, mapping, and
 unsupported-feature detection tests.
 
 | File | Purpose |

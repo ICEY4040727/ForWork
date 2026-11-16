@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-agent-tool-presentation",
+  "name": "@forwork/agent-tool-presentation",
   "description": "Deprecated tool presentation selector; use dsh-tool-executor-native or dsh-tool-executor-ptc directly",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,21 +29,21 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "@deepseek-ai/dsh-tool-executor-native": "workspace:*",
-    "@deepseek-ai/dsh-tool-executor-ptc": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~"
+    "@forwork/tool-executor-native": "workspace:*",
+    "@forwork/tool-executor-ptc": "workspace:*",
+    "@forwork/schemastery": "workspace:~"
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/tools": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-ptc-runtime": "workspace:*",
-    "@deepseek-ai/dsh-scope": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/agent": "workspace:*",
+    "@forwork/ptc-runtime": "workspace:*",
+    "@forwork/scope": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/system-prompt": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/cordis": "workspace:~"
   }
 }

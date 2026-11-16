@@ -1,15 +1,15 @@
 // @vitest-environment jsdom
-import { contextMenuHook } from '@deepseek-ai/dsh-client-test-runtime'
+import { contextMenuHook } from '@forwork/client-test-runtime'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { allowAllAccess, makeTranslate, RemoteError, sessionSnapshot } from '@deepseek-ai/dsh-client-test-runtime'
+import { allowAllAccess, makeTranslate, RemoteError, sessionSnapshot } from '@forwork/client-test-runtime'
 import type {
   SessionListState, SessionSummary, SessionSnapshot,
-} from '@deepseek-ai/dsh-api-session-controller/client'
-import type { SubagentAddress, SubagentCatalogEntry } from '@deepseek-ai/dsh-subagent/client'
-import type { TeamProjection, TeamTaskId, TeamTaskView } from '@deepseek-ai/dsh-agent-team/client'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { SessionStatusSnapshot } from '@deepseek-ai/dsh-client-ui-session/client'
+} from '@forwork/api-session-controller/client'
+import type { SubagentAddress, SubagentCatalogEntry } from '@forwork/subagent/client'
+import type { TeamProjection, TeamTaskId, TeamTaskView } from '@forwork/agent-team/client'
+import type { SessionId } from '@forwork/session/types'
+import type { SessionStatusSnapshot } from '@forwork/client-ui-session/client'
 import {
   SubagentCatalogAction, SubagentHeaderLineage,
   type SubagentCatalogActionProps, type SubagentHeaderLineageProps,

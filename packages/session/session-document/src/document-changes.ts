@@ -9,10 +9,10 @@
  *
  * All functions are pure and return new values; inputs are never mutated.
  *
- * @module @deepseek-ai/dsh-session-document/document-changes
+ * @module @forwork/session-document/document-changes
  */
 
-import type { DocumentEditOperation, DocumentId } from '@deepseek-ai/dsh-session'
+import type { DocumentEditOperation, DocumentId } from '@forwork/session'
 
 /** Who caused one content change. Lifecycle facts may be `system`; content changes never are. */
 export type ChangeActor = 'user' | 'agent'

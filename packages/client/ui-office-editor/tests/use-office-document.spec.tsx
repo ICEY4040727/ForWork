@@ -7,16 +7,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+import { brandString } from '@forwork/brand'
+import type { SessionId } from '@forwork/session/types'
+import { RemoteError } from '@forwork/typert-protocol'
+import type { RemoteResult } from '@forwork/typert-protocol'
 import type {
   OfficeDocumentReadResult,
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,
   OfficeFormat,
-} from '@deepseek-ai/dsh-office-exchange/types'
+} from '@forwork/office-exchange/types'
 import { mapOfficeFailure, useOfficeDocument } from '../src/client/useOfficeDocument.ts'
 import type { OfficeDocumentRemote, UseOfficeDocumentInput } from '../src/client/useOfficeDocument.ts'
 

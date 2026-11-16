@@ -4,20 +4,20 @@
  * `workspaceFileScope` lookup as `workspaceFiles`, confines every path to that
  * root, threads the filesystem content version, and persists saves through the
  * version-guarded binary write.
- * @module @deepseek-ai/dsh-office-exchange/remote
+ * @module @forwork/office-exchange/remote
  */
 
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import type { Context } from '@deepseek-ai/cordis'
-import z from '@deepseek-ai/schemastery'
+import type { Context } from '@forwork/cordis'
+import z from '@forwork/schemastery'
 import type { IDocumentData, IWorkbookData } from '@univerjs/core'
-import type { WorkspaceFileScope } from '@deepseek-ai/dsh-api-workspace-files'
-import { brandString } from '@deepseek-ai/dsh-brand'
-import type { FileSystem, FsInfo, FsTarget, FsVersion } from '@deepseek-ai/dsh-fs'
-import { DocumentId } from '@deepseek-ai/dsh-session'
-import type { DocumentFormat, Session } from '@deepseek-ai/dsh-session'
+import type { WorkspaceFileScope } from '@forwork/api-workspace-files'
+import { brandString } from '@forwork/brand'
+import type { FileSystem, FsInfo, FsTarget, FsVersion } from '@forwork/fs'
+import { DocumentId } from '@forwork/session'
+import type { DocumentFormat, Session } from '@forwork/session'
 import {
   createDocumentIdentity,
   documentIdFor,
@@ -28,10 +28,10 @@ import {
   recordDocumentOpen,
   recordDocumentRebind,
   recordDocumentSave,
-} from '@deepseek-ai/dsh-session-document'
-import type { DocumentIdentityBinding } from '@deepseek-ai/dsh-session-document'
-import { Remote, RemoteError, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+} from '@forwork/session-document'
+import type { DocumentIdentityBinding } from '@forwork/session-document'
+import { Remote, RemoteError, TypertRemoteService } from '@forwork/typert-protocol'
+import type { JsonValue } from '@forwork/util-values'
 import { assertWithinRoots } from './authority.ts'
 import type { DocumentCommandRequest, OfficeCommandBroker } from './commands.ts'
 import { DEFAULT_OFFICE_EXCHANGE_CONFIG } from './config.ts'
@@ -50,7 +50,7 @@ import type {
   UnsupportedFeature,
 } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     /** Host owner of the `officeDocument` Remote namespace. */
     officeDocument: OfficeDocumentRemote
@@ -606,7 +606,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     if (exchange === undefined) {
       throw new RemoteError(
         'gateway/internal',
-        'officeExchange is absent: mount @deepseek-ai/dsh-office-exchange in this composition',
+        'officeExchange is absent: mount @forwork/office-exchange in this composition',
         {},
       )
     }
@@ -619,7 +619,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     if (broker === undefined) {
       throw new RemoteError(
         'gateway/internal',
-        'officeCommandBroker is absent: mount @deepseek-ai/dsh-office-exchange in this composition',
+        'officeCommandBroker is absent: mount @forwork/office-exchange in this composition',
         {},
       )
     }

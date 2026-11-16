@@ -8,8 +8,8 @@
  * and flags the entry so the panel can show the localized save-or-discard
  * prompt. The store is created in `apply` and never at module scope.
  */
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { TabId } from '@deepseek-ai/dsh-client-ui-dockkit'
+import { createSnapshotStore, type SnapshotStore } from '@forwork/client-store'
+import type { TabId } from '@forwork/client-ui-dockkit'
 
 /** One tab's unsaved state. */
 export interface OfficeTabChangeState {

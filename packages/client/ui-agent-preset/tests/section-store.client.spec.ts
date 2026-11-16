@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
 import { AgentPresetSectionController } from '../src/client/section-store.ts'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { AgentPresetRow } from '@deepseek-ai/dsh-agent-preset-registry/types'
+import { createSnapshotStore } from '@forwork/client-store'
+import type { ConfigFormSnapshot } from '@forwork/client-ui-settings/client'
+import type { AgentPresetRow } from '@forwork/agent-preset-registry/types'
 import { en } from '../src/client/locales.ts'
 
 function fixture() {

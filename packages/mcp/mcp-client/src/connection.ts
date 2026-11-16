@@ -16,10 +16,10 @@
  */
 
 import { Client } from '@modelcontextprotocol/client'
-import type { Context } from '@deepseek-ai/cordis'
-import { assertNever, deepEqualJson, type JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { Context } from '@forwork/cordis'
+import { assertNever, deepEqualJson, type JsonValue } from '@forwork/util-values'
 import type { ServerContext } from './server-context.ts'
-import { MAX_TIMER_DELAY_MS } from '@deepseek-ai/dsh-timeout'
+import { MAX_TIMER_DELAY_MS } from '@forwork/timeout'
 import { withDeadline } from './deadline.ts'
 import { McpLocalError } from './diagnostic.ts'
 import type { McpStatusCell } from './status.ts'

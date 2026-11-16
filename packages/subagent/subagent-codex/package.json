@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-subagent-codex",
+  "name": "@forwork/subagent-codex",
   "description": "One-shot Codex subagent provider over the official app-server protocol",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -37,37 +37,37 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-subagent": "workspace:*",
-    "@deepseek-ai/dsh-subprocess": "workspace:*",
-    "@deepseek-ai/dsh-timeout": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/llm": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/subagent": "workspace:*",
+    "@forwork/subprocess": "workspace:*",
+    "@forwork/timeout": "workspace:*"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-brand": "workspace:*",
-    "@deepseek-ai/dsh-sdk-protocol": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~",
+    "@forwork/brand": "workspace:*",
+    "@forwork/sdk-protocol": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
     "@openai/codex": "0.153.4",
-    "@deepseek-ai/dsh-tool-subagent": "workspace:*"
+    "@forwork/tool-subagent": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-app-boot": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-loader-smoke": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-session-checkpoint-policy": "workspace:*",
-    "@deepseek-ai/dsh-session-persistence-jsonl": "workspace:*",
-    "@deepseek-ai/dsh-session-projection": "workspace:*",
-    "@deepseek-ai/dsh-subagent": "workspace:*",
-    "@deepseek-ai/dsh-subprocess": "workspace:*",
-    "@deepseek-ai/dsh-subprocess-local": "workspace:*",
-    "@deepseek-ai/dsh-timeout": "workspace:*",
-    "@deepseek-ai/dsh-tool-jobs": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/cordis-plugin-loader": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/app-boot": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/loader-smoke": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/session-checkpoint-policy": "workspace:*",
+    "@forwork/session-persistence-jsonl": "workspace:*",
+    "@forwork/session-projection": "workspace:*",
+    "@forwork/subagent": "workspace:*",
+    "@forwork/subprocess": "workspace:*",
+    "@forwork/subprocess-local": "workspace:*",
+    "@forwork/timeout": "workspace:*",
+    "@forwork/tool-jobs": "workspace:*",
+    "@forwork/tools": "workspace:*"
   },
   "icon": "./icon.svg"
 }

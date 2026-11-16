@@ -11,13 +11,13 @@ import { join } from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
 import { crc32, deflateSync } from 'node:zlib'
-import { Context } from '@deepseek-ai/cordis'
-import { LocalAttachmentStore } from '@deepseek-ai/dsh-attachment-local'
-import type { ImageAttachmentRef } from '@deepseek-ai/dsh-attachment'
-import { MessageId, ToolCallId } from '@deepseek-ai/dsh-llm'
-import { AssistantStreamAccumulator } from '@deepseek-ai/dsh-llm/assistant-stream'
-import SessionStore, { SessionId, type Session } from '@deepseek-ai/dsh-session'
-import SessionQueryEngine from '@deepseek-ai/dsh-session-query'
+import { Context } from '@forwork/cordis'
+import { LocalAttachmentStore } from '@forwork/attachment-local'
+import type { ImageAttachmentRef } from '@forwork/attachment'
+import { MessageId, ToolCallId } from '@forwork/llm'
+import { AssistantStreamAccumulator } from '@forwork/llm/assistant-stream'
+import SessionStore, { SessionId, type Session } from '@forwork/session'
+import SessionQueryEngine from '@forwork/session-query'
 import { ApiSessionAgentController } from '../src/agent.ts'
 import { SessionCommandController } from '../src/commands.ts'
 import type { SessionAttachmentValue } from '../src/types.ts'
@@ -299,7 +299,7 @@ async function measure(workload: keyof typeof WORKLOADS) {
 }
 
 for (const specifier of [
-  '@deepseek-ai/cordis', '@deepseek-ai/dsh-attachment-local', '@deepseek-ai/dsh-session', '@deepseek-ai/dsh-session-query',
+  '@forwork/cordis', '@forwork/attachment-local', '@forwork/session', '@forwork/session-query',
 ]) {
   assert.match(import.meta.resolve(specifier), /\/lib\/.*\.js$/, `${specifier} must resolve to built JavaScript`)
 }

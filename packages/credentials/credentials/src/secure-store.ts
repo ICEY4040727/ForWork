@@ -8,7 +8,7 @@
  * Encryption availability is checked on every `get` and `set`; an unavailable
  * store raises {@link SecureStorageUnavailableError} instead of falling back to
  * plaintext.
- * @module @deepseek-ai/dsh-credentials/secure-store
+ * @module @forwork/credentials/secure-store
  */
 
 import { randomUUID } from 'node:crypto'

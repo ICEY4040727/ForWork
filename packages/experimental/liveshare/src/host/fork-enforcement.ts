@@ -14,8 +14,8 @@
  * `ctx.shell`'s job.
  */
 
-import type { Context } from '@deepseek-ai/cordis'
-import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { Context } from '@forwork/cordis'
+import type { Agent } from '@forwork/agent'
 import type {
   FsEditOutcome,
   FsEditRequest,
@@ -23,11 +23,11 @@ import type {
   FsVersion,
   FsWriteOutcome,
   FsWriteIntent,
-} from '@deepseek-ai/dsh-fs'
-import type { PreToolDecision, ToolDefinition, ToolExecution } from '@deepseek-ai/dsh-tools'
-import type { Session } from '@deepseek-ai/dsh-session'
-import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
-import { scopeOf } from '@deepseek-ai/dsh-scope'
+} from '@forwork/fs'
+import type { PreToolDecision, ToolDefinition, ToolExecution } from '@forwork/tools'
+import type { Session } from '@forwork/session'
+import type { SandboxExecutionPolicy } from '@forwork/sandbox'
+import { scopeOf } from '@forwork/scope'
 import { forkToolGuard, installChildEnforcement, type ForkToolExecution } from './fork-tool-guard.ts'
 import { READ_ONLY_FORK_CEILING, WRITE_FORK_CEILING } from './fork-policy.ts'
 import type { ForkRegistry } from './fork-registry.ts'

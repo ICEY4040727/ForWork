@@ -17,8 +17,8 @@
  * an unanswered request without understanding that type.
  */
 
-import { brandString, type Branded } from '@deepseek-ai/dsh-brand'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import { brandString, type Branded } from '@forwork/brand'
+import type { JsonValue } from '@forwork/util-values'
 
 /** Stable identity of one open document, unique within its authorizing Session. */
 export type DocumentId = Branded<'DocumentId'>
@@ -284,7 +284,7 @@ export interface DocumentCloseEventData {
   readonly turn?: number
 }
 
-declare module '@deepseek-ai/dsh-session/types' {
+declare module '@forwork/session/types' {
   interface SessionEventMap {
     /**
      * A document became open in this Session. The projection records the

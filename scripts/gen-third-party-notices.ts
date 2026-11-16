@@ -44,16 +44,16 @@ const DEV_ONLY_AREAS = [
 /** Third-party implementations embedded by named Host packages' shipping build configurations. */
 const HOST_BUNDLED_DEPENDENCIES: Readonly<Record<string, readonly string[]>> = {
   // subagent-oar/tsdown.config.ts embeds the patched adapter instead of installing a second copy.
-  '@deepseek-ai/dsh-experimental-subagent-oar': ['@botiverse/oar'],
+  '@forwork/experimental-subagent-oar': ['@botiverse/oar'],
 }
 
 /** First-party public native packages: reachable at runtime but not third-party. */
 const FIRST_PARTY = new Set([
-  '@deepseek-ai/node-addon-system',
-  '@deepseek-ai/node-addon-system-darwin-arm64',
-  '@deepseek-ai/node-addon-system-darwin-x64',
-  '@deepseek-ai/node-addon-system-linux-arm64',
-  '@deepseek-ai/node-addon-system-linux-x64',
+  '@forwork/node-addon-system',
+  '@forwork/node-addon-system-darwin-arm64',
+  '@forwork/node-addon-system-darwin-x64',
+  '@forwork/node-addon-system-linux-arm64',
+  '@forwork/node-addon-system-linux-x64',
 ])
 
 /** Official SDK identity covered by the project's narrow owner authorization. */
@@ -795,7 +795,7 @@ The complete npm transitive closure, including the Landlock launcher workspace, 
 
 ## Vendored source (\`vendor/\`)
 
-The Cordis framework and its foundation libraries are source-vendored into this repository rather than consumed from npm, and republished under the \`@deepseek-ai\` scope. All are MIT-licensed; each directory preserves its upstream \`LICENSE\` file. Exact upstream commits and local modifications are recorded in [\`vendor/README.md\`](vendor/README.md).
+The Cordis framework and its foundation libraries are source-vendored into this repository rather than consumed from npm, and republished under the \`@forwork\` scope. All are MIT-licensed; each directory preserves its upstream \`LICENSE\` file. Exact upstream commits and local modifications are recorded in [\`vendor/README.md\`](vendor/README.md).
 
 | Package | Upstream name | Source | License |
 | --- | --- | --- | --- |
@@ -849,7 +849,7 @@ ${bundledPython.map(dep => `| [\`${dep.name}\`](${dep.repo}) | ${dep.version} | 
 
 ## First-party native packages
 
-\`@deepseek-ai/node-addon-system\` (and its platform packages) is built and released from this repository under BSD 3-Clause. It is listed here for completeness; it is first-party, not third-party.
+\`@forwork/node-addon-system\` (and its platform packages) is built and released from this repository under BSD 3-Clause. It is listed here for completeness; it is first-party, not third-party.
 `
 }
 

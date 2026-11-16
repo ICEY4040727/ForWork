@@ -1,32 +1,32 @@
-import { createUserMessage, createMessage } from '@deepseek-ai/dsh-llm'
-import type { ContextFormed, MessageSource } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, createMessage } from '@forwork/llm'
+import type { ContextFormed, MessageSource } from '@forwork/llm'
 import { describe, expect, it, vi } from 'vitest'
-import { Context, type Fiber } from '@deepseek-ai/cordis'
-import SessionStore, { SessionLogOffset, SessionSeq, SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import type { SessionEvent, SessionHeader, SessionId as SessionIdType } from '@deepseek-ai/dsh-session'
+import { Context, type Fiber } from '@forwork/cordis'
+import SessionStore, { SessionLogOffset, SessionSeq, SESSION_FORMAT_VERSION, SessionId } from '@forwork/session'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import type { SessionEvent, SessionHeader, SessionId as SessionIdType } from '@forwork/session'
 import SessionPersistence, {
   SessionPersistenceCorruptionError,
   SessionPersistenceNotFoundError,
   SessionPersistenceRevision,
   SessionReadOnlyError,
-} from '@deepseek-ai/dsh-session-persistence'
+} from '@forwork/session-persistence'
 import type {
   SessionAccess,
   SessionHandle,
   SessionHandleReadOptions,
   SessionHandleReadResult,
   SessionPersistenceSnapshot,
-} from '@deepseek-ai/dsh-session-persistence'
+} from '@forwork/session-persistence'
 import SessionQueryEngine, {
   SESSION_QUERY_DEFAULT_PERSISTED_INSPECT_CONCURRENCY,
   type SessionEventSurface,
   type SessionQueryErrorCode,
-} from '@deepseek-ai/dsh-session-query'
-import { SessionTitleProviderId, SessionTitleService } from '@deepseek-ai/dsh-session-title'
+} from '@forwork/session-query'
+import { SessionTitleProviderId, SessionTitleService } from '@forwork/session-title'
 import { TestSessionQueryEngine } from './test-service.ts'
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@forwork/llm' {
   interface MessageSourceMap {
     'test': { kind: 'test' } & ContextFormed
   }

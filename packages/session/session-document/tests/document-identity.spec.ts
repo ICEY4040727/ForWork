@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DocumentId } from '@deepseek-ai/dsh-session'
+import { DocumentId } from '@forwork/session'
 import {
   createDocumentIdentity,
   markDocumentMissing,

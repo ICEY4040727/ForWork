@@ -1,6 +1,6 @@
 /** Structure summaries: counts, bounded previews, formulas, paragraphs, and malformed snapshots. */
-import type { OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { OfficeDocumentSnapshot } from '@forwork/office-exchange'
+import type { JsonValue } from '@forwork/util-values'
 import { describe, expect, it } from 'vitest'
 import { OfficeToolResultError } from '../src/errors.ts'
 import { summarizeDocument } from '../src/summary.ts'

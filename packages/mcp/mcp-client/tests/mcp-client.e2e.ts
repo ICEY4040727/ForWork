@@ -7,27 +7,27 @@
  *
  * No API key needed — all servers are local/keyless.
  */
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
+import { executeToolFixture } from '@forwork/tool-testkit'
 
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@forwork/cordis'
 import { createMcpHandler, McpServer, type CallToolResult } from '@modelcontextprotocol/server'
 import { toNodeHandler, type NodeIncomingMessageLike } from '@modelcontextprotocol/node'
 import { z } from 'zod'
-import LocalAttachmentStore from '@deepseek-ai/dsh-attachment-local'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import { ToolCallId, LlmAdapter, LlmRuntime } from '@deepseek-ai/dsh-llm'
-import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@deepseek-ai/dsh-llm'
-import { apply, probeServer } from '@deepseek-ai/dsh-mcp-client/src/index.ts'
-import { publicToolName } from '@deepseek-ai/dsh-mcp-client/src/tools.ts'
-import { Config } from '@deepseek-ai/dsh-mcp-client'
+import LocalAttachmentStore from '@forwork/attachment-local'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
+import { ToolCallId, LlmAdapter, LlmRuntime } from '@forwork/llm'
+import type { GenerateOptions, LlmResolvedModelInfo, StreamChunk } from '@forwork/llm'
+import { apply, probeServer } from '@forwork/mcp-client/src/index.ts'
+import { publicToolName } from '@forwork/mcp-client/src/tools.ts'
+import { Config } from '@forwork/mcp-client'
 
 const testToolSignal = new AbortController().signal
 

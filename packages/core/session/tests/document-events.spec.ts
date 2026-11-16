@@ -1,5 +1,5 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
-import { snapshotJsonValue } from '@deepseek-ai/dsh-util-values'
+import { snapshotJsonValue } from '@forwork/util-values'
 import {
   DocumentId,
   KNOWN_SESSION_EVENT_TYPES,
@@ -7,12 +7,12 @@ import {
   SessionId,
   SessionSeq,
   snapshotSessionEvent,
-} from '@deepseek-ai/dsh-session'
+} from '@forwork/session'
 import type {
   DocumentEditStep,
   SessionEvent,
   SessionEventMap,
-} from '@deepseek-ai/dsh-session'
+} from '@forwork/session'
 
 /** The five document facts emitted as one Session's open-document history. */
 function documentHistory(): readonly [

@@ -8,7 +8,7 @@
  * The package is mounted as the `session-document` Cordis plugin in base
  * profiles; its projection and prompt section are owned by the mounting fiber.
  *
- * @module @deepseek-ai/dsh-session-document
+ * @module @forwork/session-document
  */
 
 export * from './document-changes.ts'

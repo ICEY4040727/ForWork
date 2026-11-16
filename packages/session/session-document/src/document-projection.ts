@@ -8,14 +8,14 @@
  * removes the entry. An unrelated event returns the same state reference so the
  * registry performs no downstream work.
  *
- * @module @deepseek-ai/dsh-session-document/document-projection
+ * @module @forwork/session-document/document-projection
  */
 
 import { z as zod } from 'zod'
 import type { ZodType } from 'zod'
-import { DocumentId } from '@deepseek-ai/dsh-session'
-import type { SessionEvent } from '@deepseek-ai/dsh-session'
-import type { ProjectionDefinition } from '@deepseek-ai/dsh-session-projection'
+import { DocumentId } from '@forwork/session'
+import type { SessionEvent } from '@forwork/session'
+import type { ProjectionDefinition } from '@forwork/session-projection'
 import type {
   DocumentProjectionEntry,
   DocumentProjectionState,

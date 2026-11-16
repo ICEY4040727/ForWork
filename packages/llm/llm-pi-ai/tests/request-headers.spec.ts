@@ -1,9 +1,9 @@
 /** Request header contributions reach the provider without crossing call lifetimes. */
 
 import { afterEach, expect, it, onTestFinished, vi } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import LlmRuntime, { userAgent } from '@deepseek-ai/dsh-llm'
-import { SessionId } from '@deepseek-ai/dsh-session'
+import { Context } from '@forwork/cordis'
+import LlmRuntime, { userAgent } from '@forwork/llm'
+import { SessionId } from '@forwork/session'
 import * as PiAi from '../src/index.ts'
 import { assemble } from './assemble.ts'
 import { closeMockServers, mockServer, textEvents } from './mock-server.ts'

@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
-import { contextMenuHook } from '@deepseek-ai/dsh-client-test-runtime'
-import type { GlobalStandardProps } from '@deepseek-ai/dsh-client-ui-slots'
+import { contextMenuHook } from '@forwork/client-test-runtime'
+import type { GlobalStandardProps } from '@forwork/client-ui-slots'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { allowAllAccess, bindSnapshotSelector, RemoteError } from '@deepseek-ai/dsh-client-test-runtime'
-import { Context } from '@deepseek-ai/cordis'
-import { SettingsSchemaService } from '@deepseek-ai/dsh-client-ui-settings/src/client/schema.ts'
-import { SettingsDescribeMirror } from '@deepseek-ai/dsh-client-ui-settings/src/client/settings-mirror.ts'
-import { ConfigFormController } from '@deepseek-ai/dsh-client-ui-settings/src/client/config-form.ts'
+import { allowAllAccess, bindSnapshotSelector, RemoteError } from '@forwork/client-test-runtime'
+import { Context } from '@forwork/cordis'
+import { SettingsSchemaService } from '@forwork/client-ui-settings/src/client/schema.ts'
+import { SettingsDescribeMirror } from '@forwork/client-ui-settings/src/client/settings-mirror.ts'
+import { ConfigFormController } from '@forwork/client-ui-settings/src/client/config-form.ts'
 
 // Every fixture carries the resource hook the resources plugin merges into GlobalStandardProps.
 const useResource = (() => ({ status: 'none' as const, value: undefined, failure: undefined, reload: () => {} })) as GlobalStandardProps['useResource']

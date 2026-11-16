@@ -1,13 +1,13 @@
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@forwork/cordis'
 import { describe, expect, it, onTestFinished, vi } from 'vitest'
-import type { SessionEventLike } from '@deepseek-ai/dsh-api-session-controller/client'
-import { SessionSeq, type SessionEvent } from '@deepseek-ai/dsh-session/types'
+import type { SessionEventLike } from '@forwork/api-session-controller/client'
+import { SessionSeq, type SessionEvent } from '@forwork/session/types'
 import {
   ConversationEventRegistry, ConversationNodeAssembler,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@forwork/client-ui-conversation/client'
 import type {
   ConversationMatchHandler, ConversationNodeDefinition, ConversationNodeDefinitionInput,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
+} from '@forwork/client-ui-conversation/client'
 
 function registry(): ConversationEventRegistry {
   const ctx = new Context()

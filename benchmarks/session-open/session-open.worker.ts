@@ -2,20 +2,20 @@
 
 import { performance } from 'node:perf_hooks'
 import { scheduler } from 'node:timers/promises'
-import { Context } from '@deepseek-ai/cordis'
-import AgentLoop from '@deepseek-ai/dsh-agent-loop'
-import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
-import { agentPresetProjectionDefinition } from '@deepseek-ai/dsh-agent-preset-registry'
+import { Context } from '@forwork/cordis'
+import AgentLoop from '@forwork/agent-loop'
+import { mountAgentLoopTestDependencies } from '@forwork/agent-loop-testkit'
+import { agentPresetProjectionDefinition } from '@forwork/agent-preset-registry'
 import SessionStore, {
   interruptedTurnClosers,
   SessionId,
   SessionLogOffset,
   SessionPreparation,
-} from '@deepseek-ai/dsh-session'
-import AgentRegistry, { type AgentHandle } from '@deepseek-ai/dsh-agent'
-import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import SessionQueryEngine from '@deepseek-ai/dsh-session-query'
+} from '@forwork/session'
+import AgentRegistry, { type AgentHandle } from '@forwork/agent'
+import * as JsonlSessionPersistence from '@forwork/session-persistence-jsonl'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import SessionQueryEngine from '@forwork/session-query'
 import type {
   SessionEventSearchPage,
   SessionEventSearchRequest,
@@ -23,11 +23,11 @@ import type {
   SessionSearchHit,
   SessionSearchPage,
   SessionSearchRequest,
-} from '@deepseek-ai/dsh-session-query'
-import * as SessionStatsPlugin from '@deepseek-ai/dsh-session-stats'
-import SessionTitleService from '@deepseek-ai/dsh-session-title'
-import * as SessionTurnOutlinePlugin from '@deepseek-ai/dsh-session-turn-outline'
-import TokenMeter from '@deepseek-ai/dsh-token-meter'
+} from '@forwork/session-query'
+import * as SessionStatsPlugin from '@forwork/session-stats'
+import SessionTitleService from '@forwork/session-title'
+import * as SessionTurnOutlinePlugin from '@forwork/session-turn-outline'
+import TokenMeter from '@forwork/token-meter'
 // These Host-only adapters have no public Node export and are compiled into the benchmark worker.
 import { HistoryController } from '../../packages/api/session-controller/src/history/controller.ts'
 import { WebController } from '../../packages/api/session-controller/src/web/controller.ts'
@@ -290,7 +290,7 @@ class SessionBenchmarkHost {
 }
 
 assertBuiltBenchmarkRuntime(import.meta.url, {
-  '@deepseek-ai/dsh-session-persistence-jsonl': import.meta.resolve('@deepseek-ai/dsh-session-persistence-jsonl'),
+  '@forwork/session-persistence-jsonl': import.meta.resolve('@forwork/session-persistence-jsonl'),
 })
 
 const [root, scenarioValue] = process.argv.slice(2)

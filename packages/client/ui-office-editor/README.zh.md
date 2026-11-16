@@ -3,7 +3,7 @@ description: "右侧 Sidebar 中内嵌的 Office 文档编辑 tab，包含 Clien
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-office-editor
+# @forwork/client-ui-office-editor
 
 [English](README.md) | 中文
 

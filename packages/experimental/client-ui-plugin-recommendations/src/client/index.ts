@@ -1,6 +1,6 @@
 /** Bind the generated Remote contribution to the source-tested browser lifecycle. */
-import type { Context } from '@deepseek-ai/cordis'
-import remote from '@deepseek-ai/dsh-plugin-recommendations/remote'
+import type { Context } from '@forwork/cordis'
+import remote from '@forwork/plugin-recommendations/remote'
 import { mountRecommendations } from './mount.ts'
 export { inject } from './mount.ts'
 

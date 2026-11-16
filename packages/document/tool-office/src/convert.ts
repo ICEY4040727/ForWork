@@ -2,15 +2,15 @@
  * `document_convert`: convert one legacy binary Office file to an editable
  * format inside the Session's workspace root. Conversion is Host-side and
  * never modifies the legacy source.
- * @module @deepseek-ai/dsh-tool-office/convert
+ * @module @forwork/tool-office/convert
  */
 
 import {
   formatOf,
   isEditableFormat,
   OfficeExchangeError,
-} from '@deepseek-ai/dsh-office-exchange'
-import type { EditableOfficeFormat } from '@deepseek-ai/dsh-office-exchange'
+} from '@forwork/office-exchange'
+import type { EditableOfficeFormat } from '@forwork/office-exchange'
 import { confineToolPath } from './documents.ts'
 import { failure, guarded } from './errors.ts'
 import type { OfficeToolResult } from './errors.ts'

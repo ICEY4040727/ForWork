@@ -2,16 +2,16 @@
 // plus the shared estimator's pricing branches.
 
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import { createMessage, createSystemMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
-import type { ContentBlock, ToolSchema } from '@deepseek-ai/dsh-llm'
-import type { ContextFormed } from '@deepseek-ai/dsh-llm'
-import SessionStore, { SessionLogOffset, SessionSeq } from '@deepseek-ai/dsh-session'
-import type { Session, SessionEvent, SessionSeq as SessionSeqType } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import TokenMeter from '@deepseek-ai/dsh-token-meter'
-import type { ContextBreakdownProjection } from '@deepseek-ai/dsh-token-meter/client'
-import { CompactionId } from '@deepseek-ai/dsh-compaction'
+import { Context } from '@forwork/cordis'
+import { createMessage, createSystemMessage, createUserMessage } from '@forwork/llm'
+import type { ContentBlock, ToolSchema } from '@forwork/llm'
+import type { ContextFormed } from '@forwork/llm'
+import SessionStore, { SessionLogOffset, SessionSeq } from '@forwork/session'
+import type { Session, SessionEvent, SessionSeq as SessionSeqType } from '@forwork/session'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import TokenMeter from '@forwork/token-meter'
+import type { ContextBreakdownProjection } from '@forwork/token-meter/client'
+import { CompactionId } from '@forwork/compaction'
 import { contextBreakdownProjectionDefinition } from '../src/breakdown-projection.ts'
 import {
   estimateContent,
@@ -20,7 +20,7 @@ import {
   estimateToolsTokens,
 } from '../src/estimate.ts'
 
-declare module '@deepseek-ai/dsh-llm' {
+declare module '@forwork/llm' {
   interface MessageSourceMap {
     'test': { kind: 'test' } & ContextFormed
   }

@@ -3,7 +3,7 @@ description: "Office Exchange capability seam: OOXML-to-unit-snapshot mapping, u
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-office-exchange
+# @forwork/office-exchange
 
 English | [中文](README.zh.md)
 
@@ -28,7 +28,7 @@ Define the contract for moving Office files in and out of the editable unit mode
 The package default-exports `LocalOfficeExchange`, a Cordis plugin that registers `ctx.officeExchange`. Mount it with deployment bounds, then read and write through the seam:
 
 ```ts
-import LocalOfficeExchange from '@deepseek-ai/dsh-office-exchange'
+import LocalOfficeExchange from '@forwork/office-exchange'
 
 await ctx.plugin(LocalOfficeExchange, {
   maxFileBytes: 25 * 1024 * 1024,
@@ -54,7 +54,7 @@ Every failure is an `OfficeExchangeError` with a stable `code`; bounds resolve o
 
 ### Remote surface
 
-The plugin also mounts `ctx.officeDocument`, a session-scoped Remote surface over the same seam. Its generated Client namespace is `remote.officeDocument`; mount the package in the Host composition and add `@deepseek-ai/dsh-office-exchange/remote` to the Client assembly.
+The plugin also mounts `ctx.officeDocument`, a session-scoped Remote surface over the same seam. Its generated Client namespace is `remote.officeDocument`; mount the package in the Host composition and add `@forwork/office-exchange/remote` to the Client assembly.
 
 The Remote resolves the live Session from the header-derived scope and records `document/*` facts there; the `session-document` plugin folds them into the open set.
 

@@ -2,7 +2,7 @@
  * Native editor snapshots produced and consumed by the Exchange seam. The
  * Univer interfaces live here, apart from the JSON-safe wire vocabulary in
  * `types.ts`, so a Remote Client imports only what it can carry.
- * @module @deepseek-ai/dsh-office-exchange/snapshots
+ * @module @forwork/office-exchange/snapshots
  */
 
 import type { IDocumentData, IWorkbookData } from '@univerjs/core'

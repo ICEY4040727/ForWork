@@ -13,13 +13,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+import type { JsonValue } from '@forwork/util-values'
+import type { RemoteResult } from '@forwork/typert-protocol'
 import type {
   OfficeDocumentReadResult,
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,
-} from '@deepseek-ai/dsh-office-exchange/types'
+} from '@forwork/office-exchange/types'
 import type { OfficeAdapter, OfficeSnapshot } from '../src/client/adapter.ts'
 import { OfficePanel } from '../src/client/OfficePanel.tsx'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'

@@ -8,13 +8,13 @@
  * forwarded to the owning hook instead of disappearing. Each panel creates one
  * scheduler; there is no module-level instance.
  */
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
-import type { RemoteFailure, RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
+import { RemoteError } from '@forwork/typert-protocol'
+import type { RemoteFailure, RemoteResult } from '@forwork/typert-protocol'
 import type {
   OfficeDocumentDraft,
   OfficeDocumentDraftWriteResult,
   OfficeDocumentSnapshot,
-} from '@deepseek-ai/dsh-office-exchange/types'
+} from '@forwork/office-exchange/types'
 
 /** Idle period after the last edit before its draft is written. */
 export const DRAFT_IDLE_MS = 2000
@@ -25,7 +25,7 @@ export type DraftRecoveryDecision = 'none' | 'offer' | 'stale'
 /**
  * Decide how a stored draft relates to the file a successful read just returned.
  *
- * This mirrors the Host rule in `@deepseek-ai/dsh-session-document`'s
+ * This mirrors the Host rule in `@forwork/session-document`'s
  * `document-recovery` module: the Host and this client cannot share a value
  * module across the planes, so both sides keep the same three-way decision and
  * the panel exposes only its result.

@@ -3,22 +3,22 @@
  * conversation unless it has its own base URL or key reference, and readiness answers what the operation would send.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { Context, FiberState } from '@deepseek-ai/cordis'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { DeepSeekAccount } from '@deepseek-ai/dsh-deepseek-account'
-import { DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot } from '@deepseek-ai/dsh-launch-environment'
-import SessionStore, { SessionId } from '@deepseek-ai/dsh-session'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import WebRuntime from '@deepseek-ai/dsh-web'
-import * as webApiPlugin from '@deepseek-ai/dsh-web-deepseek-api'
+import { Context, FiberState } from '@forwork/cordis'
+import AgentRegistry from '@forwork/agent'
+import type { Agent } from '@forwork/agent'
+import type { DeepSeekAccount } from '@forwork/deepseek-account'
+import { DSH_LAUNCH_ENVIRONMENT_KEY, createLaunchEnvironmentSnapshot } from '@forwork/launch-environment'
+import SessionStore, { SessionId } from '@forwork/session'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import WebRuntime from '@forwork/web'
+import * as webApiPlugin from '@forwork/web-deepseek-api'
 import { provideRoutes, type RouteRow } from './routes.ts'
 
 /** A value the API-key route resolver throws instead of resolving; undefined lets it resolve normally. */
 const resolverThrow = vi.hoisted(() => ({ value: undefined as string | undefined }))
 
-vi.mock('@deepseek-ai/dsh-llm-deepseek-api-key', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@deepseek-ai/dsh-llm-deepseek-api-key')>()
+vi.mock('@forwork/llm-deepseek-api-key', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@forwork/llm-deepseek-api-key')>()
   return {
     ...original,
     resolveAdapterOptions: (...args: Parameters<typeof original.resolveAdapterOptions>) => {

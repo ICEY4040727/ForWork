@@ -9,11 +9,11 @@
  * The package also exports an OS-secure-store adapter,
  * {@link SafeStorageSecureStore}, that persists model credentials only as
  * Electron `safeStorage` ciphertext.
- * @module @deepseek-ai/dsh-credentials
+ * @module @forwork/credentials
  */
 
-import { Context, Service } from '@deepseek-ai/cordis'
-import { brandString } from '@deepseek-ai/dsh-brand'
+import { Context, Service } from '@forwork/cordis'
+import { brandString } from '@forwork/brand'
 import type { CredentialInfo, CredentialKey, CredentialRecord, CredentialRef } from './types.ts'
 
 export {
@@ -161,7 +161,7 @@ export interface CredentialRecordEntry {
   kind: CredentialRecord['kind']
 }
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     credentials: CredentialProvider
   }

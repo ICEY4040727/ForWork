@@ -2,9 +2,9 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { OfficeExchangeError } from '@deepseek-ai/dsh-office-exchange'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
+import { OfficeExchangeError } from '@forwork/office-exchange'
+import { SessionId } from '@forwork/session'
+import { RemoteError } from '@forwork/typert-protocol'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   confinePath,

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-executor-native",
+  "name": "@forwork/tool-executor-native",
   "description": "Native tool execution plugin",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,11 +29,11 @@
     "lib/types/**/*.d.ts"
   ],
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-tools": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/tools": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-tools": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/tools": "workspace:*"
   }
 }

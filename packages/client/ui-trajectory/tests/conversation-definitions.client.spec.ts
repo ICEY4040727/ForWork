@@ -1,16 +1,16 @@
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context } from '@forwork/cordis'
 import { describe, expect, it } from 'vitest'
 import type {
   SessionEventLikeEntry, SessionLiveEventEntry,
-} from '@deepseek-ai/dsh-api-session-controller/client'
+} from '@forwork/api-session-controller/client'
 import type {
   ConversationNodeDefinition, ConversationViewDefinition,
-} from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { ConversationNodeAssembler, inspectRequestPrompt } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+} from '@forwork/client-ui-conversation/client'
+import { ConversationNodeAssembler, inspectRequestPrompt } from '@forwork/client-ui-conversation/client'
+import type { SessionEvent } from '@forwork/session/types'
 import { inspectSystemPrompt } from '../../ui-conversation/src/client/contract/system-prompt.ts'
-import { AssistantStreamAccumulator } from '@deepseek-ai/dsh-llm/assistant-stream'
-import type { StreamChunk } from '@deepseek-ai/dsh-llm'
+import { AssistantStreamAccumulator } from '@forwork/llm/assistant-stream'
+import type { StreamChunk } from '@forwork/llm'
 import { registerTrajectoryAssistantDefinition } from '../src/client/trajectory-assistant-definition.ts'
 import { registerTrajectoryCompactionDefinitions } from '../src/client/trajectory-compaction-definition.ts'
 import type { TrajectorySnapshot } from '../src/client/trajectory-contract.ts'

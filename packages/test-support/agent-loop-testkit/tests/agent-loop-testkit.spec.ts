@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { mkdtemp, realpath, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Context } from '@deepseek-ai/cordis'
-import FsLocal from '@deepseek-ai/dsh-fs-local'
-import { PtcRuntime, type PtcRunRequest, type PtcRunResult, type PtcRunSpec } from '@deepseek-ai/dsh-ptc-runtime'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId, SessionSeq } from '@deepseek-ai/dsh-session'
-import { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
+import { Context } from '@forwork/cordis'
+import FsLocal from '@forwork/fs-local'
+import { PtcRuntime, type PtcRunRequest, type PtcRunResult, type PtcRunSpec } from '@forwork/ptc-runtime'
+import { createUserMessage } from '@forwork/llm'
+import { Session, SessionId, SessionSeq } from '@forwork/session'
+import { renderPrompt } from '@forwork/system-prompt'
 import {
   createInboxStub,
   mountAgentLoopTestDependencies,

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-file-upload",
+  "name": "@forwork/client-file-upload",
   "description": "Agent-scoped browser file upload, streaming intake, and staged receipt service",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -41,7 +41,7 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-api-remotes"
+        "@forwork/api-remotes"
       ],
       "platform": "web",
       "immediately": true
@@ -65,20 +65,20 @@
   ],
   "dependencies": {
     "zod": "4.4.3",
-    "@deepseek-ai/dsh-typert-protocol": "workspace:*",
-    "@deepseek-ai/dsh-brand": "workspace:*"
+    "@forwork/typert-protocol": "workspace:*",
+    "@forwork/brand": "workspace:*"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-client-connection": "workspace:*",
-    "@deepseek-ai/dsh-commands": "workspace:*",
-    "@deepseek-ai/dsh-util-crypto": "workspace:*",
-    "@deepseek-ai/dsh-api-remotes": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-attachment": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/client-connection": "workspace:*",
+    "@forwork/commands": "workspace:*",
+    "@forwork/util-crypto": "workspace:*",
+    "@forwork/api-remotes": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/attachment": "workspace:*"
   }
 }

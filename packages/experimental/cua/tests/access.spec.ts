@@ -1,9 +1,9 @@
 /** Application decisions are checked at dispatch and revocation cancels owned work. */
 import { setImmediate } from 'node:timers/promises'
-import { Context } from '@deepseek-ai/cordis'
-import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@deepseek-ai/dsh-agent-loop-testkit'
-import { SessionId } from '@deepseek-ai/dsh-session'
-import UserQuestions, { type AskUserQuestionAnswer } from '@deepseek-ai/dsh-user-questions'
+import { Context } from '@forwork/cordis'
+import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@forwork/agent-loop-testkit'
+import { SessionId } from '@forwork/session'
+import UserQuestions, { type AskUserQuestionAnswer } from '@forwork/user-questions'
 import { expect, it, onTestFinished, vi } from 'vitest'
 import { ApplicationAuthorizationResult, installCuaAccess } from '../src/access.ts'
 import type { CuaApplicationGrant } from '../src/access-types.ts'

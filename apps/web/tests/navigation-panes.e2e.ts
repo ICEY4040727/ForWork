@@ -13,11 +13,11 @@ import type { Browser, Page, Response } from 'playwright'
 import { chromium } from 'playwright'
 import { strFromU8, unzipSync } from 'fflate'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, onTestFailed, onTestFinished } from 'vitest'
-import { ToolCallId, createToolResultMessage } from '@deepseek-ai/dsh-llm'
-import type SessionToolResults from '@deepseek-ai/dsh-client-ui-trajectory'
-import { defineTool } from '@deepseek-ai/dsh-tools'
-import { parseSessionLog } from '@deepseek-ai/dsh-llm-replay'
-import { SESSION_FORMAT_VERSION, SessionId, type SessionEvent } from '@deepseek-ai/dsh-session'
+import { ToolCallId, createToolResultMessage } from '@forwork/llm'
+import type SessionToolResults from '@forwork/client-ui-trajectory'
+import { defineTool } from '@forwork/tools'
+import { parseSessionLog } from '@forwork/llm-replay'
+import { SESSION_FORMAT_VERSION, SessionId, type SessionEvent } from '@forwork/session'
 import {
   assertFixtureInventory, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
   launchWebScaffold, recordFixture, seedSession, watchConsole, webSnapshotMode, type WebScaffold,

@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-sdk-app",
+  "name": "@forwork/sdk-app",
   "description": "The dsh SDK profile bundle: stdio JSON-RPC serving and process lifecycle over dsh-base",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -36,28 +36,28 @@
     }
   },
   "dependencies": {
-    "@deepseek-ai/dsh-cmdline": "workspace:*",
-    "@deepseek-ai/dsh-sdk-jsonrpc-server": "workspace:*",
-    "@deepseek-ai/schemastery": "workspace:~",
+    "@forwork/cmdline": "workspace:*",
+    "@forwork/sdk-jsonrpc-server": "workspace:*",
+    "@forwork/schemastery": "workspace:~",
     "commander": "^15.0.0",
-    "@deepseek-ai/dsh-skill-office": "workspace:*",
-    "@deepseek-ai/dsh-tool-workspace-dependencies": "workspace:*",
-    "@deepseek-ai/dsh-client-connection": "workspace:*",
-    "@deepseek-ai/dsh-client-file-upload": "workspace:*",
-    "@deepseek-ai/dsh-workspace": "workspace:*",
-    "@deepseek-ai/dsh-schedule": "workspace:*",
-    "@deepseek-ai/dsh-time-context": "workspace:*",
-    "@deepseek-ai/dsh-tool-schedule": "workspace:*",
-    "@deepseek-ai/dsh-tool-ask-user": "workspace:*",
-    "@deepseek-ai/dsh-tool-present": "workspace:*",
-    "@deepseek-ai/dsh-file-reference-local": "workspace:*",
-    "@deepseek-ai/dsh-deliverable-file-references": "workspace:*"
+    "@forwork/skill-office": "workspace:*",
+    "@forwork/tool-workspace-dependencies": "workspace:*",
+    "@forwork/client-connection": "workspace:*",
+    "@forwork/client-file-upload": "workspace:*",
+    "@forwork/workspace": "workspace:*",
+    "@forwork/schedule": "workspace:*",
+    "@forwork/time-context": "workspace:*",
+    "@forwork/tool-schedule": "workspace:*",
+    "@forwork/tool-ask-user": "workspace:*",
+    "@forwork/tool-present": "workspace:*",
+    "@forwork/file-reference-local": "workspace:*",
+    "@forwork/deliverable-file-references": "workspace:*"
   },
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis-plugin-include": "workspace:~",
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis-plugin-include": "workspace:~",
+    "@forwork/cordis": "workspace:~"
   }
 }

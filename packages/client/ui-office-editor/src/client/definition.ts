@@ -8,14 +8,14 @@
  * `.ppt` copy lands there too. A page-level glob narrows the candidates and
  * `canOpen` vetoes an address whose URI merely ends in one of those suffixes.
  */
-import type { SidebarRightTabDefinition } from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
-import { parseFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
+import type { SidebarRightTabDefinition } from '@forwork/client-ui-sidebar-right/client'
+import { parseFileAddress } from '@forwork/util-workspace-path'
 
 /** The tab kind this package owns. */
 export const OFFICE_KIND = 'office'
 
 /** This implementation's identity in the tab system: the key its body and title register under. */
-export const OFFICE_ID = '@deepseek-ai/dsh-client-ui-office-editor'
+export const OFFICE_ID = '@forwork/client-ui-office-editor'
 
 /**
  * The tab title for one `file:` address: its decoded basename.

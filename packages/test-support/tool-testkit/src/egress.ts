@@ -9,7 +9,7 @@
  * recorded body may run at a time, so a concurrent suite cannot attribute
  * another suite's egress to the current assertion.
  *
- * @module @deepseek-ai/dsh-tool-testkit/egress
+ * @module @forwork/tool-testkit/egress
  */
 
 import http from 'node:http'

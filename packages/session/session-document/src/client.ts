@@ -6,7 +6,7 @@
  * projects the same single-source content `./types` serves to Host consumers
  * with zero duplication and no Host value import.
  *
- * @module @deepseek-ai/dsh-session-document/client
+ * @module @forwork/session-document/client
  */
 
 export type * from './types.ts'

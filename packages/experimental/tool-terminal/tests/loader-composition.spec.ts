@@ -1,28 +1,28 @@
-import { executeToolFixture } from '@deepseek-ai/dsh-tool-testkit'
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import { executeToolFixture } from '@forwork/tool-testkit'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { unsupportedModel, provideWorkingDirectoryFixture, unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { unsupportedModel, provideWorkingDirectoryFixture, unsupportedInbox } from '@forwork/agent-loop-testkit'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import Include from '@deepseek-ai/cordis-plugin-include'
-import { ToolCallId } from '@deepseek-ai/dsh-llm'
-import { Session, SessionId } from '@deepseek-ai/dsh-session'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import TerminalSessionService from '@deepseek-ai/dsh-terminal'
-import SandboxProvider from '@deepseek-ai/dsh-sandbox'
-import type { ConfinedArgv, SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
-import SandboxPolicyService from '@deepseek-ai/dsh-sandbox-policy'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import LocalSubprocessRuntime from '@deepseek-ai/dsh-subprocess-local'
-import * as TerminalLocal from '@deepseek-ai/dsh-terminal-bash'
-import * as ToolPty from '@deepseek-ai/dsh-tool-terminal'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import Include from '@forwork/cordis-plugin-include'
+import { ToolCallId } from '@forwork/llm'
+import { Session, SessionId } from '@forwork/session'
+import AgentRegistry from '@forwork/agent'
+import type { Agent } from '@forwork/agent'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
+import TerminalSessionService from '@forwork/terminal'
+import SandboxProvider from '@forwork/sandbox'
+import type { ConfinedArgv, SandboxPolicy } from '@forwork/sandbox'
+import SandboxPolicyService from '@forwork/sandbox-policy'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import LocalSubprocessRuntime from '@forwork/subprocess-local'
+import * as TerminalLocal from '@forwork/terminal-bash'
+import * as ToolPty from '@forwork/tool-terminal'
 
 let root: string | undefined
 let context: Context | undefined
@@ -69,19 +69,19 @@ suite('terminal real Loader composition through cordis.yml', () => {
     root = await mkdtemp(join(tmpdir(), 'dsh-pty-loader-'))
     const configPath = join(root, 'cordis.yml')
     await writeFile(configPath, [
-      "- name: '@deepseek-ai/dsh-agent'",
-      "- name: '@deepseek-ai/dsh-system-prompt'",
-      "- name: '@deepseek-ai/dsh-tools'",
-      "- name: '@deepseek-ai/dsh-tool-executor-native'",
-      "- name: '@deepseek-ai/dsh-terminal'",
-      "- name: '@deepseek-ai/dsh-test-sandbox'",
-      "- name: '@deepseek-ai/dsh-session-projection'",
-      "- name: '@deepseek-ai/dsh-sandbox-policy'",
+      "- name: '@forwork/agent'",
+      "- name: '@forwork/system-prompt'",
+      "- name: '@forwork/tools'",
+      "- name: '@forwork/tool-executor-native'",
+      "- name: '@forwork/terminal'",
+      "- name: '@forwork/test-sandbox'",
+      "- name: '@forwork/session-projection'",
+      "- name: '@forwork/sandbox-policy'",
       '  config:',
       '    mode: danger-full-access',
       `    workspaceRoot: ${JSON.stringify(root)}`,
-      "- name: '@deepseek-ai/dsh-subprocess-local'",
-      "- name: '@deepseek-ai/dsh-terminal-bash'",
+      "- name: '@forwork/subprocess-local'",
+      "- name: '@forwork/terminal-bash'",
       '  config:',
       '    pollIntervalMs: 10',
       '    exactProbeAfterMs: 20',
@@ -89,7 +89,7 @@ suite('terminal real Loader composition through cordis.yml', () => {
       '    handoffGraceMs: 250',
       '    timeoutMs: 2000',
       '    disposeGraceMs: 500',
-      "- name: '@deepseek-ai/dsh-tool-terminal'",
+      "- name: '@forwork/tool-terminal'",
       '',
     ].join('\n'))
 
@@ -100,17 +100,17 @@ suite('terminal real Loader composition through cordis.yml', () => {
     await context.plugin(Loader)
     context.loader.builtins.include = Include
     const modules = new Map<string, unknown>([
-      ['@deepseek-ai/dsh-agent', AgentRegistry],
-      ['@deepseek-ai/dsh-system-prompt', SystemPrompt],
-      ['@deepseek-ai/dsh-tools', ToolRuntime],
-      ['@deepseek-ai/dsh-tool-executor-native', NativeToolExecutor],
-      ['@deepseek-ai/dsh-terminal', TerminalSessionService],
-      ['@deepseek-ai/dsh-test-sandbox', PassthroughSandbox],
-      ['@deepseek-ai/dsh-session-projection', SessionProjectionRegistry],
-      ['@deepseek-ai/dsh-sandbox-policy', SandboxPolicyService],
-      ['@deepseek-ai/dsh-subprocess-local', LocalSubprocessRuntime],
-      ['@deepseek-ai/dsh-terminal-bash', TerminalLocal],
-      ['@deepseek-ai/dsh-tool-terminal', ToolPty],
+      ['@forwork/agent', AgentRegistry],
+      ['@forwork/system-prompt', SystemPrompt],
+      ['@forwork/tools', ToolRuntime],
+      ['@forwork/tool-executor-native', NativeToolExecutor],
+      ['@forwork/terminal', TerminalSessionService],
+      ['@forwork/test-sandbox', PassthroughSandbox],
+      ['@forwork/session-projection', SessionProjectionRegistry],
+      ['@forwork/sandbox-policy', SandboxPolicyService],
+      ['@forwork/subprocess-local', LocalSubprocessRuntime],
+      ['@forwork/terminal-bash', TerminalLocal],
+      ['@forwork/tool-terminal', ToolPty],
     ])
     context.loader.internal = {
       version: 'v2',

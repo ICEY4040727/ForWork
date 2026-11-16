@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-tool-schedule",
+  "name": "@forwork/tool-schedule",
   "description": "Model-facing scheduled task tools (schedule_create, schedule_list, schedule_view, schedule_edit) over the Host ctx.schedule service",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -29,26 +29,26 @@
   ],
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-schedule": "workspace:*",
-    "@deepseek-ai/dsh-subagent": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/llm": "workspace:*",
+    "@forwork/schedule": "workspace:*",
+    "@forwork/subagent": "workspace:*",
+    "@forwork/system-prompt": "workspace:*",
+    "@forwork/tools": "workspace:*"
   },
   "devDependencies": {
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-agent": "workspace:*",
-    "@deepseek-ai/dsh-llm": "workspace:*",
-    "@deepseek-ai/dsh-ptc-runtime": "workspace:*",
-    "@deepseek-ai/dsh-schedule": "workspace:*",
-    "@deepseek-ai/dsh-scope": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-subagent": "workspace:*",
-    "@deepseek-ai/dsh-system-prompt": "workspace:*",
-    "@deepseek-ai/dsh-tool-executor-ptc": "workspace:*",
-    "@deepseek-ai/dsh-tool-testkit": "workspace:*",
-    "@deepseek-ai/dsh-tools": "workspace:*",
-    "@deepseek-ai/dsh-agent-preset-registry": "workspace:*"
+    "@forwork/cordis": "workspace:~",
+    "@forwork/agent": "workspace:*",
+    "@forwork/llm": "workspace:*",
+    "@forwork/ptc-runtime": "workspace:*",
+    "@forwork/schedule": "workspace:*",
+    "@forwork/scope": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/subagent": "workspace:*",
+    "@forwork/system-prompt": "workspace:*",
+    "@forwork/tool-executor-ptc": "workspace:*",
+    "@forwork/tool-testkit": "workspace:*",
+    "@forwork/tools": "workspace:*",
+    "@forwork/agent-preset-registry": "workspace:*"
   }
 }

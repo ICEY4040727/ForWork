@@ -1,5 +1,5 @@
 {
-  "name": "@deepseek-ai/dsh-client-ui-file-actions",
+  "name": "@forwork/client-ui-file-actions",
   "description": "Original-file saving and image clipboard actions for Web and Desktop",
   "version": "0.2.2-rc.1",
   "publishConfig": {
@@ -32,10 +32,10 @@
   "dsh": {
     "client": {
       "inject": [
-        "@deepseek-ai/dsh-client-locale",
-        "@deepseek-ai/dsh-client-ui-context-menu",
-        "@deepseek-ai/dsh-api-workspace-files",
-        "@deepseek-ai/dsh-api-session-controller"
+        "@forwork/client-locale",
+        "@forwork/client-ui-context-menu",
+        "@forwork/api-workspace-files",
+        "@forwork/api-session-controller"
       ],
       "platform": "web"
     }
@@ -46,23 +46,23 @@
   },
   "license": "MIT",
   "peerDependencies": {
-    "@deepseek-ai/cordis": "workspace:~"
+    "@forwork/cordis": "workspace:~"
   },
   "devDependencies": {
     "react": "^18.2.0",
-    "@deepseek-ai/dsh-client-ui-primitives": "workspace:*",
-    "@deepseek-ai/cordis": "workspace:~",
-    "@deepseek-ai/dsh-client-ui-slots": "workspace:*",
-    "@deepseek-ai/dsh-api-session-controller": "workspace:*",
-    "@deepseek-ai/dsh-client-test-runtime": "workspace:*",
-    "@deepseek-ai/dsh-util-file-drag": "workspace:*",
-    "@deepseek-ai/dsh-client-locale": "workspace:*",
-    "@deepseek-ai/dsh-client-ui-context-menu": "workspace:*",
-    "@deepseek-ai/dsh-api-workspace-files": "workspace:*",
-    "@deepseek-ai/dsh-session": "workspace:*",
-    "@deepseek-ai/dsh-util-workspace-path": "workspace:*",
+    "@forwork/client-ui-primitives": "workspace:*",
+    "@forwork/cordis": "workspace:~",
+    "@forwork/client-ui-slots": "workspace:*",
+    "@forwork/api-session-controller": "workspace:*",
+    "@forwork/client-test-runtime": "workspace:*",
+    "@forwork/util-file-drag": "workspace:*",
+    "@forwork/client-locale": "workspace:*",
+    "@forwork/client-ui-context-menu": "workspace:*",
+    "@forwork/api-workspace-files": "workspace:*",
+    "@forwork/session": "workspace:*",
+    "@forwork/util-workspace-path": "workspace:*",
     "mime": "^4.1.0",
-    "@deepseek-ai/dsh-client-ui-renderer": "workspace:*"
+    "@forwork/client-ui-renderer": "workspace:*"
   },
   "files": [
     "locale/*.json",

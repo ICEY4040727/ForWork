@@ -1,29 +1,29 @@
 import { describe, expect, it, vi } from 'vitest'
-import { unsupportedModel, provideWorkingDirectoryFixture, unsupportedInbox } from '@deepseek-ai/dsh-agent-loop-testkit'
+import { unsupportedModel, provideWorkingDirectoryFixture, unsupportedInbox } from '@forwork/agent-loop-testkit'
 import { PassThrough } from 'node:stream'
 import { resolve } from 'node:path'
-import { Context } from '@deepseek-ai/cordis'
-import Loader from '@deepseek-ai/cordis-plugin-loader'
-import SessionStore, { SESSION_FORMAT_VERSION, Session, SessionId } from '@deepseek-ai/dsh-session'
-import AgentRegistry, { type Agent } from '@deepseek-ai/dsh-agent'
-import SandboxProvider from '@deepseek-ai/dsh-sandbox'
-import type { ConfinedArgv, SandboxPolicy } from '@deepseek-ai/dsh-sandbox'
-import SandboxPolicyService, { setSandboxMode } from '@deepseek-ai/dsh-sandbox-policy'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import TerminalSessionService, { TerminalBackendCleanupError, TerminalSessionId } from '@deepseek-ai/dsh-terminal'
-import type { TerminalSendRequest, TerminalWaitReason } from '@deepseek-ai/dsh-terminal'
-import { BashTerminalBackend, PWSH_PROMPT_SETUP } from '@deepseek-ai/dsh-terminal-bash'
-import { ENCODING_PREAMBLE } from '@deepseek-ai/dsh-pwsh-local'
-import * as ptyLocal from '@deepseek-ai/dsh-terminal-bash'
-import type { ResolvedConfig } from '@deepseek-ai/dsh-terminal-bash/src/config.ts'
-import type { LocalPtySession } from '@deepseek-ai/dsh-terminal-bash/src/session.ts'
-import { SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
+import { Context } from '@forwork/cordis'
+import Loader from '@forwork/cordis-plugin-loader'
+import SessionStore, { SESSION_FORMAT_VERSION, Session, SessionId } from '@forwork/session'
+import AgentRegistry, { type Agent } from '@forwork/agent'
+import SandboxProvider from '@forwork/sandbox'
+import type { ConfinedArgv, SandboxPolicy } from '@forwork/sandbox'
+import SandboxPolicyService, { setSandboxMode } from '@forwork/sandbox-policy'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import TerminalSessionService, { TerminalBackendCleanupError, TerminalSessionId } from '@forwork/terminal'
+import type { TerminalSendRequest, TerminalWaitReason } from '@forwork/terminal'
+import { BashTerminalBackend, PWSH_PROMPT_SETUP } from '@forwork/terminal-bash'
+import { ENCODING_PREAMBLE } from '@forwork/pwsh-local'
+import * as ptyLocal from '@forwork/terminal-bash'
+import type { ResolvedConfig } from '@forwork/terminal-bash/src/config.ts'
+import type { LocalPtySession } from '@forwork/terminal-bash/src/session.ts'
+import { SubprocessRuntime } from '@forwork/subprocess'
 import type {
   SubprocessHandle,
   SubprocessSpawnSpec,
   SubprocessTerminalHandle,
   SubprocessTerminalSpawnSpec,
-} from '@deepseek-ai/dsh-subprocess'
+} from '@forwork/subprocess'
 
 class EmptySandbox extends SandboxProvider {
   async confine(_argv: readonly string[], _policy: SandboxPolicy): Promise<ConfinedArgv> {

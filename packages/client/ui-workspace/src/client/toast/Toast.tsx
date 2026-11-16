@@ -1,6 +1,6 @@
 /** One presentation Factory and the adapters for keyed Workspace notices. */
-import { IconWarningOutlineRegular, Toast } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
+import { IconWarningOutlineRegular, Toast } from '@forwork/client-ui-primitives'
+import type { PropsRuntime } from '@forwork/client-ui-slots'
 import type { ArchiveToastEntryProps, ToastEntryProps, WorkspaceToastProps } from '../contract/toast.ts'
 
 /**

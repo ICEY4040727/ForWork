@@ -4,13 +4,13 @@
  * returned snapshot with one guarded save, and append one `document/edit` fact.
  *
  * A refused or unanswered command writes nothing and appends no edit fact.
- * @module @deepseek-ai/dsh-tool-office/edit
+ * @module @forwork/tool-office/edit
  */
 
-import type { OfficeCommandOutcome, OfficeDocumentReadResult, OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange'
-import type { DocumentEditStep } from '@deepseek-ai/dsh-session'
-import { assertNever } from '@deepseek-ai/dsh-util-values'
-import type { JsonValue } from '@deepseek-ai/dsh-util-values'
+import type { OfficeCommandOutcome, OfficeDocumentReadResult, OfficeDocumentSnapshot } from '@forwork/office-exchange'
+import type { DocumentEditStep } from '@forwork/session'
+import { assertNever } from '@forwork/util-values'
+import type { JsonValue } from '@forwork/util-values'
 import { confinePath, documentTarget } from './documents.ts'
 import type { DocumentTarget } from './documents.ts'
 import { failure, guarded, OfficeToolResultError } from './errors.ts'

@@ -6,8 +6,8 @@
  * observable to the rendered component without building render machinery.
  */
 import { useSyncExternalStore } from 'react'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-store'
-import type { HostObservable } from '@deepseek-ai/dsh-client-ui-slots'
+import type { SnapshotSelectorHook } from '@forwork/client-store'
+import type { HostObservable } from '@forwork/client-ui-slots'
 
 /**
  * Bind one observable as a selector hook.

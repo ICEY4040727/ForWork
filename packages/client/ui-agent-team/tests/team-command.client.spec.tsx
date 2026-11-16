@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render } from '@testing-library/react'
-import { CommandId } from '@deepseek-ai/dsh-commands/brand'
-import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
-import { IconUsersOutlineRegular } from '@deepseek-ai/dsh-client-ui-primitives'
+import { CommandId } from '@forwork/commands/brand'
+import { makeTranslate } from '@forwork/client-test-runtime'
+import { IconUsersOutlineRegular } from '@forwork/client-ui-primitives'
 import { TeamCommandRow, type TeamCommandRowProps } from '../src/client/TeamCommandRow.tsx'
 import { zh, en, ja, es, fr, de, ru, pt } from '../src/client/locales.ts'
 

@@ -3,12 +3,12 @@
  * fetch. Duplicate ids are rejected. At execution time, a configured provider must exist and
  * be usable; without one, exactly one usable provider is required, so selection never depends
  * on registration order.
- * @module @deepseek-ai/dsh-web
+ * @module @forwork/web
  */
 
-import { Context, type Volatile } from '@deepseek-ai/cordis'
-import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
-import z from '@deepseek-ai/schemastery'
+import { Context, type Volatile } from '@forwork/cordis'
+import { Remote, TypertRemoteService } from '@forwork/typert-protocol'
+import z from '@forwork/schemastery'
 import type {
   WebFetchProvider,
   WebFetchRequest,
@@ -37,7 +37,7 @@ export type {
   WebSearchSource,
 } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
+declare module '@forwork/cordis' {
   interface Context {
     web: WebRuntime
   }

@@ -5,14 +5,14 @@
  * already uses: `<sessionId>:<path>`. The path is a locator, never identity;
  * every resolved target is confined to the Session's workspace root before a
  * command is sent or a file is touched.
- * @module @deepseek-ai/dsh-tool-office/documents
+ * @module @forwork/tool-office/documents
  */
 
 import { resolve } from 'node:path'
-import { assertWithinRoots } from '@deepseek-ai/dsh-office-exchange'
-import { DocumentId } from '@deepseek-ai/dsh-session'
-import type { DocumentId as DocumentIdValue, SessionId } from '@deepseek-ai/dsh-session'
-import { documentIdFor } from '@deepseek-ai/dsh-session-document'
+import { assertWithinRoots } from '@forwork/office-exchange'
+import { DocumentId } from '@forwork/session'
+import type { DocumentId as DocumentIdValue, SessionId } from '@forwork/session'
+import { documentIdFor } from '@forwork/session-document'
 import { OfficeToolResultError } from './errors.ts'
 
 export { documentIdFor }

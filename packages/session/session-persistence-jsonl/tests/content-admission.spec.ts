@@ -1,10 +1,10 @@
 /** V2 content admission refuses entire generations without publishing a valid prefix. */
 
-import { Context } from '@deepseek-ai/cordis'
-import { SESSION_FORMAT_VERSION, SessionId } from '@deepseek-ai/dsh-session'
-import type { SessionFormatJsonObject } from '@deepseek-ai/dsh-session-format'
-import { SessionFormatUnsupportedError } from '@deepseek-ai/dsh-session-persistence'
-import * as JsonlSessionPersistence from '@deepseek-ai/dsh-session-persistence-jsonl'
+import { Context } from '@forwork/cordis'
+import { SESSION_FORMAT_VERSION, SessionId } from '@forwork/session'
+import type { SessionFormatJsonObject } from '@forwork/session-format'
+import { SessionFormatUnsupportedError } from '@forwork/session-persistence'
+import * as JsonlSessionPersistence from '@forwork/session-persistence-jsonl'
 import { mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'

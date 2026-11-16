@@ -7,20 +7,20 @@
  * removes it (HMR safety). The carrier and framework are exercised unmodified.
  */
 
-import * as NativeToolExecutor from '@deepseek-ai/dsh-tool-executor-native'
+import * as NativeToolExecutor from '@forwork/tool-executor-native'
 import { describe, expect, it } from 'vitest'
-import { Context } from '@deepseek-ai/cordis'
-import AgentRegistry from '@deepseek-ai/dsh-agent'
-import type { Agent } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
-import SessionStore from '@deepseek-ai/dsh-session'
-import type { Session } from '@deepseek-ai/dsh-session'
-import type { TodoItem } from '@deepseek-ai/dsh-tool-todo'
-import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
-import ToolRuntime from '@deepseek-ai/dsh-tools'
-import SessionProjectionRegistry from '@deepseek-ai/dsh-session-projection'
-import UserQuestionService from '@deepseek-ai/dsh-user-questions'
-import * as ToolTodo from '@deepseek-ai/dsh-tool-todo'
+import { Context } from '@forwork/cordis'
+import AgentRegistry from '@forwork/agent'
+import type { Agent } from '@forwork/agent'
+import { createUserMessage } from '@forwork/llm'
+import SessionStore from '@forwork/session'
+import type { Session } from '@forwork/session'
+import type { TodoItem } from '@forwork/tool-todo'
+import SystemPrompt from '@forwork/system-prompt'
+import ToolRuntime from '@forwork/tools'
+import SessionProjectionRegistry from '@forwork/session-projection'
+import UserQuestionService from '@forwork/user-questions'
+import * as ToolTodo from '@forwork/tool-todo'
 
 interface Bench {
   ctx: Context

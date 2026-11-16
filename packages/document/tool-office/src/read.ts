@@ -2,10 +2,10 @@
  * `document_read`: read the live unit's structure through the command bridge.
  * A read never saves, never advances the content version, and refuses when no
  * live editor instance matches the document.
- * @module @deepseek-ai/dsh-tool-office/read
+ * @module @forwork/tool-office/read
  */
 
-import { assertNever } from '@deepseek-ai/dsh-util-values'
+import { assertNever } from '@forwork/util-values'
 import { confinePath, documentTarget } from './documents.ts'
 import { failure, guarded } from './errors.ts'
 import type { OfficeToolResult } from './errors.ts'

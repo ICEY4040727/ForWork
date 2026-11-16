@@ -5,36 +5,36 @@
 /:
   en: 93fc2e9e86fc50f8
   zh: 61c7c38a66935ad6
-/deepseek-ai-dsh-client-ui-dockkit:
-  en: 9d34bd85fc9e76b4
-  zh: 615d1d2eab451c87
-/deepseek-ai-dsh-client-ui-dockkit/summary:
+/forwork-client-ui-dockkit:
+  en: 568fd401f77da3e3
+  zh: fa205022914ec151
+/forwork-client-ui-dockkit/summary:
   en: 3ee4584a73215ef4
   zh: 051170a6d0993fa5
-/deepseek-ai-dsh-client-ui-dockkit/table-of-contents:
+/forwork-client-ui-dockkit/table-of-contents:
   en: 42038fdc402b9c2a
   zh: 99890f8f908624ce
-/deepseek-ai-dsh-client-ui-dockkit/the-two-layers:
+/forwork-client-ui-dockkit/the-two-layers:
   en: 718f52cfce426009
   zh: e8282e2e3713d242
-/deepseek-ai-dsh-client-ui-dockkit/embedding-it:
+/forwork-client-ui-dockkit/embedding-it:
   en: 53bbabeb910c6f77
   zh: 51fb4f8fb78cfd02
-/deepseek-ai-dsh-client-ui-dockkit/interaction-rules-worth-keeping:
+/forwork-client-ui-dockkit/interaction-rules-worth-keeping:
   en: cf2d00ce2b7d5719
   zh: 5510420f8872e23a
-/deepseek-ai-dsh-client-ui-dockkit/build-shape:
+/forwork-client-ui-dockkit/build-shape:
   en: 21216ba5798d7f5f
   zh: ac505fdcd5c114d4
-/deepseek-ai-dsh-client-ui-dockkit/model-experience:
+/forwork-client-ui-dockkit/model-experience:
   en: cdebb91645623401
   zh: fe262db316714fa8
-/deepseek-ai-dsh-client-ui-dockkit/model-experience/kv-cache-effect:
+/forwork-client-ui-dockkit/model-experience/kv-cache-effect:
   en: ca75c51c89c2c9b0
   zh: f57cc48a1b5cbfa9
-/deepseek-ai-dsh-client-ui-dockkit/known-limitations-and-deferred-work:
+/forwork-client-ui-dockkit/known-limitations-and-deferred-work:
   en: 4323810ca5a87e6c
   zh: 3a24af2ea4467ab7
-/deepseek-ai-dsh-client-ui-dockkit/known-limitations-and-deferred-work/dev-note:
+/forwork-client-ui-dockkit/known-limitations-and-deferred-work/dev-note:
   en: 45680a19e42f401a
   zh: 5500de88331c8a59

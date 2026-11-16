@@ -1,5 +1,5 @@
-import { Context } from '@deepseek-ai/cordis'
-import type { IndexInjection, WebServer } from '@deepseek-ai/dsh-host-webserver'
+import { Context } from '@forwork/cordis'
+import type { IndexInjection, WebServer } from '@forwork/host-webserver'
 import { expect, it } from 'vitest'
 import { Config, apply } from '../src/index.ts'
 

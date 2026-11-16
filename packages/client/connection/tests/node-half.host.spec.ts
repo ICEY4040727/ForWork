@@ -2,13 +2,13 @@
 import { EventEmitter } from 'node:events'
 import { createServer, request as httpRequest } from 'node:http'
 import { Readable } from 'node:stream'
-import { Context } from '@deepseek-ai/cordis'
+import { Context } from '@forwork/cordis'
 import { describe, expect, it, vi } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { AttachmentStore } from '@deepseek-ai/dsh-attachment'
-import type { CredentialProvider } from '@deepseek-ai/dsh-credentials'
-import type { IndexInjection, WebServer, WebRoute, WebUpgradeRoute } from '@deepseek-ai/dsh-host-webserver'
+import type { AttachmentStore } from '@forwork/attachment'
+import type { CredentialProvider } from '@forwork/credentials'
+import type { IndexInjection, WebServer, WebRoute, WebUpgradeRoute } from '@forwork/host-webserver'
 import {
   API_PATH,
   RpcId,

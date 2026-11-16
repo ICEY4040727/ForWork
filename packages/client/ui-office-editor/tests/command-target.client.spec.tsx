@@ -5,9 +5,9 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, waitFor } from '@testing-library/react'
-import type { OfficeDocumentReadResult, OfficeDocumentSnapshot } from '@deepseek-ai/dsh-office-exchange/types'
-import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { OfficeDocumentReadResult, OfficeDocumentSnapshot } from '@forwork/office-exchange/types'
+import type { RemoteResult } from '@forwork/typert-protocol'
+import type { SessionId } from '@forwork/session/types'
 import type { OfficeCommandTarget } from '../src/client/command-bridge.ts'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
 import { renderPanel, SESSION_ID } from './panel.tsx'

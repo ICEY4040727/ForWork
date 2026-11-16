@@ -5,42 +5,42 @@
 /:
   en: 4b9d633f5d1bbc6d
   zh: 7ff162885eebd97d
-/deepseek-ai-dsh-client-ui-office-editor:
-  en: 378583e05d011aba
-  zh: b3640ede26e1dfa4
-/deepseek-ai-dsh-client-ui-office-editor/summary:
+/forwork-client-ui-office-editor:
+  en: 267cfd94476550f7
+  zh: 076511eeabfa4fd5
+/forwork-client-ui-office-editor/summary:
   en: 84e107b8b99c44e7
   zh: 06de22301023ab05
-/deepseek-ai-dsh-client-ui-office-editor/table-of-contents:
+/forwork-client-ui-office-editor/table-of-contents:
   en: d152484eb41ac6b4
   zh: f8845381c3b23f66
-/deepseek-ai-dsh-client-ui-office-editor/use-this-package:
-  en: 0b2c6f36591d828d
-  zh: 33719c58bf5bb113
-/deepseek-ai-dsh-client-ui-office-editor/understand-the-implementation:
-  en: ad9f947d9c24bfcc
-  zh: 3b5a915b824497e2
-/deepseek-ai-dsh-client-ui-office-editor/further-exploration:
+/forwork-client-ui-office-editor/use-this-package:
+  en: 4a137d8a98ee46f2
+  zh: c4ae245fa5b9ef82
+/forwork-client-ui-office-editor/understand-the-implementation:
+  en: 8ced50fd36ed3bed
+  zh: 9bc2bd74e3e15aa1
+/forwork-client-ui-office-editor/further-exploration:
   en: 3660705b0d577fb0
   zh: 4ecb1ebe17cc71d6
-/deepseek-ai-dsh-client-ui-office-editor/model-experience:
+/forwork-client-ui-office-editor/model-experience:
   en: 215e7ba838619b7b
   zh: a311da3843709f90
-/deepseek-ai-dsh-client-ui-office-editor/model-experience/editor-surface:
+/forwork-client-ui-office-editor/model-experience/editor-surface:
   en: 5bf648df212228be
   zh: 2a3b88f862bdc56a
-/deepseek-ai-dsh-client-ui-office-editor/model-experience/editor-surface/what-the-model-sees:
+/forwork-client-ui-office-editor/model-experience/editor-surface/what-the-model-sees:
   en: f78598d0d1276fe7
   zh: 8bb42dcc7dc29448
-/deepseek-ai-dsh-client-ui-office-editor/model-experience/editor-surface/token-effect:
+/forwork-client-ui-office-editor/model-experience/editor-surface/token-effect:
   en: 032e04576b4c2e16
   zh: 143451dfb9dca9a9
-/deepseek-ai-dsh-client-ui-office-editor/model-experience/editor-surface/kv-cache-effect:
+/forwork-client-ui-office-editor/model-experience/editor-surface/kv-cache-effect:
   en: 7593cf5d0d2cedd6
   zh: a18013b9ffbc0b06
-/deepseek-ai-dsh-client-ui-office-editor/known-limitations-and-deferred-work:
-  en: dd0262d6f171257a
-  zh: 4c7f2fefa4538610
-/deepseek-ai-dsh-client-ui-office-editor/known-limitations-and-deferred-work/dev-note:
+/forwork-client-ui-office-editor/known-limitations-and-deferred-work:
+  en: 13aa79ef4a70293c
+  zh: 40bca15105d0e1a5
+/forwork-client-ui-office-editor/known-limitations-and-deferred-work/dev-note:
   en: e67f633dc6fe7773
   zh: e88aeb617ffb74ea

@@ -9,7 +9,7 @@ description: "省略 session-telemetry 的 `mode`（包括基础 profile）现�
 
 ## 变更
 
-`@deepseek-ai/dsh-session-telemetry-otel` 的 `mode` 默认值现在是 `DISABLED`。未提供 `mode` 就挂载后端时，不会构造协调器、处理器或导出器，因此活跃反馈和已存储历史都不会产生上传。随附的基础 profile 同样回退到 `DISABLED`；`DSH_TELEMETRY_MODE` 仍可覆盖该行。此前省略该模式会选择 `FEEDBACK_ONLY`，在新反馈后上传权威 Session 前缀。已显式设置 `mode: FEEDBACK_ONLY` 的 profile 或条目保持原有行为。
+`@forwork/session-telemetry-otel` 的 `mode` 默认值现在是 `DISABLED`。未提供 `mode` 就挂载后端时，不会构造协调器、处理器或导出器，因此活跃反馈和已存储历史都不会产生上传。随附的基础 profile 同样回退到 `DISABLED`；`DSH_TELEMETRY_MODE` 仍可覆盖该行。此前省略该模式会选择 `FEEDBACK_ONLY`，在新反馈后上传权威 Session 前缀。已显式设置 `mode: FEEDBACK_ONLY` 的 profile 或条目保持原有行为。
 
 ## 迁移
 
@@ -17,7 +17,7 @@ description: "省略 session-telemetry 的 `mode`（包括基础 profile）现�
 
    ```yaml
    - id: sessionTelemetry-otel
-     name: '@deepseek-ai/dsh-session-telemetry-otel'
+     name: '@forwork/session-telemetry-otel'
      config:
        mode: FEEDBACK_ONLY
        exporter:

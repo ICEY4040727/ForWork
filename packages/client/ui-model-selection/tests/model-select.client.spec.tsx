@@ -1,17 +1,17 @@
 // @vitest-environment jsdom
-import * as uiPrimitives from '@deepseek-ai/dsh-client-ui-primitives'
+import * as uiPrimitives from '@forwork/client-ui-primitives'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
-import { RemoteError, SlotTestRuntime } from '@deepseek-ai/dsh-client-test-runtime'
-import { SessionId } from '@deepseek-ai/dsh-session/types'
-import type { ModelSelection } from '@deepseek-ai/dsh-api-remotes/client'
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-store'
+import { RemoteError, SlotTestRuntime } from '@forwork/client-test-runtime'
+import { SessionId } from '@forwork/session/types'
+import type { ModelSelection } from '@forwork/api-remotes/client'
+import { createSnapshotStore } from '@forwork/client-store'
 import type { ComponentProps } from 'react'
-import type { OwnerOf } from '@deepseek-ai/dsh-client-ui-slots'
+import type { OwnerOf } from '@forwork/client-ui-slots'
 import type { ModelDirectoryState } from '../src/client/directory.ts'
 import { ModelSelect } from '../src/client/ModelSelect.tsx'
 import { en, zh } from '../src/client/locales.ts'
-import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
+import { zh as commonZh } from '@forwork/client-locale/src/locales/zh.ts'
 
 // The seat's key domain is model ∪ common; the stub mirrors the real lookup
 // chain: package dictionary, then common vocabulary, then the key.
@@ -528,7 +528,7 @@ describe('ModelSelect keyboard walk', () => {
         })
       }
       vi.resetModules()
-      const detection = await import('@deepseek-ai/dsh-client-ui-primitives/src/focus.ts')
+      const detection = await import('@forwork/client-ui-primitives/src/focus.ts')
       const device = vi.spyOn(uiPrimitives, 'isMobileDevice').mockImplementation(detection.isMobileDevice)
       onTestFinished(() => { device.mockRestore() })
       const select = vi.fn()

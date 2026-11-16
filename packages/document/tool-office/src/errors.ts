@@ -4,12 +4,12 @@
  * A refusal is an ordinary result value, not a thrown error, so the model can
  * branch on the stable `code` and retry with a fresh read or save. Unexpected
  * failures still throw and reach the executor as ordinary tool errors.
- * @module @deepseek-ai/dsh-tool-office/errors
+ * @module @forwork/tool-office/errors
  */
 
-import { OfficeExchangeError } from '@deepseek-ai/dsh-office-exchange'
-import type { UnsupportedFeature } from '@deepseek-ai/dsh-office-exchange'
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
+import { OfficeExchangeError } from '@forwork/office-exchange'
+import type { UnsupportedFeature } from '@forwork/office-exchange'
+import { RemoteError } from '@forwork/typert-protocol'
 
 /** Stable refusal codes the model branches on. */
 export type OfficeToolErrorCode =

@@ -3,7 +3,7 @@ description: "Model-facing document tools for reading and editing Office files t
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-tool-office
+# @forwork/tool-office
 
 ## Summary
 
@@ -26,7 +26,7 @@ Host plugin package for the agent's Office document tools. It registers `documen
 Mount the plugin in a Host composition that also provides `ctx.tools` and `ctx.officeDocument`:
 
 ```ts
-import * as ToolOffice from '@deepseek-ai/dsh-tool-office'
+import * as ToolOffice from '@forwork/tool-office'
 
 await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 ```

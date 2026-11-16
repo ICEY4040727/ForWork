@@ -3,7 +3,7 @@ description: "Open Session directories from application submenus and open previe
 kind: "package-reference"
 ---
 
-# @deepseek-ai/dsh-client-ui-open-in-app
+# @forwork/client-ui-open-in-app
 
 English | [中文](README.zh.md)
 
@@ -57,7 +57,7 @@ A file menu offers “Open in sidebar” and “Open in floating panel”, which
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-[`session-open-with.ts`](src/client/session-open-with.ts) shares one resolver across the shared context-menu package’s `session` and `sessionHeader` targets; other contributions do not cross between those targets. The file-tree slot uses `OpenInAppAction` with its owner’s `absolutePath`; there is no independent Session-header opener slot. A page-lifetime [`controller`](src/client/controller.ts) owns availability, persisted choice, and launch POST state. Menu observers and injected component hooks read those same sources. Document-relative routes and payload types come from the Host’s browser-safe `@deepseek-ai/dsh-host-open-in-app/shared` subpath. Adapters resolve native and transport failures to named outcomes; skipped requests announce nothing.
+[`session-open-with.ts`](src/client/session-open-with.ts) shares one resolver across the shared context-menu package’s `session` and `sessionHeader` targets; other contributions do not cross between those targets. The file-tree slot uses `OpenInAppAction` with its owner’s `absolutePath`; there is no independent Session-header opener slot. A page-lifetime [`controller`](src/client/controller.ts) owns availability, persisted choice, and launch POST state. Menu observers and injected component hooks read those same sources. Document-relative routes and payload types come from the Host’s browser-safe `@forwork/host-open-in-app/shared` subpath. Adapters resolve native and transport failures to named outcomes; skipped requests announce nothing.
 
 The directory and file adapters supply application metadata and operations to [`OpenTargetButton`](src/client/OpenTargetButton.tsx), which owns menu ordering, default markers, icons, and sizing. Its injected reporter sends outcomes to one feature-owned `shell.overlay` toast, so switching Sessions or closing the initiating preview cannot discard the result. The file header and empty state share `FileOpenTarget`, while `OpenPathInjected.applications` queries `session.workspacePathApplications` through [`open-path.ts`](src/client/open-path.ts). Opening uses `session.openWorkspacePath`; the Host revalidates an explicitly selected handler before launch. The directory adapter keeps the existing catalog routes. `FileRouteAction` supplies the same control to delivery cards and change review through `deliverables.file.actions` and `deliverables.review.file.actions`; their authenticated routes retain Session file authorization. A failed or unavailable file query therefore needs no platform-specific UI implementation.
 
