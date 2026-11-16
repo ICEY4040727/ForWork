@@ -157,6 +157,37 @@ Outside CI (`CI` other than `true`), default worker counts follow the [local wor
 
 `run-gates` gives the CLI help generator one child at a time; direct `pnpm run verify-cli-help` uses the standalone worker budget. `DSH_CLI_HELP_CONCURRENCY` overrides that child limit with a positive integer validated before startup. Each invocation retains its private `DSH_HOME` and `DSH_AGENTS_HOME` and 30-second deadline.
 
+### Upstream sync
+
+The fork follows upstream selectively under [Constitution VIII](../.specify/memory/constitution.md); do not run a wholesale `git merge upstream/main`. Keep an `upstream` remote, fetch it, and cherry-pick one commit at a time by SHA.
+
+| Change | Action | Reason |
+| --- | --- | --- |
+| Security fix | Take | Risk otherwise accumulates |
+| Core framework bug fix that does not touch a diverged file | Take | Direct benefit |
+| Dependency or lockfile security/compatibility upgrade | Take, then rerun the full relevant checks | Prevent breakage |
+| Fix on a file this fork has diverged on | Skip by default; if critical, take and re-apply the local change | Conflict cost |
+| DeepSeek product, brand, account, telemetry, `web-deepseek-api`, default search | Drop | Unrelated and conflicts with independent identity |
+| Experimental or optional package this product does not ship | Drop unless adopted | No product value |
+| Dependency imposing AGPL, a cloud account, or a paid SDK | Drop | Offline/local-first and license principles |
+| Breaking `SESSION_FORMAT_VERSION` change or required migration | Defer and write an upgrade guide | Highest migration risk |
+
+One-line order: security fix -> take; a diverged file -> skip or take and re-apply; DeepSeek product/telemetry/adapter/default search -> drop; AGPL/cloud/paid dependency -> drop; breaking session-format or migration -> defer.
+
+High-conflict paths, where a cherry-pick needs the re-apply path:
+
+- `packages/fs/fs` and the local, sandbox, and SSH filesystem providers: local `writeBytes`.
+- `packages/core/session`: `document/*` events and the edit-operation union.
+- `packages/client/ui-sidebar-documentpreview`: tab patterns and `dsh.client` entries.
+- `packages/experimental/liveshare`: endpoint classification.
+- `packages/session/session-telemetry*` and `packages/bundle/base`: telemetry-off defaults.
+- `packages/bundle/base` and `packages/bundle/web-app` `cordis.patch.yml`: provider and editor rows.
+- `scripts/verify-*`, `scripts/gen-cordis-catalog`, and `scripts/product-package-policy`.
+
+After each sync, run the targeted checks for the changed surface, always including `pnpm run test:coverage` for `office-exchange` and `session-document` (`writeBytes`, `document/*`), `pnpm run typecheck`, and the affected snapshots. Dependency or lockfile lifts rerun the full relevant gate set. A cherry-pick that touches a diverged file starts from a verified recovery copy and a clean tree; do not use the shared stash.
+
+Record each sync as a dated entry in an Agent Note: what was taken, what was dropped, and why. The constitution owns the rule; this section owns the procedure.
+
 ### CI gates
 
 The keyless [CI workflow](../.github/workflows/ci.yml) groups independent gates into broad lanes and runs a smaller compatibility signal across supported Node versions. Artifact consumers wait for one build within their lane. Coverage partitions reuse file timings scoped to their platform and runner pool to balance work within the configured worker limit. Native Windows lanes run in the separate [CI Windows workflow](../.github/workflows/ci-windows.yml) and Python checks in the separate [CI Python workflow](../.github/workflows/ci-python.yml), each of which can be re-run independently. Required benchmarks run separately on standard GitHub-hosted Linux; the [benchmark runner reference](../benchmarks/AGENTS.md) owns routing and the job timeout. The separate real-API workflow runs `pnpm run test:e2e` with its configured worker bound. See [scripts/run-gates.ts](../scripts/run-gates.ts) and the workflow files for the current gate and job inventory.

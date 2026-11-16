@@ -1,27 +1,17 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.0.0 -> 1.1.0 (MINOR)
-Rationale: no principle removed; one principle added and four materially expanded. The core intent
-of all seven original principles is preserved. If the V rename is judged a redefinition rather
-than an expansion, treat this as 2.0.0.
+Version change: 1.1.0 -> 2.0.0 (MAJOR)
+Rationale: Principle VIII is redefined from "the fork must stay mergeable" (wholesale
+merge-forward) to "selective upstream follow" with an executable decision table. The obligation
+changes, not only its wording; the other principles are unchanged.
 
 Modified principles:
-- II. Offline, Self-Contained Desktop First -> II. Offline, Local-First Desktop
-  (adds data ownership/privacy; scopes "offline" to editing and saving; names paid cloud SDKs)
-- IV. Lossless by Default; Never Silently Drop Content -> IV. Lossless, Non-Destructive Editing
-  (adds agent write authority, attribution, and conflict handling)
-- V. Additive Increments; Rename Last -> V. Incremental, Reversible Delivery
-  (generalizes a one-time sequencing rule into durable delivery governance)
-- VII. License and Attribution Hygiene -> VII. License and Dependency Hygiene
-  (adds a dependency policy and license gate)
+- VIII. Fork Stewardship -> VIII. Selective Upstream Follow
 
-Added sections:
-- VIII. Fork Stewardship
-
+Added sections: none
 Removed sections: none
-
-Follow-up TODOs: none (ratification date is known).
+Follow-up TODOs: none
 -->
 
 # Office Agent Harness Constitution
@@ -49,8 +39,23 @@ A change is complete only after the narrowest relevant check passes: typecheck, 
 ### VII. License and Dependency Hygiene
 The harness base is MIT; the Univer core is Apache-2.0. Forking and commercial distribution retain both notices. Third-party conversion libraries are used under compatible licenses. A dependency that imposes copyleft on the product, or that requires a cloud account for core editing, MUST NOT be a hard dependency without an explicit amendment. Dependency additions are checked for license compatibility before adoption, and the shipped package retains the required notices.
 
-### VIII. Fork Stewardship
-The fork MUST stay mergeable with its upstream base. Product changes extend shared seams or add packages rather than rewriting upstream modules in place when an additive option exists. Upstream merges are performed with a preserved-work recovery copy, a clean merge tree, and recorded conflict intent, so borrowed framework fixes keep arriving. Divergence that would make a future upstream merge conflict-heavy requires a recorded rationale and a planned reconciliation.
+### VIII. Selective Upstream Follow
+The fork follows its upstream base selectively. Routine synchronization is not a wholesale merge: take the changes that keep security and framework correctness current, and deliberately drop changes that do not serve this product. Every sync records what was taken, what was dropped, and why in a dated Agent Note; `docs/development.md#upstream-sync` owns the operational procedure.
+
+Decision order: a security fix is taken; a change to a file this fork has diverged on is skipped, or taken and re-applied on top of the local change; DeepSeek product, brand, account, telemetry, API adapter, and default search are dropped; an AGPL, cloud-account, or paid-SDK dependency is dropped; a breaking `SESSION_FORMAT_VERSION` change or one requiring migration is deferred and evaluated with an upgrade guide.
+
+| Change | Action | Reason |
+| --- | --- | --- |
+| Security fix | Take | Risk otherwise accumulates |
+| Core framework bug fix (Cordis, agent loop, session, fs/sandbox, shell, terminal, client rendering, Typert, dockkit, remotes) that does not touch a diverged file | Take | Direct benefit |
+| Dependency or lockfile security/compatibility upgrade | Take, then rerun the full relevant checks | Prevent breakage |
+| Fix on a file this fork has diverged on | Skip by default; if critical, take and re-apply the local change | Conflict cost |
+| DeepSeek product, brand, account, telemetry, `web-deepseek-api`, default search | Drop | Unrelated and conflicts with Principle I |
+| Experimental or optional package this product does not ship (liveshare, computer-use, ...) | Drop unless adopted | No product value |
+| Dependency imposing AGPL, a cloud account, or a paid SDK | Drop | Principles II and VII |
+| Breaking `SESSION_FORMAT_VERSION` change or required migration | Defer; evaluate each with an upgrade guide | Highest migration risk |
+
+Product changes still extend shared seams or add packages rather than rewriting upstream modules in place when an additive option exists. A cherry-pick that touches a diverged file uses a preserved-work recovery copy, a clean tree, and no shared stash, and records the conflict resolution.
 
 ## Technology Constraints
 
@@ -66,10 +71,10 @@ The fork MUST stay mergeable with its upstream base. Product changes extend shar
 2. Each phase is independently verifiable and independently deliverable.
 3. Tests and snapshots accompany behavior; a model-visible or user-visible change without coverage is incomplete.
 4. Destructive repository operations (rename, scope, signature) are last and gated on a green additive baseline.
-5. Upstream base merges run on a clean tree with a verified recovery copy and no shared stash; conflicts preserve both sides' intent.
+5. Upstream synchronization cherry-picks per Principle VIII; a cherry-pick that touches a diverged file uses a verified recovery copy and a clean tree (no shared stash) and re-applies the local change.
 
 ## Governance
 
 This constitution supersedes ad-hoc preference. Amendments require a recorded rationale, the affected requirement, and a migration note. Every change review verifies the principles above; a violation MUST be justified in the review or removed. Versioning follows semantic versioning: MAJOR for principle removal or incompatible redefinition, MINOR for a new principle or material expansion, PATCH for clarification. Ratified and amended dates use ISO `YYYY-MM-DD`.
 
-**Version**: 1.1.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-13
+**Version**: 2.0.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-16

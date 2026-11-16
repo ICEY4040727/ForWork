@@ -162,6 +162,37 @@ pi-ai 检查会在内存中重新生成预期元数据。数据过期时，检�
 
 `run-gates` 让 CLI 帮助生成器每次只运行一个子进程；直接执行 `pnpm run verify-cli-help` 时使用独立运行的 worker 预算。`DSH_CLI_HELP_CONCURRENCY` 可用正整数覆盖该子进程上限，并在启动前校验。每次调用仍使用独立的 `DSH_HOME` 与 `DSH_AGENTS_HOME`，超时限制仍为 30 秒。
 
+### 上游同步
+
+本 fork 按[宪法 VIII](../.specify/memory/constitution.md)选择性跟进上游；不要执行整体 `git merge upstream/main`。保留 `upstream` remote，定期 fetch，按 SHA 逐条 cherry-pick。
+
+| 变更 | 处理 | 理由 |
+| --- | --- | --- |
+| 安全修复 | 取 | 否则风险累积 |
+| 未触及已分叉文件的框架核心 bug 修复 | 取 | 直接受益 |
+| 依赖/锁文件的安全与兼容升级 | 取，并复跑相关全套检查 | 防止破坏 |
+| 落在已分叉文件上的修复 | 默认跳过；关键 bug 则取后重新叠加本地改动 | 冲突成本 |
+| DeepSeek 产品/品牌/账户/遥测/`web-deepseek-api`/默认搜索 | 丢弃 | 与独立身份无关且冲突 |
+| 本产品不发布的实验/可选包 | 除非采用，否则丢弃 | 不带走负担 |
+| 引入 AGPL、云账号或付费 SDK 的依赖 | 丢弃 | 违反离线/本地优先与许可原则 |
+| 破坏性 `SESSION_FORMAT_VERSION` 变更或需要迁移 | 暂缓并编写升级指南 | 迁移风险最高 |
+
+一句话顺序：安全修复 → 取；已分叉文件 → 跳过或取后重叠加；DeepSeek 产品/遥测/适配器/默认搜索 → 丢；AGPL/云/付费依赖 → 丢；破坏性格式或迁移 → 暂缓。
+
+高冲突路径（走“取后重叠加”）：
+
+- `packages/fs/fs` 及 local、sandbox、SSH 文件系统提供者：本地 `writeBytes`。
+- `packages/core/session`：`document/*` 事件与编辑操作 union。
+- `packages/client/ui-sidebar-documentpreview`：tab 模式与 `dsh.client` 条目。
+- `packages/experimental/liveshare`：端点分类。
+- `packages/session/session-telemetry*` 与 `packages/bundle/base`：遥测默认关闭。
+- `packages/bundle/base` 与 `packages/bundle/web-app` 的 `cordis.patch.yml`：provider 与编辑器行。
+- `scripts/verify-*`、`scripts/gen-cordis-catalog` 与 `scripts/product-package-policy`。
+
+每次同步后，针对改动面跑最小检查，并始终包含 `office-exchange` 与 `session-document` 的 `pnpm run test:coverage`（`writeBytes`、`document/*`）、`pnpm run typecheck` 与受影响快照。依赖或锁文件升级后复跑相关全套门禁。触及已分叉文件的 cherry-pick 必须从已验证的恢复副本与干净工作树开始；不要使用共享 stash。
+
+每次同步在 Agent Note 中记录一条带日期的条目：取了什么、丢了什么、为什么。宪法拥有规则，本节拥有流程。
+
 ### CI 门禁
 
 keyless [CI 工作流](../.github/workflows/ci.yml) 将独立门禁分组到若干宽粒度 lane，并在受支持的 Node 版本上运行一组较小的兼容性检查。产物消费方在各自 lane 内等待一次 build。覆盖率分区复用按平台和运行器池隔离的文件耗时，在配置的 worker 上限内均衡工作量。原生 Windows lane 运行在独立的 [CI Windows 工作流](../.github/workflows/ci-windows.yml)中，Python 检查运行在独立的 [CI Python 工作流](../.github/workflows/ci-python.yml)中，两者都可单独重新运行。必需 benchmark 在标准 GitHub 托管 Linux 上独立运行；[benchmark 运行器说明](../benchmarks/AGENTS.md)拥有路由及 job 超时。单独的真实 API 工作流按其配置的 worker 上限运行 `pnpm run test:e2e`。当前门禁和 job 清单以 [scripts/run-gates.ts](../scripts/run-gates.ts) 和工作流文件为准。

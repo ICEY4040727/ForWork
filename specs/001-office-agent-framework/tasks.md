@@ -159,7 +159,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [ ] T046 [P] Add config catalog entries and run `verify-package-dependencies`, `verify-export-jsdoc`, and `verify-client-packages` for the new packages.
 - [ ] T047 Run `corepack pnpm run build:check`, `corepack pnpm run doc-sync`, and `corepack pnpm run test:coverage`; fix regressions.
 - [ ] T048 Run quickstart scenarios S1–S11 and record the results.
-- [ ] T059 Add the upstream merge procedure (clean tree, verified recovery copy, no shared stash, recorded conflict intent) to `docs/development.md` and reference it from `specs/001-office-agent-framework/quickstart.md`
+- [x] T059 Add the selective upstream-follow policy (decision table, high-conflict paths, cherry-pick/recovery rules, sync log) to `docs/development.md#upstream-sync`, cross-reference it from `quickstart.md`, and amend Constitution VIII to v2.0.0.
 - [ ] T060 Assert MIT and Apache-2.0 notices in the packaged artifact (FR-012) in `scripts/verify-license-notices.ts`
 - [ ] T061 Add an offline test proving edit and save work with no document server configured (FR-010) in `packages/document/office-exchange/tests/offline.spec.ts`
 - [ ] T049 Brand/telemetry scan gate asserting zero DeepSeek-referencing shipped surfaces (FR-009, SC-006).
