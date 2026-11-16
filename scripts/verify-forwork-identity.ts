@@ -14,7 +14,8 @@ interface IdentityRule {
   allow?: readonly string[]
 }
 
-/** Known third-party scope that keeps the upstream DeepSeek package name. */
+/** Known third-party scope that keeps the upstream DeepSeek package name; see
+ * ../.agents/notes/implemented/process/2026-11-17-forwork-identity-exceptions.md for the exception. */
 const ALLOWED_DEEPSEEK_PACKAGES = ['@deepseek-ai/libreoffice-kit'] as const
 
 const RULES: readonly IdentityRule[] = [
