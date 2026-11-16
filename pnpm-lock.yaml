@@ -764,6 +764,9 @@ importers:
       '@forwork/client-ui-theme':
         specifier: workspace:*
         version: link:../../packages/client/ui-theme
+      '@forwork/credentials':
+        specifier: workspace:*
+        version: link:../../packages/credentials/credentials
       '@forwork/deepseek-account':
         specifier: workspace:*
         version: link:../../packages/credentials/deepseek-account
