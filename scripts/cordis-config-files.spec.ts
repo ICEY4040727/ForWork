@@ -33,4 +33,20 @@ describe('cordisConfigFiles', () => {
       join('apps', 'cli', 'config', 'examples', 'headless.cordis.yml'),
     ])
   })
+
+  it('excludes a symlink written as its target path by a no-symlink checkout', () => {
+    const root = mkdtempSync(join(tmpdir(), 'dsh-cordis-config-links-'))
+    roots.push(root)
+    for (const directory of ['snapshots/scenario', 'tests/profile']) {
+      mkdirSync(join(root, directory), { recursive: true })
+    }
+    writeFileSync(join(root, 'snapshots/scenario/cordis.yml'), '- id: agent\n')
+    writeFileSync(join(root, 'tests/profile/cordis.yml'), '../../snapshots/scenario/cordis.yml')
+    writeFileSync(join(root, 'tests/profile/unresolved.cordis.yml'), '../../snapshots/missing/cordis.yml')
+
+    expect(cordisConfigFiles(root)).toEqual([
+      join('snapshots', 'scenario', 'cordis.yml'),
+      join('tests', 'profile', 'unresolved.cordis.yml'),
+    ])
+  })
 })

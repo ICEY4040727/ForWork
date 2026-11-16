@@ -10,21 +10,27 @@ import { LocalCredentialProvider } from '../src/index.ts'
 // write; gating it makes the dispose-versus-queued-write race fully
 // deterministic. The lock helper passes through so the gated operation still
 // runs inside its real acquire/release cycle.
+const gateControl = vi.hoisted(() => ({
+  /** Replaced by the mock factory when the module first loads. */
+  set: (_next: Promise<void>): void => {
+    throw new Error('atomic-write mock is not initialized')
+  },
+}))
+
 vi.mock('@forwork/atomic-write', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@forwork/atomic-write')>()
   let gate: Promise<void> = Promise.resolve()
+  gateControl.set = (next: Promise<void>) => {
+    gate = next
+  }
   return {
     ...actual,
     writeFileAtomic: vi.fn(() => gate),
-    __setGate: (next: Promise<void>) => {
-      gate = next
-    },
   }
 })
 
-async function setGate(next: Promise<void>): Promise<void> {
-  const mocked = await import('@forwork/atomic-write') as unknown as { __setGate: (next: Promise<void>) => void }
-  mocked.__setGate(next)
+function setGate(next: Promise<void>): void {
+  gateControl.set(next)
 }
 
 const KEY = credentialRef('DSH_CRED_DRAIN_A')

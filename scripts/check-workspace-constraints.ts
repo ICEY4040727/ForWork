@@ -80,8 +80,10 @@ const desktopApplicationDirectory = 'apps/desktop'
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
   '@forwork/cli': ['lib/*.js', 'lib/types/*.d.ts'],
+  // The host entry launches the secure-credentials provider as its own bundle
+  // resolved relative to import.meta.url.
   '@forwork/desktop-host': [
-    'lib/index.js', 'lib/cli.js',
+    'lib/index.js', 'lib/cli.js', 'lib/secure-credentials.js',
   ],
   // Sourcemaps stay out by payload policy; the worker-preview surface
   // (dist/preview.html and dist/preview/) backs opt-in experimental

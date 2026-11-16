@@ -10,11 +10,30 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@forwork/cordis'
-import Loader from '@forwork/cordis-plugin-loader'
+import Loader, { type ModuleLoaderV2 } from '@forwork/cordis-plugin-loader'
 import Include from '@forwork/cordis-plugin-include'
 import LocalSpillStore, { sessionDir } from '@forwork/spill-local'
 
 const DAY_MS = 24 * 60 * 60 * 1000
+
+/**
+ * A Loader-internal stub that serves this test's plugin modules. The real Node
+ * loader's module machinery is unused by the composition under test.
+ * @param load - resolves one plugin specifier.
+ * @returns a v2 loader whose `import` calls {@link load}.
+ */
+function moduleLoaderStub(load: ModuleLoaderV2['import']): ModuleLoaderV2 {
+  const unsupported = (): never => { throw new Error('test Loader stub does not implement Node module machinery') }
+  return {
+    version: 'v2',
+    loadCache: {} as ModuleLoaderV2['loadCache'],
+    import: load,
+    register: unsupported,
+    getOrCreateModuleJob: unsupported,
+    resolveSync: unsupported,
+    load: unsupported,
+  }
+}
 
 let root: string | undefined
 let context: Context | undefined
@@ -54,13 +73,10 @@ describe('spill-local real Loader composition through cordis.yml', () => {
     context.baseUrl = pathToFileURL(root).href + '/'
     await context.plugin(Loader)
     context.loader.builtins.include = Include
-    context.loader.internal = {
-      version: 'v2',
-      async import(specifier: string) {
-        if (specifier !== '@forwork/spill-local') throw new Error(`unexpected Loader import: ${specifier}`)
-        return LocalSpillStore
-      },
-    } as unknown as NonNullable<typeof context.loader.internal>
+    context.loader.internal = moduleLoaderStub(async (specifier: string) => {
+      if (specifier !== '@forwork/spill-local') throw new Error(`unexpected Loader import: ${specifier}`)
+      return LocalSpillStore
+    })
     await context.loader.create({
       name: 'cordis:include',
       config: { path: pathToFileURL(configPath).href },

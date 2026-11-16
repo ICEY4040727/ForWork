@@ -53,15 +53,15 @@ function localizedProps(list: PluginInventorySettingsTabInjected['list']) {
 }
 
 /** A deployment with a roster: one failed global row, two preset-provided rows. */
-const SNAPSHOT = {
+const SNAPSHOT: Snapshot = {
   entries: [
-    { entryId: 'telemetry', moduleName: '@fixture/telemetry', enabled: true, fiberPhase: 'failed' },
-    { entryId: 'timer', moduleName: 'cordis:timer', enabled: true, fiberPhase: 'active' },
-    { entryId: '8a1b2c3d', moduleName: '@forwork/cordis-plugin-hmr', enabled: true, fiberPhase: 'active' },
-    { entryId: 'unobserved', moduleName: '@fixture/unobserved-name', enabled: true, fiberPhase: null },
-    { entryId: 'bash-host', moduleName: '@forwork/tool-bash', enabled: false, fiberPhase: null },
-    { entryId: 'fs-host', moduleName: '@forwork/tool-fs', enabled: false, fiberPhase: null },
-    { entryId: 'dormant', moduleName: '@fixture/dormant', enabled: false, fiberPhase: null },
+    { entryId: 'telemetry' as PluginEntryId, moduleName: '@fixture/telemetry', enabled: true, fiberPhase: 'failed' },
+    { entryId: 'timer' as PluginEntryId, moduleName: 'cordis:timer', enabled: true, fiberPhase: 'active' },
+    { entryId: '8a1b2c3d' as PluginEntryId, moduleName: '@forwork/cordis-plugin-hmr', enabled: true, fiberPhase: 'active' },
+    { entryId: 'unobserved' as PluginEntryId, moduleName: '@fixture/unobserved-name', enabled: true, fiberPhase: null },
+    { entryId: 'bash-host' as PluginEntryId, moduleName: '@forwork/tool-bash', enabled: false, fiberPhase: null },
+    { entryId: 'fs-host' as PluginEntryId, moduleName: '@forwork/tool-fs', enabled: false, fiberPhase: null },
+    { entryId: 'dormant' as PluginEntryId, moduleName: '@fixture/dormant', enabled: false, fiberPhase: null },
   ],
   agentPresets: [
     {
@@ -94,7 +94,7 @@ const SNAPSHOT = {
     },
     { id: 'shattered', name: '坏预设', isDefault: false, broken: 'the composition file is missing', rows: [] },
   ],
-} as unknown as Snapshot
+}
 
 async function renderReady(snapshot: Snapshot = SNAPSHOT): Promise<ReturnType<typeof render>> {
   const view = render(<PluginInventorySettingsTab {...props(async () => snapshot)} />)
@@ -577,10 +577,10 @@ describe('PluginInventorySettingsTab', () => {
   it('renders a rosterless deployment as one global list, folded until opened', async () => {
     const view = await renderReady({
       entries: [
-        { entryId: 'hmr', moduleName: '@forwork/cordis-plugin-hmr', enabled: true, fiberPhase: 'active' },
-        { entryId: 'off', moduleName: '@fixture/off', enabled: false, fiberPhase: null },
+        { entryId: 'hmr' as PluginEntryId, moduleName: '@forwork/cordis-plugin-hmr', enabled: true, fiberPhase: 'active' },
+        { entryId: 'off' as PluginEntryId, moduleName: '@fixture/off', enabled: false, fiberPhase: null },
       ],
-    } as unknown as Snapshot)
+    })
 
     expect(screen.queryByRole('button', { name: en.switcherLabel })).toBeNull()
     expect(globalToggle().getAttribute('aria-expanded')).toBe('false')

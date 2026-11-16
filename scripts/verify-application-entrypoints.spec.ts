@@ -29,6 +29,17 @@ describe('application entrypoints', () => {
     expect(applicationEntrypointViolations(resolve(import.meta.dirname, '..'))).toEqual([])
   })
 
+  it('keeps the CLI bin under its classified launcher name', () => {
+    const root = fixture()
+    write(root, 'apps/cli/package.json', JSON.stringify({ bin: { forwork: 'lib/bin.js' } }))
+    expect(applicationEntrypointViolations(root)).toEqual([])
+
+    write(root, 'apps/cli/package.json', JSON.stringify({ bin: { dsh: 'lib/bin.js' } }))
+    expect(applicationEntrypointViolations(root)).toEqual([
+      'apps/cli/package.json: classified bin must remain {"forwork":"lib/bin.js"}, got {"dsh":"lib/bin.js"}',
+    ])
+  })
+
   it('rejects a package-level application bin', () => {
     const root = fixture()
     write(root, 'packages/example/app/package.json', JSON.stringify({ bin: { app: 'lib/bin.js' } }))

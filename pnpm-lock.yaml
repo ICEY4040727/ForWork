@@ -18351,6 +18351,9 @@ importers:
       '@forwork/api-session-controller':
         specifier: workspace:*
         version: link:../../packages/api/session-controller
+      '@forwork/api-workspace-files':
+        specifier: workspace:*
+        version: link:../../packages/api/workspace-files
       '@forwork/app-boot':
         specifier: workspace:*
         version: link:../../packages/boot/app-boot
@@ -18510,6 +18513,9 @@ importers:
       '@forwork/native-command':
         specifier: workspace:*
         version: link:../../packages/util/native-command
+      '@forwork/office-exchange':
+        specifier: workspace:*
+        version: link:../../packages/document/office-exchange
       '@forwork/otel':
         specifier: workspace:*
         version: link:../../packages/telemetry/otel
@@ -18702,6 +18708,9 @@ importers:
       '@forwork/tool-jobs':
         specifier: workspace:*
         version: link:../../packages/jobs/tool-jobs
+      '@forwork/tool-office':
+        specifier: workspace:*
+        version: link:../../packages/document/tool-office
       '@forwork/tool-present':
         specifier: workspace:*
         version: link:../../packages/deliverables/tool-present

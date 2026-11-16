@@ -549,6 +549,14 @@ it('publishes CLI runtime declarations and rejects a payload that omits them', (
     .toEqual([expect.stringContaining('@forwork/cli: package.json files must be ["lib/*.js","lib/types/*.d.ts"]')])
 })
 
+it('publishes the desktop host secure-credentials bundle beside its entries', () => {
+  const manifest = JSON.parse(readFileSync(new URL('../apps/desktop-host/package.json', import.meta.url), 'utf8')) as WorkspaceManifest['manifest']
+  expect(checkWorkspaceManifest({ dir: 'apps/desktop-host', manifest })).toEqual([])
+  expect(checkWorkspaceManifest({ dir: 'apps/desktop-host', manifest: {
+    ...manifest, files: manifest.files!.filter(file => file !== 'lib/secure-credentials.js'),
+  } })).toEqual([expect.stringContaining('package.json files must be')])
+})
+
 it('requires the shared Web injection entry in the published payload', () => {
   const manifest = JSON.parse(readFileSync(new URL('../packages/client/web/package.json', import.meta.url), 'utf8')) as WorkspaceManifest['manifest']
   expect(checkWorkspaceManifest({ dir: 'packages/client/web', manifest })).toEqual([])
