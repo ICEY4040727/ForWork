@@ -33,7 +33,7 @@ export function realOfficeBytes(extension: 'doc' | 'docx' | 'xls' | 'xlsx' | 'pp
       }
       files[main] = `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${OFFICE_REL_NS}"><sheets><sheet name="Preview" sheetId="1" r:id="rId1"/></sheets></workbook>`
       files['xl/_rels/workbook.xml.rels'] = `<Relationships xmlns="${REL_NS}"><Relationship Id="rId1" Type="${OFFICE_REL_NS}/worksheet" Target="worksheets/sheet1.xml"/></Relationships>`
-      files['xl/worksheets/sheet1.xml'] = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols><col min="1" max="1" width="45" customWidth="1"/></cols><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>${TEXT}</t></is></c></row></sheetData></worksheet>`
+      files['xl/worksheets/sheet1.xml'] = `<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1"/><sheetFormatPr defaultRowHeight="15" baseColWidth="10"/><cols><col min="1" max="1" width="45" customWidth="1"/></cols><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>${TEXT}</t></is></c></row></sheetData></worksheet>`
       break
     case 'pptx':
       main = 'ppt/presentation.xml'
@@ -48,7 +48,9 @@ export function realOfficeBytes(extension: 'doc' | 'docx' | 'xls' | 'xlsx' | 'pp
       files['ppt/slides/slide2.xml'] = files['ppt/slides/slide1.xml']
       break
   }
-  files['_rels/.rels'] = `<Relationships xmlns="${REL_NS}"><Relationship Id="rId1" Type="${OFFICE_REL_NS}/officeDocument" Target="${main}"/></Relationships>`
+  files['docProps/core.xml'] = '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Preview</dc:title></cp:coreProperties>'
+  parts['docProps/core.xml'] = 'application/vnd.openxmlformats-package.core-properties+xml'
+  files['_rels/.rels'] = `<Relationships xmlns="${REL_NS}"><Relationship Id="rId1" Type="${OFFICE_REL_NS}/officeDocument" Target="${main}"/><Relationship Id="rId2" Type="${REL_NS}/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`
   files['[Content_Types].xml'] = `<Types xmlns="${CONTENT_NS}"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>${Object.entries(parts).map(([part, type]) => `<Override PartName="/${part}" ContentType="${type}"/>`).join('')}</Types>`
   return zipSync(Object.fromEntries(Object.entries(files).map(([path, content]) => [path, strToU8(content)])))
 }

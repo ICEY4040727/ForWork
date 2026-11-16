@@ -9,8 +9,7 @@ import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed, vi } from 'vitest'
 import { createLaunchEnvironmentSnapshot } from '@forwork/launch-environment'
 import { realOfficeBytes } from './office-fixture.ts'
-import { excelFixture, excelFreezeFixture, excelHtmlFixture, excelHtmlText, meetingMinutesFixture } from '../../../packages/client/ui-sidebar-documentpreview/tests/excel-fixture.ts'
-import { excelDrawingFixture } from '../../../packages/client/ui-sidebar-documentpreview/tests/excel-drawing-fixture.ts'
+import { excelFixture, excelFreezeFixture, meetingMinutesFixture } from '../../../packages/client/ui-sidebar-documentpreview/tests/excel-fixture.ts'
 import { xlsFixture } from '../../../packages/client/ui-sidebar-documentpreview/tests/xls-fixture.ts'
 import { pdfFixture, selectionPdfFixture } from '../../../packages/client/ui-sidebar-documentpreview/tests/pdf-fixture.ts'
 import { assertFixtureInventory, compareOrRefreshGolden, launchWebScaffold, watchConsole, webSnapshotMode, type WebScaffold } from './scaffold.ts'
@@ -128,6 +127,34 @@ async function openPreviewFile(column: Locator, filesTab: Locator, preview: Loca
   await expect.poll(async () => (await preview.getAttribute('data-textpreview-url'))?.endsWith(`/${name}`)).toBe(true)
 }
 
+/**
+ * Select a workspace file through the Files tab and wait for its visible office tab.
+ *
+ * A legacy source converts and replaces its tab with the converted copy, so the
+ * panel's file name settles on `expectedName` rather than the selected name.
+ * @param column - the right Sidebar column.
+ * @param filesTab - the Files tab chip.
+ * @param name - the file entry to select.
+ * @param expectedName - the panel file name after any legacy conversion.
+ * @returns the visible office panel.
+ */
+async function openOfficeFile(column: Locator, filesTab: Locator, name: string, expectedName = name): Promise<Locator> {
+  await filesTab.click()
+  await column.locator('[data-files-entry="file"]').getByRole('button', { name, exact: true }).click()
+  const panel = column.locator('[data-office-editor-panel]:visible')
+  await expect.poll(() => panel.locator('[data-office-file-name]').innerText(), { timeout: 60_000 }).toBe(expectedName)
+  return panel
+}
+
+/** Wait for a mounted office surface to finish loading, and report any read or mount failure. */
+async function expectOfficeRendered(panel: Locator): Promise<void> {
+  await expect.poll(() => panel.locator('[data-office-loading], [data-office-converting]').count(), { timeout: 60_000 }).toBe(0)
+  expect(await panel.locator('[data-office-error]').count()).toBe(0)
+  expect(await panel.locator('[data-office-mount-failed]').count()).toBe(0)
+  await expect.poll(() => panel.locator('[data-office-mount] > *').count(), { timeout: 60_000 }).toBeGreaterThan(0)
+  expect(await panel.locator('[data-office-surface]').isVisible()).toBe(true)
+}
+
 /** Move into the bottom reveal zone and wait for the shared zoom control. */
 async function revealDocumentZoom(page: Page, preview: Locator): Promise<Locator> {
   const frame = preview.locator('[data-document-zoom-frame]')
@@ -172,7 +199,10 @@ async function expectExcelLayout(excel: Locator): Promise<void> {
 }
 
 it.skipIf(MODE === 'record').each(['en-US', 'zh-CN'])('fills the spreadsheet pane with read-only controls in %s', async (locale) => {
-  const scaffold = await launchWebScaffold({ replayFixture: FIXTURE, paceMs: 5, compareReplaySession: false })
+  // Without the editable office tab, .xlsx falls back to the shared read-only
+  // FortuneSheet renderer this scenario owns.
+  const scaffold = await launchWebScaffold({ replayFixture: FIXTURE, paceMs: 5, compareReplaySession: false,
+    extraOverlayPath: fileURLToPath(new URL('./no-sidebar-office-editor.overlay.yml', import.meta.url)) })
   let browser: Browser | undefined
   try {
     browser = await chromium.launch()
@@ -429,7 +459,10 @@ async function freezeDividerInk(excel: Locator, axis: 'x' | 'y'): Promise<number
 }
 
 it.skipIf(MODE === 'record').each([1, 2])('keeps frozen headings without dividers at DPR %i', async (deviceScaleFactor) => {
-  const scaffold = await launchWebScaffold({ replayFixture: FIXTURE, paceMs: 5, compareReplaySession: false })
+  // Without the editable office tab, .xlsx falls back to the shared read-only
+  // FortuneSheet renderer whose freeze-pane divider behavior this scenario owns.
+  const scaffold = await launchWebScaffold({ replayFixture: FIXTURE, paceMs: 5, compareReplaySession: false,
+    extraOverlayPath: fileURLToPath(new URL('./no-sidebar-office-editor.overlay.yml', import.meta.url)) })
   let browser: Browser | undefined
   try {
     browser = await chromium.launch()
@@ -691,14 +724,12 @@ else process.exit(1);
       writeFile(join(cwd, 'user-unit.pdf'), pdfFixture(2)),
       ...[90, 180, 270].map(rotation => writeFile(join(cwd, `rotated-${rotation}.pdf`), pdfFixture(4, rotation))),
       writeFile(join(cwd, 'selection.pdf'), selectionPdfFixture()),
-      writeFile(join(cwd, 'budget.xlsx'), await excelFixture()),
-      writeFile(join(cwd, 'chart-budget.xlsx'), await excelDrawingFixture()),
-      writeFile(join(cwd, 'meeting.xlsx'), await meetingMinutesFixture()),
-      writeFile(join(cwd, 'literal-html.xlsx'), await excelHtmlFixture()),
-      writeFile(join(cwd, 'budget.xls'), xlsFixture()),
+      writeFile(join(cwd, 'editor.docx'), realOfficeBytes('docx')),
+      writeFile(join(cwd, 'editor.xlsx'), realOfficeBytes('xlsx')),
+      ...(['doc', 'xls', 'ppt'] as const).map(extension => writeFile(join(cwd, `legacy.${extension}`), realOfficeBytes(extension))),
+      writeFile(join(cwd, 'presentation.pptx'), realOfficeBytes('pptx')),
       writeFile(join(cwd, 'table.csv'), '00123,"中文,字段","=SUM(1,2)"\n2024-03-01,,TRUE'),
       writeFile(join(cwd, 'table.tsv'), '00123\t"中文\t字段"\t=SUM(1,2)\n2024-03-01\t\tTRUE'),
-      ...['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].map(extension => writeFile(join(cwd, `unavailable.${extension}`), Buffer.from('PK\u0003\u0004OFFICE_BINARY_PREVIEW'))),
       writeFile(join(cwd, 'clip.mp4'), Buffer.from([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70])),
     ])
 
@@ -1310,122 +1341,63 @@ else process.exit(1);
       `- Tail: ${completed.at(-1)}`,
     ].join('\n'))
 
-    const officeMenus: number[] = []
     const configurationGuide = 'Read failed: Office previews are unavailable. Enable the document preview service on the computer running ForWork.'
-    for (const extension of ['doc', 'docx', 'ppt', 'pptx']) {
-      await openFile(`unavailable.${extension}`)
-      expect(await preview.locator('[data-document-viewer-menu]').count()).toBe(0)
-      await preview.getByText(configurationGuide, { exact: true }).waitFor({ timeout: 15_000 })
-      expect(await preview.locator('[data-textpreview-line]').count()).toBe(0)
-      expect(await preview.getByText('OFFICE_BINARY_PREVIEW', { exact: false }).count()).toBe(0)
-      officeMenus.push(await viewer.count())
-    }
+    await openFile('presentation.pptx')
+    expect(await preview.locator('[data-document-viewer-menu]').count()).toBe(0)
+    await preview.getByText(configurationGuide, { exact: true }).waitFor({ timeout: 15_000 })
+    expect(await preview.locator('[data-textpreview-line]').count()).toBe(0)
+    // FR-011: a presentation stays in the read-only preview and opens no office edit surface.
+    expect(await column.locator('[data-office-editor-panel]:visible').count()).toBe(0)
+    expect(await column.locator('[data-office-surface]:visible').count()).toBe(0)
+    expect(await column.locator('[data-office-save]:visible').count()).toBe(0)
     await successShot(page, 'office-unavailable')
     sections.push([
       '## Office unavailable', '',
-      `- DOC, DOCX, PPT, PPTX viewer menus: ${officeMenus.join(' | ')}`,
+      `- PPTX viewer menu: ${await viewer.count()}`,
       `- Guidance: ${configurationGuide}`,
       '- Binary text shown: false',
       '- Plain-text option and viewer picker: hidden',
+      '- Read-only preview only: no office tab or edit surface',
     ].join('\n'))
 
-    await openFile('budget.xlsx')
-    const excel = preview.locator('[data-excel-preview]')
-    const sheetTabs = excel.locator('.luckysheet-sheets-item-name')
-    await sheetTabs.getByText('季度预算', { exact: true }).waitFor({ state: 'visible' })
-    expect(await sheetTabs.getByText('隐藏页', { exact: true }).isVisible()).toBe(false)
-    await successShot(page, 'excel-budget')
-    expect(await preview.locator('[data-pdf-preview]').count()).toBe(0)
-    expect(await excel.locator('.fortune-toolbar').count()).toBe(0)
-    const sheetOverlay = excel.locator('.fortune-sheet-overlay')
-    const formulaInput = excel.locator('.fortune-fx-input')
-    await sheetOverlay.click({ position: { x: 500, y: 110 } })
-    await expect.poll(() => formulaInput.innerText()).toBe('=C3/B3')
-    await page.keyboard.press('ControlOrMeta+C')
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('80.0%\n')
-    await sheetTabs.getByText('公式与格式', { exact: true }).click()
-    await expect.poll(() => excel.locator('.fortune-name-box').innerText()).toBe('A1')
-    await sheetOverlay.click({ position: { x: 140, y: 30 } })
-    await expect.poll(() => formulaInput.innerText()).toBe('46281')
-    await page.keyboard.press('ControlOrMeta+C')
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('2026-09-16\n')
-    await sheetOverlay.click({ position: { x: 70, y: 30 } })
-    await expect.poll(() => formulaInput.innerText()).toBe('=_xlfn.XLOOKUP(1,{1},{42})')
-    expect(await formulaInput.getAttribute('contenteditable')).toBe('false')
-    await page.keyboard.press('ControlOrMeta+C')
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('42\n')
-    await page.keyboard.type('999')
-    await page.keyboard.press('ControlOrMeta+C')
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('42\n')
-    await successShot(page, 'excel-cached-formula')
-    await openFile('chart-budget.xlsx')
-    await sheetTabs.getByText('季度预算', { exact: true }).waitFor({ state: 'visible' })
-    const unsupportedNotice = excel.locator('[data-excel-unsupported-notice]')
-    const chartNotice = await unsupportedNotice.innerText()
-    expect(chartNotice).toBe('This preview does not support charts, conditional formatting in this workbook. Open it in a system application for the full experience.')
-    await sheetOverlay.click({ position: { x: 500, y: 110 } })
-    await expect.poll(() => formulaInput.innerText()).toBe('=C3/B3')
-    await page.keyboard.press('ControlOrMeta+C')
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('80.0%\n')
-    await successShot(page, 'excel-chart-notice')
-    await openFile('meeting.xlsx')
-    await sheetTabs.getByText('会议信息', { exact: true }).waitFor({ state: 'visible' })
-    expect(await unsupportedNotice.count()).toBe(0)
-    expect(await excel.getByText('Read-only preview', { exact: false }).count()).toBe(0)
-    expect(await excel.getByText('Some formulas have no saved result', { exact: false }).count()).toBe(0)
-    const formulaWarning = excel.locator('[data-excel-formula-warning]')
-    await formulaWarning.hover()
-    await page.getByText('This workbook contains formulas. Displayed results may be missing or inaccurate.', { exact: true }).waitFor()
-    await sheetTabs.getByText('统计看板', { exact: true }).click()
-    await expect.poll(() => excel.locator('.fortune-name-box').innerText()).toBe('A1')
-    await successShot(page, 'excel-meeting')
-    await openFile('budget.xls')
-    await sheetTabs.getByText('预算', { exact: true }).waitFor({ state: 'visible' })
-    await expect.poll(() => excel.locator('.fortune-name-box').innerText()).toBe('A1')
-    await excel.locator('.fortune-sheet-overlay').click({ position: { x: 70, y: 30 } })
-    await expect.poll(() => excel.locator('.fortune-fx-input').innerText()).toBe('旧版预算')
-    await page.keyboard.press('ControlOrMeta+C')
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toContain('旧版预算')
-    await sheetTabs.getByText('明细', { exact: true }).click()
-    await expect.poll(() => excel.locator('.fortune-name-box').innerText()).toBe('A1')
-    await successShot(page, 'excel-legacy')
-    await openFile('literal-html.xlsx')
-    for (const [sheet, formula, copied] of [
-      ['Formula', `="${excelHtmlText}"`, 'saved result'],
-      ['Text', excelHtmlText, excelHtmlText],
-      ['Cached text', '="cached"', excelHtmlText],
-    ] as const) {
-      await sheetTabs.getByText(sheet, { exact: true }).click()
-      await expect.poll(() => formulaInput.textContent()).toBe(formula)
-      expect(await formulaInput.locator('img').count()).toBe(0)
-      await excel.locator('.fortune-sheet-overlay').click({ position: { x: 70, y: 30 } })
-      await page.keyboard.press('ControlOrMeta+C')
-      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(`${copied}\n`)
-      const clipboardTable = excel.locator('#fortune-copy-content table')
-      expect(await clipboardTable.locator('td').textContent()).toBe(copied)
-      expect(await clipboardTable.locator('img').count()).toBe(0)
-      expect(await page.evaluate(() => document.documentElement.dataset.spreadsheetHtml)).toBeUndefined()
+    const officeTabs: string[] = []
+    const docx = await openOfficeFile(column, filesTab, 'editor.docx')
+    await expectOfficeRendered(docx)
+    await expect.poll(() => docx.locator('[data-office-mount] canvas').count(), { timeout: 60_000 }).toBeGreaterThan(0)
+    expect(await docx.locator('[data-office-legacy-notice]').count()).toBe(0)
+    expect(await docx.locator('[data-office-save]').isEnabled()).toBe(true)
+    officeTabs.push('DOCX')
+    const xlsx = await openOfficeFile(column, filesTab, 'editor.xlsx')
+    await expectOfficeRendered(xlsx)
+    await expect.poll(() => xlsx.locator('[data-office-mount] canvas').count(), { timeout: 60_000 }).toBeGreaterThan(0)
+    expect(await xlsx.locator('[data-office-save]').isEnabled()).toBe(true)
+    officeTabs.push('XLSX')
+    for (const [source, converted] of [['legacy.doc', 'legacy.docx'], ['legacy.xls', 'legacy.xlsx']] as const) {
+      const legacy = await openOfficeFile(column, filesTab, source, converted)
+      await expectOfficeRendered(legacy)
+      await expect.poll(() => legacy.locator('[data-office-legacy-notice]').isVisible(), { timeout: 60_000 }).toBe(true)
+      expect(await legacy.locator('[data-office-legacy-notice]').innerText()).toContain(source)
+      officeTabs.push(source.toUpperCase())
     }
-    const invalidExcel = 'This spreadsheet could not be opened. Check its format, contents, or password protection.'
-    for (const extension of ['xls', 'xlsx']) {
-      await openFile(`unavailable.${extension}`)
-      await preview.getByText(invalidExcel, { exact: true }).waitFor()
-    }
+    // A converted .ppt copy is a .pptx, so it lands in the read-only preview
+    // instead of the office tab; the source file itself never becomes editable.
+    await filesTab.click()
+    await column.locator('[data-files-entry="file"]').getByRole('button', { name: 'legacy.ppt', exact: true }).click()
+    await expect.poll(async () => (await preview.getAttribute('data-textpreview-url'))?.endsWith('/legacy.pptx'), { timeout: 60_000 }).toBe(true)
+    await preview.getByText(configurationGuide, { exact: true }).waitFor({ timeout: 15_000 })
+    expect(await column.locator('[data-office-editor-panel]:visible').count()).toBe(0)
+    expect(await column.locator('[data-office-surface]:visible').count()).toBe(0)
+    officeTabs.push('PPT -> PPTX')
     sections.push([
-      '## Browser Excel preview', '',
-      '- Opens without the Office conversion service',
-      '- Sheets: 季度预算 | 公式与格式; hidden worksheet omitted',
-      '- Formula workbooks use a compact warning beside fx; notice rows absent',
-      `- Unsupported XLSX content: ${chartNotice}`,
-      '- Drawing parts omitted; styled cells and cached formulas retained; notice cleared on file replacement',
-      '- Formatted percent copied: 80.0%; date copied: 2026-09-16',
-      '- Cached XLOOKUP result copied: 42; typing leaves it unchanged',
-      '- Formula bar is read-only; PDF body and editing toolbar absent',
-      '- HTML-looking formulas, text, and cached results stay literal; copying retains text and table cells without executing HTML',
-      '- XLS: merged title copied; worksheet selection retained',
-      `- Invalid XLS/XLSX: ${invalidExcel}`,
+      '## Office tabs', '',
+      `- Editable office tabs: ${officeTabs.join(' | ')}`,
+      '- DOCX: document text rendered; no legacy notice; save available',
+      '- XLSX: workbook canvas mounted; save available',
+      '- Legacy DOC and XLS: converted copy opens in the office tab with a legacy-source notice',
+      '- Legacy PPT: converted copy is a .pptx and opens the read-only preview with no office edit surface',
     ].join('\n'))
 
+    const excel = preview.locator('[data-excel-preview]')
     for (const extension of ['csv', 'tsv']) {
       await openFile(`table.${extension}`)
       await expect.poll(() => viewer.innerText()).toBe('Spreadsheet')
@@ -1630,7 +1602,7 @@ describe.skipIf(MODE === 'record')('web e2e: Host Office preview', () => {
     try { await browser?.close() } finally { await scaffold?.close() }
   })
 
-  it('rejects renamed text and renders Chinese Office documents through the PDF worker', async () => {
+  it('rejects renamed presentations and renders Chinese PowerPoint through the PDF worker', async () => {
     scaffold = await launchWebScaffold({ replayFixture: FIXTURE, paceMs: 5, compareReplaySession: false,
       extraOverlayPath: [
         fileURLToPath(new URL('../../../packages/client/ui-sidebar-documentpreview/tests/fixtures/office-cache.patch.yml', import.meta.url)),
@@ -1654,11 +1626,8 @@ describe.skipIf(MODE === 'record')('web e2e: Host Office preview', () => {
     const cwd = scaffold.ctx.agents.get(sessionId)?.session.header.cwd
     if (cwd === undefined) throw new Error('settled Session has no workspace cwd')
     await Promise.all([
-      writeFile(join(cwd, 'renamed.docx'), 'This is plain text renamed to docx.'),
-      writeFile(join(cwd, 'chinese.docx'), realOfficeBytes('docx', 'DSH Missing Preview Font')),
-      writeFile(join(cwd, 'chinese.pptx'), realOfficeBytes('pptx')),
-      ...(['doc', 'ppt'] as const).map(extension => writeFile(join(cwd, `chinese.${extension}`), realOfficeBytes(extension))),
-      ...['doc', 'ppt'].map(extension => writeFile(join(cwd, `renamed.${extension}`), 'Plain text is not a binary Office document.')),
+      writeFile(join(cwd, 'renamed.pptx'), 'This is plain text renamed to pptx.'),
+      writeFile(join(cwd, 'chinese.pptx'), realOfficeBytes('pptx', 'DSH Missing Preview Font')),
     ])
     const releaseConversion = Promise.withResolvers<undefined>()
     const convertOffice = scaffold.ctx.officeToPdf.convert.bind(scaffold.ctx.officeToPdf)
@@ -1674,7 +1643,7 @@ describe.skipIf(MODE === 'record')('web e2e: Host Office preview', () => {
       await column.locator('[data-files-reload]').click()
       const filesTab = column.locator('[data-dockkit-tab]').filter({ has: page.getByText('Files', { exact: true }) })
       const preview = column.locator('[data-textpreview-url]')
-      await column.locator('[data-files-entry="file"]').getByRole('button', { name: 'chinese.docx', exact: true }).click()
+      await column.locator('[data-files-entry="file"]').getByRole('button', { name: 'chinese.pptx', exact: true }).click()
       for (const colorScheme of ['dark', 'light'] as const) {
         await page.emulateMedia({ colorScheme })
         await expect.poll(() => page.locator('body').getAttribute('data-ds-dark-theme')).toBe(colorScheme === 'dark' ? '' : null)
@@ -1826,7 +1795,7 @@ describe.skipIf(MODE === 'record')('web e2e: Host Office preview', () => {
         '- Document preparation: centered 28px spinner with visible rendering status in both themes',
         '- Text selection: translucent blue with transparent overlay text in both themes; Chinese text copies unchanged',
         '- Document backdrop: cool light grey in light mode; matte black in dark mode',
-        '- Word and PowerPoint paper layout: 12px page gaps and outer backdrop insets',
+        '- PowerPoint paper layout: 12px page gaps and outer backdrop insets',
         '- Warning precedes reload in the same toolbar: true',
         '- Warning and reload share button geometry and icon size: true',
         '- Details open only on request: true',
@@ -1839,49 +1808,18 @@ describe.skipIf(MODE === 'record')('web e2e: Host Office preview', () => {
         '- Pinch updates the displayed percentage during the gesture: 166%',
         `- Document top inset: ${topInset}px`,
       ].join('\n'), MODE)
-      await successShot(page, 'office-docx')
-      for (const extension of ['doc', 'ppt', 'pptx']) {
-        await openPreviewFile(column, filesTab, preview, `chinese.${extension}`)
-        await preview.getByRole('img', { name: 'PDF page 1', exact: true }).waitFor({ state: 'visible', timeout: 60_000 })
-        await expect.poll(async () => (await preview.locator('[data-pdf-text]').allTextContents()).join(''), { timeout: 30_000 }).toContain('中文文档')
-        if (extension === 'pptx') await expectPdfPageSpacing(preview)
-        const officeZoom = await revealDocumentZoom(page, preview)
-        await officeZoom.click()
-        await page.getByRole('menuitem', { name: '150%', exact: true }).click()
-        await expectPdfResolution(canvas)
-        if (extension === 'pptx') await copyPdfText(page, preview, '中文文档')
-        if (['doc', 'ppt'].includes(extension)) expect(await warning.count()).toBe(0)
-        if (extension === 'pptx') {
-          await preview.locator('[data-document-zoom-scrollport]').evaluate((node) => {
-            const second = node.querySelector('[data-pdf-page="2"]')!.getBoundingClientRect()
-            node.scrollTop += second.top - node.getBoundingClientRect().top - node.clientHeight / 2
-          })
-          for (const colorScheme of ['dark', 'light'] as const) {
-            await page.emulateMedia({ colorScheme })
-            await expect.poll(() => page.locator('body').getAttribute('data-ds-dark-theme')).toBe(colorScheme === 'dark' ? '' : null)
-            await expectPdfPageSpacing(preview)
-            await successShot(page, `office-pptx-spacing-${colorScheme}`)
-          }
-        }
-        await successShot(page, `office-${extension}`)
-      }
-      expect(convert).toHaveBeenCalledTimes(4)
-      await openPreviewFile(column, filesTab, preview, 'chinese.docx')
-      await preview.getByRole('img', { name: 'PDF page 1', exact: true }).waitFor({ state: 'visible' })
-      await preview.getByRole('button', { name: 'Read the file again', exact: true }).click()
-      await expect.poll(() => convert.mock.calls.length).toBe(5)
-      await preview.getByRole('img', { name: 'PDF page 1', exact: true }).waitFor({ state: 'visible' })
-      await openPreviewFile(column, filesTab, preview, 'renamed.docx')
+      await successShot(page, 'office-pptx')
+      // FR-011: the presentation stays in the read-only preview, with no office tab or edit surface.
+      expect(await column.locator('[data-office-editor-panel]').count()).toBe(0)
+      expect(await column.locator('[data-office-surface]').count()).toBe(0)
+      expect(await column.locator('[data-office-save]').count()).toBe(0)
+      expect(convert).toHaveBeenCalledTimes(1)
+      await openPreviewFile(column, filesTab, preview, 'renamed.pptx')
       await preview.getByText('Read failed: This Office file cannot be previewed. It may be damaged, password protected, or have the wrong extension.', { exact: true }).waitFor({ timeout: 30_000 })
       expect(await preview.locator('[data-textpreview-line]').count()).toBe(0)
+      expect(await column.locator('[data-office-editor-panel]').count()).toBe(0)
       await successShot(page, 'office-invalid')
-      expect(convert).toHaveBeenCalledTimes(6)
-      for (const extension of ['doc', 'ppt']) {
-        await openPreviewFile(column, filesTab, preview, `renamed.${extension}`)
-        await preview.getByText('Read failed: This Office file cannot be previewed. It may be damaged, password protected, or have the wrong extension.', { exact: true }).waitFor({ timeout: 30_000 })
-        expect(await preview.locator('[data-textpreview-line]').count()).toBe(0)
-      }
-      expect(convert).toHaveBeenCalledTimes(8)
+      expect(convert).toHaveBeenCalledTimes(2)
       expect(tripwire.pageErrors).toEqual([])
     } finally {
       releaseConversion.resolve(undefined)

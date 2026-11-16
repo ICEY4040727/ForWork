@@ -38,6 +38,7 @@ A user opens a local `.xlsx` or `.docx` file from the product's sidebar. A full 
 1. **Given** a `.xlsx` with formulas and styles, **When** the user changes one cell and saves, **Then** only that cell changes and all formulas/styles remain.
 2. **Given** a `.docx` with headings, tables, and images, **When** the user edits one paragraph and saves, **Then** all other paragraphs, tables, and images are preserved.
 3. **Given** an unsupported operation (for example editing a macro), **When** the user attempts it, **Then** the product refuses and explains the limitation instead of saving a lossy file.
+4. **Given** a `.pptx` and an editable Office file, **When** the user opens each from the sidebar, **Then** the `.pptx` renders read-only in the document preview with no editable office tab or edit surface, while `.docx`, `.xlsx`, `.doc`, `.xls`, and `.ppt` open an editable office tab.
 
 ### User Story 2 - Agent operates the same document (Priority: P1)
 

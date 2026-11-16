@@ -82,24 +82,19 @@
 
 ## Office unavailable
 
-- DOC, DOCX, PPT, PPTX viewer menus: 0 | 0 | 0 | 0
+- PPTX viewer menu: 0
 - Guidance: Read failed: Office previews are unavailable. Enable the document preview service on the computer running ForWork.
 - Binary text shown: false
 - Plain-text option and viewer picker: hidden
+- Read-only preview only: no office tab or edit surface
 
-## Browser Excel preview
+## Office tabs
 
-- Opens without the Office conversion service
-- Sheets: 季度预算 | 公式与格式; hidden worksheet omitted
-- Formula workbooks use a compact warning beside fx; notice rows absent
-- Unsupported XLSX content: This preview does not support charts, conditional formatting in this workbook. Open it in a system application for the full experience.
-- Drawing parts omitted; styled cells and cached formulas retained; notice cleared on file replacement
-- Formatted percent copied: 80.0%; date copied: 2026-09-16
-- Cached XLOOKUP result copied: 42; typing leaves it unchanged
-- Formula bar is read-only; PDF body and editing toolbar absent
-- HTML-looking formulas, text, and cached results stay literal; copying retains text and table cells without executing HTML
-- XLS: merged title copied; worksheet selection retained
-- Invalid XLS/XLSX: This spreadsheet could not be opened. Check its format, contents, or password protection.
+- Editable office tabs: DOCX | XLSX | LEGACY.DOC | LEGACY.XLS | PPT -> PPTX
+- DOCX: document text rendered; no legacy notice; save available
+- XLSX: workbook canvas mounted; save available
+- Legacy DOC and XLS: converted copy opens in the office tab with a legacy-source notice
+- Legacy PPT: converted copy is a .pptx and opens the read-only preview with no office edit surface
 
 ## Delimited spreadsheets
 

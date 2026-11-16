@@ -1,0 +1,3 @@
+# Exercise the shared read-only spreadsheet renderer without the editable office tab.
+- id: ui-office-editor
+  disabled: true
