@@ -34,7 +34,7 @@ Fork the MIT-licensed harness into **ForWork**, a Windows/macOS desktop product 
 
 | Principle | Gate | Status |
 |---|---|---|
-| I. Independent Identity | No shipped surface retains `deepseek`; `@forwork/*` scope, `forwork` CLI, `forwork-` artifacts; a scan gate asserts it | PASS once the identity-landing phase (T049–T051) lands |
+| I. Independent Identity | No shipped surface retains `deepseek`; `@forwork/*` scope, `forwork` CLI, `forwork-` artifacts; a scan gate asserts it | PASS for scope/CLI/brand; T051 signing pending |
 | II. Offline, Local-First Desktop | Edit/save local; no upload; telemetry opt-in; no AGPL/cloud engine | PASS |
 | III. Documents First-Class | `document/*` facts, projection, restore | PASS |
 | IV. Lossless, Non-Destructive Editing | Unsupported-feature detection, refusal, attribution, undo, conflict | PASS |

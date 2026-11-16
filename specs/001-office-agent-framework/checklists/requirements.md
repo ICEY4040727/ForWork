@@ -34,4 +34,4 @@
 - Items marked incomplete require spec updates before `/speckit.clarify` or `/speckit.plan`
 - FR-009 (independent identity) is delivered by the final rename phase, tracked separately from the additive capability phases; it is in scope but deliberately sequenced last.
 - 2026-11-13 amendment: FR-013..FR-019, five new edge cases, SC-008..SC-012, and four new assumptions were added to cover the amended constitution (local-first privacy, change attribution and undo, stable document identity, unsaved-work safety, write authority, credential safety, fork stewardship). No [NEEDS CLARIFICATION] markers were required; each gap has a stated default in Assumptions.
-- The executable plan and task list predate these requirements; re-run `/speckit.plan` and `/speckit.tasks` to fold them into phases and coverage.
+- The executable plan and task list predate these requirements; the amendments were folded into `plan.md`/`tasks.md` during later passes (2026-11-14 through 2026-11-16).

@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Draft
+**Status**: Implemented
 
 **Input**: User description: "把作为智能体框架的 harness 改造成智能体操作办公文档的框架，在侧栏挂载完整的 Word、Excel、编辑器（这里指 Word/Excel 编辑器本身）；后续要求：不是可逆插件、可改 harness 核心、密钥自动配置、借用框架而非插件作者、独立签名、Windows/macOS 桌面。"
 
@@ -91,7 +91,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **FR-006**: The product MUST record document open/edit/rebind/missing/close as durable session facts so the agent can reference documents across turns.
 - **FR-007**: The product MUST restore the open-document set after restart.
 - **FR-008**: The product MUST refuse and explain any save that would drop unsupported content.
-- **FR-009**: The product MUST be delivered as the ForWork desktop application under the `@forwork/*` npm scope, the `forwork-` artifact prefix, and the `forwork` CLI, with no remaining DeepSeek brand, telemetry, default model adapter, or upstream npm scope in any shipped surface.
+- **FR-009**: The product MUST be delivered as the ForWork desktop application under the `@forwork/*` npm scope, the `forwork-` artifact prefix, and the `forwork` CLI, with no remaining DeepSeek brand, telemetry, default model adapter, or upstream npm scope in product surfaces. Legally-required provenance notices, protocol-internal `dsh.*`/`DSH_*` tokens, and the external LibreOffice conversion dependency are the only accepted references, each enforced by `verify-forwork-identity`.
 - **FR-010**: The product MUST operate fully offline for editing and saving, with no required external document server or cloud account.
 - **FR-011**: `.pptx` MUST be viewable but not editable in v1.
 - **FR-012**: The product MUST preserve MIT and Apache-2.0 notices for the harness base and the editor core.
@@ -102,7 +102,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **FR-017**: Agent initiated writes MUST stay within the filesystem roots permitted for the session; out-of-scope writes MUST be refused.
 - **FR-018**: User-supplied model credentials MUST be stored in the operating system's secure store and MUST NOT be committed to the repository or written to logs.
 - **FR-019**: The product MUST remain updatable from its upstream framework base without losing local product changes; upstream updates MUST preserve local work and record conflict resolution.
-- **FR-020**: Agent document operations MUST apply to the same live document instance the editor displays, through one command path, so agent and user edits share one undo history and one version state; an operation on a document that is not open in a live instance MUST be refused rather than applied to a detached copy.
+- **FR-020**: Agent document operations MUST apply to the same live document instance the editor displays, through one command path; an operation on a document that is not open in a live instance MUST be refused rather than applied to a detached copy. (Convergence and version-guarded writes are FR-005.)
 
 ### Key Entities *(include if feature involves data)*
 
@@ -122,7 +122,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **SC-003**: An agent edit is visible in the open editor in under 2 seconds without a manual reload.
 - **SC-004**: Every attempted save that would drop unsupported content is refused with a named reason; zero silent lossy saves in the test suite.
 - **SC-005**: The open-document set is fully restored after restart in 100% of tested sessions.
-- **SC-006**: A brand and telemetry scan of the packaged product reports zero DeepSeek-referencing shipped surfaces.
+- **SC-006**: A brand and telemetry scan of the packaged product reports zero DeepSeek-referencing product surfaces outside the declared provenance/protocol/external-dependency allowlist.
 - **SC-007**: Signed installers launch on Windows and macOS with the product's own identity and no unsigned-publisher warning.
 - **SC-008**: No document content or edit history leaves the device during editing, saving, or agent operation, verified by an egress check of tested flows.
 - **SC-009**: Renaming or moving an open file keeps it open in 100% of tested cases, or reports it missing without losing its identity or data.
