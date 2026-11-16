@@ -392,6 +392,7 @@ function ciSharedStaticGates(): Gate[] {
     pnpmScript('constraints', 'constraints'),
     pnpmScript('package-dependencies', 'verify-package-dependencies', { label: 'package dependencies' }),
     pnpmScript('forwork-package-licenses', 'verify-forwork-package-licenses', { label: 'ForWork package licenses' }),
+    pnpmScript('license-notices', 'verify-license-notices', { label: 'license notices' }),
     pnpmScript('package-meta', 'verify-package-meta', { label: 'package metadata' }),
     pnpmScript('cordis-config', 'verify-cordis-config', { label: 'Cordis config' }),
     ...sharedHygieneGates(),
@@ -809,6 +810,7 @@ function hygieneLeafGates(options: { artifactNeeds?: string[] } = {}): Gate[] {
     pnpmScript('package-dependencies', 'verify-package-dependencies', { label: 'package dependencies' }),
     pnpmScript('application-entrypoints', 'verify-application-entrypoints', { label: 'application entrypoints' }),
     pnpmScript('forwork-package-licenses', 'verify-forwork-package-licenses', { label: 'ForWork package licenses' }),
+    pnpmScript('license-notices', 'verify-license-notices', { label: 'license notices' }),
     pnpmScript('node-next-types', 'verify-node-next-types', {
       label: 'node-next types',
       ...artifactOptions,
