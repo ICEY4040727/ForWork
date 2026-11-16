@@ -154,16 +154,16 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 
 **Purpose**: Tests for the cross-cutting guarantees, docs, and the final independent-identity release.
 
-- [ ] T042 [P] Add the privacy egress test proving no document bytes leave the device (SC-008) in `packages/test-support/tool-testkit/tests/egress-documents.spec.ts`.
-- [ ] T043 [P] Add the write-authority test proving out-of-root writes are refused (SC-011) in `packages/document/tool-office/tests/authority.spec.ts`.
+- [x] T042 [P] Add the privacy egress test proving no document bytes leave the device (SC-008) in `packages/test-support/tool-testkit/tests/egress-documents.spec.ts`.
+- [x] T043 [P] Add the write-authority test proving out-of-root writes are refused (SC-011) in `packages/document/tool-office/tests/authority.spec.ts`.
 - [ ] T044 [P] Add the unsaved-work recovery test (SC-010) in `packages/session/session-document/tests/document-recovery.spec.ts`.
-- [ ] T045 [P] Document the packages and subsystem: `packages/document/office-exchange/README.md` Model Experience section, `packages/client/ui-office-editor/README.md`, `docs/subsystems/office-editing.md`.
+- [x] T045 [P] Document the packages and subsystem: `packages/document/office-exchange/README.md` Model Experience section, `packages/client/ui-office-editor/README.md`, `docs/subsystems/office-editing.md`.
 - [ ] T046 [P] Add config catalog entries and run `verify-package-dependencies`, `verify-export-jsdoc`, and `verify-client-packages` for the new packages.
 - [ ] T047 Run `corepack pnpm run build:check`, `corepack pnpm run doc-sync`, and `corepack pnpm run test:coverage`; fix regressions.
 - [ ] T048 Run quickstart scenarios S1–S11 and record the results.
 - [x] T059 Add the selective upstream-follow policy (decision table, high-conflict paths, cherry-pick/recovery rules, sync log) to `docs/development.md#upstream-sync`, cross-reference it from `quickstart.md`, and amend Constitution VIII to v2.0.0.
-- [ ] T060 Assert MIT and Apache-2.0 notices in the packaged artifact (FR-012) in `scripts/verify-license-notices.ts`
-- [ ] T061 Add an offline test proving edit and save work with no document server configured (FR-010) in `packages/document/office-exchange/tests/offline.spec.ts`
+- [x] T060 Assert MIT and Apache-2.0 notices in the packaged artifact (FR-012) in `scripts/verify-license-notices.ts`
+- [x] T061 Add an offline test proving edit and save work with no document server configured (FR-010) in `packages/document/office-exchange/tests/offline.spec.ts`
 - [x] T049 Brand/telemetry scan gate asserting zero `deepseek` references in shipped surfaces: add `scripts/verify-forwork-identity.ts` and wire it into `doc-sync`/gates (FR-009, SC-006).
 - [x] T050 Execute the scripted identity-landing phase in Constitution V's step order, each step one revertible commit: (1) rename `@deepseek-ai/dsh-<name>` → `@forwork/<name>` (drop the `dsh-` segment; keep `/client`, `/types`, `/remote`, `/typert` subpaths) across package.json, imports, `tsconfig.base.json` paths, cordis.yml rows, and generated catalogs; (2) rename `dsh` CLI and `dsh-*` artifacts → `forwork` / `forwork-*`, and desktop brand → ForWork; (3) re-scope vendor `@deepseek-ai/*` → `@forwork/*` and update `vendor/README.md` manifests/upstream SHAs; (4) replace DeepSeek telemetry and default-model-adapter defaults; (5) run the T049 scan. Gate each step on green `build`/`typecheck`/package tests. **Landed: scope (9bbee70f), CLI/brand/scan (62737545). Remaining deepseek references are provenance/protocol/external, tracked by T089; signing is T051.**
 - [ ] T051 Configure Windows and macOS signing identities and produce signed installers (SC-007); verify both launch.
