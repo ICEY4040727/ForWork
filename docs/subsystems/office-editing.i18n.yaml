@@ -1,0 +1,37 @@
+# Bilingual-pair consistency record for office-editing.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/subsystems/office-editing.md
+/office-editing:
+  en: 8fe04746f06479eb
+  zh: f9ba7da65f38de5e
+/office-editing/ownership:
+  en: 5894e8ae93cabbbc
+  zh: 13aaacf22fd0db33
+/office-editing/formats-and-the-editable-set:
+  en: 6dd7b64e33334fa5
+  zh: d02252a256190f13
+/office-editing/identity-versions-and-guarded-saves:
+  en: 7c045a86a01e7b72
+  zh: f165ab4d8da7f51a
+/office-editing/data-paths:
+  en: 99bd1a0be4c92b5b
+  zh: 17cf6579fabcef3c
+/office-editing/session-facts-and-the-document-projection:
+  en: fcca18803633fbfa
+  zh: c988e5a25a71205d
+/office-editing/the-sidebar-editor:
+  en: f2811dc55bcfc46b
+  zh: 45756532742b6c12
+/office-editing/the-agent-command-bridge:
+  en: 56090e8e3c0fee6c
+  zh: 04701d62baecb3ea
+/office-editing/drafts-and-recovery:
+  en: 21f0fe1de23f6148
+  zh: 4ebbf5c0b974c950
+/office-editing/legacy-conversion:
+  en: 0e57407f6e33a0ef
+  zh: a817898b58848f55
+/office-editing/composition:
+  en: d35d11b960bd16ad
+  zh: 5f6fed1fde456416

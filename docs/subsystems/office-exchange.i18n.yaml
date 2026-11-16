@@ -3,8 +3,8 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/subsystems/office-exchange.md
 /office-exchange:
-  en: ff25643a5cadfaa7
-  zh: 857e122e9ef3ef8f
+  en: 677097ab918532a7
+  zh: c6e381c7c08c657d
 /office-exchange/ownership:
   en: 4bff4c28cea68d59
   zh: 12d187c6ba2df834

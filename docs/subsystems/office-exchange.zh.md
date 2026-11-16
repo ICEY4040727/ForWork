@@ -2,7 +2,7 @@
 
 [English](office-exchange.md) | 中文
 
-[document 包族](../../packages/document/README.zh.md) 在磁盘字节与 Office 编辑器及智能体文档工具使用的可编辑单元快照之间移动 Office 文件。[office-exchange](../../packages/document/office-exchange) 声明 `ctx.officeExchange` 能力 seam，提供 `LocalOfficeExchange` 提供方，并承载会话级的 `officeDocument` Remote。该包不注册面向模型的工具，也不追加 Session 事件。预留的 [Office 编辑器 Client](../../packages/client/ui-office-editor) 与 [Office 文档工具](../../packages/document/tool-office) 目前不注册标签页、面板、slot 或工具；落地后，编辑器通过 `remote.officeDocument` 读写，面向模型的工具使用 `ctx.officeExchange`。
+[document 包族](../../packages/document/README.zh.md) 在磁盘字节与 Office 编辑器及智能体文档工具使用的可编辑单元快照之间移动 Office 文件。[office-exchange](../../packages/document/office-exchange) 声明 `ctx.officeExchange` 能力 seam，提供 `LocalOfficeExchange` 提供方，并承载会话级的 `officeDocument` Remote。该包不注册面向模型的工具，也不追加 Session 事件。[Office 编辑器 Client](../../packages/client/ui-office-editor/README.zh.md) 通过 `remote.officeDocument` 读取和保存，面向模型的 [Office 文档工具](../../packages/document/tool-office/README.zh.md) 使用该 seam 与 Remote；[Office 编辑](office-editing.zh.md) 端到端说明该子系统。
 
 ## 所有权
 

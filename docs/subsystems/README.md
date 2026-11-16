@@ -34,6 +34,7 @@ One page per subsystem of the ForWork: what it is, the data structures it moves,
 | [user-questions.md](user-questions.md) | the UI-backed human question/answer seam: `AskUserQuestionRequest`, answer/options vocabulary, provider API, error taxonomy |
 | [approval.md](approval.md) | the one-shot user-approval seam: `ApprovalRequest`, `ApprovalOutcome`, per-session policy, audit events, and answerer contracts |
 | [office-exchange.md](office-exchange.md) | the Office Exchange capability seam: format classification, unit snapshots, unsupported-feature detection, the `officeDocument` Remote's version-guarded save, and the `base` mount |
+| [office-editing.md](office-editing.md) | the Office editing subsystem end to end: the Exchange seam and `officeDocument` Remote, the agent document tools, `document/*` facts and the projection, the Sidebar editor, guarded saves, drafts, legacy conversion, and the `.pptx` preview-only path |
 | [office-to-pdf.md](office-to-pdf.md) | authorized Office-to-PDF conversion, native/WASM engines, and bounded shared reuse |
 | [attachment.md](attachment.md) | durable image identity and metadata, validation inputs, verified reads, and the `AttachmentStore` seam |
 | [shell.md](shell.md) | the shell executor seam: `ShellExecRequest`/`Spec`, `ShellRunResult`, background `ShellProcess` handles |

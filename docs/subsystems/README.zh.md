@@ -34,6 +34,7 @@
 | [user-questions.md](user-questions.zh.md) | UI 支持的人工问答 seam：`AskUserQuestionRequest`、answer/options 词汇、提供方 API、错误分类体系 |
 | [approval.md](approval.zh.md) | 一次性用户审批 seam：`ApprovalRequest`、`ApprovalOutcome`、逐会话策略、审计事件和 answerer 约定 |
 | [office-exchange.md](office-exchange.zh.md) | Office Exchange 能力 seam：格式分类、单元快照、不支持特性检测、`officeDocument` Remote 的版本守卫保存，以及 `base` 挂载 |
+| [office-editing.md](office-editing.zh.md) | 端到端的 Office 编辑子系统：Exchange seam 与 `officeDocument` Remote、智能体文档工具、`document/*` 事实与投影、Sidebar 编辑器、守卫保存、草稿、旧格式转换，以及 `.pptx` 仅预览路径 |
 | [office-to-pdf.md](office-to-pdf.zh.md) | 已授权的 Office 到 PDF 转换、原生/WASM 引擎与有界共享复用 |
 | [attachment.md](attachment.zh.md) | 持久图片标识与元数据、校验输入、经校验读取，以及 `AttachmentStore` seam |
 | [shell.md](shell.zh.md) | shell 执行器 seam：`ShellExecRequest`/`Spec`、`ShellRunResult`、后台 `ShellProcess` 句柄 |

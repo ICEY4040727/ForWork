@@ -2,7 +2,7 @@
 
 English | [中文](office-exchange.zh.md)
 
-The [document package family](../../packages/document/README.md) moves Office files between disk bytes and the editable unit snapshots consumed by the office editor and agent document tools. [office-exchange](../../packages/document/office-exchange) declares the `ctx.officeExchange` capability seam, supplies the `LocalOfficeExchange` provider, and hosts the session-scoped `officeDocument` Remote. The package registers no model-facing tool and appends no Session event. The reserved [office editor Client](../../packages/client/ui-office-editor) and [office document tools](../../packages/document/tool-office) packages register no tab, panel, slot, or tool yet; when they land, the editor reads and saves through `remote.officeDocument` and the model-facing tools consume `ctx.officeExchange`.
+The [document package family](../../packages/document/README.md) moves Office files between disk bytes and the editable unit snapshots consumed by the office editor and agent document tools. [office-exchange](../../packages/document/office-exchange) declares the `ctx.officeExchange` capability seam, supplies the `LocalOfficeExchange` provider, and hosts the session-scoped `officeDocument` Remote. The package registers no model-facing tool and appends no Session event. The [office editor Client](../../packages/client/ui-office-editor/README.md) reads and saves through `remote.officeDocument`, and the model-facing [office document tools](../../packages/document/tool-office/README.md) consume the seam and the Remote; [Office editing](office-editing.md) describes the subsystem end to end.
 
 ## Ownership
 
