@@ -156,7 +156,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 
 - [x] T042 [P] Add the privacy egress test proving no document bytes leave the device (SC-008) in `packages/test-support/tool-testkit/tests/egress-documents.spec.ts`.
 - [x] T043 [P] Add the write-authority test proving out-of-root writes are refused (SC-011) in `packages/document/tool-office/tests/authority.spec.ts`.
-- [ ] T044 [P] Add the unsaved-work recovery test (SC-010) in `packages/session/session-document/tests/document-recovery.spec.ts`.
+- [x] T044 [P] Add the unsaved-work recovery test (SC-010) in `packages/session/session-document/tests/document-recovery.spec.ts`.
 - [x] T045 [P] Document the packages and subsystem: `packages/document/office-exchange/README.md` Model Experience section, `packages/client/ui-office-editor/README.md`, `docs/subsystems/office-editing.md`.
 - [ ] T046 [P] Add config catalog entries and run `verify-package-dependencies`, `verify-export-jsdoc`, and `verify-client-packages` for the new packages.
 - [ ] T047 Run `corepack pnpm run build:check`, `corepack pnpm run doc-sync`, and `corepack pnpm run test:coverage`; fix regressions.
@@ -170,8 +170,8 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 - [ ] T089 [P] Replace `github.com/deepseek-ai/deepseek-harness` repository URLs with the ForWork fork once it exists; keep legally-required upstream provenance notices.
 - [ ] T090 [P] Migrate the protocol-stable `dsh.*`/`DSH_*` tokens (`dsh.bundle`, `dsh.client`, `dsh.profile`, `$DSH_HOME`, `dsh-app://`) only if a later session-format amendment justifies the risk; otherwise record a documented exception.
 - [ ] T091 [P] Replace the external `@deepseek-ai/libreoffice-kit*` dependency with a ForWork-published or vendored equivalent, or record a documented exception in the identity scan's allowlist.
-- [ ] T063 [P] Construct `SafeStorageSecureStore` in the desktop host with Electron `safeStorage` and `app.getPath('userData')`, and connect it to the model-credential path; surface `secure-storage-unavailable` in `apps/desktop/` and `packages/credentials/credentials/src/`.
-- [ ] T069 [P] Classify the `officeExchange`/`officeDocument` product roles so `gen-doc-graphs --check` regenerates `docs/capability-seams.md`; update the service-role classification and re-run the doc gates.
+- [x] T063 [P] Construct `SafeStorageSecureStore` in the desktop host with Electron `safeStorage` and `app.getPath('userData')`, and connect it to the model-credential path; surface `secure-storage-unavailable` in `apps/desktop/` and `packages/credentials/credentials/src/`.
+- [x] T069 [P] Classify the `officeExchange`/`officeDocument` product roles so `gen-doc-graphs --check` regenerates `docs/capability-seams.md`; update the service-role classification and re-run the doc gates.
 - [x] T076 Classify the four `officeDocument` Remote endpoints (`read`, `save`, `detectUnsupported`, `convertLegacy`) in `packages/experimental/liveshare/src/client/endpoint-classification.ts` so the client aggregate typecheck passes.
 
 ---
