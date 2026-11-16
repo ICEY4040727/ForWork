@@ -110,8 +110,8 @@ describe('PluginInventorySettingsTab', () => {
   it.each(['global', 'preset'])('shortens package and module name fallbacks in the %s inventory', async (scope) => {
     const names = [
       ['@forwork/tool-subagent', 'tool-subagent'],
-      ['@forwork/host-web', 'web'],
-      ['@forwork/client-tabs', 'tabs'],
+      ['@forwork/host-web', 'host-web'],
+      ['@forwork/client-tabs', 'client-tabs'],
       ['@forwork/cordis-plugin-hmr', 'hmr'],
       ['cordis:timer', 'timer'],
       ['@acme/dsh-sidebar/navigation', 'sidebar/navigation'],
