@@ -120,6 +120,6 @@ describe('desktop development project', () => {
       dependencyDir: dependencies,
       release: release(),
       target: 'mac-x64',
-    })).toThrow(/must be @forwork\/dsh@1\.2\.3/u)
+    })).toThrow(/must be @forwork\/cli@1\.2\.3/u)
   })
 })

@@ -1,9 +1,17 @@
 /** Copy a verified runtime into isolated, version-bound qualification resources without signing. */
 import { createHash } from 'node:crypto'
 import { cp, mkdir, readFile, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
+import { releaseFamily } from '../../../scripts/release/families.ts'
+import { DESKTOP_HOST_PACKAGE } from '../src/core-package-set.ts'
 import { runtimePath, verifyDesktopRuntime, writeDesktopRuntime } from '../src/runtime-tree.ts'
 import { readInstalledUpdateRun } from './installed-update-qualification.ts'
+
+/** Release-owned names; vendored packages share the scope but keep their own version line. */
+const RELEASE_FAMILY_NAMES = new Set([
+  ...releaseFamily('dsh').members(resolve(import.meta.dirname, '../../..')).map(member => member.name),
+  DESKTOP_HOST_PACKAGE,
+])
 
 interface PackageMetadata {
   name?: string
@@ -33,7 +41,7 @@ export async function prepareInstalledUpdateRuntime(manifest: string, sourceRoot
     await writeFile(join(receipt, 'source.json'), `${JSON.stringify({ sourceHash, version: run.source.version })}\n`,
       { flag: 'wx', mode: 0o600, flush: true })
     const releaseNames = new Set(source.sharedPackages.filter(entry => entry.version === run.source.version
-      && (entry.name === '@forwork/cli' || entry.name.startsWith('@forwork/'))).map(entry => entry.name))
+      && RELEASE_FAMILY_NAMES.has(entry.name)).map(entry => entry.name))
     for (const version of run.versions) {
       const directory = join(run.root, version)
       await mkdir(directory)

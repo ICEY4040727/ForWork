@@ -44,9 +44,9 @@ describe('desktop package-set selection', () => {
       ['@forwork/unused', packed('@forwork/unused')],
     ])
     expect(selectDesktopPackageClosure(available, { platform: 'win32', arch: 'x64' }).map(entry => entry.manifest.name)).toEqual([
-      '@forwork/cordis',
-      '@forwork/cli',
       '@forwork/base',
+      '@forwork/cli',
+      '@forwork/cordis',
       '@forwork/desktop-host',
       '@forwork/platform-package',
     ])
@@ -154,12 +154,12 @@ it('copies no macOS tarball into the Windows package set', () => {
         writeFileSync(join(folder, file), '')
       }
     }
-    execFileSync('tar', ['-czf', join(inputs, `${stem}.tgz`), '-C', join(folder, '..'), 'package'])
+    execFileSync('tar', ['-czf', join(inputs, `forwork-${stem}.tgz`), '-C', join(folder, '..'), 'package'])
   }
   const output = join(root, 'output')
   prepareDesktopPackageSet([inputs], output, { platform: 'win32', arch: 'x64' })
-  expect(readdirSync(join(output, DESKTOP_PACKAGES_DIR))).not.toContain('dsh-experimental-cua-macos.tgz')
+  expect(readdirSync(join(output, DESKTOP_PACKAGES_DIR))).not.toContain('forwork-experimental-cua-macos.tgz')
   prepareDesktopPackageSet([inputs], output, { platform: 'darwin', arch: 'arm64' })
-  expect(readFileSync(join(output, DESKTOP_PACKAGES_DIR, 'dsh-experimental-cua-macos.tgz')))
-    .toEqual(readFileSync(join(inputs, 'dsh-experimental-cua-macos.tgz')))
+  expect(readFileSync(join(output, DESKTOP_PACKAGES_DIR, 'forwork-experimental-cua-macos.tgz')))
+    .toEqual(readFileSync(join(inputs, 'forwork-experimental-cua-macos.tgz')))
 })

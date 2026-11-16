@@ -1,7 +1,7 @@
 ForWork
 ForWork
 Add an API key to get started
-Configure official DeepSeek models to start using Harness
+Configure a model provider to start using ForWork
 Enter API key [password]
 Save and continue [disabled]
 Set up later
