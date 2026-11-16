@@ -73,6 +73,12 @@ flowchart LR
   pkg_office_to_pdf["office-to-pdf"]
   svc_officeToPdf["ctx.officeToPdf<br/>Office to PDF conversion"]
   pkg_client_ui_sidebar_documentpreview["client-ui-sidebar-documentpreview"]
+  pkg_office_exchange["office-exchange"]
+  svc_officeExchange["ctx.officeExchange<br/>Office file interchange seam"]
+  svc_officeDocument["ctx.officeDocument<br/>Session-scoped document Remote"]
+  pkg_tool_office["tool-office"]
+  pkg_client_ui_office_editor["client-ui-office-editor"]
+  svc_officeCommandBroker["ctx.officeCommandBroker<br/>Correlated document command transport"]
   pkg_attachment["attachment"]
   svc_attachments["ctx.attachments<br/>Durable binary attachment storage"]
   pkg_attachment_local["attachment-local"]
@@ -141,7 +147,7 @@ flowchart LR
   pkg_credentials["credentials"]
   svc_credentials["ctx.credentials<br/>Credential seam"]
   pkg_credentials_local["credentials-local"]
-  pkg_deepseek_account["account"]
+  pkg_account["account"]
   svc_deepseekAccount["ctx.deepseekAccount<br/>DeepSeek account"]
   pkg_deepseek_account_platform["deepseek-account-platform"]
   pkg_api_account_controller["api-account-controller"]
@@ -285,7 +291,7 @@ flowchart LR
   pkg_web["web"]
   svc_web["ctx.web<br/>Web access provider registry"]
   pkg_web_search_deepseek["web-search-deepseek"]
-  pkg_web_deepseek_api["web-api"]
+  pkg_web_api["web-api"]
   pkg_web_fetch_http["web-fetch-http"]
   pkg_spill["spill"]
   svc_spillStore["ctx.spillStore<br/>Spill storage seam"]
@@ -317,6 +323,7 @@ flowchart LR
   svc_cordisInspect["ctx.cordisInspect<br/>Dynamic Cordis inspect registry"]
   pkg_experimental_liveshare["experimental-liveshare"]
   svc_liveshareShares["ctx.liveshareShares<br/>Owner share management Remote"]
+  pkg_account --> svc_deepseekAccount
   pkg_action_cards --> svc_actionCards
   pkg_agent --> svc_agents
   pkg_agent_default_model --> svc_agentDefaultModel
@@ -359,7 +366,6 @@ flowchart LR
   pkg_credentials --> svc_credentials
   pkg_credentials_local --> svc_credentials
   pkg_cua --> svc_cuaAccess
-  pkg_deepseek_account --> svc_deepseekAccount
   pkg_deepseek_account_platform --> svc_deepseekAccount
   pkg_deepseek_llm_api_extensions --> svc_deepseekLlmApiExtensions
   pkg_experimental_api_speech_to_text --> svc_speechController
@@ -407,6 +413,9 @@ flowchart LR
   pkg_mcp_manager --> svc_mcpManager
   pkg_mcp_resources --> svc_mcpResources
   pkg_message_feedback --> svc_messageFeedback
+  pkg_office_exchange --> svc_officeCommandBroker
+  pkg_office_exchange --> svc_officeDocument
+  pkg_office_exchange --> svc_officeExchange
   pkg_office_to_pdf --> svc_officeToPdf
   pkg_otel --> svc_otel
   pkg_permission_presets --> svc_permissionPresets
@@ -473,8 +482,8 @@ flowchart LR
   pkg_user_approval --> svc_approval
   pkg_user_questions --> svc_userQuestions
   pkg_web --> svc_web
+  pkg_web_api --> svc_web
   pkg_web_app --> svc_webApp
-  pkg_web_deepseek_api --> svc_web
   pkg_web_fetch_http --> svc_web
   pkg_web_search_deepseek --> svc_web
   pkg_webhook --> svc_webhookRuntime
@@ -539,6 +548,11 @@ flowchart LR
   svc_llm --> pkg_compaction_basic
   svc_lsp --> pkg_tool_lsp
   svc_mcpResources --> pkg_mcp_resources
+  svc_officeCommandBroker --> pkg_office_exchange
+  svc_officeCommandBroker --> pkg_tool_office
+  svc_officeDocument --> pkg_client_ui_office_editor
+  svc_officeDocument --> pkg_tool_office
+  svc_officeExchange --> pkg_office_exchange
   svc_officeToPdf --> pkg_client_ui_sidebar_documentpreview
   svc_otel --> pkg_host_product_telemetry_otel
   svc_otel --> pkg_session_telemetry_otel
@@ -672,6 +686,9 @@ flowchart LR
 | `ctx.computerUse` | `seam` | [`computer-use`](../packages/computer-use/computer-use) | [`experimental-computer-use-cua-driver-mcp`](../packages/experimental/computer-use-cua-driver-mcp), [`experimental-computer-use-cua-driver-native`](../packages/experimental/computer-use-cua-driver-native) | [`experimental-computer-use-cua-driver-mcp`](../packages/experimental/computer-use-cua-driver-mcp), [`experimental-computer-use-cua-driver-native`](../packages/experimental/computer-use-cua-driver-native) | - | 每个服务实例只注册一个提供方自定的名称。各提供方也拥有自己的模型工具；服务不提供通用操作 API、运行时选择或 Session 流程锁。 |
 | `ctx.cuaAccess` | `core` | [`cua`](../packages/experimental/cua) | - | [`cua`](../packages/experimental/cua) | - | 原生 provider 负责应用授权和取消操作；可选的 Client 权限页面通过 Remote 查询和修改授权。 |
 | `ctx.officeToPdf` | `core` | [`office-to-pdf`](../packages/document/office-to-pdf) | - | [`client-ui-sidebar-documentpreview`](../packages/client/ui-sidebar-documentpreview) | - | 已授权的 Office 字节在宿主上使用已声明的原生目标引擎转换；未声明原生目标时使用 Node WASM。 |
+| `ctx.officeExchange` | `seam` | [`office-exchange`](../packages/document/office-exchange) | [`office-exchange`](../packages/document/office-exchange) | [`office-exchange`](../packages/document/office-exchange) | - | 提供方在 `.docx`、`.xlsx` 文件与单元快照之间双向映射，报告可编辑模型无法保留的特性，并通过已声明的转换引擎转换旧版二进制文件；文档 Remote 与 Agent 工具依赖该 seam，而非某个具体的转换库。 |
+| `ctx.officeDocument` | `service` | [`office-exchange`](../packages/document/office-exchange) | - | [`tool-office`](../packages/document/tool-office), [`client-ui-office-editor`](../packages/client/ui-office-editor) | - | 提供 `remote.officeDocument` 命名空间：限定在工作区内的读取、在并发外部编辑时报告冲突的版本受控保存、恢复草稿，以及 `session-document` 打开文档投影所读取的 `document/open` 与 `document/save` 事实。 |
+| `ctx.officeCommandBroker` | `service` | [`office-exchange`](../packages/document/office-exchange) | - | [`office-exchange`](../packages/document/office-exchange), [`tool-office`](../packages/document/tool-office) | - | 记录一个待处理的 Agent 命令，追加其 `document/command` 事件，并仅接受来自发起请求的 Session 的实时编辑器答复；文档 Remote 通过它分发并完成请求。 |
 | `ctx.attachments` | `seam` | [`attachment`](../packages/attachment/attachment) | [`attachment-local`](../packages/attachment/attachment-local) | [`api-session-controller`](../packages/api/session-controller), [`tool-fs`](../packages/fs/tool-fs), [`llm-pi-ai`](../packages/llm/llm-pi-ai), [`llm-deepseek`](../packages/llm/llm-deepseek) | - | 宿主会在会话事件之前提交已接受的图片；提供方适配器将已授权的持久引用解析为提供方原生内容。 |
 | `ctx.fileUploads` | `core` | [`client-file-upload`](../packages/client/file-upload) | - | [`api-session-controller`](../packages/api/session-controller) | - | 负责流式接收、持久存储和暂存回执生命周期；Session Controller 将回执绑定到已接受的提交。 |
 | `ctx.llm` | `seam` | [`llm`](../packages/llm/llm) | [`llm-deepseek`](../packages/llm/llm-deepseek), [`llm-pi-ai`](../packages/llm/llm-pi-ai), [`llm-replay`](../packages/test-support/llm-replay) | [`agent-loop`](../packages/core/agent-loop), [`compaction-basic`](../packages/compaction/compaction-basic) | - | 适配器注册提供方实现；agent loop（智能体循环）与压缩功能调用提供方无关的流服务。 |
@@ -700,7 +717,7 @@ flowchart LR
 | `ctx.settings` | `core` | [`settings`](../packages/settings/settings) | - | [`api-settings-controller`](../packages/api/settings-controller) | - | Forms project volatile Config fields from active profile entries and delegate validated edits to config-editor. Plugins consume their own Config references. |
 | `ctx.subagentModelSelection` | `core` | [`tool-subagent`](../packages/subagent/tool-subagent) | - | [`tool-subagent`](../packages/subagent/tool-subagent) | - | 拥有默认关闭的设置命名空间；Agent 作用域的委派工具会在组合新顶层 Session 时读取它。 |
 | `ctx.credentials` | `seam` | [`credentials`](../packages/credentials/credentials) | [`credentials-local`](../packages/credentials/credentials-local) | [`api-settings-controller`](../packages/api/settings-controller), [`llm-deepseek`](../packages/llm/llm-deepseek), [`llm-pi-ai`](../packages/llm/llm-pi-ai) | - | 配置携带对机密信息的引用；提供方拥有实际值。消费方按操作解析，因此轮换后的凭据会在紧接着的下一次请求中生效；settings controller 提供不含实际值的视图和只写存储。 |
-| `ctx.deepseekAccount` | `seam` | [`deepseek-account`](../packages/credentials/deepseek-account) | [`deepseek-account-platform`](../packages/credentials/deepseek-account-platform) | [`api-account-controller`](../packages/api/account-controller), [`llm-deepseek`](../packages/llm/llm-deepseek) | - | Host 负责浏览器授权和本地凭证；UI 使用方只接收不含 token 的状态。 |
+| `ctx.deepseekAccount` | `seam` | `account` | [`deepseek-account-platform`](../packages/credentials/deepseek-account-platform) | [`api-account-controller`](../packages/api/account-controller), [`llm-deepseek`](../packages/llm/llm-deepseek) | - | Host 负责浏览器授权和本地凭证；UI 使用方只接收不含 token 的状态。 |
 | `ctx.authorization` | `seam` | [`authorization`](../packages/credentials/authorization) | - | [`llm-pi-ai`](../packages/llm/llm-pi-ai) | - | flow 由知道如何取得某份凭据的插件注册，并以其写入的记录为键；seam 拥有这段对话与"每个键同时只跑一次尝试"的生命周期，而非协议本身。 |
 | `ctx.productAnalytics` | `service` | [`client-product-analytics`](../packages/client/product-analytics) | - | - | - | 根据 Host 动态采集策略接收指定桌面事件、补充可用登录身份并监听实时压缩。 |
 | `ctx.otel` | `service` | [`otel`](../packages/telemetry/otel) | - | [`host-product-telemetry-otel`](../packages/host/product-telemetry-otel), [`session-telemetry-otel`](../packages/session/session-telemetry-otel) | - | 产品埋点和 Session 反馈适配器通过同一个注入服务创建独立上报通道。 |

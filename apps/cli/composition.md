@@ -3,7 +3,7 @@
 
 # DSH Base Composition
 
-The base bundle patch shared by the web, headless, sdk, and acp profiles; their mode bundles and user layers patch over it, while sdk-minimal owns a separate standalone tree.
+The dsh-base bundle patch shared by the web, headless, sdk, and acp profiles; their mode bundles and user layers patch over it, while sdk-minimal owns a separate standalone tree.
 
 ```mermaid
 flowchart LR
@@ -64,6 +64,8 @@ flowchart LR
   cfg --> plugin_dsh_base_session_persistence_jsonl
   plugin_dsh_base_attachment_local["attachment-local<br/>@forwork/attachment-local"]
   cfg --> plugin_dsh_base_attachment_local
+  plugin_dsh_base_office_exchange["office-exchange<br/>@forwork/office-exchange"]
+  cfg --> plugin_dsh_base_office_exchange
   plugin_dsh_base_session_query_sqlite["session-query-sqlite<br/>@forwork/session-query-sqlite"]
   cfg --> plugin_dsh_base_session_query_sqlite
   plugin_dsh_base_working_directory["working-directory<br/>@forwork/working-directory"]
@@ -72,6 +74,8 @@ flowchart LR
   cfg --> plugin_dsh_base_tool_working_directory
   plugin_dsh_base_session_projection["session-projection<br/>@forwork/session-projection"]
   cfg --> plugin_dsh_base_session_projection
+  plugin_dsh_base_session_document["session-document<br/>@forwork/session-document"]
+  cfg --> plugin_dsh_base_session_document
   plugin_dsh_base_storage["storage<br/>@forwork/storage"]
   cfg --> plugin_dsh_base_storage
   plugin_dsh_base_storage_json["storage-json<br/>@forwork/storage-json"]
@@ -112,6 +116,8 @@ flowchart LR
   cfg --> plugin_dsh_base_tool_fs
   plugin_dsh_base_tool_fs_search["tool-fs-search<br/>@forwork/tool-fs-search"]
   cfg --> plugin_dsh_base_tool_fs_search
+  plugin_dsh_base_tool_office["tool-office<br/>@forwork/tool-office"]
+  cfg --> plugin_dsh_base_tool_office
   plugin_dsh_base_agent_instructions["agent-instructions<br/>@forwork/agent-instructions"]
   cfg --> plugin_dsh_base_agent_instructions
   plugin_dsh_base_skill["skill<br/>@forwork/skill"]
@@ -182,8 +188,8 @@ flowchart LR
   cfg --> plugin_dsh_base_web
   plugin_dsh_base_web_search_deepseek["web-search-deepseek<br/>@forwork/web-search-deepseek"]
   cfg --> plugin_dsh_base_web_search_deepseek
-  plugin_dsh_base_web_deepseek_api["web-api<br/>@forwork/web-api"]
-  cfg --> plugin_dsh_base_web_deepseek_api
+  plugin_dsh_base_web_api["web-api<br/>@forwork/web-api"]
+  cfg --> plugin_dsh_base_web_api
   plugin_dsh_base_web_fetch_http["web-fetch-http<br/>@forwork/web-fetch-http"]
   cfg --> plugin_dsh_base_web_fetch_http
   plugin_dsh_base_tool_web["tool-web<br/>@forwork/tool-web"]
@@ -238,10 +244,12 @@ flowchart LR
 | `llm-pi-ai` | `@forwork/llm-pi-ai` |
 | `session-persistence-jsonl` | `@forwork/session-persistence-jsonl` |
 | `attachment-local` | `@forwork/attachment-local` |
+| `office-exchange` | `@forwork/office-exchange` |
 | `session-query-sqlite` | `@forwork/session-query-sqlite` |
 | `working-directory` | `@forwork/working-directory` |
 | `tool-working-directory` | `@forwork/tool-working-directory` |
 | `session-projection` | `@forwork/session-projection` |
+| `session-document` | `@forwork/session-document` |
 | `storage` | `@forwork/storage` |
 | `storage-json` | `@forwork/storage-json` |
 | `storage-domain` | `@forwork/storage-domain` |
@@ -262,6 +270,7 @@ flowchart LR
 | `fs-observation-policy` | `@forwork/fs-observation-policy` |
 | `tool-fs` | `@forwork/tool-fs` |
 | `tool-fs-search` | `@forwork/tool-fs-search` |
+| `tool-office` | `@forwork/tool-office` |
 | `agent-instructions` | `@forwork/agent-instructions` |
 | `skill` | `@forwork/skill` |
 | `skill-filesystem` | `@forwork/skill-filesystem` |
