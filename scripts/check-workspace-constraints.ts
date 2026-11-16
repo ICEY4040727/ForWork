@@ -62,7 +62,7 @@ const publicationSourceAllowlist: Readonly<Record<string, readonly string[]>> = 
   '@forwork/node-addon-system': ['src/main.c', 'src/flock.c'],
 }
 /** Public source home recorded in maintained package manifests. */
-const publishedRepositoryUrl = 'git+https://github.com/deepseek-ai/deepseek-harness.git'
+const publishedRepositoryUrl = 'git+https://github.com/ICEY4040727/ForWork.git'
 /** Packages that participate in the experimental policy. */
 const experimentalPackageDirectory = /^packages\/experimental\/[^/]+$/
 /** Private reference tool run from the repository; it publishes no files. */
