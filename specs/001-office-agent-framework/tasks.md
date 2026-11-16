@@ -66,7 +66,7 @@ Monorepo: workspace packages under `packages/<group>/<pkg>/`, desktop under `app
 >
 > Progress (2026-11-15): **US3 implemented and committed** — facts (`open`/`save`/`edit`/`close`/`rebind`/`missing`), `document` projection + dynamic prompt section, restore + draft recovery, Host lifecycle endpoints. Verified: session-document 40, client 175, office-exchange 141, tool-office 80; aggregates 0; migration/catalog 1448 pass. **T041/T035 remain:** snapshot replay needs re-recording with a key (5 office tool-list deltas; Windows env diffs), and no `document_*` session fixture exists. **Lockfile refreshed separately (`a0a4565e`).**
 >
-> Identity landing (2026-11-16): packages and vendor re-scoped to `@forwork/*` (`9bbee70f`), CLI/brand/scan landed (`62737545`); `verify-forwork-identity` passes and T049/T050 are closed. Residual: repository URL, protocol tokens `dsh.*`/`DSH_*`, external `libreoffice-kit` (T089), signing (T051).
+> Identity landing (2026-11-16): packages and vendor re-scoped to `@forwork/*` (`9bbee70f`), CLI/brand/scan landed (`62737545`); `verify-forwork-identity` passes and T049/T050 are closed. Residual: repository URL, protocol tokens `dsh.*`/`DSH_*`, external `libreoffice-kit` (T089–T091), signing (T051); post-rename gates (T092–T094).
 
 ---
 
@@ -217,14 +217,14 @@ Complete Phase 1 + Phase 2 + Phase 3 (US1). Stop and validate S1/S2; that is a u
 
 - [P] tasks touch different files and can run in parallel.
 - Tests are required by the repository's coverage gate; write them with each behavior.
-- The destructive rename (T050) is intentionally last (Constitution V).
+- The identity-landing phase landed (T050); residual identity work is T089–T091 and signing is T051 (Constitution V).
 - Every task declares its own verification; a later task does not assume an earlier check passed.
 
 ---
 
 ## Phase 7: Convergence
 
-Convergence on 2026-11-16 found the remaining unbuilt work below; open tasks T028, T035, T041–T048, and T049–T051 stay authoritative for the items they already name.
+Convergence on 2026-11-16 found the remaining unbuilt work below; open tasks T028, T035, T041–T048, T051, T089–T091, and the Phase 8 gates stay authoritative for the items they already name.
 
 - [ ] T079 [P] [US1] Update `apps/web/tests/document-preview.e2e.ts` and `snapshots/web/document-preview/document.expected.md` so `.docx`, `.xlsx`, `.doc`, `.xls`, and `.ppt` open the `office` tab and only `.pptx` stays in the read-only preview, then replay the web lane named in T028, leaving the shipped roster and SDK deltas to T041 per FR-001/FR-011 (partial)
 - [ ] T080 [P] [US3] Call `officeDocument.rebindDocument` from the `workspaceFiles` change feed when an open document's path disappears and the same version reappears, recording `document/rebind`, in `packages/client/ui-office-editor/src/client/changes.ts` with tests in `packages/client/ui-office-editor/tests/changes.client.spec.ts`, so `rebindDocument` gains its production caller per FR-015/SC-009 (missing)
@@ -236,3 +236,13 @@ Convergence on 2026-11-16 found the remaining unbuilt work below; open tasks T02
 - [ ] T086 [P] Add the bilingual twins: `packages/document/office-exchange/README.zh.md` with `README.i18n.yaml` (its English README already links the missing counterpart), `packages/document/tool-office/README.zh.md` with `README.i18n.yaml`, `packages/session/session-document/README.zh.md` with `README.i18n.yaml`, and after T045 `docs/subsystems/office-editing.zh.md` with `.i18n.yaml`; re-record with `verify-translation-pairing --write` per plan: documentation (partial)
 - [ ] T087 [P] [US2] Extend the unsaved-work coverage in T044 with the abnormal-exit and dirty-close branches of SC-010 (a killed process offers its draft on relaunch and a dirty close warns) across `packages/session/session-document/tests/document-recovery.spec.ts` and `packages/client/ui-office-editor/tests/draft-recovery.spec.tsx` per SC-010/T044 (partial)
 - [ ] T088 [P] Close or rewrite T056 to its shipped form (`undoChange` in `packages/session/session-document/src/document-changes.ts`; `src/undo.ts` does not exist) and correct the stale "T062 blocks T031 and T056" US2 dependency note in `specs/001-office-agent-framework/tasks.md` per T056 (contradicts)
+
+---
+
+## Phase 8: Identity-landing follow-up
+
+The identity landing surfaced three repository gates that are not yet tracked; they are cross-cutting, not story work.
+
+- [ ] T092 Fix the client bundle manifest so `check-workspace-constraints` accepts the declared entry: `packages/client/ui-office-editor` currently declares `lib/client*.js` where the policy expects `lib/client.js`; adjust `packages/client/ui-office-editor/package.json` and `packages/client/ui-office-editor/tsdown.config.ts`.
+- [ ] T093 Make `rescope-vendor:check` green: fix the postcondition text mismatch in `scripts/rescope-vendor.ts` and remove the four residue files it reports, so the vendored re-scope gate passes.
+- [ ] T094 Rename `scripts/verify-dsh-package-licenses.ts` and any remaining `dsh-*` script/artifact names to `forwork-*`, updating their references in `scripts/run-gates.ts` and the root `package.json`.
