@@ -281,7 +281,7 @@ function ciBuildGate(id = 'build', options: Partial<Gate> = {}): Gate {
 
 /**
  * Emit the artifacts every artifact consumer reads, without the aggregate
- * test and script type checks that the master lanes own.
+ * test and script type checks that the main lanes own.
  */
 function ciArtifactBuildGate(id = 'build', options: Partial<Gate> = {}): Gate {
   return pnpmScript(id, 'build:artifacts', {

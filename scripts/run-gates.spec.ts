@@ -977,7 +977,7 @@ describe('Node 24 lane ownership', () => {
     ])
     expect(subject.find(item => item.id === 'publint')?.needs).toEqual(['build'])
     // The consumers lane emits artifacts only: the aggregate test and script
-    // type checks belong to the master lanes, not to every pull request.
+    // type checks belong to the main lanes, not to every pull request.
     expect(subject.find(item => item.id === 'build')).toMatchObject({
       displayCommand: 'pnpm run build:artifacts',
       env: { DSH_BUILD_CLIENT_PROFILE: 'official' },

@@ -25,10 +25,10 @@ it.each(['accepted', 'unconfirmed', 'incomplete', 'wrong-journal', 'upload', 'pu
       bucket: 'production-123', origin: 'https://download.deepseek.com', credentialsFile,
       githubApp: { clientId: 'app', privateKeyFile: join(root, 'app.pem') },
     }))
-    const route = { runId: '12', attempt: '1', commit: 'a'.repeat(40), sourceRef: 'master', channel: scenario === 'stable' ? 'stable' : 'nightly',
+    const route = { runId: '12', attempt: '1', commit: 'a'.repeat(40), sourceRef: 'main', channel: scenario === 'stable' ? 'stable' : 'nightly',
       runnerName: 'mini', runnerLabel: 'dsh-mini', target: 'mac-arm64', preset: 'production' }
     const manifest = { schemaVersion: 1, source: { repository: 'owner/repo', runId: '12', attempt: '1', commit: route.commit,
-      workflowCommit: route.commit, sourceRef: 'master', channel: route.channel, runnerName: 'mini', target: 'mac-arm64',
+      workflowCommit: route.commit, sourceRef: 'main', channel: route.channel, runnerName: 'mini', target: 'mac-arm64',
       preset: 'production', productVersion: '1.0.0', version: '1.0.0', testReleaseId: null, qualification: 'notarized' },
     files: [{ name: 'forwork-1.0.0-mac-arm64.dmg', size: 1, sha512: createHash('sha512').update('x').digest('base64') }] }
     await writeFile(join(root, 'releases', '12', '1', 'manifest.json'), JSON.stringify(manifest))

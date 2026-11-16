@@ -30,7 +30,7 @@ async function retainedFixture(target: 'win-x64' | 'mac-x64' | 'mac-arm64', qual
   await Promise.all(names.map(name => writeFile(join(artifacts, name), 'fixture')))
   const env = {
     DSH_DESKTOP_RELEASES_DIR: '', DSH_PACKAGING_CONFIG_DIR: config, DSH_PACKAGING_PRESET: 'test', DSH_DESKTOP_TARGET_PLATFORM: target === 'win-x64' ? 'win32' : 'darwin',
-    DSH_DESKTOP_TARGET_ARCH: target === 'mac-arm64' ? 'arm64' : 'x64', PACKAGE_SOURCE_REF: 'master', PACKAGE_SOURCE_SHA: 'b'.repeat(40), PACKAGE_VERSION: '1.0.0',
+    DSH_DESKTOP_TARGET_ARCH: target === 'mac-arm64' ? 'arm64' : 'x64', PACKAGE_SOURCE_REF: 'main', PACKAGE_SOURCE_SHA: 'b'.repeat(40), PACKAGE_VERSION: '1.0.0',
     PACKAGE_SIGNING: qualification === 'unsigned' ? 'unsigned' : 'signed', PACKAGE_SKIP_NOTARIZATION: qualification === 'unnotarized' ? 'true' : 'false', GITHUB_RUN_ID: '123', GITHUB_RUN_ATTEMPT: '2',
     GITHUB_STEP_SUMMARY: join(root, 'summary.md'),
     DESKTOP_PUBLISH_RUNNERS: JSON.stringify({ dedicated: { label: 'dsh-dedicated', target: [target] } }),
@@ -111,7 +111,7 @@ it.each([
     expect(summary).toContain('不能发布到 test 或 production')
     expect(summary).not.toContain('Publish separately')
     await expect(prepareDesktopPublication({ ...env, DESKTOP_PUBLISH_ROUTE: JSON.stringify({
-      runId: '123', attempt: '2', commit: env.GITHUB_SHA, runnerName: env.RUNNER_NAME, target, preset: 'test', sourceRef: 'master', channel: 'nightly',
+      runId: '123', attempt: '2', commit: env.GITHUB_SHA, runnerName: env.RUNNER_NAME, target, preset: 'test', sourceRef: 'main', channel: 'nightly',
     }) })).rejects.toThrow('重跑当前发布任务无效')
     await expect(summary).toMatchFileSnapshot(`./expected/retained-${qualification}.md`)
   } else expect(summary).toContain('Publish separately with package_run_id=123 and package_run_attempt=2')

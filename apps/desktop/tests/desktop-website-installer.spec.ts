@@ -16,7 +16,7 @@ async function fixture(target: DesktopPublishRoute['target'] = 'mac-arm64') {
   const directory = await mkdtemp(join(tmpdir(), 'website-installer-'))
   roots.push(directory)
   const bytes = Buffer.from('final installer bytes')
-  const route: DesktopPublishRoute = { runId: '12', attempt: '1', commit: 'a'.repeat(40), sourceRef: 'master',
+  const route: DesktopPublishRoute = { runId: '12', attempt: '1', commit: 'a'.repeat(40), sourceRef: 'main',
     channel: 'nightly', runnerName: 'mini', runnerLabel: 'dsh-mini', target, preset: 'production' }
   const filename = `forwork-0.2.1-rc.5-${target}.${target === 'win-x64' ? 'exe' : 'dmg'}`
   await writeFile(join(directory, filename), bytes)

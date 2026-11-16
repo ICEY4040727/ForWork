@@ -761,7 +761,7 @@ describe('raw Markdown projection of the published manifest', () => {
   // emission and the 181-file link walk past vitest's 5s default.
   beforeAll(() => {
     mirror = mkdtempSync(join(tmpdir(), 'dsh-doc-mirror-real-'))
-    emitRawMarkdownPages(mirror, { pages: docsPages, repoRoot: repositoryRoot, repositoryRef: 'master' })
+    emitRawMarkdownPages(mirror, { pages: docsPages, repoRoot: repositoryRoot, repositoryRef: 'main' })
   }, 60_000)
 
   afterAll(() => {
