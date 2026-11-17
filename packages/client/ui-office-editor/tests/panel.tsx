@@ -112,6 +112,9 @@ export function panelFixture(input: PanelInput): {
   const dismissCloseWarning = vi.fn<OfficePanelInjected['dismissCloseWarning']>((tabId) => {
     changes.dismissWarning(tabId)
   })
+  const registerDraftFlush = vi.fn<OfficePanelInjected['registerDraftFlush']>((tabId, flush) => {
+    return changes.registerDraftFlush(tabId, flush)
+  })
   const trackDocument = vi.fn<OfficePanelInjected['trackDocument']>((sessionId, documentId, path) => {
     changes.trackDocument(sessionId, documentId, path)
   })
@@ -151,6 +154,7 @@ export function panelFixture(input: PanelInput): {
     attachCommandBridge: input.attachCommandBridge ?? attachCommandBridge,
     markTabDirty,
     dismissCloseWarning,
+    registerDraftFlush,
     bindDocument: (address: string, documentId: string) => { changes.bindDocument(address, documentId) },
     documentIdAt: (address: string) => changes.documentIdAt(address),
     trackDocument,

@@ -1,12 +1,14 @@
 /**
- * Idle-debounced recovery-draft capture for one open document.
+ * Recovery-draft capture for one open document.
  *
- * An edit only updates the local draft candidate; the scheduler writes the
- * candidate through the injected `officeDocument.writeDraft` after the idle
- * period elapses without another edit. Drafts never touch the document's own
- * file, a successful save clears the stored draft, and a write failure is
- * forwarded to the owning hook instead of disappearing. Each panel creates one
- * scheduler; there is no module-level instance.
+ * The first edit after a clean state — a fresh document, a save, or a discard —
+ * writes its candidate through the injected `officeDocument.writeDraft`
+ * immediately, so a crash cannot lose the first keystroke. Later edits only
+ * replace the candidate, which is written once the idle period elapses without
+ * another edit. Drafts never touch the document's own file, a successful save
+ * clears the stored draft, and a write failure is forwarded to the owning hook
+ * instead of disappearing. Each panel creates one scheduler; there is no
+ * module-level instance.
  */
 import { RemoteError } from '@forwork/typert-protocol'
 import type { RemoteFailure, RemoteResult } from '@forwork/typert-protocol'
@@ -60,21 +62,25 @@ export interface OfficeDraftSchedulerInput {
   readonly idleMs?: number
 }
 
-/** The debounced capture surface the hook schedules edits through. */
+/** The capture surface the hook schedules edits through. */
 export interface OfficeDraftScheduler {
   /**
-   * Replace the pending candidate and restart the idle period.
+   * Capture one edit. The first edit after a clean state writes immediately;
+   * every later edit replaces the pending candidate and restarts the idle
+   * period.
    * @param snapshot - the live unit snapshot after the edit.
    * @param contentVersion - the file version the edit started from.
    */
   schedule(snapshot: OfficeDocumentSnapshot, contentVersion: string): void
   /**
-   * Write the pending candidate now and stop the idle period.
+   * Write the pending candidate now, stop the idle period, and wait for any
+   * write already running.
    * @returns settles after the write attempt, including a forwarded failure.
    */
   flush(): Promise<void>
   /**
-   * Drop the pending candidate, then wait for an in-flight write.
+   * Drop the pending candidate, restore the leading-edge first edit, then wait
+   * for an in-flight write.
    * @returns settles after the in-flight write, so a later clear cannot race it.
    */
   cancel(): Promise<void>
@@ -103,6 +109,8 @@ export function createDraftScheduler(input: OfficeDraftSchedulerInput): OfficeDr
   let timer: ReturnType<typeof setTimeout> | undefined
   let candidate: DraftCandidate | undefined
   let inFlight: Promise<void> | undefined
+  /** The next edit is the first after a clean state and writes without waiting. */
+  let leading = true
 
   const stopTimer = (): void => {
     if (timer === undefined) return
@@ -135,6 +143,11 @@ export function createDraftScheduler(input: OfficeDraftSchedulerInput): OfficeDr
       if (input.signal.aborted) return
       candidate = { snapshot, contentVersion }
       stopTimer()
+      if (leading) {
+        leading = false
+        void write()
+        return
+      }
       timer = setTimeout(() => {
         timer = undefined
         void write()
@@ -143,10 +156,12 @@ export function createDraftScheduler(input: OfficeDraftSchedulerInput): OfficeDr
     async flush() {
       stopTimer()
       await write()
+      if (inFlight !== undefined) await inFlight
     },
     async cancel() {
       stopTimer()
       candidate = undefined
+      leading = true
       if (inFlight !== undefined) await inFlight
     },
     isPending: () => candidate !== undefined,

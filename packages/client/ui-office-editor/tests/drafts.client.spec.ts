@@ -79,30 +79,53 @@ describe('draft scheduler', () => {
     expect(draftRecoveryDecision(null, 'v1')).toBe('none')
   })
 
-  it('writes the latest candidate only after the idle period', async () => {
-    vi.useFakeTimers()
+  it('writes the first edit immediately and debounces later edits', async () => {
     const { scheduler, write } = schedulerHarness()
     scheduler.schedule(snapshot, 'v1')
-    await vi.advanceTimersByTimeAsync(10)
+    expect(write).toHaveBeenCalledOnce()
+    expect(write.mock.calls[0]?.[0]).toBe(snapshot)
+    expect(write.mock.calls[0]?.[1]).toBe('v1')
+    expect(scheduler.isPending()).toBe(false)
+
+    vi.useFakeTimers()
     scheduler.schedule(edited, 'v1')
     await vi.advanceTimersByTimeAsync(19)
-    expect(write).not.toHaveBeenCalled()
+    expect(write).toHaveBeenCalledOnce()
     expect(scheduler.isPending()).toBe(true)
     await vi.advanceTimersByTimeAsync(1)
-    expect(write).toHaveBeenCalledOnce()
-    expect(write.mock.calls[0]?.[0]).toBe(edited)
-    expect(write.mock.calls[0]?.[1]).toBe('v1')
+    expect(write).toHaveBeenCalledTimes(2)
+    expect(write.mock.calls[1]?.[0]).toBe(edited)
     expect(scheduler.isPending()).toBe(false)
   })
 
   it('flushes a pending candidate without waiting for the idle period', async () => {
     vi.useFakeTimers()
     const { scheduler, write } = schedulerHarness()
+    scheduler.schedule(snapshot, 'v1')
     scheduler.schedule(edited, 'v1')
     await scheduler.flush()
-    expect(write).toHaveBeenCalledOnce()
+    expect(write).toHaveBeenCalledTimes(2)
+    expect(write.mock.calls[1]?.[0]).toBe(edited)
     await vi.advanceTimersByTimeAsync(20)
-    expect(write).toHaveBeenCalledOnce()
+    expect(write).toHaveBeenCalledTimes(2)
+  })
+
+  it('waits for an in-flight write when flushing without a candidate', async () => {
+    let settle: () => void = () => {}
+    const write = vi.fn<OfficeDraftSchedulerInput['write']>(() => new Promise<RemoteResult<{ savedAt: string }>>(
+      (done) => { settle = () => { done(success({ savedAt: 't' })) } },
+    ))
+    const { scheduler } = schedulerHarness({ write })
+    scheduler.schedule(edited, 'v1')
+    expect(scheduler.isPending()).toBe(false)
+    let settled = false
+    const flushed = scheduler.flush().then(() => { settled = true })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(settled).toBe(false)
+    settle()
+    await flushed
+    expect(settled).toBe(true)
   })
 
   it('flushes with no candidate as a no-op', async () => {
@@ -114,26 +137,35 @@ describe('draft scheduler', () => {
   it('cancels a pending candidate', async () => {
     vi.useFakeTimers()
     const { scheduler, write } = schedulerHarness()
+    scheduler.schedule(snapshot, 'v1')
     scheduler.schedule(edited, 'v1')
     await scheduler.cancel()
     await vi.advanceTimersByTimeAsync(20)
-    expect(write).not.toHaveBeenCalled()
+    expect(write).toHaveBeenCalledOnce()
     expect(scheduler.isPending()).toBe(false)
   })
 
+  it('writes the first edit after a cancel immediately again', async () => {
+    const { scheduler, write } = schedulerHarness()
+    scheduler.schedule(snapshot, 'v1')
+    await scheduler.cancel()
+    scheduler.schedule(edited, 'v1')
+    expect(write).toHaveBeenCalledTimes(2)
+    expect(write.mock.calls[1]?.[0]).toBe(edited)
+  })
+
   it('waits for an in-flight write before cancelling', async () => {
-    vi.useFakeTimers()
     let settle: () => void = () => {}
     const write = vi.fn<OfficeDraftSchedulerInput['write']>(() => new Promise<RemoteResult<{ savedAt: string }>>(
       (done) => { settle = () => { done(success({ savedAt: 't' })) } },
     ))
     const { scheduler } = schedulerHarness({ write })
     scheduler.schedule(edited, 'v1')
-    await vi.advanceTimersByTimeAsync(20)
     expect(write).toHaveBeenCalledOnce()
     let settled = false
     const cancelled = scheduler.cancel().then(() => { settled = true })
-    await vi.advanceTimersByTimeAsync(0)
+    await Promise.resolve()
+    await Promise.resolve()
     expect(settled).toBe(false)
     settle()
     await cancelled
@@ -208,10 +240,12 @@ describe('draft scheduler', () => {
   it('drops a candidate whose lifetime ends before its write', async () => {
     vi.useFakeTimers()
     const { scheduler, write, controller } = schedulerHarness()
+    scheduler.schedule(snapshot, 'v1')
     scheduler.schedule(edited, 'v1')
     controller.abort()
     await vi.advanceTimersByTimeAsync(20)
-    expect(write).not.toHaveBeenCalled()
+    expect(write).toHaveBeenCalledOnce()
+    expect(write.mock.calls[0]?.[0]).toBe(snapshot)
   })
 })
 
@@ -327,19 +361,49 @@ describe('useOfficeDocument recovery', () => {
 })
 
 describe('useOfficeDocument draft capture', () => {
-  it('writes the scheduled snapshot at the read version after the idle period', async () => {
-    vi.useFakeTimers()
+  it('writes the first scheduled snapshot immediately at the read version', async () => {
     const remote = makeDraftRemote()
     const { result } = renderDocument(remote.face)
-    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
-    expect(result.current.status).toBe('ready')
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
     act(() => { result.current.scheduleDraft(edited) })
-    await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
     expect(remote.writeDraft).toHaveBeenCalledOnce()
     expect(remote.writeDraft.mock.calls[0]?.[1]).toBe(DOCUMENT_ID)
     expect(remote.writeDraft.mock.calls[0]?.[2]).toBe(PATH)
     expect(remote.writeDraft.mock.calls[0]?.[3]).toBe('v1')
     expect(remote.writeDraft.mock.calls[0]?.[4]).toBe(edited)
+  })
+
+  it('debounces a later edit until the idle period', async () => {
+    vi.useFakeTimers()
+    const remote = makeDraftRemote()
+    const { result } = renderDocument(remote.face)
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    act(() => { result.current.scheduleDraft(snapshot) })
+    act(() => { result.current.scheduleDraft(edited) })
+    expect(remote.writeDraft).toHaveBeenCalledOnce()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1999) })
+    expect(remote.writeDraft).toHaveBeenCalledOnce()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(remote.writeDraft).toHaveBeenCalledTimes(2)
+    expect(remote.writeDraft.mock.calls[1]?.[4]).toBe(edited)
+  })
+
+  it('flushes the pending draft on pagehide and beforeunload', async () => {
+    const remote = makeDraftRemote()
+    const { result } = renderDocument(remote.face)
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    act(() => { result.current.scheduleDraft(snapshot) })
+    act(() => { result.current.scheduleDraft(edited) })
+    expect(remote.writeDraft).toHaveBeenCalledOnce()
+
+    await act(async () => { window.dispatchEvent(new Event('pagehide')) })
+    expect(remote.writeDraft).toHaveBeenCalledTimes(2)
+    expect(remote.writeDraft.mock.calls[1]?.[4]).toBe(edited)
+
+    act(() => { result.current.scheduleDraft(snapshot) })
+    await act(async () => { window.dispatchEvent(new Event('beforeunload')) })
+    expect(remote.writeDraft).toHaveBeenCalledTimes(3)
+    expect(remote.writeDraft.mock.calls[2]?.[4]).toBe(snapshot)
   })
 
   it('does not capture an edit before the read succeeds', async () => {

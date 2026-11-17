@@ -62,6 +62,7 @@ describe('a rebound live document', () => {
     const view = render(<OfficePanel {...fixture.props} />)
     await waitFor(() => { expect(fixture.attachCommandBridge).toHaveBeenCalled() })
     expect(fixture.attachCommandBridge.mock.calls.at(-1)?.[1].documentId).toBe(DOCUMENT_ID)
+    await waitFor(() => { expect(fixture.adapter.mounts).toHaveLength(1) })
     act(() => { fixture.adapter.setDirty(true) })
 
     act(() => {

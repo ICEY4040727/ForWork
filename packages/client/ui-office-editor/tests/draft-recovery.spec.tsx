@@ -68,21 +68,63 @@ describe('OfficePanel recovery drafts', () => {
     expect(view.queryByText(en.draftError)).toBeNull()
   })
 
-  it('captures each edit as an idle-debounced draft', async () => {
+  it('writes the first edit immediately and debounces later edits', async () => {
     vi.useFakeTimers()
     const remote = makeDraftRemote()
     const view = fixture(remote)
     await act(async () => { await vi.advanceTimersByTimeAsync(0) })
     expect(view.fixture.adapter.mounts).toHaveLength(1)
     act(() => { view.fixture.adapter.setDirty(true) })
-    await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
-    act(() => { view.fixture.adapter.setDirty(true) })
-    await act(async () => { await vi.advanceTimersByTimeAsync(1999) })
-    expect(remote.writeDraft).not.toHaveBeenCalled()
-    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
     expect(remote.writeDraft).toHaveBeenCalledOnce()
     expect(remote.writeDraft.mock.calls[0]?.[3]).toBe('v1')
     expect(remote.writeDraft.mock.calls[0]?.[4]).toBe(snapshot)
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+    act(() => { view.fixture.adapter.setDirty(true) })
+    await act(async () => { await vi.advanceTimersByTimeAsync(1999) })
+    expect(remote.writeDraft).toHaveBeenCalledOnce()
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(remote.writeDraft).toHaveBeenCalledTimes(2)
+    expect(remote.writeDraft.mock.calls[1]?.[4]).toBe(snapshot)
+  })
+
+  it('flushes the pending draft when the page unloads', async () => {
+    const remote = makeDraftRemote()
+    const view = fixture(remote)
+    await waitFor(() => { expect(view.fixture.adapter.mounts).toHaveLength(1) })
+    act(() => { view.fixture.adapter.setDirty(true) })
+    act(() => { view.fixture.adapter.setDirty(true) })
+    expect(remote.writeDraft).toHaveBeenCalledOnce()
+
+    await act(async () => { window.dispatchEvent(new Event('pagehide')) })
+    expect(remote.writeDraft).toHaveBeenCalledTimes(2)
+  })
+
+  it('flushes the pending draft on request without waiting for the idle period', async () => {
+    const remote = makeDraftRemote()
+    const view = fixture(remote)
+    await waitFor(() => { expect(view.fixture.adapter.mounts).toHaveLength(1) })
+    act(() => { view.fixture.adapter.setDirty(true) })
+    act(() => { view.fixture.adapter.setDirty(true) })
+    expect(remote.writeDraft).toHaveBeenCalledOnce()
+
+    act(() => { view.fixture.changes.flushDraft(TAB_ID) })
+    await waitFor(() => { expect(remote.writeDraft).toHaveBeenCalledTimes(2) })
+  })
+
+  it('recovers a flushed draft after the process restarts', async () => {
+    const remote = makeDraftRemote()
+    const view = fixture(remote)
+    await waitFor(() => { expect(view.fixture.adapter.mounts).toHaveLength(1) })
+    act(() => { view.fixture.adapter.setDirty(true) })
+    const written = remote.writeDraft.mock.calls[0]
+    expect(written).toBeDefined()
+    view.unmount()
+
+    const restarted = makeDraftRemote()
+    restarted.readDraft.mockResolvedValueOnce(success(draftAt('v1', written?.[4] ?? snapshot)))
+    const again = fixture(restarted)
+    expect(await again.findByText(en.draftFound)).toBeDefined()
   })
 
   it('ignores a change reported before the handle is recorded', async () => {

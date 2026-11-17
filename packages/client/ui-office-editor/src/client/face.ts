@@ -28,6 +28,13 @@ export interface OfficePanelInjected {
   /** Dismiss the close prompt without saving or closing. */
   readonly dismissCloseWarning: (tabId: TabId) => void
   /**
+   * Register the writer the close handler flushes before it warns or removes.
+   * @param tabId - the tab whose open body owns the pending draft.
+   * @param flush - starts the pending draft write without waiting for it.
+   * @returns stops flushing through this registration.
+   */
+  readonly registerDraftFlush: (tabId: TabId, flush: () => void) => () => void
+  /**
    * Bind a tab address to the document identity its live unit uses.
    * @param address - the tab's file address.
    * @param documentId - Session-scoped identity of the open document.
@@ -138,6 +145,7 @@ export function officePanelInjected(deps: OfficePanelDeps): OfficePanelInjected 
     attachCommandBridge,
     markTabDirty: (tabId, dirty) => { changes.markDirty(tabId, dirty) },
     dismissCloseWarning: (tabId) => { changes.dismissWarning(tabId) },
+    registerDraftFlush: (tabId, flush) => changes.registerDraftFlush(tabId, flush),
     bindDocument: (address, documentId) => { changes.bindDocument(address, documentId) },
     documentIdAt: address => changes.documentIdAt(address),
     trackDocument: (sessionId, documentId, path) => { changes.trackDocument(sessionId, documentId, path) },

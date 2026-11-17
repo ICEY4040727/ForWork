@@ -245,6 +245,7 @@ function panelProps(options: PanelOptions = {}): OfficePanelProps {
     attachCommandBridge: vi.fn(() => () => {}),
     markTabDirty: options.onMarkDirty ?? vi.fn(),
     dismissCloseWarning: options.onDismissWarning ?? vi.fn(),
+    registerDraftFlush: vi.fn(() => () => {}),
     bindDocument: vi.fn(),
     documentIdAt: () => undefined,
     trackDocument: vi.fn(),
@@ -395,8 +396,13 @@ describe('ui-office-editor apply', () => {
     await face!.remote.readDraft(SESSION_ID, 'doc-1')
     await face!.remote.clearDraft(SESSION_ID, 'doc-1')
     face!.markTabDirty(TAB_ID, true)
+    let warnedAtFlush: boolean | undefined
+    const flush = vi.fn(() => { warnedAtFlush = face!.hooks.officeTab.getSnapshot()[TAB_ID]?.warned })
+    face!.registerDraftFlush(TAB_ID, flush)
     expect(() => closeHandler?.(SESSION_ID, { id: TAB_ID, title: 'budget.xlsx', contentId: ADDRESS }))
       .toThrow('unsaved changes')
+    expect(flush).toHaveBeenCalledOnce()
+    expect(warnedAtFlush).toBe(false)
     expect(face!.hooks.officeTab.getSnapshot()[TAB_ID]).toEqual({ dirty: true, warned: true })
     face!.dismissCloseWarning(TAB_ID)
     expect(face!.hooks.officeTab.getSnapshot()[TAB_ID]).toEqual({ dirty: true, warned: false })

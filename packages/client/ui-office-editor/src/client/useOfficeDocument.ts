@@ -19,11 +19,14 @@
  * stays mounted and the editor's native undo history keeps the agent edit. A
  * file change no applied command accounts for still reloads or prompts.
  *
- * Edits are captured as idle-debounced recovery drafts through the same
- * Remote. A draft found after a successful read is offered only as a recovery
- * choice: it is never applied automatically, and a draft captured from an
- * older file version is labelled stale so the user chooses it explicitly. A
- * successful save and a discard both clear the stored draft.
+ * Edits are captured as recovery drafts through the same Remote: the first
+ * edit after a clean state is written immediately and later edits are
+ * idle-debounced. A tab close and a page unload flush the pending draft, so an
+ * edit already in the window is on disk before the tab or page goes away. A
+ * draft found after a successful read is offered only as a recovery choice: it
+ * is never applied automatically, and a draft captured from an older file
+ * version is labelled stale so the user chooses it explicitly. A successful
+ * save and a discard both clear the stored draft.
  *
  * A legacy `.doc`, `.xls`, or `.ppt` address is never read: it is converted
  * through the same Remote, and the converted copy opens in a new tab in this
@@ -243,10 +246,16 @@ export interface UseOfficeDocumentResult {
   /** The live unit currently holds an accepted recovery draft. */
   readonly recovered: boolean
   /**
-   * Capture the live unit as a recovery draft after the idle period.
+   * Capture the live unit as a recovery draft. The first edit after a clean
+   * state is written immediately; later edits wait for the idle period.
    * @param snapshot - the live unit snapshot to capture.
    */
   scheduleDraft(snapshot: OfficeDocumentSnapshot): void
+  /**
+   * Write the pending recovery draft now, for a tab close or page unload.
+   * @returns settles after the pending and in-flight writes.
+   */
+  flushDraft(): Promise<void>
   /** Replace the live unit with the offered recovery draft. */
   acceptRecovery(): void
   /** Dismiss the offered draft and remove it from the draft store. */
@@ -396,6 +405,18 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
 
   useEffect(() => () => {
     void scheduler.cancel()
+  }, [scheduler])
+
+  useEffect(() => {
+    // Both events run while the page can still start a write: `beforeunload`
+    // for a reload or navigation and `pagehide` for a tab close or an app quit.
+    const flush = (): void => { void scheduler.flush() }
+    window.addEventListener('beforeunload', flush)
+    window.addEventListener('pagehide', flush)
+    return () => {
+      window.removeEventListener('beforeunload', flush)
+      window.removeEventListener('pagehide', flush)
+    }
   }, [scheduler])
 
   useEffect(() => {
@@ -607,6 +628,8 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     scheduler.schedule(snapshot, fileVersionRef.current)
   }, [scheduler])
 
+  const flushDraft = useCallback((): Promise<void> => scheduler.flush(), [scheduler])
+
   const acceptRecovery = useCallback((): void => {
     if (recovery === undefined) return
     setRecovery(undefined)
@@ -654,6 +677,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     draftError,
     recovered,
     scheduleDraft,
+    flushDraft,
     acceptRecovery,
     discardRecovery,
     dismissDraftError,

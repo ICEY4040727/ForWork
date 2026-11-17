@@ -79,6 +79,9 @@ export function apply(ctx: ClientContext): void {
     openResourceIn: (sessionId, address) => { ctx.sidebarRight.openResourceIn(sessionId, address) },
   }), 'ui-office-editor: activation restore')
   ctx.effect(() => ctx.sidebarRight.registerCloseHandler(OFFICE_KIND, (sessionId, tab) => {
+    // Start the pending draft before the warning, so the edits are on disk even
+    // when the user cancels the prompt and the process then dies.
+    changes.flushDraft(tab.id)
     if (changes.isDirty(tab.id)) {
       changes.warnClose(tab.id)
       throw new Error(`ui-office-editor: "${tab.title}" has unsaved changes`)

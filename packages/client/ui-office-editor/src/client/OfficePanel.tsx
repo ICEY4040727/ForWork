@@ -82,9 +82,9 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
  */
 export function OfficePanel({
   useTabInfo, useProjection, useResource, useSidebarTabs, useRestore, useLegacyNotice, useDocumentLocations, mountEditor,
-  attachCommandBridge, markTabDirty, dismissCloseWarning, markMissing, rememberLegacySource, dismissLegacyNotice,
-  dismissRestoreNotice, bindDocument, documentIdAt, trackDocument, forgetDocument, observeFile, useOfficeTab, remote,
-  restore, t,
+  attachCommandBridge, markTabDirty, dismissCloseWarning, registerDraftFlush, markMissing, rememberLegacySource,
+  dismissLegacyNotice, dismissRestoreNotice, bindDocument, documentIdAt, trackDocument, forgetDocument, observeFile,
+  useOfficeTab, remote, restore, t,
 }: OfficePanelProps): ReactNode {
   const { tab } = useTabInfo()
   const addressTarget = useMemo(() => openTargetOf(tab.contentId), [tab.contentId])
@@ -203,6 +203,11 @@ export function OfficePanel({
   useEffect(
     () => attachCommandBridge(target.sessionId, commandTarget),
     [attachCommandBridge, commandTarget, target.sessionId],
+  )
+  const flushDraft = useCallback((): void => { void docRef.current.flushDraft() }, [])
+  useEffect(
+    () => registerDraftFlush(tab.id, flushDraft),
+    [registerDraftFlush, tab.id, flushDraft],
   )
   const onChange = useCallback((): void => { markTabDirty(tab.id, true) }, [markTabDirty, tab.id])
   const onEdit = useCallback((): void => {

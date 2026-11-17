@@ -47,6 +47,28 @@ describe('createOfficeTabChanges', () => {
     expect(changes.source.getSnapshot()).toEqual({})
   })
 
+  it('flushes the draft writer registered for a closing tab', () => {
+    const changes = createOfficeTabChanges()
+    const flush = vi.fn()
+    changes.flushDraft(TAB)
+    expect(flush).not.toHaveBeenCalled()
+
+    const release = changes.registerDraftFlush(TAB, flush)
+    changes.flushDraft(TAB)
+    expect(flush).toHaveBeenCalledOnce()
+
+    const replacement = vi.fn()
+    const releaseReplacement = changes.registerDraftFlush(TAB, replacement)
+    release()
+    changes.flushDraft(TAB)
+    expect(flush).toHaveBeenCalledOnce()
+    expect(replacement).toHaveBeenCalledOnce()
+
+    releaseReplacement()
+    changes.flushDraft(TAB)
+    expect(replacement).toHaveBeenCalledOnce()
+  })
+
   it('keeps a warned tab dirty and clears the warning with the dirty state', () => {
     const changes = createOfficeTabChanges()
     changes.markDirty(TAB, true)

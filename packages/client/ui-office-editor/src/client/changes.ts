@@ -6,7 +6,9 @@
  * and the close handler reads the same entry before the tab is removed. A close
  * attempt on a dirty tab is vetoed through the Sidebar's cleanup-failure path
  * and flags the entry so the panel can show the localized save-or-discard
- * prompt. The same plugin-owned surface follows the workspace file change feed:
+ * prompt. The panel also registers its pending-draft writer here, so the close
+ * handler starts that write before it warns or removes the tab. The same
+ * plugin-owned surface follows the workspace file change feed:
  * when a tracked document's path disappears and its content version reappears
  * at another path, the document is rebound to that path so the Session records
  * `document/rebind` instead of losing the open document. A rebind publishes the
@@ -40,6 +42,9 @@ export type OfficeDocumentRebind = (
   documentId: string,
   toPath: string,
 ) => void
+
+/** Start writing one tab's pending recovery draft. */
+export type OfficeDraftFlush = () => void
 
 /** One document the move tracker follows for one plugin instance. */
 interface TrackedDocument {
@@ -226,6 +231,18 @@ export interface OfficeTabChanges {
    */
   markDirty(tabId: TabId, dirty: boolean): void
   /**
+   * Register the writer the close handler flushes before it warns or removes.
+   * @param tabId - the tab whose open body owns the pending draft.
+   * @param flush - starts the pending write without waiting for it to settle.
+   * @returns stops flushing through this registration.
+   */
+  registerDraftFlush(tabId: TabId, flush: OfficeDraftFlush): () => void
+  /**
+   * Start writing one tab's pending recovery draft, if the tab has a writer.
+   * @param tabId - the tab whose close or unload is starting.
+   */
+  flushDraft(tabId: TabId): void
+  /**
    * Flag a refused close while the tab is dirty.
    * @param tabId - the tab whose close was refused.
    */
@@ -299,6 +316,7 @@ export function createOfficeTabChanges(rebind?: OfficeDocumentRebind): OfficeTab
   const locations = createSnapshotStore<OfficeDocumentLocationSnapshot>({})
   const moves = new DocumentMoves(rebind, locations)
   const identities = new Map<string, string>()
+  const draftFlushes = new Map<TabId, OfficeDraftFlush>()
 
   const write = (tabId: TabId, next: OfficeTabChangeState): void => {
     source.set({ ...source.getSnapshot(), [tabId]: next })
@@ -309,6 +327,15 @@ export function createOfficeTabChanges(rebind?: OfficeDocumentRebind): OfficeTab
     markDirty(tabId, dirty) {
       const current = source.getSnapshot()[tabId]
       write(tabId, { dirty, warned: dirty ? current?.warned ?? false : false })
+    },
+    registerDraftFlush(tabId, flush) {
+      draftFlushes.set(tabId, flush)
+      return () => {
+        if (draftFlushes.get(tabId) === flush) draftFlushes.delete(tabId)
+      }
+    },
+    flushDraft(tabId) {
+      draftFlushes.get(tabId)?.()
     },
     warnClose(tabId) {
       const current = source.getSnapshot()[tabId]
