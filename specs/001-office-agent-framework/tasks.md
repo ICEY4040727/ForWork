@@ -279,7 +279,7 @@ Convergence on 2026-11-17 re-assessed every requirement, success criterion, acce
 - [x] T117 Execute the declared `formula`, `row`, `column`, and `style` steps in the live editor: `editor/sheets.ts:67` and `editor/docs.ts:63` accept only `cell` and `paragraph`, so an accepted operation with any other kind returns `unsupported-feature` even though the operation union and the tool schemas declare it; implement those steps in the Univer adapter or remove them from the tool schema and record the limitation, per FR-004 and FR-020 (contradicts). **Done (2026-11-17): the Univer sheets adapter now applies formula/row/column/style steps atomically; no kind was removed from the tool schema, and the docs adapter still refuses sheet-only kinds.**
 - [ ] T118 Align the legacy-conversion tab behaviour: `OfficePanel.tsx:121` calls `openResource(address, { replaceTab: true })` while the clarification and T073 say the converted copy opens in a new tab; choose one and update the code or the spec and task wording, with a test asserting the chosen behaviour, per FR-003 and US1 (contradicts).
 - [x] T119 Enforce the `officeDocument` write postcondition: `contracts/office-exchange.contract.md:26` requires a save to refuse when the source's unsupported set is non-empty, but the provider save path checks only the content version; add the refusal at the save boundary plus a contract test, extending T096 (partial). **Done (2026-11-17): the Host save re-detects the source and refuses with `unsupported-feature` before writing.**
-- [ ] **HIGH** T120 Replace the DeepSeek brand artwork and gate it: `FishLogo` and `BrandWordmark`, `website/public/wordmark.svg`, `website/public/favicon.svg`, `apps/desktop/resources/{icon,icon-windows,icon-macos,tray-windows}`, `apps/desktop/renderer/assets/welcome-brand.svg`, `apps/desktop/installer/assets/*`, and the `home-whale` pixel animation carry DeepSeek marks that FR-009 and SC-006 do not allow; produce ForWork-owned marks at the existing sizes, decide replace-or-remove for the home animation, add `verify-brand-assets` with an asset manifest, upstream-path fingerprints, and a rejection spec, and update the affected desktop and brand snapshots per FR-009, SC-006, and Constitution I (contradicts).
+- [x] **HIGH** T120 Replace the DeepSeek brand artwork and gate it: `FishLogo` and `BrandWordmark`, `website/public/wordmark.svg`, `website/public/favicon.svg`, `apps/desktop/resources/{icon,icon-windows,icon-macos,tray-windows}`, `apps/desktop/renderer/assets/welcome-brand.svg`, `apps/desktop/installer/assets/*`, and the `home-whale` pixel animation carry DeepSeek marks that FR-009 and SC-006 do not allow; produce ForWork-owned marks at the existing sizes, decide replace-or-remove for the home animation, add `verify-brand-assets` with an asset manifest, upstream-path fingerprints, and a rejection spec, and update the affected desktop and brand snapshots per FR-009, SC-006, and Constitution I (contradicts). **Done (2026-11-17): the door mark, lockup, platform icons, favicons, welcome/installer art, `verify-brand-assets`, and 13 finished-product screenshots are landed; the whale atlas is removed.**
 - [ ] T121 Correct task and plan references: T036 and T040 name the wrong emitting files, T066 writes `packages/fs/fs-ssh` for `packages/ssh/fs-ssh`, `provider/detect.ts` is `src/detect.ts`, and `command-bridge.spec.tsx` is `command-bridge.client.spec.ts`; plan.md omits `apps/desktop-host`, `apps/web`, `bundle/web-app`, `ssh/fs-ssh`, and `experimental/liveshare` and describes conversion and credentials roles that no longer match (partial).
 - [ ] T122 Correct the remaining specification and contract prose: the office-exchange operation union omits `read` and `timeout`, `document_convert` omits the `.ppt` refusal, the office-exchange README describes a superseded surface, the data-model entity and field list drifted from the events, SC status still reads implemented while T028/T035/T041/T048/T051 are open, contract signatures omit `outputDir`, and the snapshot label calls a converted `.ppt` an editable tab per FR-003 and the current contracts (partial).
 - [ ] T123 Decide the default workspace directory name: `packages/api/workspace-controller/src/default-workspace.ts:11` and `default-directory.ts:77` still create a `deepseek-harness` folder, a user-visible brand leak that FR-009 and SC-006 do not allow; rename to a ForWork-owned path with an in-place migration for existing workspaces (or record the migration decision), plus a test per FR-009 and SC-006 (contradicts).
@@ -289,3 +289,73 @@ Convergence on 2026-11-17 re-assessed every requirement, success criterion, acce
 - [x] T124 Detect and refuse the remaining `.docx` constructs the writer still drops without detection — run and paragraph formatting beyond font, color, size, and alignment (strike, highlight, spacing, indentation, borders), footnotes and endnotes, sections and page layout, theme styles, and images that only reference an external target — with one reject and one no-false-positive test per construct, per FR-008, SC-002, and SC-004 (partial). **Done (2026-11-17): strike, highlight, spacing, indentation, borders, footnotes, endnotes, external images, and multiple sections are now detected; single-section page setup and theme styles remain reported limitations.**
 - [ ] T125 Expose the `row`, `column`, and `style` operation kinds the live adapter now applies: `document_edit_cells` declares no row-insert/delete, column-insert/delete, or style steps, so the agent cannot issue them; either add those steps to the tool schema or formally descope them in the spec and data model, per FR-004 and FR-020 (partial).
 - [x] T126 Make the web office fixture lossless and cover the refusal path: the docx branch of apps/web/tests/office-fixture.ts emits rFonts/sz/color/jc that the run-formatting detector now refuses, so regenerate it as a minimal editable document (Chinese text, a w:br page break, a single default sectPr) and add a positive assertion that a docx carrying <w:rPr><w:rFonts/></w:rPr> opens into the unsupported state with Save disabled, plus README and quickstart wording that explicit run/paragraph formatting is refused rather than lost, per FR-008, SC-004, and T096 (partial). **Done (2026-11-17): the docx fixture is now lossless and a positive refusal assertion covers the run-formatting path.**
+
+## Phase 12: ForWork Brand Artwork Design (T120 design half)
+
+**Goal**: Produce ForWork-owned vector masters and every derived bitmap at the existing sizes, then adopt them in components and static surfaces so T120's gate has real assets to enforce.
+
+**Independent Test**: Render every asset from its master, run `corepack pnpm run verify-brand-assets`, and inspect the mark at 16, 24, 50, 192, 512, and 1024 px on light and dark backgrounds; no DeepSeek contour, letterform, or blue-whale favicon remains.
+
+**Design baseline**: A 24-unit grid half-open door mark — frame at `x=4..20, y=3..21`, leaf hinged at `(7,7)`, handle hole at `(14,14)` — on a flat `#F4F2EC` tile with `#141414` ink and a `#D8D3C8` hairline. The wordmark pairs the mark with "ForWork" at weight 600. See `assets/brand/README.md`.
+
+### Design Foundations
+
+- [x] T127 Write the ForWork brand design brief in `assets/brand/README.md`: door construction grid, wordmark spacing, flat palette, clear space, minimum sizes, platform safe zones, derivation commands, and the recorded removal decision for the home animation.
+- [x] T128 [P] Author the canonical monochrome door mark in `assets/brand/forwork-mark.svg` with a 24×24 viewBox and `currentColor` fills, so sidebar, hero, tray, and favicon derive from one geometry.
+- [x] T129 [P] Author the 1024×1024 app tile master in `assets/brand/forwork-tile.svg` with the `#F4F2EC` field, `#141414` door, handle cutout, and a 1024-unit artwork extent that survives the 0.4 safe-radius maskable circle.
+- [x] T130 [P] Author the lockup master in `assets/brand/forwork-lockup.svg` with the door mark and "ForWork" lettering, preserving the existing `BrandWordmark` contract: 182 units with the mark at `viewBox="0 0 182 24"` and 156 units without it at `viewBox="26 0 156 24"`.
+
+### Surface Derivation
+
+- [x] T131 [P] Derive the desktop platform sources from T129 — `apps/desktop/resources/icon.svg` (1104-unit canvas with the 40/32 inset and shadow groups), `apps/desktop/resources/icon-windows.svg` (192-radius tile plus `id="tray-glyph"` around the artwork), and `apps/desktop/resources/icon-macos.svg` (230-radius tile) — by adding a derivation script at `scripts/render-brand-assets.ts` and committing its generated output.
+- [x] T132 [P] Derive the website assets from T128 and T130: `website/public/wordmark.svg` (mark plus ForWork lettering at 182×24, `currentColor` fills) and `website/public/favicon.svg` (tile-backed mark, not a bare glyph), keeping the `dsh-wordmark` class hook in `website/.vitepress/config.ts:187` working.
+- [x] T133 [P] Derive the welcome and installer bitmaps from T129 and T130 at their existing pixel sizes: `apps/desktop/renderer/assets/welcome-brand.svg` (472×40), `apps/desktop/installer/assets/brand.png` and `brand-2x.png` (light), and `brand-dark.png` and `brand-dark-2x.png` (dark), then verify each in `apps/desktop/tests/welcome-renderer.client.spec.tsx` and `apps/desktop/tests/installer-packaging.spec.ts`.
+- [x] T134 Regenerate the Web install icons from the T129-derived `apps/desktop/resources/icon.svg` by running `corepack pnpm --filter @forwork/web-frontend run render:app-icons`, committing `apps/web/public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, and `apple-touch-icon.png`, and keeping `apps/web/tests/pwa-manifest.e2e.ts` within the 0.4 safe-radius assertion.
+- [x] T135 Regenerate `apps/desktop/resources/tray-windows.ico` from the T131 Windows source by running `corepack pnpm run render:tray-icon` in `apps/desktop`, confirm the mark stays legible at 16 px, and update the door wording in `apps/desktop/scripts/render-tray-icon.ts:2`.
+- [x] T136 [P] Remove the DeepSeek-derived home animation: delete `packages/client/ui-brand-official/src/client/home-whale/` and `breach-atlas.webp`, drop the `PixelWhale` import and `conversation.hero.frame` registration, delete its unit/e2e tests, and update the package metadata, slot catalog, and docs; keep the slot declared for other bundles.
+
+### Component Adoption
+
+- [x] T137 Replace `FishLogo` with the T128 mark in `packages/client/ui-primitives/src/BrandMark.tsx` (exporting `BRAND_MARK_PATH`, `BRAND_MARK_FRAME_PATH`, `BRAND_MARK_LEAF_PATH`, and `BRAND_MARK_VIEWBOX`), update `packages/client/ui-primitives/src/index.ts`, and update every consumer: `packages/client/ui-sidebar/src/client/SidebarRoot.tsx:297`, `packages/client/ui-brand-official/src/client/Brand.tsx:11`, and `packages/experimental/liveshare/src/client/viewer-brand.tsx:61`.
+- [x] T138 Replace `BrandWordmark` with the T130 lockup in `packages/client/ui-primitives/src/BrandWordmark.tsx`, preserving the `includeMark` prop and the 182/156 width and viewBox contract, and update `packages/client/ui-primitives/tests/icons.client.spec.tsx`.
+- [x] T139 Replace the fish morph in `packages/client/ui-conversation/src/client/skeleton/EmptyHero.tsx:74` with a door-leaf rotation around its hinge that keeps the reduced-motion fallback and the `conversation.hero.brand.mark` slot, and remove the now-unused `HERO_SWIM_UP_PATH` and `HERO_SWIM_DOWN_PATH` constants.
+
+### Gate and Evidence
+
+- [x] T140 [P] Add `scripts/verify-brand-assets.ts`, `scripts/brand-assets.manifest.json`, `scripts/verify-brand-assets.spec.ts`, and `scripts/fixtures/brand/`: the manifest records every shipped brand asset path, SHA-256, generator, dimensions, kind, and the 13 reviewed evidence rows; the verifier rejects a missing or stale manifest entry, an unreferenced asset, a dimension mismatch, missing evidence, and any fingerprint match against the retired DeepSeek whale, wordmark, blue favicon, or home atlas.
+- [x] T141 Wire `verify-brand-assets` into `package.json` and `scripts/run-gates.ts` beside `forwork-identity`, then update the affected tests and snapshots: delete the whale unit/e2e tests, keep `packages/client/ui-brand-official/tests/browser-plugin.client.spec.tsx` covering the empty frame, and update `apps/desktop/tests/welcome-renderer.client.spec.tsx`, `apps/desktop/tests/installer-packaging.spec.ts`, `apps/web/tests/app-icons.spec.ts`, and `apps/web/tests/pwa-manifest.e2e.ts`.
+- [x] T142 [P] Update the surface documentation and record the design decision: `packages/client/ui-brand-official/README.md`, `README.zh.md`, `apps/desktop/README.md:88`, `README.zh.md`, `docs/subsystems/slots.md`, `slots.zh.md`, and `assets/brand/README.md`, replacing whale/fish artwork descriptions with the door mark, the removed frame layer, and the flat palette; link the design brief from T127.
+
+### Checkpoint
+
+`verify-brand-assets`, `verify-forwork-identity`, the icon and brand unit tests, and the Web/Desktop snapshot lanes pass; every listed asset derives from `assets/brand/` and no retired DeepSeek contour remains.
+
+### Dependencies
+
+- T127 blocks T128–T130.
+- T128 and T129 block T131–T136.
+- T130 blocks T132 and T133.
+- T128 and T130 block T137 and T138.
+- T137 blocks T139.
+- T140 blocks T141.
+- T142 can run after T127 and in parallel with T140/T141.
+
+## Phase 13: Finished-Product Brand Evidence (T120 evidence half)
+
+**Goal**: Prove the shipped door mark in the running Web app, the desktop welcome renderer, the installer artwork, and the built website, with committed screenshots and a manifest that binds each image to the assets it depicts.
+
+**Independent Test**: `corepack pnpm exec vitest run --config vitest.brand.config.ts` and `corepack pnpm run verify-brand-assets`; inspect the 13 committed images and confirm the door mark, ForWork label, and no whale.
+
+- [x] T143 Add `vitest.brand.config.ts` with the four evidence suites, serial file execution, and the host-plane tsconfig entries for `apps/web/tests/brand-*.e2e.ts`.
+- [x] T144 Add `apps/web/tests/brand-artwork.e2e.ts` and commit `home-desktop-{light,dark}.png`, `home-hover.png`, `home-mobile.png`, `rail-collapsed.png`, and `icon-sheet.png` under `apps/web/tests/expected/brand/`.
+- [x] T145 Add `apps/web/tests/brand-welcome.e2e.ts` and commit `welcome-{light,dark}.png` under `apps/desktop/tests/expected/brand/`.
+- [x] T146 Add `apps/web/tests/brand-installer.e2e.ts` and commit `installer-{light,dark}.png` and `uninstaller.png` under `apps/desktop/tests/expected/brand/`.
+- [x] T147 Add `apps/web/tests/brand-website.e2e.ts` and commit `nav-{desktop,mobile}.png` under `website/tests/expected/brand/`.
+- [x] T148 Extend `scripts/brand-assets.manifest.json` with the 13 evidence rows, record their hashes with `verify-brand-assets --write`, and verify the evidence inventory and dimensions.
+- [x] T149 Rename the local-build label from `DSH Local Build` to `ForWork Local Build` in the locale dictionaries, Vite title, tests, snapshots, and packaging docs so the screenshots show the ForWork product.
+- [x] T150 Record `brand-home-hover.gif` from the real Web server with Playwright video and ffmpeg; the 960×600, 5.8 s artifact is at `D:\kilo\output\forwork-brand\brand-home-hover.gif` for the PR attachment.
+- [x] T151 Update the plan, contract, and quickstart to the consolidated `apps/web/tests/brand-*.e2e.ts` lane and the final evidence paths.
+
+### Checkpoint
+
+`vitest.brand.config.ts` passes, all 13 evidence images exist with matching manifest hashes, `verify-brand-assets` passes, and the Web screenshot shows the door mark and the ForWork label in both themes.

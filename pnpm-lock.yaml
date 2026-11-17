@@ -3948,9 +3948,6 @@ importers:
 
   packages/client/ui-brand-official:
     devDependencies:
-      '@forwork/client-ui-conversation':
-        specifier: workspace:*
-        version: link:../ui-conversation
       '@forwork/client-ui-primitives':
         specifier: workspace:*
         version: link:../ui-primitives

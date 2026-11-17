@@ -136,3 +136,67 @@ opened|dirty --path missing--> missing (document retained)
 - No transition from `dirty` to `closed` may discard edits without a warning or a recoverable draft (FR-016).
 - `conflict` never overwrites; the user or agent must resolve it (FR-005).
 - `missing` keeps the document and its history; it never silently closes.
+
+## Brand Asset and Evidence
+
+The brand gate and the screenshot suites share three records: the **Brand Asset**, the **Brand Asset Manifest**, and the **Visual Evidence Record**. They do not enter the session log; they are repository artifacts reviewed with the change.
+
+### Brand Asset
+
+One shipped graphic with a known owner and derivation.
+
+| Field | Type | Rules |
+|---|---|---|
+| `path` | repo-relative path | Unique; must exist; no symlink outside the repository |
+| `kind` | enum | `svg-mark`, `svg-tile`, `svg-lockup`, `svg-surface`, `png-icon`, `ico`, `webp-atlas`, `png-evidence` |
+| `surface` | enum | `web`, `desktop`, `website`, `installer`, `brand-master` |
+| `width` / `height` | integer | Positive; matches the SVG viewBox or the raster pixel size |
+| `sha256` | 64-char hex | Hash of the committed bytes; a mismatch is stale |
+| `generator` | string | Script command, or `authored` for a reviewed master |
+| `required` | boolean | False only for optional review evidence |
+
+**Validation**: every file under the scanned brand roots has exactly one manifest row; every row points to an existing file; a row with `required: true` has a matching evidence record when the contract names a screenshot surface.
+
+### Brand Asset Manifest
+
+The repository's single inventory at `scripts/brand-assets.manifest.json`.
+
+| Field | Type | Rules |
+|---|---|---|
+| `version` | integer | Starts at 1; a schema change bumps it |
+| `assets` | Brand Asset list | Sorted by path; no duplicate paths |
+| `evidence` | Visual Evidence list | Sorted by id; every id is unique |
+| `fingerprints` | retired-pattern list | Each entry names the retired artifact and the hash or path fragment that must not reappear |
+
+**Validation**: the verifier recomputes hashes from disk; it never trusts a caller-supplied hash. A stale row fails with the path and the refresh command.
+
+### Visual Evidence Record
+
+One reviewed screenshot or screen recording that proves a shipped surface.
+
+| Field | Type | Rules |
+|---|---|---|
+| `id` | stable string | For example `web-home-desktop-light` |
+| `path` | repo-relative path | Under an owner's `tests/expected/brand/` |
+| `surface` | enum | Same values as Brand Asset, except `brand-master` |
+| `viewport` | `{ width, height }` | Positive integers matching the image |
+| `colorScheme` | `light` / `dark` | Recorded in the image metadata or manifest |
+| `locale` | string | `en-US` for the initial evidence set |
+| `depicts` | asset path list | Every manifest asset visible in the image |
+| `sha256` | 64-char hex | Hash of the committed evidence bytes |
+| `capturedBy` | string | Test path and refresh environment variable |
+
+**Validation**: every evidence path exists; its dimensions match; every `depicts` entry exists in the manifest; the screenshot inventory covers the matrix in `plan.md`; a missing or extra file fails.
+
+### Retired fingerprint
+
+A pattern for an upstream graphic that must not return.
+
+| Field | Type | Rules |
+|---|---|---|
+| `artifact` | string | Human name, for example `deepseek-whale-mark` |
+| `kind` | `svg-path` / `sha256` | How the fingerprint is matched |
+| `value` | string | Exact path-data fragment or full-file hash |
+| `replacement` | string | The ForWork asset that owns the surface now |
+
+**Validation**: an SVG containing a matching path fragment fails; a raster with a matching hash fails; the rejection spec proves both paths.

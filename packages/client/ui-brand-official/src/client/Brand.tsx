@@ -1,14 +1,13 @@
-import { FishLogo } from '@forwork/client-ui-primitives'
+import { BrandMark } from '@forwork/client-ui-primitives'
 import type { SidebarBrandMarkOwnerProps, SidebarBrandNameOwnerProps } from '@forwork/client-ui-sidebar/client'
 
 /**
  * Render the official mark with the presentation requested by its host surface.
  * @param props - Host-supplied mark presentation.
- * @returns the current mark glyph.
- * TODO(forwork-brand): replace the fish glyph with approved ForWork mark artwork.
+ * @returns the official ForWork mark.
  */
 export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
-  return <FishLogo size={size} />
+  return <BrandMark size={size} />
 }
 
 /**
