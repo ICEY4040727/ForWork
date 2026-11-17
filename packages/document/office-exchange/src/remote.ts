@@ -151,6 +151,8 @@ export class OfficeDocumentRemote extends TypertRemoteService {
    * @param expectedVersion - version returned by {@link read}; a changed file is refused.
    * @param signal - caller cancellation.
    * @returns the version the guarded write published.
+   * @throws RemoteError with `office-document/unsupported-feature` when the source still at
+   * `expectedVersion` contains a feature an edit-and-save would drop.
    * @throws RemoteError with `office-document/conflict` when the file changed after the read.
    */
   @Remote
@@ -164,6 +166,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   ): Promise<OfficeDocumentSaveResult> {
     try {
       const target = await this.confine(workspaceFileScope, path, signal)
+      await this.refuseUnsupportedSource(path, target, expectedVersion, signal)
       const bytes = await this.exchange().write(nativeSnapshot(snapshot, format), format, signal)
       const outcome = await this.files().writeBytes(
         target,
@@ -598,6 +601,36 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     const target = await fs.resolve(path, { cwd: workspaceFileScope.workspaceRoot, signal })
     await assertWithinRoots(fs.processPath(target), [workspaceFileScope.workspaceRoot])
     return target
+  }
+
+  /**
+   * Refuse a save whose source still holds content the editable model would drop.
+   *
+   * The client and the document tools refuse earlier, but the contract makes
+   * this boundary authoritative: a save that skips the check is non-conforming.
+   * Detection reads the current source file through the Exchange, never the
+   * caller's in-memory snapshot, and names the first detected feature. A source
+   * that changed or disappeared since the read is left to the version guard,
+   * which reports it as a conflict; its unsupported set no longer describes the
+   * file the caller read.
+   * @param path - caller-supplied path used in the refusal message.
+   * @param target - confined target of the file being replaced.
+   * @param expectedVersion - version the caller read the source at.
+   * @param signal - caller cancellation.
+   * @throws {OfficeExchangeError} `unsupported-feature` when the source reports one.
+   */
+  private async refuseUnsupportedSource(
+    path: string, target: FsTarget, expectedVersion: string, signal: AbortSignal,
+  ): Promise<void> {
+    const info = await this.files().stat(target, signal)
+    if (info === undefined || info.type !== 'file' || info.version !== expectedVersion) return
+    const unsupported = await this.exchange().detectUnsupported(this.files().processPath(target), signal)
+    const first = unsupported[0]
+    if (first === undefined) return
+    throw new OfficeExchangeError(
+      'unsupported-feature',
+      `Cannot save "${path}": the source contains ${first.kind} (${first.detail}), which the editable model cannot preserve.`,
+    )
   }
 
   /** The Exchange seam, required for every operation. */
