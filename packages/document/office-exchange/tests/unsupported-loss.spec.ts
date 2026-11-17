@@ -123,21 +123,6 @@ it('drops footnotes and endnotes with their parts, and reports them', async () =
   expect(written[DOCUMENT_XML]).not.toContain('endnote text')
 })
 
-it('collapses a second section, and reports it', async () => {
-  const bytes = documentPackage(
-    '<w:p><w:pPr><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:pPr>'
-    + '<w:r><w:t>first section</w:t></w:r></w:p>'
-    + '<w:p><w:r><w:t>second section</w:t></w:r></w:p>'
-    + '<w:sectPr><w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/></w:sectPr>',
-  )
-  expectDetected(bytes, { kind: 'sections', detail: DOCUMENT_XML })
-  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
-  expect(writtenXml.match(/<w:sectPr(?=[\s/>])/gu)?.length).toBe(1)
-  expect(writtenXml).not.toContain('w:orient')
-  expect(writtenXml).toContain('first section')
-  expect(writtenXml).toContain('second section')
-})
-
 it('drops a linked image and its external target, and reports it', async () => {
   const bytes = documentPackage(
     '<w:p><w:r><w:drawing><wp:inline xmlns:wp="urn:probe"><a:graphic'

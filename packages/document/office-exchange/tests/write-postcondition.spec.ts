@@ -90,26 +90,37 @@ it('refuses a save whose source still reports unsupported content', async () => 
   expect(openedDocuments().documents[documentIdFor(scope.sessionId, path)]?.contentVersion).toBe(0)
 })
 
-for (const [fixture, kind] of [
-  ['unsupported-tracked.docx', 'tracked-changes'],
-  ['unsupported-header.docx', 'header-footer'],
-] as const) {
-  it(`refuses a save that would drop ${kind}`, async () => {
-    const path = await copyFixture(fixture)
-    const read = await ctx.officeDocument.read(scope, path, signal)
-    expect(read.unsupported.map(feature => feature.kind)).toContain(kind)
-    const before = await readFile(join(root, path))
+it('refuses a save that would drop tracked changes', async () => {
+  const path = await copyFixture('unsupported-tracked.docx')
+  const read = await ctx.officeDocument.read(scope, path, signal)
+  expect(read.unsupported.map(feature => feature.kind)).toContain('tracked-changes')
+  const before = await readFile(join(root, path))
 
-    await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal))
-      .rejects.toMatchObject({
-        code: 'office-document/unsupported-feature',
-        message: expect.stringContaining(kind),
-      })
+  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal))
+    .rejects.toMatchObject({
+      code: 'office-document/unsupported-feature',
+      message: expect.stringContaining('tracked-changes'),
+    })
 
-    expect(hashOf(await readFile(join(root, path)))).toBe(hashOf(before))
-    expect(openedDocuments().documents[documentIdFor(scope.sessionId, path)]?.contentVersion).toBe(0)
-  })
-}
+  expect(hashOf(await readFile(join(root, path)))).toBe(hashOf(before))
+  expect(openedDocuments().documents[documentIdFor(scope.sessionId, path)]?.contentVersion).toBe(0)
+})
+
+it('saves a document whose header text is mapped into the snapshot', async () => {
+  const path = await copyFixture('unsupported-header.docx')
+  const read = await ctx.officeDocument.read(scope, path, signal)
+  expect(read.unsupported).toEqual([])
+  if (read.snapshot.kind !== 'document') throw new Error('expected a document snapshot')
+  const data = jsonObject(read.snapshot.data)
+  expect(JSON.stringify(data['headers'])).toContain('Confidential header')
+
+  const saved = await ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal)
+  expect(saved.version).not.toBe(read.version)
+
+  const reread = await ctx.officeDocument.read(scope, path, signal)
+  expect(JSON.stringify(reread.snapshot)).toContain('Confidential header')
+  expect(events.filter(event => event.type === 'document/save')).toHaveLength(1)
+})
 
 it('appends no document/save for a refused save', async () => {
   const path = await copyFixture('unsupported-macro.docx')

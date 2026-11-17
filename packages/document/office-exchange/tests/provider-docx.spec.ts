@@ -1,10 +1,13 @@
 /** DOCX provider mapping: fixture semantics, round-trip, and structural failures. */
 import { readFile } from 'node:fs/promises'
-import { strToU8, unzipSync, zipSync } from 'fflate'
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { expect, it, vi } from 'vitest'
 import {
   BooleanNumber,
+  ColumnSeparatorType,
   NamedStyleType,
+  PageOrientType,
+  SectionType,
   TextDecoration,
   validateDocumentStructure,
   type IDocumentData,
@@ -110,6 +113,288 @@ it('reads a macro-bearing document without executing or retaining macros', async
   const data = await readDocument(new Uint8Array(await readFile(MACRO_FIXTURE)))
   expectFixtureSemantics(data)
   expect(JSON.stringify(data)).not.toContain('vba')
+})
+
+it('preserves per-section page setup and orientation', async () => {
+  const xml = `${DOCUMENT_NAMESPACE.replace(
+    '>',
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+  )}<w:body>`
+    + '<w:p><w:r><w:t>landscape body</w:t></w:r></w:p>'
+    + '<w:p><w:pPr><w:sectPr>'
+    + '<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>'
+    + '<w:pgMar w:top="720" w:right="1440" w:bottom="720" w:left="1440" w:header="708" w:footer="708"/>'
+    + '</w:sectPr></w:pPr><w:r><w:t>A4 section</w:t></w:r></w:p>'
+    + '<w:p><w:r><w:t>letter body</w:t></w:r></w:p>'
+    + '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/>'
+    + '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>'
+    + '</w:body></w:document>'
+  const data = await readDocument(documentOf(xml))
+  const sections = data.body?.sectionBreaks ?? []
+  expect(sections).toHaveLength(2)
+  expect(sections[0]?.pageSize).toEqual({ width: 16838 / 15, height: 11906 / 15 })
+  expect(sections[0]?.pageOrient).toBe(PageOrientType.LANDSCAPE)
+  expect(sections[0]?.marginTop).toBe(48)
+  expect(sections[0]?.marginRight).toBe(96)
+  expect(sections[0]?.marginBottom).toBe(48)
+  expect(sections[0]?.marginLeft).toBe(96)
+  expect(sections[0]?.marginHeader).toBe(708 / 15)
+  expect(sections[0]?.marginFooter).toBe(708 / 15)
+  expect(sections[1]?.pageSize).toEqual({ width: 816, height: 1056 })
+  expect(sections[1]?.pageOrient).toBe(PageOrientType.PORTRAIT)
+  expect(sections[1]?.marginTop).toBe(96)
+  expect(sections[1]?.marginLeft).toBe(96)
+  expect(validateDocumentStructure(data)).toEqual([])
+
+  const reopened = await readDocument(await writeDocument(data))
+  const rewritten = reopened.body?.sectionBreaks ?? []
+  expect(rewritten).toHaveLength(2)
+  expect(rewritten[0]?.pageSize).toEqual(sections[0]?.pageSize)
+  expect(rewritten[0]?.pageOrient).toBe(PageOrientType.LANDSCAPE)
+  expect(rewritten[0]?.marginTop).toBe(48)
+  expect(rewritten[0]?.marginRight).toBe(96)
+  expect(rewritten[1]?.pageSize).toEqual({ width: 816, height: 1056 })
+  expect(rewritten[1]?.marginTop).toBe(96)
+  expect(rewritten[1]?.marginLeft).toBe(96)
+  expect(validateDocumentStructure(reopened)).toEqual([])
+})
+
+it('maps header and footer text with their section references', async () => {
+  const namespace = DOCUMENT_NAMESPACE.replace(
+    '>',
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+  )
+  const bytes = packageOf({
+    'word/document.xml': `${namespace}<w:body>`
+      + '<w:p><w:r><w:t>body text</w:t></w:r></w:p>'
+      + '<w:sectPr>'
+      + '<w:headerReference w:type="default" r:id="rId2"/>'
+      + '<w:footerReference w:type="default" r:id="rId3"/>'
+      + '<w:pgSz w:w="12240" w:h="15840"/>'
+      + '</w:sectPr></w:body></w:document>',
+    'word/_rels/document.xml.rels': '<Relationships>'
+      + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"'
+      + ' Target="header1.xml"/>'
+      + '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer"'
+      + ' Target="footer1.xml"/>'
+      + '</Relationships>',
+    'word/header1.xml': '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:p><w:r><w:t>Report header</w:t></w:r></w:p></w:hdr>',
+    'word/footer1.xml': '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:p><w:r><w:t>Page footer</w:t></w:r></w:p></w:ftr>',
+  })
+  const data = await readDocument(bytes)
+  const section = data.body?.sectionBreaks?.[0]
+  expect(section?.defaultHeaderId).toBe('header1')
+  expect(section?.defaultFooterId).toBe('footer1')
+  expect(data.headers?.header1?.body.dataStream).toBe('Report header\r\n')
+  expect(data.footers?.footer1?.body.dataStream).toBe('Page footer\r\n')
+  expect(data.headers?.header1?.body.paragraphs).toEqual([{ startIndex: 13, paragraphId: 'paragraph-1' }])
+  expect(validateDocumentStructure(data)).toEqual([])
+
+  const reopened = await readDocument(await writeDocument(data))
+  expect(reopened.body?.sectionBreaks?.[0]?.defaultHeaderId).toBe('header1')
+  expect(reopened.body?.sectionBreaks?.[0]?.defaultFooterId).toBe('footer1')
+  expect(reopened.headers?.header1?.body.dataStream).toBe('Report header\r\n')
+  expect(reopened.footers?.footer1?.body.dataStream).toBe('Page footer\r\n')
+  expect(validateDocumentStructure(reopened)).toEqual([])
+})
+
+it('maps first-page and even-page references, title pages, settings, and explicit columns', async () => {
+  const namespace = DOCUMENT_NAMESPACE.replace(
+    '>',
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+  )
+  const bytes = packageOf({
+    'word/document.xml': `${namespace}<w:body><w:p/>`
+      + '<w:sectPr>'
+      + '<w:headerReference w:type="first" r:id="rId2"/>'
+      + '<w:headerReference w:type="even" r:id="rId3"/>'
+      + '<w:footerReference w:type="first" r:id="rId4"/>'
+      + '<w:pgSz w:w="11906" w:h="16838" w:orient="portrait"/>'
+      + '<w:pgMar w:top="1000" w:left="2000"/>'
+      + '<w:cols w:sep="0"><w:col w:w="3000" w:space="400"/><w:col w:w="3000"/></w:cols>'
+      + '<w:titlePg/>'
+      + '</w:sectPr></w:body></w:document>',
+    'word/settings.xml': '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:evenAndOddHeaders/></w:settings>',
+    'word/_rels/document.xml.rels': '<Relationships>'
+      + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"'
+      + ' Target="header1.xml"/>'
+      + '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"'
+      + ' Target="header2.xml"/>'
+      + '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer"'
+      + ' Target="footer1.xml"/>'
+      + '</Relationships>',
+    'word/header1.xml': '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:p><w:r><w:t>First header</w:t></w:r></w:p></w:hdr>',
+    'word/header2.xml': '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:p><w:r><w:t>Even header</w:t></w:r></w:p></w:hdr>',
+    'word/footer1.xml': '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:p><w:r><w:t>First footer</w:t></w:r></w:p></w:ftr>',
+  })
+  const data = await readDocument(bytes)
+  const section = data.body?.sectionBreaks?.[0]
+  expect(data.documentStyle.evenAndOddHeaders).toBe(BooleanNumber.TRUE)
+  expect(section?.firstPageHeaderId).toBe('header1')
+  expect(section?.evenPageHeaderId).toBe('header2')
+  expect(section?.firstPageFooterId).toBe('footer1')
+  expect(section?.defaultHeaderId).toBeUndefined()
+  expect(section?.useFirstPageHeaderFooter).toBe(BooleanNumber.TRUE)
+  expect(section?.pageOrient).toBe(PageOrientType.PORTRAIT)
+  expect(section?.marginTop).toBe(1000 / 15)
+  expect(section?.marginLeft).toBe(2000 / 15)
+  expect(section?.marginRight).toBeUndefined()
+  expect(section?.columnSeparatorType).toBe(ColumnSeparatorType.NONE)
+  expect(section?.columnProperties).toEqual([
+    { width: 200, paddingEnd: 400 / 15 },
+    { width: 200, paddingEnd: 0 },
+  ])
+
+  const reopened = await readDocument(await writeDocument(data))
+  const rewritten = reopened.body?.sectionBreaks?.[0]
+  expect(reopened.documentStyle.evenAndOddHeaders).toBe(BooleanNumber.TRUE)
+  expect(rewritten?.firstPageHeaderId).toBe('header1')
+  expect(rewritten?.evenPageHeaderId).toBe('header2')
+  expect(rewritten?.firstPageFooterId).toBe('footer1')
+  expect(rewritten?.useFirstPageHeaderFooter).toBe(BooleanNumber.TRUE)
+  expect(rewritten?.pageOrient).toBe(PageOrientType.PORTRAIT)
+  expect(rewritten?.marginTop).toBe(1000 / 15)
+  expect(rewritten?.marginLeft).toBe(2000 / 15)
+  expect(rewritten?.columnProperties).toEqual(section?.columnProperties)
+  const entries = unzipSync(await writeDocument(data))
+  expect(Object.keys(entries)).toEqual(expect.arrayContaining([
+    'word/header1.xml',
+    'word/header2.xml',
+    'word/footer1.xml',
+    'word/settings.xml',
+  ]))
+})
+
+it('ignores unusable section references and column declarations', async () => {
+  const namespace = DOCUMENT_NAMESPACE.replace(
+    '>',
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+  )
+  const bytes = packageOf({
+    'word/document.xml': `${namespace}<w:body>`
+      + '<w:p><w:pPr><w:sectPr>'
+      + '<w:headerReference w:type="default"/>'
+      + '<w:headerReference w:type="default" r:id="rId99"/>'
+      + '<w:headerReference w:type="default" r:id="rId2"/>'
+      + '<w:pgSz w:w="12240"/>'
+      + '<w:cols w:num="2"><w:col/><w:unknown/></w:cols>'
+      + '</w:sectPr></w:pPr><w:r><w:t>one</w:t></w:r></w:p>'
+      + '<w:p><w:pPr><w:sectPr><w:cols w:sep="1"/></w:sectPr></w:pPr><w:r><w:t>two</w:t></w:r></w:p>'
+      + '<w:p><w:pPr><w:sectPr><w:pgSz w:w="15840" w:h="12240"/>'
+      + '<w:cols w:num="2" w:space="20000"/></w:sectPr></w:pPr><w:r><w:t>three</w:t></w:r></w:p>'
+      + '<w:p><w:r><w:t>four</w:t></w:r></w:p>'
+      + '<w:sectPr><w:pgSz w:w="15840" w:h="12240"/><w:cols w:num="2"/></w:sectPr>'
+      + '</w:body></w:document>',
+    'word/_rels/document.xml.rels': '<Relationships>'
+      + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"'
+      + ' Target="headerMissing.xml"/>'
+      + '</Relationships>',
+  })
+  const sections = (await readDocument(bytes)).body?.sectionBreaks ?? []
+  expect(sections).toHaveLength(4)
+  expect(sections[0]?.pageSize).toBeUndefined()
+  expect(sections[0]?.defaultHeaderId).toBeUndefined()
+  expect(sections[0]?.columnProperties).toBeUndefined()
+  expect(sections[1]?.columnSeparatorType).toBe(ColumnSeparatorType.BETWEEN_EACH_COLUMN)
+  expect(sections[1]?.columnProperties).toBeUndefined()
+  expect(sections[2]?.columnProperties).toBeUndefined()
+  expect(sections[3]?.pageOrient).toBe(PageOrientType.LANDSCAPE)
+  expect(sections[3]?.columnProperties).toEqual([
+    { width: 408, paddingEnd: 48 },
+    { width: 408, paddingEnd: 0 },
+  ])
+})
+
+it('omits unknown header ids and writes a separator-only restriction', async () => {
+  const data: IDocumentData = {
+    id: 'separator-only',
+    documentStyle: {},
+    body: {
+      dataStream: '\r\n',
+      paragraphs: [{ startIndex: 0, paragraphId: 'paragraph-1' }],
+      sectionBreaks: [{
+        sectionId: 'section-1',
+        startIndex: 1,
+        defaultHeaderId: 'missing',
+        columnSeparatorType: ColumnSeparatorType.BETWEEN_EACH_COLUMN,
+      }],
+    },
+  }
+  const xml = strFromU8(unzipSync(await writeDocument(data))['word/document.xml'] ?? new Uint8Array())
+  expect(xml).not.toContain('headerReference')
+  expect(xml).toContain('<w:cols w:num="1" w:sep="1"/>')
+})
+
+it('reads even-and-odd settings only when they are enabled', async () => {
+  const plain = `${DOCUMENT_NAMESPACE}<w:body><w:p/></w:body></w:document>`
+  const unrelated = await readDocument(packageOf({
+    'word/document.xml': plain,
+    'word/settings.xml': '<w:settings><w:compat/></w:settings>',
+  }))
+  expect(unrelated.documentStyle.evenAndOddHeaders).toBeUndefined()
+  const disabled = await readDocument(packageOf({
+    'word/document.xml': plain,
+    'word/settings.xml': '<w:settings><w:evenAndOddHeaders w:val="off"/></w:settings>',
+  }))
+  expect(disabled.documentStyle.evenAndOddHeaders).toBeUndefined()
+})
+
+it('round-trips a table inside a header', async () => {
+  const namespace = DOCUMENT_NAMESPACE.replace(
+    '>',
+    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+  )
+  const bytes = packageOf({
+    'word/document.xml': `${namespace}<w:body><w:p/>`
+      + '<w:sectPr><w:headerReference w:type="default" r:id="rId2"/></w:sectPr>'
+      + '</w:body></w:document>',
+    'word/_rels/document.xml.rels': '<Relationships>'
+      + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"'
+      + ' Target="header1.xml"/>'
+      + '</Relationships>',
+    'word/header1.xml': '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:p><w:r><w:t>Items</w:t></w:r></w:p>'
+      + '<w:tbl><w:tblGrid><w:gridCol w:w="1200"/></w:tblGrid>'
+      + '<w:tr><w:tc><w:p><w:r><w:t>Item</w:t></w:r></w:p></w:tc></w:tr></w:tbl>'
+      + '</w:hdr>',
+  })
+  const data = await readDocument(bytes)
+  expect(data.headers?.header1?.body.tables).toHaveLength(1)
+  expect(data.headers?.header1?.tableSource?.['table-1']?.tableRows).toHaveLength(1)
+  const reopened = await readDocument(await writeDocument(data))
+  expect(reopened.headers?.header1?.body.tables).toHaveLength(1)
+  expect(reopened.headers?.header1?.tableSource?.['table-1']?.tableRows).toHaveLength(1)
+  expect(reopened.headers?.header1?.body.dataStream).toBe(data.headers?.header1?.body.dataStream)
+})
+
+it('maps section columns and break type', async () => {
+  const xml = `${DOCUMENT_NAMESPACE}<w:body><w:p/>`
+    + '<w:sectPr><w:type w:val="continuous"/>'
+    + '<w:pgSz w:w="11906" w:h="16838"/>'
+    + '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/>'
+    + '<w:cols w:num="2" w:space="720" w:sep="1"/>'
+    + '</w:sectPr></w:body></w:document>'
+  const data = await readDocument(documentOf(xml))
+  const section = data.body?.sectionBreaks?.[0]
+  expect(section?.sectionType).toBe(SectionType.CONTINUOUS)
+  expect(section?.columnSeparatorType).toBe(ColumnSeparatorType.BETWEEN_EACH_COLUMN)
+  const columns = section?.columnProperties ?? []
+  expect(columns).toHaveLength(2)
+  expect(columns[0]?.paddingEnd).toBe(48)
+  expect(columns[1]?.paddingEnd).toBe(0)
+  expect(Math.round((columns[0]?.width ?? 0) * 15)).toBe(Math.round((columns[1]?.width ?? 0) * 15))
+
+  const reopenedSection = (await readDocument(await writeDocument(data))).body?.sectionBreaks?.[0]
+  expect(reopenedSection?.sectionType).toBe(SectionType.CONTINUOUS)
+  expect(reopenedSection?.columnSeparatorType).toBe(ColumnSeparatorType.BETWEEN_EACH_COLUMN)
+  expect(reopenedSection?.columnProperties).toHaveLength(2)
+  expect(reopenedSection?.columnProperties?.[0]?.paddingEnd).toBe(48)
 })
 
 it('maps paragraph, run, underline, and heading style variants', async () => {

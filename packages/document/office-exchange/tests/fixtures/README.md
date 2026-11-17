@@ -11,7 +11,7 @@ unsupported-feature detection tests.
 | `roundtrip.docx` | Minimal OOXML document: `Heading1` paragraph, normal paragraph with a bold run, and a 2x2 table. No macros, comments, tracked changes, headers, drawings, or embedded objects. Detects clean. |
 | `unsupported-macro.docx` | `roundtrip.docx` plus a `word/vbaProject.bin` entry. Detection must report `macro`. |
 | `unsupported-tracked.docx` | `roundtrip.docx` with `<w:ins>` and `<w:del>` revisions in `word/document.xml`. Detection must report `tracked-changes`. |
-| `unsupported-header.docx` | `roundtrip.docx` plus `word/header1.xml` and its content-type override and relationship. Detection must report `header-footer`. |
+| `unsupported-header.docx` | `roundtrip.docx` plus `word/header1.xml` with `Confidential header` text and its content-type override and relationship. Detection must report nothing, and the header text must survive a save. |
 | `legacy.xls` | BIFF8 workbook written by SheetJS with one `Legacy` sheet. Exercises legacy conversion. |
 | `generate.mjs` | Regenerates every fixture above. |
 

@@ -10223,7 +10223,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'UnsupportedFeatureKind',
-    declaration: 'export type UnsupportedFeatureKind = \'macro\' | \'tracked-changes\' | \'comment\' | \'chart\' | \'drawing\' | \'shape\' | \'header-footer\' | \'image\' | \'external-image\' | \'hyperlink\' | \'numbering\' | \'borders\' | \'footnotes\' | \'sections\' | \'merged-cells\' | \'nested-table\' | \'conditional-formatting\' | \'data-validation\' | \'freeze-panes\' | \'tab-color\' | \'formula-recalc\' | \'embedded-object\' | \'other\';',
+    declaration: 'export type UnsupportedFeatureKind = \'macro\' | \'tracked-changes\' | \'comment\' | \'chart\' | \'drawing\' | \'shape\' | \'image\' | \'external-image\' | \'hyperlink\' | \'numbering\' | \'borders\' | \'footnotes\' | \'merged-cells\' | \'nested-table\' | \'conditional-formatting\' | \'data-validation\' | \'freeze-panes\' | \'tab-color\' | \'formula-recalc\' | \'embedded-object\' | \'other\';',
   },
   {
     name: 'UpdateBundleOptions',

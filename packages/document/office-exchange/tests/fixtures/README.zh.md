@@ -10,7 +10,7 @@
 | `roundtrip.docx` | 最小 OOXML 文档：一个 `Heading1` 段落、一个带粗体 run 的普通段落，以及一个 2x2 表格。不含宏、批注、修订、页眉、绘图或嵌入对象。检测结果干净。 |
 | `unsupported-macro.docx` | `roundtrip.docx` 加上一个 `word/vbaProject.bin` 条目。检测必须报告 `macro`。 |
 | `unsupported-tracked.docx` | `roundtrip.docx` 在 `word/document.xml` 中带有 `<w:ins>` 与 `<w:del>` 修订。检测必须报告 `tracked-changes`。 |
-| `unsupported-header.docx` | `roundtrip.docx` 加上 `word/header1.xml` 及其 content-type 覆盖与关系。检测必须报告 `header-footer`。 |
+| `unsupported-header.docx` | `roundtrip.docx` 加上带 `Confidential header` 文本的 `word/header1.xml` 及其 content-type 覆盖与关系。检测不得报告任何内容，且保存后页眉文本必须保留。 |
 | `legacy.xls` | 由 SheetJS 写入的 BIFF8 工作簿，包含一个 `Legacy` 工作表。用于演练旧版转换。 |
 | `generate.mjs` | 重新生成上述所有夹具。 |
 

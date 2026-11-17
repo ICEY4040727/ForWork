@@ -7,9 +7,13 @@
  * paragraph alignment, spacing, line spacing, indentation, tab stops, outline
  * level, shading, and paragraph borders; document font and paragraph defaults
  * from `word/styles.xml`; named heading paragraph styles (`Heading1` through
- * `Heading5`); and flow tables. Table support covers rows, cells, cell text,
- * grid column widths, preferred cell widths, and the paragraph/section-break
- * pair each cell requires.
+ * `Heading5`); flow tables; section page setup; and header/footer text. Table
+ * support covers rows, cells, cell text, grid column widths, preferred cell
+ * widths, and the paragraph/section-break pair each cell requires. Section
+ * support maps `w:sectPr` page size, orientation, margins, header/footer
+ * distances, columns, and break type into `ISectionBreak`, and maps header and
+ * footer parts into `IDocumentData.headers`/`footers` with their default,
+ * first-page, and even-page references.
  *
  * The installed Univer runtime tokens define the stream conventions used here:
  * `\r` ends a paragraph and `\n` ends a section. Tables use `\x1A` (table
@@ -21,14 +25,13 @@
  * its structural rows live in `tableSource[tableId]`.
  *
  * UNSUPPORTED: images, charts, drawings, shapes, comments, tracked changes,
- * headers, footers, macros, footnotes and endnotes, hyperlinks, lists and
- * numbering, sections and page layout, theme styles and theme-derived colors,
- * named style definitions other than the heading styles above, cell borders,
- * merged cells with spans, nested tables, floating and inline objects, and
- * property values the Univer model has no field for (for example a run
- * border's line size or a decimal tab stop's alignment). A read/write
- * round-trip does not preserve these. Macro-bearing packages are read without
- * executing or retaining macros.
+ * macros, footnotes and endnotes, hyperlinks, lists and numbering, page borders
+ * and page numbering, theme styles and theme-derived colors, named style
+ * definitions other than the heading styles above, cell borders, merged cells
+ * with spans, nested tables, floating and inline objects, and property values
+ * the Univer model has no field for (for example a run border's line size or a
+ * decimal tab stop's alignment). A read/write round-trip does not preserve
+ * these. Macro-bearing packages are read without executing or retaining macros.
  */
 import { XMLParser } from 'fast-xml-parser'
 import { SyntaxValidator } from 'fast-xml-validator'
@@ -38,8 +41,11 @@ import {
   BaselineOffset,
   BorderStyleTypes,
   BooleanNumber,
+  ColumnSeparatorType,
   DashStyleType,
   HorizontalAlign,
+  PageOrientType,
+  SectionType,
   SpacingRule,
   TabStopAlignment,
   TabStopLeader,
@@ -49,12 +55,16 @@ import type {
   IBorderData,
   IBorderStyleData,
   ICustomTable,
+  IDocumentBody,
   IDocumentData,
   IDocumentStyle,
+  IFooters,
+  IHeaders,
   IParagraph,
   IParagraphBorder,
   IParagraphStyle,
   ISectionBreak,
+  ISectionColumnProperties,
   ITable,
   ITableCell,
   ITableCellMargin,
@@ -77,6 +87,12 @@ import { OfficeExchangeError } from '../errors.ts'
 
 const DOCUMENT_XML = 'word/document.xml'
 const STYLES_XML = 'word/styles.xml'
+const SETTINGS_XML = 'word/settings.xml'
+const DOCUMENT_RELS = 'word/_rels/document.xml.rels'
+const HEADER_PART = /^word\/header[^/]*\.xml$/u
+const FOOTER_PART = /^word\/footer[^/]*\.xml$/u
+const DEFAULT_COLUMN_SPACING = 720
+const DEFAULT_PAGE_MARGIN = 1440 / 15
 const PARAGRAPH = '\r'
 const SECTION_BREAK = '\n'
 const TABLE_START = '\x1A'
@@ -240,6 +256,41 @@ const TAB_STOP_LEADERS: readonly (readonly [string, TabStopLeader])[] = [
   ['middleDot', TabStopLeader.MIDDLE_DOT],
 ]
 
+/** OOXML `w:type` section values and their Univer section break kind. */
+const SECTION_TYPES: readonly (readonly [string, SectionType])[] = [
+  ['continuous', SectionType.CONTINUOUS],
+  ['nextColumn', SectionType.NEXT_COLUMN],
+  ['nextPage', SectionType.NEXT_PAGE],
+  ['evenPage', SectionType.EVEN_PAGE],
+  ['oddPage', SectionType.ODD_PAGE],
+]
+
+/** Header/footer reference variants declared by `w:headerReference` and `w:footerReference`. */
+type StoryVariant = 'default' | 'first' | 'even'
+
+/** Section fields that address one header or footer variant. */
+type StoryReferenceKey =
+  | 'defaultHeaderId'
+  | 'firstPageHeaderId'
+  | 'evenPageHeaderId'
+  | 'defaultFooterId'
+  | 'firstPageFooterId'
+  | 'evenPageFooterId'
+
+/** Section fields that address one header variant. */
+const HEADER_REFERENCE_KEYS: Readonly<Record<StoryVariant, StoryReferenceKey>> = {
+  default: 'defaultHeaderId',
+  first: 'firstPageHeaderId',
+  even: 'evenPageHeaderId',
+}
+
+/** Section fields that address one footer variant. */
+const FOOTER_REFERENCE_KEYS: Readonly<Record<StoryVariant, StoryReferenceKey>> = {
+  default: 'defaultFooterId',
+  first: 'firstPageFooterId',
+  even: 'evenPageFooterId',
+}
+
 const XML_PARSER_OPTIONS = {
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
@@ -303,14 +354,75 @@ interface ParsedTable {
   readonly end: number
 }
 
+/** Section fields mapped from one `w:sectPr` element. */
+type SectionSetup = Omit<ISectionBreak, 'sectionId' | 'startIndex'>
+
+/** One package relationship declared by `word/_rels/document.xml.rels`. */
+interface DocumentRelationship {
+  /** Relationship type URI; the trailing segment names the target role. */
+  readonly type: string
+  /** Target part name, relative to `word/`. */
+  readonly target: string
+}
+
+/** Package relationship ids mapped to their declarations. */
+type DocumentRelationships = ReadonlyMap<string, DocumentRelationship>
+
+/** Header and footer part ids present in the package, used to reject dangling references. */
+interface StoryPartIds {
+  /** Header part identities. */
+  readonly headers: ReadonlySet<string>
+  /** Footer part identities. */
+  readonly footers: ReadonlySet<string>
+}
+
+/** A document or header/footer body with the table metadata addressing it. */
+interface StoryData {
+  /** Paragraph, table, and run content. */
+  readonly body?: IDocumentBody
+  /** Table metadata keyed by table id. */
+  readonly tableSource?: ITables
+}
+
+/** One header or footer part scheduled for the writer. */
+interface StoryPart {
+  /** Segment identity the section references. */
+  readonly id: string
+  /** Package entry name. */
+  readonly partName: string
+  /** Document relationship id addressing the part. */
+  readonly relId: string
+  /** Encoded part XML. */
+  readonly xml: string
+}
+
+/** Header or footer parts plus the relationship ids their sections use. */
+interface StoryPlan {
+  /** Parts in deterministic order. */
+  readonly parts: readonly StoryPart[]
+  /** Segment identity mapped to its relationship id. */
+  readonly relIds: ReadonlyMap<string, string>
+  /** Relationship id after the last part in this plan. */
+  readonly nextRelId: number
+}
+
+/** Section properties addressed from the document stream and the body's final section. */
+interface SectionPlan {
+  /** Non-final sections keyed by the stream offset of their section break token. */
+  readonly breakAt: ReadonlyMap<number, ISectionBreak>
+  /** Body-level `w:sectPr` for the final section. */
+  readonly finalXml: string
+}
+
 /**
  * Read `.docx` bytes into a Univer document snapshot. Paragraph text, paragraph
  * breaks, run and paragraph formatting, `word/styles.xml` defaults, heading
- * styles, and flow tables are mapped; the unsupported features listed in the
- * module note are not.
+ * styles, flow tables, section page setup, and header/footer text are mapped;
+ * the unsupported features listed in the module note are not.
  * @param bytes - Complete DOCX package bytes.
  * @param config - Bounds applied before parsing; defaults when omitted.
- * @returns Document snapshot with Univer stream tokens, run styles, and table metadata.
+ * @returns Document snapshot with Univer stream tokens, run styles, table and
+ * header/footer metadata, and section page setup.
  * @throws {OfficeExchangeError} `too-large` when a byte, package-entry,
  * expansion, or table-cell bound is exceeded; `conversion-failed` when the
  * input is not a readable Word document.
@@ -332,13 +444,27 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
     throw new OfficeExchangeError('conversion-failed', 'Package has no word/document.xml part')
   }
   const body = parseDocumentBody(parts.document)
+  const relationships = readRelationships(parts.relationships)
+  const identifiers: StoryPartIds = {
+    headers: new Set(parts.headers.keys()),
+    footers: new Set(parts.footers.keys()),
+  }
   const context = createReadContext(bounds)
   for (const child of childElements(body)) {
-    if (child.tag === 'p') appendParagraph(context, child)
+    if (child.tag === 'p') appendParagraph(context, child, relationships, identifiers)
     if (child.tag === 'tbl') appendTable(context, child)
   }
-  finalizeBody(context)
-  return {
+  const finalSection = findChild(body, 'sectPr')
+  finalizeBody(context, finalSection === undefined ? undefined : readSectionSetup(finalSection, relationships, identifiers))
+  const headers = readStoryParts(parts.headers, 'hdr', bounds, (id, body, tableSource) => (
+    { headerId: id, body, tableSource }
+  ))
+  const footers = readStoryParts(parts.footers, 'ftr', bounds, (id, body, tableSource) => (
+    { footerId: id, body, tableSource }
+  ))
+  const documentStyle = readDocumentStyle(parts.styles)
+  if (readEvenAndOddHeaders(parts.settings)) documentStyle.evenAndOddHeaders = BOOLEAN_TRUE
+  const snapshot: IDocumentData = {
     id: 'office-exchange-document',
     locale: LOCALE_EN_US,
     title: '',
@@ -349,10 +475,13 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
       sectionBreaks: context.sectionBreaks,
       tables: context.tables,
     },
-    documentStyle: readDocumentStyle(parts.styles),
+    documentStyle,
     tableSource: context.tableSource,
     resources: [],
   }
+  if (headers.size > 0) snapshot.headers = Object.fromEntries(headers)
+  if (footers.size > 0) snapshot.footers = Object.fromEntries(footers)
+  return snapshot
 }
 
 /**
@@ -375,14 +504,25 @@ function writeDocumentBytes(data: IDocumentData, config?: OfficeExchangeConfig):
   const stream = data.body?.dataStream ?? ''
   const paragraphs = new Map<number, IParagraph>()
   for (const paragraph of data.body?.paragraphs ?? []) paragraphs.set(paragraph.startIndex, paragraph)
-  const bodyXml = writeBody(stream, paragraphs, data, bounds)
+  let nextRelId = 2
+  const settings = writeSettingsXml(data.documentStyle)
+  if (settings !== undefined) nextRelId += 1
+  const headers = planStoryParts(data.headers, 'header', nextRelId, bounds)
+  const footers = planStoryParts(data.footers, 'footer', headers.nextRelId, bounds)
+  const relIds = new Map([...headers.relIds, ...footers.relIds])
+  const sections = planSections(data.body?.sectionBreaks ?? [], relIds)
+  const bodyXml = writeBody(stream, paragraphs, data, sections, relIds, bounds)
   const entries: Record<string, Uint8Array> = {
-    '[Content_Types].xml': strToU8(contentTypesXml()),
+    '[Content_Types].xml': strToU8(contentTypesXml(headers.parts, footers.parts, settings !== undefined)),
     '_rels/.rels': strToU8(rootRelsXml()),
-    'word/_rels/document.xml.rels': strToU8(documentRelsXml()),
-    [DOCUMENT_XML]: strToU8(documentXml(bodyXml)),
+    'word/_rels/document.xml.rels': strToU8(
+      documentRelsXml(headers.parts, footers.parts, settings !== undefined),
+    ),
+    [DOCUMENT_XML]: strToU8(documentXml(bodyXml, sections.finalXml)),
     [STYLES_XML]: strToU8(stylesXml(data.documentStyle)),
   }
+  if (settings !== undefined) entries[SETTINGS_XML] = strToU8(settings)
+  for (const part of [...headers.parts, ...footers.parts]) entries[part.partName] = strToU8(part.xml)
   const zippable: Zippable = {}
   for (const name of Object.keys(entries).sort()) {
     const content = entries[name]
@@ -435,7 +575,12 @@ function appendParagraphBreak(context: ReadContext, styleId?: string, formatting
   context.paragraphs.push(paragraph)
 }
 
-function appendParagraph(context: ReadContext, element: XmlElement): void {
+function appendParagraph(
+  context: ReadContext,
+  element: XmlElement,
+  relationships?: DocumentRelationships,
+  identifiers?: StoryPartIds,
+): void {
   const properties = findChild(element, 'pPr')
   const style = properties === undefined ? undefined : findChild(properties, 'pStyle')
   const styleId = style === undefined ? undefined : attribute(style, '@_val')
@@ -445,6 +590,146 @@ function appendParagraph(context: ReadContext, element: XmlElement): void {
     appendRun(context, child)
   }
   appendParagraphBreak(context, styleId, formatting)
+  if (properties === undefined || relationships === undefined || identifiers === undefined) return
+  const section = findChild(properties, 'sectPr')
+  if (section === undefined) return
+  context.sectionBreaks.push({
+    sectionId: `section-${context.sectionBreaks.length + 1}`,
+    startIndex: context.length,
+    ...readSectionSetup(section, relationships, identifiers),
+  })
+  append(context, SECTION_BREAK)
+}
+
+/**
+ * Map one `w:sectPr` element into section metadata.
+ * @param element - Section properties element.
+ * @param relationships - Document relationships resolving header and footer references.
+ * @param identifiers - Header and footer part ids present in the package.
+ * @returns Page size, orientation, margins, columns, break type, and header/footer references.
+ */
+function readSectionSetup(
+  element: XmlElement,
+  relationships: DocumentRelationships,
+  identifiers: StoryPartIds,
+): SectionSetup {
+  const section: SectionSetup = {}
+  readPageSize(findChild(element, 'pgSz'), section)
+  readPageMargins(findChild(element, 'pgMar'), section)
+  const columns = findChild(element, 'cols')
+  if (columns !== undefined) readColumns(columns, section)
+  const type = optionalAttribute(findChild(element, 'type'), '@_val')
+  const sectionType = type === undefined ? undefined : lookup(SECTION_TYPES, type)
+  if (sectionType !== undefined) section.sectionType = sectionType
+  for (const child of childElements(element)) {
+    if (child.tag !== 'headerReference' && child.tag !== 'footerReference') continue
+    readStoryReference(child, relationships, identifiers, section)
+  }
+  if (isEnabled(element, 'titlePg') === true) section.useFirstPageHeaderFooter = BOOLEAN_TRUE
+  return section
+}
+
+function readPageSize(element: XmlElement | undefined, section: SectionSetup): void {
+  if (element === undefined) return
+  const width = numberAttribute(element, '@_w')
+  const height = numberAttribute(element, '@_h')
+  if (width === undefined || height === undefined) return
+  section.pageSize = { width: width / TWIPS_PER_PIXEL, height: height / TWIPS_PER_PIXEL }
+  section.pageOrient = pageOrientationOf(attribute(element, '@_orient'), width, height)
+}
+
+function pageOrientationOf(orientation: string | undefined, width: number, height: number): PageOrientType {
+  if (orientation === 'landscape') return PageOrientType.LANDSCAPE
+  if (orientation === 'portrait') return PageOrientType.PORTRAIT
+  return width > height ? PageOrientType.LANDSCAPE : PageOrientType.PORTRAIT
+}
+
+function readPageMargins(element: XmlElement | undefined, section: SectionSetup): void {
+  if (element === undefined) return
+  const top = numberAttribute(element, '@_top')
+  const bottom = numberAttribute(element, '@_bottom')
+  const left = numberAttribute(element, '@_left')
+  const right = numberAttribute(element, '@_right')
+  const header = numberAttribute(element, '@_header')
+  const footer = numberAttribute(element, '@_footer')
+  if (top !== undefined) section.marginTop = top / TWIPS_PER_PIXEL
+  if (bottom !== undefined) section.marginBottom = bottom / TWIPS_PER_PIXEL
+  if (left !== undefined) section.marginLeft = left / TWIPS_PER_PIXEL
+  if (right !== undefined) section.marginRight = right / TWIPS_PER_PIXEL
+  if (header !== undefined) section.marginHeader = header / TWIPS_PER_PIXEL
+  if (footer !== undefined) section.marginFooter = footer / TWIPS_PER_PIXEL
+}
+
+function readColumns(element: XmlElement, section: SectionSetup): void {
+  const separator = attribute(element, '@_sep')
+  section.columnSeparatorType = separator === undefined || separator === '0' || separator === 'false' || separator === 'off'
+    ? ColumnSeparatorType.NONE
+    : ColumnSeparatorType.BETWEEN_EACH_COLUMN
+  const columns: ISectionColumnProperties[] = []
+  for (const child of childElements(element)) {
+    if (child.tag !== 'col') continue
+    const width = numberAttribute(child, '@_w')
+    if (width === undefined) continue
+    columns.push({
+      width: width / TWIPS_PER_PIXEL,
+      paddingEnd: (numberAttribute(child, '@_space') ?? 0) / TWIPS_PER_PIXEL,
+    })
+  }
+  if (columns.length > 0) {
+    section.columnProperties = columns
+    return
+  }
+  const count = numberAttribute(element, '@_num')
+  if (count === undefined || count <= 1) return
+  const spacing = numberAttribute(element, '@_space') ?? DEFAULT_COLUMN_SPACING
+  const widths = equalColumnWidths(section, count, spacing / TWIPS_PER_PIXEL)
+  if (widths !== undefined) section.columnProperties = widths
+}
+
+function equalColumnWidths(
+  section: SectionSetup,
+  count: number,
+  spacing: number,
+): ISectionColumnProperties[] | undefined {
+  const pageSize = section.pageSize
+  if (pageSize?.width === undefined) return undefined
+  const available = pageSize.width - (section.marginLeft ?? DEFAULT_PAGE_MARGIN)
+    - (section.marginRight ?? DEFAULT_PAGE_MARGIN)
+  const width = (available - (count - 1) * spacing) / count
+  if (!Number.isFinite(width) || width <= 0) return undefined
+  const columns: ISectionColumnProperties[] = []
+  for (let index = 0; index < count; index += 1) {
+    columns.push({ width, paddingEnd: index === count - 1 ? 0 : spacing })
+  }
+  return columns
+}
+
+function readStoryReference(
+  element: XmlElement,
+  relationships: DocumentRelationships,
+  identifiers: StoryPartIds,
+  section: SectionSetup,
+): void {
+  const relationshipId = attribute(element, '@_id')
+  if (relationshipId === undefined) return
+  const relationship = relationships.get(relationshipId)
+  if (relationship === undefined || relationship.target.length === 0) return
+  const id = partIdOf(relationship.target)
+  const header = element.tag === 'headerReference'
+  if (header ? relationship.type.endsWith('/header') : relationship.type.endsWith('/footer')) {
+    if (header ? !identifiers.headers.has(id) : !identifiers.footers.has(id)) return
+    section[referenceKeyOf(element.tag, variantOf(attribute(element, '@_type')))] = id
+  }
+}
+
+function referenceKeyOf(tag: string, variant: StoryVariant): StoryReferenceKey {
+  return tag === 'headerReference' ? HEADER_REFERENCE_KEYS[variant] : FOOTER_REFERENCE_KEYS[variant]
+}
+
+function variantOf(value: string | undefined): StoryVariant {
+  if (value === 'first') return 'first'
+  if (value === 'even') return 'even'
+  return 'default'
 }
 
 function appendRun(context: ReadContext, element: XmlElement): void {
@@ -848,19 +1133,57 @@ function cellMargin(): ITableCellMargin {
   }
 }
 
-function finalizeBody(context: ReadContext): void {
+function finalizeBody(context: ReadContext, section?: SectionSetup): void {
   if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
   context.sectionBreaks.push({
     sectionId: `section-${context.sectionBreaks.length + 1}`,
     startIndex: context.length,
+    ...section,
   })
   append(context, SECTION_BREAK)
+}
+
+/**
+ * Read header or footer parts into their segment bodies.
+ * @param parts - Part identities mapped to their decoded XML.
+ * @param root - Root element name: `hdr` for headers, `ftr` for footers.
+ * @param bounds - Bounds applied while parsing tables.
+ * @param build - Builds one segment entry from its identity, body, and table metadata.
+ * @returns Segment identity mapped to its entry.
+ */
+function readStoryParts<Entry>(
+  parts: ReadonlyMap<string, Uint8Array>,
+  root: 'hdr' | 'ftr',
+  bounds: OfficeExchangeConfig,
+  build: (id: string, body: IDocumentBody, tableSource: ITables) => Entry,
+): Map<string, Entry> {
+  const stories = new Map<string, Entry>()
+  for (const [id, xml] of parts) {
+    const element = parseRootElement(xml, root, `${root === 'hdr' ? 'header' : 'footer'} XML`)
+    const context = createReadContext(bounds)
+    for (const child of childElements(element)) {
+      if (child.tag === 'p') appendParagraph(context, child)
+      if (child.tag === 'tbl') appendTable(context, child)
+    }
+    finalizeBody(context)
+    const body: IDocumentBody = {
+      dataStream: context.parts.join(''),
+      textRuns: context.textRuns,
+      paragraphs: context.paragraphs,
+      sectionBreaks: context.sectionBreaks,
+      tables: context.tables,
+    }
+    stories.set(id, build(id, body, context.tableSource))
+  }
+  return stories
 }
 
 function writeBody(
   stream: string,
   paragraphs: ReadonlyMap<number, IParagraph>,
-  data: IDocumentData,
+  story: StoryData,
+  sections: SectionPlan,
+  relIds: ReadonlyMap<string, string>,
   bounds: OfficeExchangeConfig,
 ): string {
   const cells = { count: 0 }
@@ -871,13 +1194,15 @@ function writeBody(
     const token = stream[index]
     if (token === TABLE_START) {
       const table = readTableRange(stream, index)
-      xml += writeTable(stream, index, table, paragraphs, data, bounds, cells)
+      xml += writeTable(stream, index, table, paragraphs, story, bounds, cells)
       index = table.end
       cursor = index
     } else if (token === PARAGRAPH) {
-      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), data)
-      cursor = index + 1
-      index += 1
+      const section = stream[index + 1] === SECTION_BREAK ? sections.breakAt.get(index + 1) : undefined
+      const properties = section === undefined ? '' : writeSectionProperties(section, relIds)
+      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, properties)
+      cursor = section === undefined ? index + 1 : index + 2
+      index = cursor
     } else {
       index += 1
     }
@@ -887,6 +1212,170 @@ function writeBody(
     throw new OfficeExchangeError('conversion-failed', 'Document stream has text outside a paragraph')
   }
   return xml
+}
+
+/**
+ * Write one header or footer body.
+ * @param story - Header or footer segment content.
+ * @param bounds - Table-cell bound applied while writing.
+ * @returns OOXML block content for the part root.
+ */
+function writeStoryBody(story: StoryData & { readonly body: IDocumentBody }, bounds: OfficeExchangeConfig): string {
+  const paragraphs = new Map<number, IParagraph>()
+  for (const paragraph of story.body.paragraphs ?? []) paragraphs.set(paragraph.startIndex, paragraph)
+  return writeBody(
+    story.body.dataStream,
+    paragraphs,
+    story,
+    { breakAt: new Map(), finalXml: '' },
+    new Map(),
+    bounds,
+  )
+}
+
+/**
+ * Schedule header or footer parts for the writer.
+ * @param entries - Segment bodies keyed by their identity.
+ * @param kind - Whether the parts are headers or footers.
+ * @param firstRelId - First document relationship number available.
+ * @param bounds - Table-cell bound applied while writing story bodies.
+ * @returns The parts, their relationship ids, and the next free relationship number.
+ */
+function planStoryParts(
+  entries: IHeaders | IFooters | undefined,
+  kind: 'header' | 'footer',
+  firstRelId: number,
+  bounds: OfficeExchangeConfig,
+): StoryPlan {
+  const ids = entries === undefined ? [] : Object.keys(entries).sort()
+  const parts: StoryPart[] = []
+  const relIds = new Map<string, string>()
+  for (const [index, id] of ids.entries()) {
+    const entry = entries?.[id]
+    /* v8 ignore next -- ids came from this record's own keys, so every lookup resolves. */
+    if (entry === undefined) continue
+    const partName = `word/${kind}${String(index + 1)}.xml`
+    const relId = `rId${String(firstRelId + index)}`
+    parts.push({
+      id,
+      partName,
+      relId,
+      xml: storyXml(kind, writeStoryBody(entry, bounds)),
+    })
+    relIds.set(id, relId)
+  }
+  return { parts, relIds, nextRelId: firstRelId + parts.length }
+}
+
+function storyXml(kind: 'header' | 'footer', content: string): string {
+  const root = kind === 'header' ? 'hdr' : 'ftr'
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + `<w:${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">`
+    + `${content}</w:${root}>`
+}
+
+/**
+ * Split the snapshot's sections into paragraph-level breaks and the body-level final section.
+ * @param sections - Section metadata in document order.
+ * @param relIds - Segment identity mapped to its relationship id.
+ * @returns Non-final sections by stream offset and the final `w:sectPr` XML.
+ */
+function planSections(
+  sections: readonly ISectionBreak[],
+  relIds: ReadonlyMap<string, string>,
+): SectionPlan {
+  const finalSection = lastSectionOf(sections)
+  const breakAt = new Map<number, ISectionBreak>()
+  for (const section of sections) {
+    if (section !== finalSection) breakAt.set(section.startIndex, section)
+  }
+  return { breakAt, finalXml: writeSectionProperties(finalSection, relIds) }
+}
+
+function lastSectionOf(sections: readonly ISectionBreak[]): ISectionBreak | undefined {
+  let last: ISectionBreak | undefined
+  for (const section of sections) {
+    if (last === undefined || section.startIndex > last.startIndex) last = section
+  }
+  return last
+}
+
+/**
+ * Write one section's properties as a `w:sectPr` element.
+ * @param section - Section metadata; absent writes an empty section.
+ * @param relIds - Segment identity mapped to its relationship id.
+ * @returns Section properties XML.
+ */
+function writeSectionProperties(
+  section: ISectionBreak | undefined,
+  relIds: ReadonlyMap<string, string>,
+): string {
+  if (section === undefined) return '<w:sectPr/>'
+  let xml = ''
+  xml += writeStoryReference('headerReference', 'default', section.defaultHeaderId, relIds)
+  xml += writeStoryReference('headerReference', 'first', section.firstPageHeaderId, relIds)
+  xml += writeStoryReference('headerReference', 'even', section.evenPageHeaderId, relIds)
+  xml += writeStoryReference('footerReference', 'default', section.defaultFooterId, relIds)
+  xml += writeStoryReference('footerReference', 'first', section.firstPageFooterId, relIds)
+  xml += writeStoryReference('footerReference', 'even', section.evenPageFooterId, relIds)
+  const sectionType = section.sectionType === undefined
+    ? undefined
+    : nameOf(SECTION_TYPES, section.sectionType)
+  if (sectionType !== undefined) xml += `<w:type w:val="${sectionType}"/>`
+  const size = section.pageSize
+  if (size?.width !== undefined && size.height !== undefined) {
+    const orientation = section.pageOrient === PageOrientType.LANDSCAPE ? ' w:orient="landscape"' : ''
+    xml += `<w:pgSz w:w="${twipsOf(size.width)}" w:h="${twipsOf(size.height)}"${orientation}/>`
+  }
+  xml += writeSectionMargins(section)
+  xml += writeSectionColumns(section)
+  if (section.useFirstPageHeaderFooter === BOOLEAN_TRUE) xml += '<w:titlePg/>'
+  return `<w:sectPr>${xml}</w:sectPr>`
+}
+
+function writeStoryReference(
+  tag: 'headerReference' | 'footerReference',
+  variant: StoryVariant,
+  id: string | undefined,
+  relIds: ReadonlyMap<string, string>,
+): string {
+  if (id === undefined) return ''
+  const relId = relIds.get(id)
+  if (relId === undefined) return ''
+  return `<w:${tag} w:type="${variant}" r:id="${relId}"/>`
+}
+
+function writeSectionMargins(section: ISectionBreak): string {
+  const attributes: string[] = []
+  if (section.marginTop !== undefined) attributes.push(`w:top="${twipsOf(section.marginTop)}"`)
+  if (section.marginRight !== undefined) attributes.push(`w:right="${twipsOf(section.marginRight)}"`)
+  if (section.marginBottom !== undefined) attributes.push(`w:bottom="${twipsOf(section.marginBottom)}"`)
+  if (section.marginLeft !== undefined) attributes.push(`w:left="${twipsOf(section.marginLeft)}"`)
+  if (section.marginHeader !== undefined) attributes.push(`w:header="${twipsOf(section.marginHeader)}"`)
+  if (section.marginFooter !== undefined) attributes.push(`w:footer="${twipsOf(section.marginFooter)}"`)
+  return attributes.length === 0 ? '' : `<w:pgMar ${attributes.join(' ')}/>`
+}
+
+function writeSectionColumns(section: ISectionBreak): string {
+  const columns = section.columnProperties
+  const separator = section.columnSeparatorType === ColumnSeparatorType.BETWEEN_EACH_COLUMN
+  const separatorAttribute = separator ? ' w:sep="1"' : ''
+  if (columns === undefined || columns.length === 0) {
+    return section.columnSeparatorType === undefined ? '' : `<w:cols w:num="1"${separatorAttribute}/>`
+  }
+  const spacing = Math.max(0, ...columns.map(column => column.paddingEnd))
+  let xml = `<w:cols w:num="${String(columns.length)}" w:space="${twipsOf(spacing)}"${separatorAttribute}>`
+  for (const column of columns) {
+    xml += `<w:col w:w="${twipsOf(column.width)}" w:space="${twipsOf(column.paddingEnd)}"/>`
+  }
+  return `${xml}</w:cols>`
+}
+
+function writeSettingsXml(documentStyle: IDocumentStyle): string | undefined {
+  if (documentStyle.evenAndOddHeaders !== BOOLEAN_TRUE) return undefined
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    + '<w:evenAndOddHeaders/></w:settings>'
 }
 
 function readTableRange(stream: string, start: number): ParsedTable {
@@ -933,11 +1422,11 @@ function writeTable(
   start: number,
   table: ParsedTable,
   paragraphs: ReadonlyMap<number, IParagraph>,
-  data: IDocumentData,
+  story: StoryData,
   bounds: OfficeExchangeConfig,
   cells: { count: number },
 ): string {
-  const source = tableSourceAt(data, start)
+  const source = tableSourceAt(story, start)
   const sourceColumns = source?.tableColumns ?? []
   const columnCount = Math.max(
     1,
@@ -967,23 +1456,23 @@ function writeTable(
       const width = sourceCell?.size?.width.v ?? widths[cellIndex] ?? DEFAULT_COLUMN_WIDTH
       xml += '<w:tc><w:tcPr>'
         + `<w:tcW w:w="${String(Math.max(1, Math.round(width * TWIPS_PER_PIXEL)))}" w:type="dxa"/>`
-        + `</w:tcPr>${writeCell(stream, cell, paragraphs, data)}</w:tc>`
+        + `</w:tcPr>${writeCell(stream, cell, paragraphs, story)}</w:tc>`
     }
     xml += '</w:tr>'
   }
   return `${xml}</w:tbl>`
 }
 
-function tableSourceAt(data: IDocumentData, startIndex: number): ITable | undefined {
-  const range = data.body?.tables?.find(table => table.startIndex === startIndex)
-  return range === undefined ? undefined : data.tableSource?.[range.tableId]
+function tableSourceAt(story: StoryData, startIndex: number): ITable | undefined {
+  const range = story.body?.tables?.find(table => table.startIndex === startIndex)
+  return range === undefined ? undefined : story.tableSource?.[range.tableId]
 }
 
 function writeCell(
   stream: string,
   cell: ParsedCell,
   paragraphs: ReadonlyMap<number, IParagraph>,
-  data: IDocumentData,
+  story: StoryData,
 ): string {
   let xml = ''
   let cursor = cell.start
@@ -991,7 +1480,7 @@ function writeCell(
   while (index < cell.end) {
     const token = stream[index]
     if (token === PARAGRAPH) {
-      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), data)
+      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, '')
       cursor = index + 1
       index += 1
     } else if (token === TABLE_START) {
@@ -1006,7 +1495,7 @@ function writeCell(
   if (remainder.length > 0) {
     throw new OfficeExchangeError('conversion-failed', 'Table cell text must end with a paragraph break')
   }
-  return xml.length === 0 ? writeParagraph(stream, cell.start, cell.start, undefined, data) : xml
+  return xml.length === 0 ? writeParagraph(stream, cell.start, cell.start, undefined, story, '') : xml
 }
 
 function writeParagraph(
@@ -1014,11 +1503,12 @@ function writeParagraph(
   start: number,
   end: number,
   paragraph: IParagraph | undefined,
-  data: IDocumentData,
+  story: StoryData,
+  sectionProperties: string,
 ): string {
-  const properties = paragraphProperties(paragraph)
+  const properties = paragraphProperties(paragraph, sectionProperties)
   let xml = `<w:p>${properties}`
-  const runs = runSlices(data.body?.textRuns ?? [], start, end)
+  const runs = runSlices(story.body?.textRuns ?? [], start, end)
   if (runs.length === 0) {
     xml += writeRun(stream.slice(start, end), undefined)
   } else {
@@ -1060,14 +1550,14 @@ function runSlices(textRuns: readonly ITextRun[], start: number, end: number): r
   return slices
 }
 
-function paragraphProperties(paragraph: IParagraph | undefined): string {
+function paragraphProperties(paragraph: IParagraph | undefined, sectionProperties: string): string {
   const styleId = paragraph?.styleId ?? styleIdForNamedStyle(paragraph?.paragraphStyle?.namedStyleType)
   const formatting = paragraph?.paragraphStyle === undefined
     ? ''
     : writeParagraphFormatting(paragraph.paragraphStyle)
-  if (styleId === undefined && formatting.length === 0) return ''
+  if (styleId === undefined && formatting.length === 0 && sectionProperties.length === 0) return ''
   const named = styleId === undefined ? '' : `<w:pStyle w:val="${escapeXml(styleId)}"/>`
-  return `<w:pPr>${named}${formatting}</w:pPr>`
+  return `<w:pPr>${named}${formatting}${sectionProperties}</w:pPr>`
 }
 
 function writeParagraphFormatting(style: IParagraphStyle): string {
@@ -1270,6 +1760,14 @@ interface PackageParts {
   readonly document: Uint8Array | undefined
   /** Decoded `word/styles.xml`, when present. */
   readonly styles: Uint8Array | undefined
+  /** Decoded `word/settings.xml`, when present. */
+  readonly settings: Uint8Array | undefined
+  /** Decoded `word/_rels/document.xml.rels`, when present. */
+  readonly relationships: Uint8Array | undefined
+  /** Header parts keyed by their segment identity. */
+  readonly headers: ReadonlyMap<string, Uint8Array>
+  /** Footer parts keyed by their segment identity. */
+  readonly footers: ReadonlyMap<string, Uint8Array>
 }
 
 function readPackage(bytes: Uint8Array): PackageParts {
@@ -1291,34 +1789,109 @@ function readPackage(bytes: Uint8Array): PackageParts {
             `Document package expands beyond ${EXPANSION_BYTE_LIMIT} bytes`,
           )
         }
-        return file.name === DOCUMENT_XML || file.name === STYLES_XML
+        const path = file.name.toLowerCase()
+        return file.name === DOCUMENT_XML
+          || file.name === STYLES_XML
+          || file.name === SETTINGS_XML
+          || file.name === DOCUMENT_RELS
+          || HEADER_PART.test(path)
+          || FOOTER_PART.test(path)
       },
     })
   } catch (error) {
     if (error instanceof OfficeExchangeError) throw error
     throw new OfficeExchangeError('conversion-failed', `Cannot read OOXML package: ${messageOf(error)}`)
   }
-  return { document: entries[DOCUMENT_XML], styles: entries[STYLES_XML] }
+  const headers = new Map<string, Uint8Array>()
+  const footers = new Map<string, Uint8Array>()
+  for (const [name, content] of Object.entries(entries)) {
+    const path = name.toLowerCase()
+    if (HEADER_PART.test(path)) headers.set(partIdOf(name), content)
+    if (FOOTER_PART.test(path)) footers.set(partIdOf(name), content)
+  }
+  return {
+    document: entries[DOCUMENT_XML],
+    styles: entries[STYLES_XML],
+    settings: entries[SETTINGS_XML],
+    relationships: entries[DOCUMENT_RELS],
+    headers,
+    footers,
+  }
 }
 
-function parseDocumentBody(documentXml: Uint8Array): XmlElement {
-  const xml = strFromU8(documentXml)
+/**
+ * Parse one XML part and return its root element.
+ * @param bytes - Encoded part XML.
+ * @param tag - Expected local root element name.
+ * @param description - Part name used in the failure message.
+ * @returns The parsed root element.
+ * @throws {OfficeExchangeError} `conversion-failed` when the XML is malformed or lacks the root element.
+ */
+function parseRootElement(bytes: Uint8Array, tag: string, description: string): XmlElement {
+  const xml = strFromU8(bytes)
   let parsed: readonly ParserNode[]
   try {
     SyntaxValidator.validate(xml)
     parsed = new XMLParser(XML_PARSER_OPTIONS).parse(xml) as readonly ParserNode[]
   } catch (error) {
-    throw new OfficeExchangeError('conversion-failed', `Cannot read document XML: ${messageOf(error)}`)
+    throw new OfficeExchangeError('conversion-failed', `Cannot read ${description}: ${messageOf(error)}`)
   }
-  const root = parsed.map(toElement).find(element => element?.tag === 'document')
+  const root = parsed.map(toElement).find(element => element?.tag === tag)
   if (root === undefined) {
-    throw new OfficeExchangeError('conversion-failed', 'Document XML has no w:document element')
+    throw new OfficeExchangeError('conversion-failed', `${description} has no w:${tag} element`)
   }
+  return root
+}
+
+function parseDocumentBody(documentXml: Uint8Array): XmlElement {
+  const root = parseRootElement(documentXml, 'document', 'document XML')
   const body = findChild(root, 'body')
   if (body === undefined) {
     throw new OfficeExchangeError('conversion-failed', 'Document XML has no w:body element')
   }
   return body
+}
+
+/**
+ * Read the document relationship part.
+ * @param xml - Decoded `word/_rels/document.xml.rels`, when present.
+ * @returns Relationship ids mapped to their type and target; empty without a part.
+ */
+function readRelationships(xml: Uint8Array | undefined): DocumentRelationships {
+  const relationships = new Map<string, DocumentRelationship>()
+  if (xml === undefined) return relationships
+  const text = strFromU8(xml)
+  for (const match of text.matchAll(/<Relationship(?=[\s/>])[^>]*>/gu)) {
+    const id = tagAttribute(match[0], 'Id')
+    const type = tagAttribute(match[0], 'Type')
+    const target = tagAttribute(match[0], 'Target')
+    if (id !== undefined && type !== undefined && target !== undefined) {
+      relationships.set(id, { type, target })
+    }
+  }
+  return relationships
+}
+
+function tagAttribute(tag: string, name: string): string | undefined {
+  return new RegExp(`\\b${name}="([^"]*)"`, 'u').exec(tag)?.[1]
+}
+
+/**
+ * Report whether `word/settings.xml` enables even and odd page headers.
+ * @param xml - Decoded settings part, when present.
+ * @returns `true` when the on/off element is present and not disabled.
+ */
+function readEvenAndOddHeaders(xml: Uint8Array | undefined): boolean {
+  if (xml === undefined) return false
+  const match = /<(?:w:)?evenAndOddHeaders(?=[\s/>])[^>]*>/u.exec(strFromU8(xml))
+  if (match === null) return false
+  const value = tagAttribute(match[0], 'w:val') ?? tagAttribute(match[0], 'val')
+  return value === undefined || (value !== '0' && value !== 'false' && value !== 'off')
+}
+
+function partIdOf(partName: string): string {
+  const name = partName.slice(partName.lastIndexOf('/') + 1)
+  return name.slice(0, -'.xml'.length)
 }
 
 function toElement(node: ParserNode): XmlElement | undefined {
@@ -1420,15 +1993,32 @@ function positiveNumber(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
 }
 
-function documentXml(body: string): string {
+function documentXml(body: string, section: string): string {
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
     + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
-    + `<w:body>${body}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body>`
+    + `<w:body>${body}${section}</w:body>`
     + '</w:document>'
 }
 
-function contentTypesXml(): string {
+function contentTypesXml(
+  headers: readonly StoryPart[],
+  footers: readonly StoryPart[],
+  settings: boolean,
+): string {
+  let overrides = ''
+  if (settings) {
+    overrides += '<Override PartName="/word/settings.xml"'
+      + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
+  }
+  for (const part of headers) {
+    overrides += `<Override PartName="/${part.partName}"`
+      + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>'
+  }
+  for (const part of footers) {
+    overrides += `<Override PartName="/${part.partName}"`
+      + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'
+  }
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
     + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
@@ -1437,7 +2027,7 @@ function contentTypesXml(): string {
     + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
     + '<Override PartName="/word/styles.xml"'
     + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
-    + '</Types>'
+    + `${overrides}</Types>`
 }
 
 function rootRelsXml(): string {
@@ -1449,13 +2039,32 @@ function rootRelsXml(): string {
     + '</Relationships>'
 }
 
-function documentRelsXml(): string {
-  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-    + '<Relationship Id="rId1"'
+function documentRelsXml(
+  headers: readonly StoryPart[],
+  footers: readonly StoryPart[],
+  settings: boolean,
+): string {
+  let relationships = '<Relationship Id="rId1"'
     + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"'
     + ' Target="styles.xml"/>'
-    + '</Relationships>'
+  if (settings) {
+    relationships += '<Relationship Id="rId2"'
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings"'
+      + ' Target="settings.xml"/>'
+  }
+  for (const part of headers) {
+    relationships += `<Relationship Id="${part.relId}"`
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header"'
+      + ` Target="${part.partName.slice('word/'.length)}"/>`
+  }
+  for (const part of footers) {
+    relationships += `<Relationship Id="${part.relId}"`
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer"'
+      + ` Target="${part.partName.slice('word/'.length)}"/>`
+  }
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + `${relationships}</Relationships>`
 }
 
 function stylesXml(documentStyle: IDocumentStyle): string {

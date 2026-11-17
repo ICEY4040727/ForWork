@@ -3,8 +3,8 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/document/office-exchange/tests/fixtures/README.md
 /office-exchange-fixtures:
-  en: 1f94b293cde3ee52
-  zh: 8336469a3a395a49
+  en: d975b0c151f517ff
+  zh: 06408fdfcd65c3a3
 /office-exchange-fixtures/regenerate:
   en: 69cb2a180a0b8e97
   zh: 0c4ae2d6b0b3b49a

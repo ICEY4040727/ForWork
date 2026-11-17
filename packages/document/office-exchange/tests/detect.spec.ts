@@ -1,6 +1,7 @@
 /** Unsupported-feature detection over in-memory OOXML packages. */
 import { readFile } from 'node:fs/promises'
-import { strToU8, zipSync } from 'fflate'
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
+import { PageOrientType } from '@univerjs/core'
 import { expect, it } from 'vitest'
 import { DEFAULT_OFFICE_EXCHANGE_CONFIG } from '../src/config.ts'
 import { detectUnsupportedFeatures } from '../src/detect.ts'
@@ -94,11 +95,32 @@ it('detects drawing and VML shape parts', () => {
   ])
 })
 
-it('detects header and footer parts', () => {
+it('does not report header and footer parts', () => {
   for (const path of ['word/header1.xml', 'word/footer2.xml']) {
     const bytes = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, [path]: '<hdr/>' })
-    expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'header-footer', detail: path }])
+    expect(detectUnsupportedFeatures(bytes)).toEqual([])
   }
+})
+
+it('detects dropped constructs inside header and footer parts', () => {
+  const hyperlink = packageOf({
+    [DOCUMENT_XML]: PLAIN_DOCUMENT,
+    'word/header1.xml': '<w:hdr><w:hyperlink r:id="rId1"><w:r><w:t>link</w:t></w:r></w:hyperlink></w:hdr>',
+  })
+  expect(detectUnsupportedFeatures(hyperlink)).toEqual([
+    { kind: 'hyperlink', detail: 'word/header1.xml' },
+  ])
+
+  const external = packageOf({
+    [DOCUMENT_XML]: PLAIN_DOCUMENT,
+    'word/footer1.xml': '<w:ftr/>',
+    'word/_rels/footer1.xml.rels': '<Relationships><Relationship Id="rId1"'
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+      + ' Target="https://example.test/a.png" TargetMode="External"/></Relationships>',
+  })
+  expect(detectUnsupportedFeatures(external)).toEqual([
+    { kind: 'external-image', detail: 'word/_rels/footer1.xml.rels' },
+  ])
 })
 
 it('detects embedded objects', () => {
@@ -111,7 +133,6 @@ it('detects embedded objects', () => {
 it('reports every kind once, ordered by the fixed kind order', () => {
   const bytes = packageOf({
     'word/embeddings/oleObject1.bin': new Uint8Array([0]),
-    'word/header1.xml': '<hdr/>',
     'word/vmlDrawing1.vml': '<vml/>',
     'ppt/charts/chart1.xml': '<chart/>',
     'word/comments.xml': '<comments/>',
@@ -124,7 +145,6 @@ it('reports every kind once, ordered by the fixed kind order', () => {
     { kind: 'comment', detail: 'word/comments.xml' },
     { kind: 'chart', detail: 'ppt/charts/chart1.xml' },
     { kind: 'shape', detail: 'word/vmlDrawing1.vml' },
-    { kind: 'header-footer', detail: 'word/header1.xml' },
     { kind: 'embedded-object', detail: 'word/embeddings/oleObject1.bin' },
   ])
 })
@@ -330,14 +350,14 @@ it('does not report notes for a document without note parts or references', () =
   expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT }))).toEqual([])
 })
 
-it('detects a second section', () => {
+it('does not report multiple sections', () => {
   const bytes = packageOf({
     [DOCUMENT_XML]: bodyOf(
       '<w:p><w:pPr><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:pPr></w:p>'
       + '<w:p/><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>',
     ),
   })
-  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'sections', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
 it('does not report the single default section every document carries', () => {
@@ -490,9 +510,16 @@ it('keeps the minimal editable web fixture free of detected losses across a roun
   })
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
   const original = await readDocument(bytes)
+  expect(original.body?.sectionBreaks?.[0]?.pageSize).toEqual({ width: 816, height: 1056 })
+  expect(original.body?.sectionBreaks?.[0]?.pageOrient).toBe(PageOrientType.PORTRAIT)
   const rewritten = await writeDocument(original)
   expect(detectUnsupportedFeatures(rewritten)).toEqual([])
-  expect((await readDocument(rewritten)).body?.dataStream).toBe(original.body?.dataStream)
+  expect(strFromU8(unzipSync(rewritten)[DOCUMENT_XML] ?? new Uint8Array()))
+    .toContain('<w:pgSz w:w="12240" w:h="15840"/>')
+  const reopened = await readDocument(rewritten)
+  expect(reopened.body?.sectionBreaks?.[0]?.pageSize).toEqual({ width: 816, height: 1056 })
+  expect(reopened.body?.sectionBreaks?.[0]?.pageOrient).toBe(PageOrientType.PORTRAIT)
+  expect(reopened.body?.dataStream).toBe(original.body?.dataStream)
 })
 
 it('keeps the supported round-trip fixtures free of detected losses', async () => {

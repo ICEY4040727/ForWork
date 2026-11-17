@@ -46,7 +46,6 @@ const UNSUPPORTED_KIND_ORDER: readonly UnsupportedFeatureKind[] = [
   'chart',
   'drawing',
   'shape',
-  'header-footer',
   'embedded-object',
   'image',
   'external-image',
@@ -54,7 +53,6 @@ const UNSUPPORTED_KIND_ORDER: readonly UnsupportedFeatureKind[] = [
   'numbering',
   'borders',
   'footnotes',
-  'sections',
   'merged-cells',
   'nested-table',
   'conditional-formatting',
@@ -86,6 +84,10 @@ interface PackageContents {
   readonly documentRelsXml: Uint8Array | undefined
   /** Decoded `word/numbering.xml`, when the package declares numbering. */
   readonly numberingXml: Uint8Array | undefined
+  /** Decoded header and footer parts, in central-directory order. */
+  readonly storyParts: readonly PackagePart[]
+  /** Decoded header and footer relationship parts, in central-directory order. */
+  readonly storyRelsParts: readonly PackagePart[]
   /** Decoded worksheet parts, in central-directory order. */
   readonly worksheetParts: readonly PackagePart[]
 }
@@ -108,7 +110,8 @@ export function detectUnsupportedFeatures(
     )
   }
 
-  const { entryNames, documentXml, documentRelsXml, numberingXml, worksheetParts } = readPackage(bytes)
+  const { entryNames, documentXml, documentRelsXml, numberingXml, storyParts, storyRelsParts, worksheetParts }
+    = readPackage(bytes)
   const details = new Map<UnsupportedFeatureKind, string>()
   const record = (kind: UnsupportedFeatureKind, detail: string): void => {
     if (!details.has(kind)) details.set(kind, detail)
@@ -121,7 +124,6 @@ export function detectUnsupportedFeatures(
     if (hasPrefix(path, CHART_PREFIXES)) record('chart', name)
     if (hasPrefix(path, DRAWING_PREFIXES)) record('drawing', name)
     if (path.includes('vmldrawing')) record('shape', name)
-    if (isHeaderOrFooterPart(path)) record('header-footer', name)
     if (hasPrefix(path, EMBEDDING_PREFIXES)) record('embedded-object', name)
     if (hasPrefix(path, MEDIA_PREFIXES)) record('image', name)
     if (NOTE_PARTS.has(path)) record('footnotes', name)
@@ -130,7 +132,11 @@ export function detectUnsupportedFeatures(
   if (documentRelsXml !== undefined && hasExternalImageRelationship(strFromU8(documentRelsXml))) {
     record('external-image', DOCUMENT_RELS)
   }
-  if (documentXml !== undefined) detectDocumentFeatures(strFromU8(documentXml), record)
+  if (documentXml !== undefined) detectDocumentFeatures(strFromU8(documentXml), DOCUMENT_XML, record)
+  for (const part of storyParts) detectDocumentFeatures(part.xml, part.name, record)
+  for (const part of storyRelsParts) {
+    if (hasExternalImageRelationship(part.xml)) record('external-image', part.name)
+  }
   if (numberingXml !== undefined && hasNumberingDefinitions(strFromU8(numberingXml))) {
     record('numbering', NUMBERING_XML)
   }
@@ -147,23 +153,24 @@ export function detectUnsupportedFeatures(
 /**
  * Record document-body constructs that the document writer drops, because it
  * writes back paragraph text, run and paragraph formatting, heading styles,
- * and flow tables.
- * @param xml - Decoded `word/document.xml`.
+ * section page setup, header and footer text, and flow tables.
+ * @param xml - Decoded `word/document.xml` or a header/footer part.
+ * @param detail - Part name reported with each detected kind.
  * @param record - First-detail-per-kind recorder.
  */
 function detectDocumentFeatures(
   xml: string,
+  detail: string,
   record: (kind: UnsupportedFeatureKind, detail: string) => void,
 ): void {
-  if (xml.includes('<w:ins ') || xml.includes('<w:del ')) record('tracked-changes', DOCUMENT_XML)
-  if (/<w:hyperlink(?=[\s/>])/u.test(xml)) record('hyperlink', DOCUMENT_XML)
-  if (/<w:numPr(?=[\s/>])/u.test(xml)) record('numbering', DOCUMENT_XML)
-  if (hasCellBorders(xml)) record('borders', DOCUMENT_XML)
-  if (hasNoteReference(xml)) record('footnotes', DOCUMENT_XML)
-  if (hasMultipleSections(xml)) record('sections', DOCUMENT_XML)
-  if (/<a:blip(?=[\s/>])[^>]*\br:link=/u.test(xml)) record('external-image', DOCUMENT_XML)
-  if (hasMergedCellSpan(xml)) record('merged-cells', DOCUMENT_XML)
-  if (hasNestedTable(xml)) record('nested-table', DOCUMENT_XML)
+  if (xml.includes('<w:ins ') || xml.includes('<w:del ')) record('tracked-changes', detail)
+  if (/<w:hyperlink(?=[\s/>])/u.test(xml)) record('hyperlink', detail)
+  if (/<w:numPr(?=[\s/>])/u.test(xml)) record('numbering', detail)
+  if (hasCellBorders(xml)) record('borders', detail)
+  if (hasNoteReference(xml)) record('footnotes', detail)
+  if (/<a:blip(?=[\s/>])[^>]*\br:link=/u.test(xml)) record('external-image', detail)
+  if (hasMergedCellSpan(xml)) record('merged-cells', detail)
+  if (hasNestedTable(xml)) record('nested-table', detail)
 }
 
 /**
@@ -214,21 +221,10 @@ function hasNoteReference(xml: string): boolean {
 }
 
 /**
- * Report whether the document defines more than one section. Every document
- * carries one final `w:sectPr`; a single section is therefore not a loss, while
- * the writer collapses a second section's layout into its own fixed one.
- * @param xml - Decoded `word/document.xml`.
- * @returns `true` when more than one `w:sectPr` element is present.
- */
-function hasMultipleSections(xml: string): boolean {
-  return (xml.match(/<w:sectPr(?=[\s/>])/gu)?.length ?? 0) > 1
-}
-
-/**
  * Report whether the document's relationships carry an image outside the
  * package. Hyperlink relationships also use an external target, so the
  * relationship type must name an image.
- * @param xml - Decoded `word/_rels/document.xml.rels`.
+ * @param xml - Decoded `word/_rels/document.xml.rels` or a header/footer relationship part.
  * @returns `true` when an image relationship has `TargetMode="External"`.
  */
 function hasExternalImageRelationship(xml: string): boolean {
@@ -304,6 +300,8 @@ function readPackage(bytes: Uint8Array): PackageContents {
           || file.name === DOCUMENT_RELS
           || file.name === NUMBERING_XML
           || isWorksheetPart(path)
+          || isHeaderOrFooterPart(path)
+          || isStoryRelationshipPart(path)
       },
     })
   } catch (error) {
@@ -313,15 +311,25 @@ function readPackage(bytes: Uint8Array): PackageContents {
   }
 
   const worksheetParts: PackagePart[] = []
+  const storyParts: PackagePart[] = []
+  const storyRelsParts: PackagePart[] = []
   for (const [name, content] of Object.entries(entries)) {
     if (name === DOCUMENT_XML || name === DOCUMENT_RELS || name === NUMBERING_XML) continue
-    worksheetParts.push({ name, xml: strFromU8(content) })
+    const xml = strFromU8(content)
+    if (isWorksheetPart(name.toLowerCase())) {
+      worksheetParts.push({ name, xml })
+      continue
+    }
+    if (isStoryRelationshipPart(name.toLowerCase())) storyRelsParts.push({ name, xml })
+    else storyParts.push({ name, xml })
   }
   return {
     entryNames,
     documentXml: entries[DOCUMENT_XML],
     documentRelsXml: entries[DOCUMENT_RELS],
     numberingXml: entries[NUMBERING_XML],
+    storyParts,
+    storyRelsParts,
     worksheetParts,
   }
 }
@@ -342,4 +350,8 @@ function isCommentPart(path: string): boolean {
 
 function isHeaderOrFooterPart(path: string): boolean {
   return (path.startsWith('word/header') || path.startsWith('word/footer')) && path.endsWith('.xml')
+}
+
+function isStoryRelationshipPart(path: string): boolean {
+  return path.startsWith('word/_rels/') && path.endsWith('.rels')
 }
