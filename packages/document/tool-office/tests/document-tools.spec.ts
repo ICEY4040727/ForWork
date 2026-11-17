@@ -151,6 +151,14 @@ describe('document_read', () => {
     result = objectOf(await call('document_read', { documentId: documentIdFor(h, path) }))
     expect(result['code']).toBe('unsupported-feature')
     expect(result['features']).toEqual([{ kind: 'macro' }])
+
+    dispatch.mockResolvedValueOnce({
+      status: 'unsupported-feature',
+      features: [{ kind: 'data-validation', detail: 'Sales' }],
+    })
+    result = objectOf(await call('document_read', { documentId: documentIdFor(h, path) }))
+    expect(result['code']).toBe('unsupported-feature')
+    expect(result['features']).toEqual([{ kind: 'data-validation', detail: 'Sales' }])
   })
 
   it('refuses an applied answer for a read command', async () => {

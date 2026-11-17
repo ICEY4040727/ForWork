@@ -56,6 +56,15 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 
 `formatOf(path)` 按扩展名分类路径；`isEditableFormat` 区分可直接编辑的 `.docx/.xlsx` 与需要转换的格式；`isLegacyFormat` 指出旧版格式集合。
 
+### 不支持特性的检测
+
+`read` 与 `detectUnsupported` 报告每一项在编辑并保存后会丢失的内容；列表非空时拒绝保存，而不是写入有损文件。
+
+- 文档：宏、修订记录、批注、图表、绘图、形状、页眉与页脚、嵌入对象、内嵌图片（`word/media/`）、超链接、列表与编号（`word/numbering.xml` 定义或 `w:numPr`）、无法往返的文字格式（字体、字号、颜色）与段落对齐、合并单元格跨度（大于 1 的 `w:gridSpan` 或任意 `w:vMerge`），以及单元格内的嵌套表格。
+- 工作簿：图表、绘图、批注、宏、嵌入对象、条件格式、数据验证、冻结窗格、工作表标签颜色，以及单元格超链接目标。
+
+粗体、斜体、下划线、标题样式、数字格式、填充、边框、合并区域、行高与列宽都能往返，因此检测不会报告它们。
+
 ### Remote 表面
 
 该插件还挂载 `ctx.officeDocument`，一个在同一 seam 之上的 Session 作用域 Remote 表面。它生成的 Client 命名空间是 `remote.officeDocument`；把该包挂载进 Host 组合，并把 `@forwork/office-exchange/remote` 加入 Client 组装。

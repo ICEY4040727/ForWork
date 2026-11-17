@@ -56,6 +56,15 @@ Every failure is an `OfficeExchangeError` with a stable `code`; bounds resolve o
 
 `formatOf(path)` classifies a path by extension; `isEditableFormat` separates directly editable `.docx/.xlsx` from formats that require conversion; `isLegacyFormat` names the legacy set.
 
+### Unsupported-feature detection
+
+`read` and `detectUnsupported` report every construct an edit-and-save would drop; a non-empty list refuses the save instead of writing a lossy file.
+
+- Documents: macros, tracked changes, comments, charts, drawings, shapes, headers and footers, embedded objects, inline images (`word/media/`), hyperlinks, lists and numbering (`word/numbering.xml` definitions or `w:numPr`), unsupported run formatting (font, size, color) and paragraph alignment, merged-cell spans (a `w:gridSpan` above one or any `w:vMerge`), and tables nested inside a cell.
+- Workbooks: charts, drawings, comments, macros, embedded objects, conditional formatting, data validation, frozen panes, sheet tab colors, and cell hyperlink targets.
+
+Bold, italic, underline, heading styles, number formats, fills, borders, merged ranges, row heights, and column widths round-trip, so detection does not report them.
+
 ### Remote surface
 
 The plugin also mounts `ctx.officeDocument`, a session-scoped Remote surface over the same seam. Its generated Client namespace is `remote.officeDocument`; mount the package in the Host composition and add `@forwork/office-exchange/remote` to the Client assembly.

@@ -62,6 +62,16 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
   'header-footer': 'feature.headerFooter',
   'formula-recalc': 'feature.formulaRecalc',
   'embedded-object': 'feature.embeddedObject',
+  image: 'feature.image',
+  hyperlink: 'feature.hyperlink',
+  numbering: 'feature.numbering',
+  'run-formatting': 'feature.runFormatting',
+  'merged-cells': 'feature.mergedCells',
+  'nested-table': 'feature.nestedTable',
+  'conditional-formatting': 'feature.conditionalFormatting',
+  'data-validation': 'feature.dataValidation',
+  'freeze-panes': 'feature.freezePanes',
+  'tab-color': 'feature.tabColor',
   other: 'feature.other',
 }
 

@@ -483,6 +483,22 @@ describe('OfficePanel', () => {
     expect(remote.save).not.toHaveBeenCalled()
   })
 
+  it('names a newly detected document or workbook loss and refuses to save', async () => {
+    const remote = fakeRemote()
+    remote.read.mockResolvedValueOnce(success(readResult('v1', {
+      unsupported: [{ kind: 'nested-table', detail: 'table-1' }, { kind: 'data-validation' }],
+    })))
+    const view = render(<OfficePanel {...panelProps({
+      value: { absolutePath: '/work/budget.xlsx', version: 'v1' },
+      remote: remote.face,
+    })} />)
+    expect(await view.findByText(en['feature.nestedTable'])).toBeDefined()
+    expect(view.getByText(en['feature.dataValidation'])).toBeDefined()
+    expect(view.getByText('table-1')).toBeDefined()
+    fireEvent.click(view.getByText(en.save))
+    expect(remote.save).not.toHaveBeenCalled()
+  })
+
   it('prompts instead of reloading when the file changes while dirty', async () => {
     const remote = fakeRemote()
     const adapter = createMockAdapter()
