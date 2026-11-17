@@ -79,7 +79,7 @@ recordDocumentClose(session, { documentId, reason })
 
 `document` projection 持有 `{ order, documents }`：显示顺序，以及每个打开文档的一条条目，包含其身份、当前路径、格式、内容版本、`open` 或 `missing` 状态与不支持特性。`document/open` 插入或更新条目，`document/save` 与 `document/edit` 推进其版本，`document/rebind` 替换路径，`document/missing` 标记为不可用，`document/close` 删除它。未知事件保持同一个 state 引用，因此不运行任何下游工作。线缆视图是同一个值，并带有供 Client 恢复的 schema。
 
-该插件的 prompt 区段为正在组装的 Agent 的 Session 渲染打开集合；没有 Agent 或没有打开文档时不渲染内容。projection 与区段都随挂载 fiber 释放。
+该插件的 prompt 区段为正在组装的 Agent 的 Session 渲染打开集合；没有 Agent 或没有打开文档时不渲染内容。每行以条目的精确 `documentId` 开头，文档工具调用正是原样传回该身份。projection 与区段都随挂载 fiber 释放。
 
 ### 恢复打开集合
 
@@ -117,7 +117,7 @@ const decision = recoveryDecision(draft, readResult.version)
 | [`src/document-restore.ts`](src/document-restore.ts) | `restoreSet`：Client 重新打开的有序、带缺失标记的集合 |
 | [`src/document-recovery.ts`](src/document-recovery.ts) | `recoveryDecision`：提供、过期或忽略一份已存储草稿 |
 | [`src/plugin.ts`](src/plugin.ts) | `session-document` 插件：projection 注册与打开文档的 prompt 区段 |
-| [`src/index.ts`](src/index.ts) | 包入口，重新导出各模块与插件的 `name`／`inject`／`apply` |
+| [`src/index.ts`](src/index.ts) | 包入口，重新导出各模块、prompt 渲染器与插件的 `name`／`inject`／`apply` |
 
 </details>
 
@@ -139,19 +139,19 @@ const decision = recoveryDecision(draft, readResult.version)
 
 #### 模型看到什么
 
-当至少打开一个文档时，prompt 区段渲染一份简短的英文列表：由位置顺序体现的打开文档数量、每个文件名、其格式以及 `missing` 标记。没有 Agent 或没有打开文档时，区段不渲染任何内容；文档工具拥有自己的模型可见 schema 与结果。
+当至少打开一个文档时，prompt 区段渲染一份简短的英文列表：由位置顺序体现的打开文档数量、每个文档的 Session 作用域 `<sessionId>:<path>` id、其文件名、其格式以及 `missing` 标记。该 id 正是文档工具接受的身份，因此模型无需额外读取即可寻址打开文档。没有 Agent 或没有打开文档时，区段不渲染任何内容；文档工具拥有自己的模型可见 schema 与结果。
 
 ##### 打开文档 prompt 区段
 
 ```markdown
 Open documents in this session:
-1. budget.xlsx (xlsx)
-2. report.docx (docx, missing)
+1. document-plugin:work/budget.xlsx (budget.xlsx, xlsx)
+2. document-plugin:work/report.docx (report.docx, docx, missing)
 ```
 
 #### Token 影响
 
-每个打开文档一行，再加一行标题，且仅在文档打开期间存在。空打开集合增加零 token。
+每个打开文档一行，再加一行标题，且仅在文档打开期间存在。每行的 id 重复完整路径，因此行长随路径长度增长；超过 40 个字符的文件名会截断为前 37 个字符加 `...`，而 id 保持精确。空打开集合增加零 token。
 
 #### KV Cache 影响
 

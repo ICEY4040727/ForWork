@@ -22,6 +22,12 @@ export const name = 'session-document'
 /** The projection registry and the prompt registry this plugin contributes to. */
 export const inject = ['sessionProjections', 'systemPrompt']
 
+/** Longest readable file name the section repeats before eliding its tail. */
+const MAX_DISPLAY_NAME = 40
+
+/** Fixed marker that replaces an elided tail, so the rendered name is deterministic. */
+const ELLIPSIS = '...'
+
 /** File name of one document path, independent of the host separator. */
 function fileNameOf(path: string): string {
   const normalized = path.replace(/\\/g, '/')
@@ -29,7 +35,21 @@ function fileNameOf(path: string): string {
 }
 
 /**
- * Render one open entry as a compact model-facing line.
+ * Shorten the readable file name; the addressable id keeps the full path.
+ * @param name - file name of the logged path.
+ * @returns the name, or its leading characters followed by a fixed ellipsis.
+ */
+function displayNameOf(name: string): string {
+  if (name.length <= MAX_DISPLAY_NAME) return name
+  return `${name.slice(0, MAX_DISPLAY_NAME - ELLIPSIS.length)}${ELLIPSIS}`
+}
+
+/**
+ * Render one open entry as an addressable, compact model-facing line.
+ *
+ * The first field is the exact `documentId` from the projection, so the model
+ * can pass it unchanged to the document tools; the parenthesized name, format,
+ * and `missing` marker stay for readability.
  * @param position - one-based position in the open order.
  * @param entry - the open document entry.
  * @returns the rendered line.
@@ -37,11 +57,16 @@ function fileNameOf(path: string): string {
 function renderEntry(position: number, entry: DocumentProjectionEntry): string {
   const markers: string[] = [entry.format]
   if (entry.status === 'missing') markers.push('missing')
-  return `${position}. ${fileNameOf(entry.path)} (${markers.join(', ')})`
+  return `${position}. ${entry.documentId} (${displayNameOf(fileNameOf(entry.path))}, ${markers.join(', ')})`
 }
 
 /**
  * Render the open-document set for the model.
+ *
+ * Every line leads with the entry's `documentId` (`<sessionId>:<path>`), which
+ * is the identity the document tools accept, so a later turn can address an
+ * open document from this text alone. The text derives only from the logged
+ * projection state.
  * @param state - folded open-document state for the requesting session.
  * @returns the section text, or `''` when no document is open.
  */

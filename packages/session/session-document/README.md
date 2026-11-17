@@ -79,7 +79,7 @@ Each helper appends one ordinary Session event and returns it. Facts are append-
 
 The `document` projection holds `{ order, documents }`: the display order and one entry per open document with its identity, current path, format, content version, `open` or `missing` status, and unsupported features. `document/open` inserts or updates an entry, `document/save` and `document/edit` advance its version, `document/rebind` replaces the path, `document/missing` marks it unavailable, and `document/close` removes it. Unknown events keep the same state reference, so no downstream work runs. The wire view is the same value with a schema for client restore.
 
-The plugin's prompt section renders the open set for the assembling Agent's Session, or nothing when there is no Agent or no open document. Both the projection and the section are disposed with the mounting fiber.
+The plugin's prompt section renders the open set for the assembling Agent's Session, or nothing when there is no Agent or no open document. Each line leads with the entry's exact `documentId`, the identity a document tool call passes back unchanged. Both the projection and the section are disposed with the mounting fiber.
 
 ### Restore the open set
 
@@ -117,7 +117,7 @@ Both modules are collections of pure functions over immutable values; every func
 | [`src/document-restore.ts`](src/document-restore.ts) | `restoreSet`: the ordered, missing-flagged set a client reopens |
 | [`src/document-recovery.ts`](src/document-recovery.ts) | `recoveryDecision`: offer, stale, or ignore one stored draft |
 | [`src/plugin.ts`](src/plugin.ts) | The `session-document` plugin: projection registration and the open-document prompt section |
-| [`src/index.ts`](src/index.ts) | Package entry re-exporting the modules and the plugin's `name`/`inject`/`apply` |
+| [`src/index.ts`](src/index.ts) | Package entry re-exporting the modules, the prompt renderer, and the plugin's `name`/`inject`/`apply` |
 
 </details>
 
@@ -139,19 +139,19 @@ Both modules are collections of pure functions over immutable values; every func
 
 #### What the model sees
 
-When at least one document is open, the prompt section renders a short English list: the open-document count implied by its position order, each file name, its format, and a `missing` marker. Without an Agent or without an open document the section renders nothing; the document tools own their own model-visible schemas and results.
+When at least one document is open, the prompt section renders a short English list: the open-document count implied by its position order, each document's Session-scoped `<sessionId>:<path>` id, its file name, its format, and a `missing` marker. The id is the exact identity the document tools accept, so the model can address an open document without a separate read. Without an Agent or without an open document the section renders nothing; the document tools own their own model-visible schemas and results.
 
 ##### Open-document prompt section
 
 ```markdown
 Open documents in this session:
-1. budget.xlsx (xlsx)
-2. report.docx (docx, missing)
+1. document-plugin:work/budget.xlsx (budget.xlsx, xlsx)
+2. document-plugin:work/report.docx (report.docx, docx, missing)
 ```
 
 #### Token effect
 
-One line per open document, plus a one-line heading, only while documents are open. An empty open set adds zero tokens.
+One line per open document, plus a one-line heading, only while documents are open. Each line repeats the full path in its id, so a line grows with the path length; a file name longer than 40 characters is elided to its first 37 characters and `...`, while the id stays exact. An empty open set adds zero tokens.
 
 #### KV Cache effect
 
