@@ -97,7 +97,7 @@ await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 <a id="known-limitations-and-deferred-work"></a>
 
 - 稳定文档 id 目前等于 `<sessionId>:<path>`。`document` projection（US3）拥有稳定 id 映射与模型面向的打开文档集合；在它落地之前，模型必须从编辑器或先前的读取中获得该 id。
-- 这些工具只暴露单元格与段落编辑。`document/edit` 步骤联合已包含行、列、公式与样式步骤，但还没有工具表面发出行／列插入或删除、仅公式或样式操作。
+- 这些工具只暴露单元格与段落编辑。`document/edit` 步骤联合还包含行、列、公式与样式步骤：`document_edit_cells` 会发出公式步骤，但还没有工具表面发出行／列插入或删除或样式操作。
 - `document_convert` 返回工作区下的转换副本；没有任何机制自动清理 `.dsh/office-tmp/` 转换目录。
 - 编辑需要实时编辑器实例。无头 Session 以 `document-not-open` 拒绝，而不是编辑并保存脱离的文件。
 

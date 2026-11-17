@@ -203,9 +203,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * Whether one payload is a step kind the live adapter understands.
  *
- * Cell and paragraph steps are checked because the adapter reads their fields.
- * The remaining known spreadsheet steps are refused by the adapter before it
- * reads any field, so their payload is only required to name a known kind.
+ * Each kind's fields are checked at this durable event boundary, so a
+ * malformed step is ignored rather than reaching the adapter.
  */
 function isEditStep(value: unknown): boolean {
   if (!isRecord(value)) return false
@@ -218,10 +217,27 @@ function isEditStep(value: unknown): boolean {
     case 'paragraph':
       return typeof value['index'] === 'number' && typeof value['text'] === 'string'
     case 'row':
+      return typeof value['sheetId'] === 'string'
+        && typeof value['row'] === 'number'
+        && typeof value['count'] === 'number'
+        && (value['action'] === 'insert' || value['action'] === 'delete')
     case 'column':
+      return typeof value['sheetId'] === 'string'
+        && typeof value['column'] === 'number'
+        && typeof value['count'] === 'number'
+        && (value['action'] === 'insert' || value['action'] === 'delete')
     case 'formula':
+      return typeof value['sheetId'] === 'string'
+        && typeof value['row'] === 'number'
+        && typeof value['column'] === 'number'
+        && (value['formula'] === null || typeof value['formula'] === 'string')
     case 'style':
-      return true
+      return typeof value['sheetId'] === 'string'
+        && typeof value['startRow'] === 'number'
+        && typeof value['startColumn'] === 'number'
+        && typeof value['endRow'] === 'number'
+        && typeof value['endColumn'] === 'number'
+        && 'style' in value
     default:
       return false
   }

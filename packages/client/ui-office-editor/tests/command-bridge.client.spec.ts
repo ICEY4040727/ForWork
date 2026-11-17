@@ -427,6 +427,33 @@ describe('sessionCommandSource', () => {
       operation: { kind: 'edit', steps: [{ kind: 'paragraph', index: 0 }] },
       fromVersion: 0,
     })
+    feed.appendEvent('document/command', {
+      requestId: 'r',
+      documentId: 'document-1',
+      operation: { kind: 'edit', steps: [{ kind: 'row', sheetId: 's', row: 0, count: 1, action: 'move' }] },
+      fromVersion: 0,
+    })
+    feed.appendEvent('document/command', {
+      requestId: 'r',
+      documentId: 'document-1',
+      operation: { kind: 'edit', steps: [{ kind: 'column', sheetId: 's', column: 0, count: 1 }] },
+      fromVersion: 0,
+    })
+    feed.appendEvent('document/command', {
+      requestId: 'r',
+      documentId: 'document-1',
+      operation: { kind: 'edit', steps: [{ kind: 'formula', sheetId: 's', row: 0, column: 0, formula: 1 }] },
+      fromVersion: 0,
+    })
+    feed.appendEvent('document/command', {
+      requestId: 'r',
+      documentId: 'document-1',
+      operation: {
+        kind: 'edit',
+        steps: [{ kind: 'style', sheetId: 's', startRow: 0, startColumn: 0, endRow: 0 }],
+      },
+      fromVersion: 0,
+    })
     expect(listener).not.toHaveBeenCalled()
   })
 

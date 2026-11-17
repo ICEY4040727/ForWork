@@ -97,7 +97,7 @@ None; the package neither assembles nor sends a provider request.
 <a id="known-limitations-and-deferred-work"></a>
 
 - The stable document id currently equals `<sessionId>:<path>`. The `document` projection (US3) owns the stable-id mapping and the model-facing open-document set; until it lands, a model must obtain the id from the editor or a prior read.
-- The tools expose cell and paragraph edits. The `document/edit` step union already carries row, column, formula, and style steps, but no tool surface emits row/column insert or delete, formula-only, or style operations yet.
+- The tools expose cell and paragraph edits. The `document/edit` step union also carries row, column, formula, and style steps: `document_edit_cells` emits formula steps, while no tool surface emits row/column insert or delete or style operations yet.
 - `document_convert` returns a converted copy under the workspace; nothing prunes `.dsh/office-tmp/` conversion directories automatically.
 - Editing requires a live editor instance. Headless sessions refuse with `document-not-open` rather than editing and saving a detached file.
 
