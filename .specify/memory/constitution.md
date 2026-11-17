@@ -1,22 +1,28 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 2.0.0 -> 3.0.0 (MAJOR)
-Rationale: Principle I now fixes the product's concrete identity (ForWork, `@forwork/*`, `forwork-`,
-`forwork` CLI) instead of a generic "own scope and brand"; Principle V defines a bounded, scripted
-identity-landing phase with an entry gate and a fixed step order. Principle VIII is a clarification
-only: its redefinition from wholesale merge-forward to selective upstream follow landed in 2.0.0.
+Version change: 3.0.0 -> 3.1.0 (MINOR)
+Rationale: Principle I gains an explicit, recorded exception for the external LibreOffice conversion
+engine, reconciling the principle with FR-009's declared third-party-dependency carve-out and the
+already-shipped `@deepseek-ai/libreoffice-kit` dependency in five manifests (T097). The Technology
+Constraints conversion stack is corrected to the shipped implementation: `.docx` is hand-written OOXML
+over `fast-xml-parser`/`fflate` with no docx library, and SheetJS CE is used only for legacy `.xls`
+preview (T113).
 
-Modified principles:
-- I. Independent Identity -> I. Independent Identity (ForWork fork)
-- V. Incremental, Reversible Delivery (identity-landing phase defined and bounded)
-- VIII. Selective Upstream Follow (clarification only: no merge-forward claim)
+Affected requirements: FR-009.
+Affected principles:
+- I. Independent Identity (ForWork fork) — external-dependency exception recorded.
+- Technology Constraints — conversion stack text corrected.
+
+Migration note: no data, configuration, schema, package, or session-format migration is required. The
+change only records an already-enforced exception: `scripts/verify-forwork-identity.ts`
+`ALLOWED_DEEPSEEK_PACKAGES` allowlists exactly `@deepseek-ai/libreoffice-kit`, and
+`THIRD_PARTY_NOTICES.md` records the corresponding sources. See
+`.agents/notes/implemented/process/2026-11-17-forwork-identity-exceptions.md`.
 
 Added sections: none
 Removed sections: none
-Follow-up TODOs: none in this document. The identity-landing phase itself (repository-wide rename,
-CLI rename, vendored re-scope, brand/telemetry scan, signing) is implementation work owned by the
-task list (T049-T051).
+Follow-up TODOs: none in this document; T097 and T113 are closed by this amendment.
 -->
 
 # ForWork Constitution
@@ -24,7 +30,7 @@ task list (T049-T051).
 ## Core Principles
 
 ### I. Independent Identity (ForWork fork)
-The product is **ForWork**, a fork of the DeepSeek Harness used as a base framework, not a plugin authored for DeepSeek. Every package scope, brand mark, CLI name, model default, telemetry path, and distribution signature belongs to ForWork. Concretely: packages publish under the `@forwork/*` npm scope, artifacts and binaries carry the `forwork-` prefix, the CLI is `forwork`, and the canonical repository is the ForWork fork (its creation belongs to the identity-landing phase). A package id is `@forwork/<name>`; the `forwork-` prefix names artifacts, so a scope-internal `forwork` segment MUST NOT be duplicated (`@forwork/office-exchange`, never `@forwork/forwork-office-exchange`). Vendored packages are re-scoped with the rest of the repository, and their `vendor/README.md` manifests and upstream SHAs are updated in the same step; an upstream scope left in a shipped manifest is the same defect as an upstream brand mark. A `deepseek` reference that remains reachable in a shipped surface is a defect, detected by an executed scan rather than by inspection. Third-party notices for the MIT base and Apache-2.0 editor remain, per Principle VII.
+The product is **ForWork**, a fork of the DeepSeek Harness used as a base framework, not a plugin authored for DeepSeek. Every package scope, brand mark, CLI name, model default, telemetry path, and distribution signature belongs to ForWork. Concretely: packages publish under the `@forwork/*` npm scope, artifacts and binaries carry the `forwork-` prefix, the CLI is `forwork`, and the canonical repository is the ForWork fork (its creation belongs to the identity-landing phase). A package id is `@forwork/<name>`; the `forwork-` prefix names artifacts, so a scope-internal `forwork` segment MUST NOT be duplicated (`@forwork/office-exchange`, never `@forwork/forwork-office-exchange`). Vendored packages are re-scoped with the rest of the repository, and their `vendor/README.md` manifests and upstream SHAs are updated in the same step. An upstream scope left in a shipped manifest is the same defect as an upstream brand mark, with one recorded exception: the external LibreOffice conversion engine (`@deepseek-ai/libreoffice-kit` plus its `-darwin-*`/`-win32-*`/`-wasm` engine packages) keeps its upstream scope as a third-party runtime dependency; the identity scan allowlists exactly that scope and `THIRD_PARTY_NOTICES.md` records its corresponding sources. A `deepseek` reference that remains reachable in a shipped surface is a defect, detected by an executed scan rather than by inspection, except for that same LibreOffice dependency and legally required notices. Third-party notices for the MIT base and Apache-2.0 editor remain, per Principle VII.
 
 ### II. Offline, Local-First Desktop
 Targets are Windows and macOS Electron desktop, independently signed. Document editing and saving MUST run locally with no required Linux server, cloud account, container runtime, or network round-trip. The model call is the only expected network dependency. User documents remain local unless the user explicitly exports or shares them; telemetry is off by default. AGPL engines, cloud-account document services, and paid editor SDK modules are excluded from v1 unless an amendment records the trade-off and its license.
@@ -69,7 +75,7 @@ Product changes still extend shared seams or add packages rather than rewriting 
 - Node >= 24.9, TypeScript strict, ESM everywhere, pnpm workspaces.
 - Package scope, artifact prefix, and CLI follow Principle I; vendored Cordis packages re-scope with the repository.
 - Editor core: Univer open-source (Apache-2.0) Sheets/Docs presets, embedded in React; no iframe and no server.
-- Conversion: a self-owned Exchange layer (ExcelJS, SheetJS CE, a docx library, LibreOffice kit) mapping OOXML to and from Univer unit snapshots.
+- Conversion: a self-owned Exchange layer mapping OOXML to and from Univer unit snapshots — ExcelJS for `.xlsx`, hand-written OOXML over `fast-xml-parser` and `fflate` for `.docx`, and `@deepseek-ai/libreoffice-kit` for legacy conversion; SheetJS CE is used only for legacy `.xls` preview.
 - v1 edits `.docx` and `.xlsx`; `.pptx` is read-only. Legacy `.doc/.xls/.ppt` are converted on open.
 - Persistence writes through the filesystem seam with version guards so observers converge.
 
@@ -85,4 +91,4 @@ Product changes still extend shared seams or add packages rather than rewriting 
 
 This constitution supersedes ad-hoc preference. Amendments require a recorded rationale, the affected requirement, and a migration note. Every change review verifies the principles above; a violation MUST be justified in the review or removed. Versioning follows semantic versioning: MAJOR for principle removal or incompatible redefinition, MINOR for a new principle or material expansion, PATCH for clarification. Ratified and amended dates use ISO `YYYY-MM-DD`.
 
-**Version**: 3.0.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-16
+**Version**: 3.1.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-17
