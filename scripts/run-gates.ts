@@ -423,6 +423,7 @@ function sharedHygieneGates(): Gate[] {
     pnpmScript('no-unknown-casts', 'verify-no-unknown-casts', { label: 'no new unknown casts' }),
     pnpmScript('no-top-level-await', 'verify-no-top-level-await', { label: 'no module-scope await' }),
     pnpmScript('forwork-identity', 'verify-forwork-identity', { label: 'ForWork identity' }),
+    pnpmScript('brand-assets', 'verify-brand-assets', { label: 'ForWork brand assets' }),
   ]
 }
 

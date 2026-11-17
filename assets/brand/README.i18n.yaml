@@ -1,0 +1,28 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write assets/brand/README.md
+/forwork-brand-artwork:
+  en: b591dd12d127afba
+  zh: 80a84c96a96b0146
+/forwork-brand-artwork/construction:
+  en: d3edad7e6f52f224
+  zh: acd2fc928d65c998
+/forwork-brand-artwork/palette:
+  en: dbc2e0a018379fdf
+  zh: b7a90de858d44a6f
+/forwork-brand-artwork/sizes-and-safety:
+  en: 9c25968047ec223b
+  zh: a6a7622c2ef786f7
+/forwork-brand-artwork/type:
+  en: b379e1ac234389c5
+  zh: b18284b2e1842df8
+/forwork-brand-artwork/motion:
+  en: 6889eab66168a1a0
+  zh: e253eef7fcf45f8d
+/forwork-brand-artwork/derived-assets:
+  en: e67f27daa9494aff
+  zh: be7dc1d07c988712
+/forwork-brand-artwork/home-frame-layer:
+  en: 708d18bf2ccc208a
+  zh: 9637630ba38e9717

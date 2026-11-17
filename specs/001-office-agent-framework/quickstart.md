@@ -106,3 +106,61 @@ corepack pnpm run doc-sync
 - Command bridge contract: [contracts/command-bridge.contract.md](./contracts/command-bridge.contract.md)
 - Tool contract: [contracts/tool-office.contract.md](./contracts/tool-office.contract.md)
 - Upstream sync policy: [docs/development.md#upstream-sync](../../docs/development.md#upstream-sync)
+
+## Scenario S14 — Brand assets derive and pass the gate
+
+1. Run `corepack pnpm run verify-brand-assets`.
+2. Change one SVG in `assets/brand/` intentionally and rerun.
+
+**Expected**: the unchanged tree passes; the changed tree fails naming the stale manifest row, and the printed refresh command updates the manifest after review.
+
+## Scenario S15 — Finished Web screenshots
+
+1. Build the Web app and run `corepack pnpm run test:brand:built`.
+2. Inspect `apps/web/tests/expected/brand/` and the fresh copies under `.artifacts/brand/`.
+3. After an intentional visual change, refresh with `UPDATE_BRAND_SCREENSHOTS=1 corepack pnpm run test:brand:built`, then record the hashes with `corepack pnpm run verify-brand-assets --write`.
+
+**Expected**: desktop light, desktop dark, hover, mobile, rail, and icon-sheet images exist at their recorded dimensions; the door is visible in the sidebar and hero; the hover image shows the leaf rotated; the manifest hashes match the assets.
+
+## Scenario S16 — Desktop welcome screenshot
+
+1. Run `corepack pnpm run test:brand:built`.
+2. Inspect `apps/desktop/tests/expected/brand/welcome-{light,dark}.png`.
+
+**Expected**: the built welcome renderer shows the ForWork door lockup at 472×40 in both themes; the mocked preload exposes only the bridge the page reads.
+
+## Scenario S17 — Website navigation screenshot
+
+1. Run `corepack pnpm run website:build`.
+2. Run `corepack pnpm run test:brand:built`.
+3. Inspect `website/tests/expected/brand/nav-{desktop,mobile}.png`.
+
+**Expected**: the nav shows the door lockup and the current release tag; the favicon tile renders; no DeepSeek whale is visible.
+
+## Scenario S18 — Retired artwork is rejected
+
+1. Run the rejection spec, which builds a temp tree with a manifest row and an SVG containing a retired whale path fragment.
+2. Run `corepack pnpm run verify-brand-assets` on the real tree.
+
+**Expected**: the rejection case exits 1 naming `deepseek-whale-mark` and the temp path; the real tree passes. The test exercises the fingerprint branch rather than only the unreferenced-file branch.
+
+## Scenario S19 — Home no longer plays the whale
+
+1. Open the built Web app on the blank home.
+2. Click empty space in the conversation frame.
+
+**Expected**: no whale canvas appears, no `[data-home-whale]` node exists, and the door mark remains in the sidebar and hero. The `conversation.hero.frame` slot is still declared in the slot catalog.
+
+## Automated checks
+
+```sh
+corepack pnpm run build:artifacts
+corepack pnpm run build:check
+corepack pnpm run verify-brand-assets
+corepack pnpm run verify-forwork-identity
+corepack pnpm run test:brand:built
+corepack pnpm run test:docs
+corepack pnpm run website:build
+```
+
+**Expected**: all pass, and every screenshot named in the evidence matrix exists with a matching manifest hash.

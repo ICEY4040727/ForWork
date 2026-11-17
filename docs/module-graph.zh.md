@@ -92,7 +92,7 @@ flowchart TD
   subgraph group_web["packages/web"]
     pkg_tool_web["tool-web"]
     pkg_web["web"]
-    pkg_web_deepseek_api["web-api"]
+    pkg_web_api["web-api"]
     pkg_web_fetch_http["web-fetch-http"]
     pkg_web_search_deepseek["web-search-deepseek"]
   end
@@ -246,7 +246,7 @@ flowchart TD
     pkg_authorization["authorization"]
     pkg_credentials["credentials"]
     pkg_credentials_local["credentials-local"]
-    pkg_deepseek_account["account"]
+    pkg_deepseek_account["deepseek-account"]
     pkg_deepseek_account_platform["deepseek-account-platform"]
   end
   subgraph group_deliverables["packages/deliverables"]
@@ -904,16 +904,16 @@ flowchart TD
   pkg_tool_web --> pkg_system_prompt
   pkg_tool_web --> pkg_tools
   pkg_tool_web --> pkg_web
-  pkg_web_deepseek_api --> pkg_agent
-  pkg_web_deepseek_api --> pkg_credentials
-  pkg_web_deepseek_api --> pkg_deepseek_account
-  pkg_web_deepseek_api --> pkg_launch_environment
-  pkg_web_deepseek_api --> pkg_llm
-  pkg_web_deepseek_api --> pkg_llm_deepseek
-  pkg_web_deepseek_api --> pkg_llm_deepseek_account
-  pkg_web_deepseek_api --> pkg_llm_deepseek_api_key
-  pkg_web_deepseek_api --> pkg_session
-  pkg_web_deepseek_api --> pkg_web
+  pkg_web_api --> pkg_agent
+  pkg_web_api --> pkg_credentials
+  pkg_web_api --> pkg_deepseek_account
+  pkg_web_api --> pkg_launch_environment
+  pkg_web_api --> pkg_llm
+  pkg_web_api --> pkg_llm_deepseek
+  pkg_web_api --> pkg_llm_deepseek_account
+  pkg_web_api --> pkg_llm_deepseek_api_key
+  pkg_web_api --> pkg_session
+  pkg_web_api --> pkg_web
   pkg_tool_todo --> pkg_agent
   pkg_tool_todo --> pkg_session
   pkg_tool_todo --> pkg_session_projection

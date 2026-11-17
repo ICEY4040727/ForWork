@@ -128,3 +128,28 @@ This file records the technical decisions that resolve the plan's open questions
 - **Decision**: Convert into the workspace-scoped temp directory and open the converted copy in a new tab with a visible "editing converted copy" notice; the source is never modified.
 - **Rationale**: Keeps identity and save targets unambiguous; matches the T068 conversion location.
 - **Alternatives**: Replace the tab resource in place (confusing identity); force Save As (interrupts the workflow).
+
+## R21. Home animation removal (accepted 2026-11-17)
+
+- **Decision**: Remove the official `conversation.hero.frame` whale occupant, its `PixelWhale` renderer, `breach-atlas.webp`, code-fill layer, and their tests. Keep the slot declared and available to other bundles.
+- **Rationale**: The atlas is the last DeepSeek-derived raster and the only remaining shipped graphic that does not follow the flat door identity. The minimal brand already has a static door mark with a hover motion; a replacement dot-matrix atlas would add a generated raster, a loader, and a second motion system with no product requirement.
+- **Alternatives**: Generate a door-based atlas at the same geometry (keeps a decorative animation but preserves a nonessential canvas subsystem); keep the whale behind a build flag (still ships the upstream asset and fails the independent-identity gate).
+- **Consequences**: The blank home no longer plays a click animation; the sidebar, hero mark, icons, welcome art, and installer art are unchanged. Product copy and the slot catalog drop the whale terms.
+
+## R22. Screenshot evidence strategy (accepted 2026-11-17)
+
+- **Decision**: E2E suites assert DOM, geometry, computed color, and screenshot dimensions, and always write fresh screenshots to `.artifacts/brand/`. A reviewed set is committed under each owner's `tests/expected/brand/` and recorded in `scripts/brand-assets.manifest.json` with dimensions and asset hashes. `UPDATE_BRAND_SCREENSHOTS=1` refreshes the committed set; normal runs verify inventory and hashes but do not compare pixels against the live render.
+- **Rationale**: The evidence must show the finished product, but cross-platform font rasterization makes pixel equality brittle. A committed, reviewed image set plus deterministic DOM assertions proves the brand renders without turning CI into a font-matrix gate.
+- **Alternatives**: Playwright `toHaveScreenshot` pixel baselines (platform-specific, high churn); screenshots only in `.artifacts/` (not reviewable in the repository); text-only assertions (no visual proof requested by the user).
+
+## R23. Brand manifest and retired fingerprints (accepted 2026-11-17)
+
+- **Decision**: One `scripts/brand-assets.manifest.json` records every shipped brand asset, its kind, dimensions, generator, SHA-256, and owning surface. `scripts/fixtures/brand/` stores the retired DeepSeek whale, wordmark, favicon, and atlas fingerprints. `verify-brand-assets` fails on a missing or stale row, an unreferenced asset, a dimension mismatch, a screenshot inventory gap, or any fingerprint match.
+- **Rationale**: Text scans cannot see SVG contours or raster contents. A manifest makes every graphic an explicit reviewed artifact; fingerprints close the exact gap that let the upstream whale atlas survive the existing identity scan.
+- **Alternatives**: Scan only for `deepseek` strings (misses contours); hash folders without a manifest (no ownership or generation trail); review screenshots manually only (no regression gate).
+
+## R24. Reproducible desktop icon derivation (accepted 2026-11-17)
+
+- **Decision**: Add `scripts/render-brand-assets.ts` to read the 1024 tile master and emit `apps/desktop/resources/icon.svg` (square 1104 crop source), `icon-windows.svg` (192 radius plus `tray-glyph`), and `icon-macos.svg` (230 radius), with the shared shadow filters. Existing `render-app-icons` and `render:tray-icon` remain the raster owners.
+- **Rationale**: The three SVGs currently duplicate the door geometry by hand; a derivation script makes the platform variants auditable and keeps the square web crop separate from the rounded platform masks.
+- **Alternatives**: Hand-maintain all three (drift risk); generate the web icons from a rounded source (breaks the opaque-corner contract); add a general SVG transform dependency (unneeded for one template).

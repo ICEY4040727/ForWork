@@ -3,44 +3,44 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/client/ui-brand-official/README.md
 /:
-  en: a46a90b8cedd5c45
-  zh: 9b4f0d5fd9ffa945
+  en: 25e802d0b9d3edbd
+  zh: 73ce342b04f3cb33
 /forwork-client-ui-brand-official:
   en: 7f3ac4005d3a9b83
   zh: 3c050bb03963adde
 /forwork-client-ui-brand-official/summary:
-  en: 6d3aca3fc18411dd
-  zh: 987e1856efd51ddb
+  en: b297263b40f32ba4
+  zh: c98e62a8b917dc4b
 /forwork-client-ui-brand-official/table-of-contents:
   en: d152484eb41ac6b4
   zh: 09388d293f9be9cb
 /forwork-client-ui-brand-official/use-this-package:
-  en: e8f8c83697cd3ca6
-  zh: d39a742f51ee3610
+  en: acd769f9588012b5
+  zh: 60a145a411e69e05
 /forwork-client-ui-brand-official/use-this-package/choosing-the-profile:
-  en: 876e7a0e21eaa396
-  zh: 596fcdec565e3eae
-/forwork-client-ui-brand-official/use-this-package/home-feedback:
-  en: f79f52c71a3d1491
-  zh: bda67c8b4050316a
+  en: 6ac08ab9adba31ca
+  zh: 459ba21e0ace52d6
+/forwork-client-ui-brand-official/use-this-package/home-frame-layer:
+  en: 9263c172774d67f9
+  zh: fe74481c789cd7aa
 /forwork-client-ui-brand-official/use-this-package/replacing-the-brand:
-  en: 3fd4b315b27cfa23
-  zh: 8f76a10d642a5811
+  en: aca680d0d497b92c
+  zh: fe1d7ce5dd080e33
 /forwork-client-ui-brand-official/understand-the-implementation:
-  en: 4b59ceb74b5c9d1e
-  zh: c22bcc7d7344fe12
+  en: 5f4c2d3fe5d60a42
+  zh: be69fc5153b52cc8
 /forwork-client-ui-brand-official/further-exploration:
-  en: 268cb9edf0c7d2f0
-  zh: 9b75285a61b44008
+  en: ac01d2d0adc59ff5
+  zh: c242a9eebc8ceadd
 /forwork-client-ui-brand-official/model-experience:
   en: 618008c7641070e7
-  zh: 7233febb4d92ccfb
+  zh: 606579eb0e31f927
 /forwork-client-ui-brand-official/model-experience/kv-cache-effect:
   en: ca75c51c89c2c9b0
-  zh: f57cc48a1b5cbfa9
+  zh: 2064958b0754647e
 /forwork-client-ui-brand-official/known-limitations-and-deferred-work:
-  en: b8f0ff2ff02bc0be
-  zh: 8f52f9dee0225fad
+  en: 2190852109d23fa2
+  zh: 09eb9abf00ac6b3b
 /forwork-client-ui-brand-official/known-limitations-and-deferred-work/dev-note:
   en: e67f633dc6fe7773
-  zh: 3bb0c20c93f16f98
+  zh: e88aeb617ffb74ea

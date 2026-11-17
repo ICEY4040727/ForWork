@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="164" height="314" viewBox="0 0 164 314" fill="none">
+  <defs>
+    <filter id="card-shadow" x="0" y="75" width="164" height="176" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="4"/>
+      <feGaussianBlur stdDeviation="8"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.08 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+    </filter>
+  </defs>
+  <rect width="164" height="314" fill="#F4F4F4"/>
+  <rect x="12" y="87" width="140" height="140" rx="20" fill="#FFFFFF" filter="url(#card-shadow)"/>
+  <g transform="translate(82 157) scale(4.416667) translate(-12 -12)">
+    <path fill="#141414" d="M4 3h2.5v18H4V3Z"/>
+    <path fill="#141414" d="M17.5 5.5H20V21h-2.5V5.5Z"/>
+    <path fill="#141414" d="M4 3h16v2.5H4V3Z"/>
+    <path fill="#141414" d="M7 7l9 2v10l-9 2V7Z"/>
+    <circle cx="14" cy="14" r="0.85" fill="#FFFFFF"/>
+  </g>
+</svg>

@@ -1,0 +1,527 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "path": "assets/brand/forwork-lockup.svg",
+      "kind": "svg-lockup",
+      "surface": "brand-master",
+      "width": 182,
+      "height": 24,
+      "sha256": "92eb5a93db2b336d8c4d0c8e9e89bbc135144aa185ab5afae8a3f9c38d2b0f4a",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "assets/brand/forwork-mark.svg",
+      "kind": "svg-mark",
+      "surface": "brand-master",
+      "width": 24,
+      "height": 24,
+      "sha256": "b38548882f9426a4802d29d4a99c2fe923596d291f5646669a10e15bc2d5af8a",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "assets/brand/forwork-tile.svg",
+      "kind": "svg-tile",
+      "surface": "brand-master",
+      "width": 1024,
+      "height": 1024,
+      "sha256": "558b201edd37f85898ce01201b7eb115a13f7bbc992f2b1f13c33e6cb73d18df",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "assets/brand/installer-brand-dark.svg",
+      "kind": "svg-surface",
+      "surface": "brand-master",
+      "width": 600,
+      "height": 196,
+      "sha256": "5ae775339e619578e55ce8224906e5be0107dbf5eebed070dc378b5d4cfbe310",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "assets/brand/installer-brand-light.svg",
+      "kind": "svg-surface",
+      "surface": "brand-master",
+      "width": 600,
+      "height": 196,
+      "sha256": "f74f1dfa6b292b69fc2d74b3259ee7acb9880497953ad312ad8e07c825ebab41",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "assets/brand/uninstaller-sidebar.svg",
+      "kind": "svg-surface",
+      "surface": "brand-master",
+      "width": 164,
+      "height": 314,
+      "sha256": "c9ea443bc5ac4e418e3066c67baa3ffb44e99004d85c0e80b60f300560b49448",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/resources/icon.svg",
+      "kind": "svg-surface",
+      "surface": "desktop",
+      "width": 1104,
+      "height": 1104,
+      "sha256": "38c5fc1a092bbe2062e605d7b73f36baee49641b7de411d0d0024a0a03f01cf9",
+      "generator": "corepack pnpm run render-brand-assets",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/resources/icon-windows.svg",
+      "kind": "svg-surface",
+      "surface": "desktop",
+      "width": 1024,
+      "height": 1024,
+      "sha256": "417b29e950e6aadc0cd7245f74850216b634a121b60c8a2ff9cb054062cfba56",
+      "generator": "corepack pnpm run render-brand-assets",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/resources/icon-macos.svg",
+      "kind": "svg-surface",
+      "surface": "desktop",
+      "width": 1024,
+      "height": 1024,
+      "sha256": "21fdbc806689dd268ecbed0fc6dd79a9ac4654327e3cf042ba15382df9e6d202",
+      "generator": "corepack pnpm run render-brand-assets",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/resources/icon.png",
+      "kind": "png-icon",
+      "surface": "desktop",
+      "width": 1104,
+      "height": 1104,
+      "sha256": "afc7eb66c70037ff838e76953933198d869ab1b26f935a9cfc7891507f92cf9b",
+      "generator": "sharp apps/desktop/resources/icon.svg",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/resources/icon-windows.png",
+      "kind": "png-icon",
+      "surface": "desktop",
+      "width": 1024,
+      "height": 1024,
+      "sha256": "9184e8756d03a82830e934fca9ab222891b44c87c2d2b523fbd9dabdd9e2eba1",
+      "generator": "sharp apps/desktop/resources/icon-windows.svg",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/resources/icon-macos.png",
+      "kind": "png-icon",
+      "surface": "desktop",
+      "width": 1024,
+      "height": 1024,
+      "sha256": "71908b8acc1ab8f2becd5b85e10648deebd5c73d544c765ddf3736e1495815ec",
+      "generator": "sharp apps/desktop/resources/icon-macos.svg",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/resources/tray-windows.ico",
+      "kind": "ico",
+      "surface": "desktop",
+      "width": 64,
+      "height": 64,
+      "sha256": "cd4fc97823f45727d29df202b415b31cb4c29b7fc419b947b3ebd33cf6cc0b4f",
+      "generator": "corepack pnpm run render:tray-icon",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/installer/assets/brand.png",
+      "kind": "png-icon",
+      "surface": "installer",
+      "width": 600,
+      "height": 196,
+      "sha256": "8b18d985169957270f71daa291ab1e345a5383c622ad0589fb55015f80e819bb",
+      "generator": "sharp assets/brand/installer-brand-light.svg",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/installer/assets/brand-2x.png",
+      "kind": "png-icon",
+      "surface": "installer",
+      "width": 1200,
+      "height": 392,
+      "sha256": "94b7feca951bd159d84c336c5ea2b56eb4f20b3450a5ac6492fa9c31fe17a0a5",
+      "generator": "sharp assets/brand/installer-brand-light.svg",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/installer/assets/brand-dark.png",
+      "kind": "png-icon",
+      "surface": "installer",
+      "width": 600,
+      "height": 196,
+      "sha256": "3a20bb32c1dc18bf9fc67f6ce72b0537c3e8fc456cea1e996cfbd3580aa539f5",
+      "generator": "sharp assets/brand/installer-brand-dark.svg",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/installer/assets/brand-dark-2x.png",
+      "kind": "png-icon",
+      "surface": "installer",
+      "width": 1200,
+      "height": 392,
+      "sha256": "8591615cc2535a98bd8a36825af80d1f4c0d7c419803046107661a20797406dc",
+      "generator": "sharp assets/brand/installer-brand-dark.svg",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/installer/assets/uninstaller-sidebar.png",
+      "kind": "png-icon",
+      "surface": "installer",
+      "width": 164,
+      "height": 314,
+      "sha256": "4e4ee194032e3f90b0e684e58cf5b397d0b9b0885f013d9a4979c7e85e5f44b2",
+      "generator": "sharp assets/brand/uninstaller-sidebar.svg",
+      "required": true
+    },
+    {
+      "path": "apps/desktop/renderer/assets/welcome-brand.svg",
+      "kind": "svg-surface",
+      "surface": "desktop",
+      "width": 472,
+      "height": 40,
+      "sha256": "54c180f3334c5356daa4a623ab8dd81de6df3c40e4d879ba050fe920a2ab8734",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "apps/web/public/apple-touch-icon.png",
+      "kind": "png-icon",
+      "surface": "web",
+      "width": 180,
+      "height": 180,
+      "sha256": "68eda7b27dad4794fcb406fc6ec81918a9660f7c05643c23ba770fa93f0ecc41",
+      "generator": "corepack pnpm --filter @forwork/web-frontend run render:app-icons",
+      "required": true
+    },
+    {
+      "path": "apps/web/public/favicon.svg",
+      "kind": "svg-surface",
+      "surface": "web",
+      "width": 50,
+      "height": 50,
+      "sha256": "2c01ed57e9ecdd48a4b17abc56d16cad35f0a025acfc006412cb6d7ea4970f6b",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "apps/web/public/favicon-dark.svg",
+      "kind": "svg-surface",
+      "surface": "web",
+      "width": 50,
+      "height": 50,
+      "sha256": "63a570ab1432adcf2819e4b00ab34b9f9bedfd99ed4b1540945bf3a99aa295fd",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "apps/web/public/icon-192.png",
+      "kind": "png-icon",
+      "surface": "web",
+      "width": 192,
+      "height": 192,
+      "sha256": "6f0e547ee8c6845601bbdbc4f2ccd37a0abbdf662f12be386804676d930c8f66",
+      "generator": "corepack pnpm --filter @forwork/web-frontend run render:app-icons",
+      "required": true
+    },
+    {
+      "path": "apps/web/public/icon-512.png",
+      "kind": "png-icon",
+      "surface": "web",
+      "width": 512,
+      "height": 512,
+      "sha256": "0fbea3f05c9035ce3b45f8b3a5806658f0503820c3293a8e032127f2015d00e8",
+      "generator": "corepack pnpm --filter @forwork/web-frontend run render:app-icons",
+      "required": true
+    },
+    {
+      "path": "apps/web/public/icon-maskable-512.png",
+      "kind": "png-icon",
+      "surface": "web",
+      "width": 512,
+      "height": 512,
+      "sha256": "c2a5633890d1062aefb0d8ecd1e2a72d6824df571128da407991692b9bc40b8e",
+      "generator": "corepack pnpm --filter @forwork/web-frontend run render:app-icons",
+      "required": true
+    },
+    {
+      "path": "website/public/favicon.svg",
+      "kind": "svg-surface",
+      "surface": "website",
+      "width": 50,
+      "height": 50,
+      "sha256": "8ed795e1d6d5bd0b48afbcdb38bcfde39a87d1c8203c044477b8366e8f652896",
+      "generator": "authored",
+      "required": true
+    },
+    {
+      "path": "website/public/wordmark.svg",
+      "kind": "svg-lockup",
+      "surface": "website",
+      "width": 182,
+      "height": 24,
+      "sha256": "92eb5a93db2b336d8c4d0c8e9e89bbc135144aa185ab5afae8a3f9c38d2b0f4a",
+      "generator": "authored",
+      "required": true
+    }
+  ],
+  "evidence": [
+    {
+      "id": "web-home-desktop-light",
+      "path": "apps/web/tests/expected/brand/home-desktop-light.png",
+      "surface": "web",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "assets/brand/forwork-mark.svg",
+        "apps/web/public/favicon.svg"
+      ],
+      "sha256": "9438a43fe5abb51c825848175c1aa8c1a6c84b30bd42961cafe43ce19fa8de36",
+      "capturedBy": "apps/web/tests/brand-artwork.e2e.ts"
+    },
+    {
+      "id": "web-home-desktop-dark",
+      "path": "apps/web/tests/expected/brand/home-desktop-dark.png",
+      "surface": "web",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "scale": 1,
+      "colorScheme": "dark",
+      "locale": "en-US",
+      "depicts": [
+        "assets/brand/forwork-mark.svg"
+      ],
+      "sha256": "d4381f3f54ddd4dfb37265b6d89c93dedf0e232c04d4104583e2c7a0354a7824",
+      "capturedBy": "apps/web/tests/brand-artwork.e2e.ts"
+    },
+    {
+      "id": "web-home-hover",
+      "path": "apps/web/tests/expected/brand/home-hover.png",
+      "surface": "web",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "assets/brand/forwork-mark.svg"
+      ],
+      "sha256": "fec572fe26e4957bbe119b6d3b33d57aa9f4323d56ea5037addbdd3eca457b9f",
+      "capturedBy": "apps/web/tests/brand-artwork.e2e.ts"
+    },
+    {
+      "id": "web-home-mobile",
+      "path": "apps/web/tests/expected/brand/home-mobile.png",
+      "surface": "web",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "assets/brand/forwork-mark.svg"
+      ],
+      "sha256": "f9c501dcbfe7a70ad989f668bd4afd02affe18b8bca27f21f5c37cc29060b3e0",
+      "capturedBy": "apps/web/tests/brand-artwork.e2e.ts"
+    },
+    {
+      "id": "web-rail-collapsed",
+      "path": "apps/web/tests/expected/brand/rail-collapsed.png",
+      "surface": "web",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "assets/brand/forwork-mark.svg"
+      ],
+      "sha256": "af9ba853035d76aba4ae23d0cf2af4a8527d7a557052ee814b539f8844fbeaa4",
+      "capturedBy": "apps/web/tests/brand-artwork.e2e.ts"
+    },
+    {
+      "id": "web-icon-sheet",
+      "path": "apps/web/tests/expected/brand/icon-sheet.png",
+      "surface": "web",
+      "viewport": {
+        "width": 1024,
+        "height": 320
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "apps/desktop/resources/icon.svg",
+        "apps/web/public/icon-192.png"
+      ],
+      "sha256": "18b3807d9be3992ce92bd220352b4898d44a861ba49a190c847fa1e54f9cb49e",
+      "capturedBy": "apps/web/tests/brand-artwork.e2e.ts"
+    },
+    {
+      "id": "desktop-welcome-light",
+      "path": "apps/desktop/tests/expected/brand/welcome-light.png",
+      "surface": "desktop",
+      "viewport": {
+        "width": 600,
+        "height": 700
+      },
+      "scale": 2,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "apps/desktop/renderer/assets/welcome-brand.svg"
+      ],
+      "sha256": "ed03d6dbc06cc721d69608d56573094b3c4c0265343599676e9d1f9ebc1d931a",
+      "capturedBy": "apps/web/tests/brand-welcome.e2e.ts"
+    },
+    {
+      "id": "desktop-welcome-dark",
+      "path": "apps/desktop/tests/expected/brand/welcome-dark.png",
+      "surface": "desktop",
+      "viewport": {
+        "width": 600,
+        "height": 700
+      },
+      "scale": 2,
+      "colorScheme": "dark",
+      "locale": "en-US",
+      "depicts": [
+        "apps/desktop/renderer/assets/welcome-brand.svg"
+      ],
+      "sha256": "76bad86bf98c77f63dbe6bb8f4a61de1f0060c3d45199ec2a341fa574becbbd3",
+      "capturedBy": "apps/web/tests/brand-welcome.e2e.ts"
+    },
+    {
+      "id": "website-nav-desktop",
+      "path": "website/tests/expected/brand/nav-desktop.png",
+      "surface": "website",
+      "viewport": {
+        "width": 1440,
+        "height": 240
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "website/public/wordmark.svg",
+        "website/public/favicon.svg"
+      ],
+      "sha256": "fd85a54145c56724a6e2940f8e5c5977f023faee809f4bc6edcae64263f71825",
+      "capturedBy": "apps/web/tests/brand-website.e2e.ts"
+    },
+    {
+      "id": "website-nav-mobile",
+      "path": "website/tests/expected/brand/nav-mobile.png",
+      "surface": "website",
+      "viewport": {
+        "width": 390,
+        "height": 720
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "website/public/wordmark.svg"
+      ],
+      "sha256": "fc83a31c129ea7d946538421590923de5f92cbb6265af71219492b78ca856774",
+      "capturedBy": "apps/web/tests/brand-website.e2e.ts"
+    },
+    {
+      "id": "installer-light",
+      "path": "apps/desktop/tests/expected/brand/installer-light.png",
+      "surface": "installer",
+      "viewport": {
+        "width": 600,
+        "height": 196
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "apps/desktop/installer/assets/brand.png"
+      ],
+      "sha256": "af0bd9e814b9eba68fc6b247c6d14d48a87e3b7cd391679a398577ba104c258a",
+      "capturedBy": "apps/web/tests/brand-installer.e2e.ts"
+    },
+    {
+      "id": "installer-dark",
+      "path": "apps/desktop/tests/expected/brand/installer-dark.png",
+      "surface": "installer",
+      "viewport": {
+        "width": 600,
+        "height": 196
+      },
+      "scale": 1,
+      "colorScheme": "dark",
+      "locale": "en-US",
+      "depicts": [
+        "apps/desktop/installer/assets/brand-dark.png"
+      ],
+      "sha256": "79800eb8fad1b9f56771aee674f48f9c2f262a9fe95f2a507e4e8962eda3f270",
+      "capturedBy": "apps/web/tests/brand-installer.e2e.ts"
+    },
+    {
+      "id": "installer-uninstaller",
+      "path": "apps/desktop/tests/expected/brand/uninstaller.png",
+      "surface": "installer",
+      "viewport": {
+        "width": 164,
+        "height": 314
+      },
+      "scale": 1,
+      "colorScheme": "light",
+      "locale": "en-US",
+      "depicts": [
+        "apps/desktop/installer/assets/uninstaller-sidebar.png"
+      ],
+      "sha256": "7d38b8bde3ffa60380159537312bbdb463179560b2519ffdc10ee06f211d7507",
+      "capturedBy": "apps/web/tests/brand-installer.e2e.ts"
+    }
+  ],
+  "fingerprints": [
+    {
+      "artifact": "deepseek-whale-mark",
+      "kind": "svg-path",
+      "value": "M22.9168 1.43018C22.6713 1.31018",
+      "replacement": "assets/brand/forwork-mark.svg"
+    },
+    {
+      "artifact": "deepseek-wordmark",
+      "kind": "svg-path",
+      "value": "M68.416 18.2447H67.0501V16.1272",
+      "replacement": "assets/brand/forwork-lockup.svg"
+    },
+    {
+      "artifact": "deepseek-favicon",
+      "kind": "svg-path",
+      "value": "M48.8354 10.0479C48.3232 9.79199",
+      "replacement": "apps/web/public/favicon.svg"
+    },
+    {
+      "artifact": "deepseek-home-atlas",
+      "kind": "sha256",
+      "value": "6ab7c778b7085b0248525bd5640933eee2891c836ba33129a1bd6bbae80eaf63",
+      "replacement": "assets/brand/forwork-mark.svg"
+    }
+  ]
+}

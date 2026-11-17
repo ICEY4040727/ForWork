@@ -171,7 +171,8 @@ it('keeps the shipped maskable artwork inside its opaque platform safe zone', as
     expect(scaled.radius).toBeLessThanOrEqual(MASKABLE_SAFE_RADIUS_RATIO * size)
     expect(scaled.radius).toBeGreaterThan(unscaled.radius * MASKABLE_ARTWORK_SCALE - 2)
     expect(scaled.corners).toEqual([255, 255, 255, 255])
-    expect(unscaled.radius).toBeGreaterThan(MASKABLE_SAFE_RADIUS_RATIO * size)
+    // The door is already inside the safe circle; keep it large enough to read.
+    expect(unscaled.radius).toBeGreaterThan(MASKABLE_SAFE_RADIUS_RATIO * size * 0.75)
   } finally {
     await browser.close()
   }
