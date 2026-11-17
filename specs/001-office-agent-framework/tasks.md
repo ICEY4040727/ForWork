@@ -273,3 +273,11 @@ Convergence on 2026-11-17 re-assessed every requirement, success criterion, acce
 - [ ] T114 Extend legacy conversion immutability coverage from `.xls` to `.doc` and `.ppt`, asserting the source hash is unchanged per FR-003 and SC-002 (partial).
 - [ ] T115 Surface the converted-copy notice on the `.ppt` converted preview tab, which never reads the notice store per FR-003 (partial).
 - [ ] T116 Assert the SC-003 visible-edit bound: no test asserts apply-to-visible latency, and the default `commandTimeoutMs` is five seconds rather than the stated two per SC-003 (partial).
+
+## Phase 10: Convergence Merge (2026-11-17)
+
+Merge of the net-new findings from the 2026-11-17 review that Phase 9 did not already capture; Phase 9 (T095-T116) stays as written, and CV-06 is already covered by T096 and is not re-opened.
+
+- [ ] T117 Execute `formula`, `row`, `column`, and `style` edit steps in the live editor: `packages/client/ui-office-editor/src/client/editor/sheets.ts:67` accepts only `cell` and `editor/docs.ts:63` only `paragraph`, so the operation kinds the union and tool schemas declare are rejected with `unsupported-feature` in any open document; implement them through the Univer API or narrow the advertised schema, with a live-bridge test per FR-004 and FR-020 (contradicts).
+- [ ] T118 Decide the legacy-conversion tab behavior: `packages/client/ui-office-editor/src/client/OfficePanel.tsx:121` opens the converted copy with `replaceTab: true`, contradicting the spec and T073 "open in a new tab with a visible notice"; choose to change the code or the wording, then align the spec and the implementation per FR-003 and US1 (contradicts).
+- [ ] T119 Correct the stale paths and wording across `plan.md`, `tasks.md`, and package docs: `packages/ssh/fs-ssh` (not `packages/fs/fs-ssh`), `src/detect.ts` (not `provider/detect.ts`), `command-bridge.client.spec.ts`, the T036 and T040 attribution files, the plan source tree (`apps/desktop-host`, `apps/web`, `bundle/web-app`, `ssh/fs-ssh`, `experimental/liveshare`), the credentials role, the conversion-path sentence, the operation-union members, and the stale status and README notes (review CV-07, CV-09, CV-10, CV-12, CV-13, CV-14, CV-18, CV-19, CV-21 through CV-27); re-run `/speckit.analyze` to re-verify (partial).
