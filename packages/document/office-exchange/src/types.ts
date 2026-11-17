@@ -46,7 +46,6 @@ export type UnsupportedFeatureKind =
   | 'image'
   | 'external-image'
   | 'hyperlink'
-  | 'numbering'
   | 'borders'
   | 'footnotes'
   | 'merged-cells'

@@ -102,15 +102,18 @@ it('does not report header and footer parts', () => {
   }
 })
 
-it('detects dropped constructs inside header and footer parts', () => {
-  const hyperlink = packageOf({
+it('does not report mapped list and hyperlink constructs inside header and footer parts', () => {
+  const parts = packageOf({
     [DOCUMENT_XML]: PLAIN_DOCUMENT,
-    'word/header1.xml': '<w:hdr><w:hyperlink r:id="rId1"><w:r><w:t>link</w:t></w:r></w:hyperlink></w:hdr>',
+    'word/header1.xml': '<w:hdr>'
+      + '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>'
+      + '<w:hyperlink w:anchor="top"><w:r><w:t>link</w:t></w:r></w:hyperlink></w:p></w:hdr>',
+    'word/numbering.xml': '<w:numbering><w:abstractNum w:abstractNumId="0"/><w:num w:numId="1"/></w:numbering>',
   })
-  expect(detectUnsupportedFeatures(hyperlink)).toEqual([
-    { kind: 'hyperlink', detail: 'word/header1.xml' },
-  ])
+  expect(detectUnsupportedFeatures(parts)).toEqual([])
+})
 
+it('detects dropped constructs inside header and footer parts', () => {
   const external = packageOf({
     [DOCUMENT_XML]: PLAIN_DOCUMENT,
     'word/footer1.xml': '<w:ftr/>',
@@ -199,11 +202,11 @@ it('does not report images for a package without media parts', () => {
   expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT }))).toEqual([])
 })
 
-it('detects hyperlinks in a document body and in a worksheet', () => {
+it('leaves a document-body hyperlink alone and detects a worksheet hyperlink', () => {
   const document = packageOf({
     [DOCUMENT_XML]: bodyOf('<w:p><w:hyperlink r:id="rId1"><w:r><w:t>link</w:t></w:r></w:hyperlink></w:p>'),
   })
-  expect(detectUnsupportedFeatures(document)).toEqual([{ kind: 'hyperlink', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(document)).toEqual([])
 
   const worksheet = packageOf({
     [WORKSHEET_XML]: '<worksheet><hyperlinks><hyperlink ref="A1" r:id="rId1"/></hyperlinks></worksheet>',
@@ -217,17 +220,17 @@ it('does not report hyperlinks for plain text or plain cells', () => {
   expect(detectUnsupportedFeatures(packageOf({ [WORKSHEET_XML]: PLAIN_WORKSHEET }))).toEqual([])
 })
 
-it('detects list numbering from paragraph properties and the numbering part', () => {
+it('does not report list numbering from paragraph properties or the numbering part', () => {
   const paragraph = packageOf({
     [DOCUMENT_XML]: bodyOf('<w:p><w:pPr><w:numPr><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>item</w:t></w:r></w:p>'),
   })
-  expect(detectUnsupportedFeatures(paragraph)).toEqual([{ kind: 'numbering', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(paragraph)).toEqual([])
 
   const part = packageOf({
     [DOCUMENT_XML]: PLAIN_DOCUMENT,
     'word/numbering.xml': '<w:numbering><w:abstractNum w:abstractNumId="0"/><w:num w:numId="1"/></w:numbering>',
   })
-  expect(detectUnsupportedFeatures(part)).toEqual([{ kind: 'numbering', detail: 'word/numbering.xml' }])
+  expect(detectUnsupportedFeatures(part)).toEqual([])
 })
 
 it('does not report numbering for a styled paragraph or an empty numbering part', () => {

@@ -429,7 +429,7 @@ it('maps paragraph, run, underline, and heading style variants', async () => {
   expect(all?.ts?.bl).toBe(BooleanNumber.TRUE)
   expect(all?.ts?.it).toBe(BooleanNumber.TRUE)
   expect(all?.ts?.ul).toEqual({ s: BooleanNumber.TRUE, t: TextDecoration.SINGLE })
-  expect(body?.dataStream).not.toContain('link')
+  expect(body?.dataStream).toContain('link')
 })
 
 it('reads an empty body as one empty paragraph with a section break', async () => {

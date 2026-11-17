@@ -1,7 +1,8 @@
 /**
- * Round-trip evidence for every construct that detection refuses: each source
- * package carries the construct, detection reports its kind, and a read/write
- * round-trip through the real provider no longer contains it.
+ * Round-trip evidence for constructs that detection refuses or the provider
+ * maps: each source package carries the construct, detection reports its kind
+ * when it is still refused, and a read/write round-trip drops or preserves it
+ * as documented.
  */
 import ExcelJS from 'exceljs'
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
@@ -70,17 +71,23 @@ it('drops an inline image and reports it', async () => {
   expect(written[DOCUMENT_XML]).not.toContain('w:drawing')
 })
 
-it('drops a hyperlink and its target text, and reports it', async () => {
+it('keeps a hyperlink, its text, and its external target', async () => {
   const bytes = documentPackage(
     '<w:p><w:hyperlink r:id="rId9"><w:r><w:t>link text</w:t></w:r></w:hyperlink></w:p>',
+    {
+      'word/_rels/document.xml.rels': '<Relationships><Relationship Id="rId9"'
+        + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+        + ' Target="https://example.test/link" TargetMode="External"/></Relationships>',
+    },
   )
-  expectDetected(bytes, { kind: 'hyperlink', detail: DOCUMENT_XML })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
   const written = await documentRoundTrip(bytes)
-  expect(written[DOCUMENT_XML]).not.toContain('w:hyperlink')
-  expect(written[DOCUMENT_XML]).not.toContain('link text')
+  expect(written[DOCUMENT_XML]).toContain('<w:hyperlink r:id="rId')
+  expect(written[DOCUMENT_XML]).toContain('link text')
+  expect(written['word/_rels/document.xml.rels']).toContain('https://example.test/link')
 })
 
-it('drops list numbering and the numbering part, and reports it', async () => {
+it('keeps list numbering and the numbering part', async () => {
   const bytes = documentPackage(
     '<w:p><w:pPr><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr>'
     + '<w:r><w:t>item</w:t></w:r></w:p>',
@@ -88,10 +95,10 @@ it('drops list numbering and the numbering part, and reports it', async () => {
       'word/numbering.xml': '<w:numbering><w:abstractNum w:abstractNumId="0"/><w:num w:numId="1"/></w:numbering>',
     },
   )
-  expectDetected(bytes, { kind: 'numbering', detail: DOCUMENT_XML })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
   const written = await documentRoundTrip(bytes)
-  expect(Object.keys(written)).not.toContain('word/numbering.xml')
-  expect(written[DOCUMENT_XML]).not.toContain('w:numPr')
+  expect(Object.keys(written)).toContain('word/numbering.xml')
+  expect(written[DOCUMENT_XML]).toContain('<w:numPr>')
 })
 
 it('drops cell borders, and reports them', async () => {

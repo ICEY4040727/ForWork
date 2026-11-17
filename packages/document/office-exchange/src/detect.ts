@@ -8,7 +8,6 @@ import type { UnsupportedFeature, UnsupportedFeatureKind } from './types.ts'
 
 const DOCUMENT_XML = 'word/document.xml'
 const DOCUMENT_RELS = 'word/_rels/document.xml.rels'
-const NUMBERING_XML = 'word/numbering.xml'
 
 /** Parts that hold footnote and endnote definitions. */
 const NOTE_PARTS: ReadonlySet<string> = new Set(['word/footnotes.xml', 'word/endnotes.xml'])
@@ -50,7 +49,6 @@ const UNSUPPORTED_KIND_ORDER: readonly UnsupportedFeatureKind[] = [
   'image',
   'external-image',
   'hyperlink',
-  'numbering',
   'borders',
   'footnotes',
   'merged-cells',
@@ -82,8 +80,6 @@ interface PackageContents {
   readonly documentXml: Uint8Array | undefined
   /** Decoded `word/_rels/document.xml.rels`, when the package declares relationships. */
   readonly documentRelsXml: Uint8Array | undefined
-  /** Decoded `word/numbering.xml`, when the package declares numbering. */
-  readonly numberingXml: Uint8Array | undefined
   /** Decoded header and footer parts, in central-directory order. */
   readonly storyParts: readonly PackagePart[]
   /** Decoded header and footer relationship parts, in central-directory order. */
@@ -110,7 +106,7 @@ export function detectUnsupportedFeatures(
     )
   }
 
-  const { entryNames, documentXml, documentRelsXml, numberingXml, storyParts, storyRelsParts, worksheetParts }
+  const { entryNames, documentXml, documentRelsXml, storyParts, storyRelsParts, worksheetParts }
     = readPackage(bytes)
   const details = new Map<UnsupportedFeatureKind, string>()
   const record = (kind: UnsupportedFeatureKind, detail: string): void => {
@@ -137,9 +133,6 @@ export function detectUnsupportedFeatures(
   for (const part of storyRelsParts) {
     if (hasExternalImageRelationship(part.xml)) record('external-image', part.name)
   }
-  if (numberingXml !== undefined && hasNumberingDefinitions(strFromU8(numberingXml))) {
-    record('numbering', NUMBERING_XML)
-  }
   for (const part of worksheetParts) detectWorksheetFeatures(part, record)
 
   const features: UnsupportedFeature[] = []
@@ -153,7 +146,8 @@ export function detectUnsupportedFeatures(
 /**
  * Record document-body constructs that the document writer drops, because it
  * writes back paragraph text, run and paragraph formatting, heading styles,
- * section page setup, header and footer text, and flow tables.
+ * section page setup, header and footer text, flow tables, lists, and
+ * hyperlinks.
  * @param xml - Decoded `word/document.xml` or a header/footer part.
  * @param detail - Part name reported with each detected kind.
  * @param record - First-detail-per-kind recorder.
@@ -164,8 +158,6 @@ function detectDocumentFeatures(
   record: (kind: UnsupportedFeatureKind, detail: string) => void,
 ): void {
   if (xml.includes('<w:ins ') || xml.includes('<w:del ')) record('tracked-changes', detail)
-  if (/<w:hyperlink(?=[\s/>])/u.test(xml)) record('hyperlink', detail)
-  if (/<w:numPr(?=[\s/>])/u.test(xml)) record('numbering', detail)
   if (hasCellBorders(xml)) record('borders', detail)
   if (hasNoteReference(xml)) record('footnotes', detail)
   if (/<a:blip(?=[\s/>])[^>]*\br:link=/u.test(xml)) record('external-image', detail)
@@ -187,17 +179,6 @@ function detectWorksheetFeatures(
   if (/<pane\b[^>]*\bstate="frozen(?:Split)?"/u.test(part.xml)) record('freeze-panes', part.name)
   if (/<tabColor(?=[\s/>])/u.test(part.xml)) record('tab-color', part.name)
   if (/<hyperlink(?=[\s/>])/u.test(part.xml)) record('hyperlink', part.name)
-}
-
-/**
- * Report whether a numbering part declares any numbering definition.
- * A part with no `w:abstractNum` or `w:num` element defines nothing a save
- * could lose.
- * @param xml - Decoded `word/numbering.xml`.
- * @returns `true` when the part declares a numbering definition.
- */
-function hasNumberingDefinitions(xml: string): boolean {
-  return /<w:(?:abstractNum|num)(?=[\s/>])/u.test(xml)
 }
 
 /**
@@ -298,7 +279,6 @@ function readPackage(bytes: Uint8Array): PackageContents {
         const path = file.name.toLowerCase()
         return file.name === DOCUMENT_XML
           || file.name === DOCUMENT_RELS
-          || file.name === NUMBERING_XML
           || isWorksheetPart(path)
           || isHeaderOrFooterPart(path)
           || isStoryRelationshipPart(path)
@@ -314,7 +294,7 @@ function readPackage(bytes: Uint8Array): PackageContents {
   const storyParts: PackagePart[] = []
   const storyRelsParts: PackagePart[] = []
   for (const [name, content] of Object.entries(entries)) {
-    if (name === DOCUMENT_XML || name === DOCUMENT_RELS || name === NUMBERING_XML) continue
+    if (name === DOCUMENT_XML || name === DOCUMENT_RELS) continue
     const xml = strFromU8(content)
     if (isWorksheetPart(name.toLowerCase())) {
       worksheetParts.push({ name, xml })
@@ -327,7 +307,6 @@ function readPackage(bytes: Uint8Array): PackageContents {
     entryNames,
     documentXml: entries[DOCUMENT_XML],
     documentRelsXml: entries[DOCUMENT_RELS],
-    numberingXml: entries[NUMBERING_XML],
     storyParts,
     storyRelsParts,
     worksheetParts,

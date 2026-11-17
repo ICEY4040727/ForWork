@@ -7,13 +7,17 @@
  * paragraph alignment, spacing, line spacing, indentation, tab stops, outline
  * level, shading, and paragraph borders; document font and paragraph defaults
  * from `word/styles.xml`; named heading paragraph styles (`Heading1` through
- * `Heading5`); flow tables; section page setup; and header/footer text. Table
- * support covers rows, cells, cell text, grid column widths, preferred cell
- * widths, and the paragraph/section-break pair each cell requires. Section
- * support maps `w:sectPr` page size, orientation, margins, header/footer
- * distances, columns, and break type into `ISectionBreak`, and maps header and
- * footer parts into `IDocumentData.headers`/`footers` with their default,
- * first-page, and even-page references.
+ * `Heading5`); flow tables; section page setup; header/footer text; lists and
+ * numbering; and hyperlinks. Table support covers rows, cells, cell text, grid
+ * column widths, preferred cell widths, and the paragraph/section-break pair
+ * each cell requires. Section support maps `w:sectPr` page size, orientation,
+ * margins, header/footer distances, columns, and break type into
+ * `ISectionBreak`, and maps header and footer parts into
+ * `IDocumentData.headers`/`footers` with their default, first-page, and
+ * even-page references. Numbering maps `word/numbering.xml` definitions into
+ * `IDocumentData.lists` and each paragraph's `w:numPr` into
+ * `IParagraph.bullet`; hyperlinks map `w:hyperlink` into `\x1F`/`\x1E`
+ * custom-range tokens with their relationship target or bookmark anchor.
  *
  * The installed Univer runtime tokens define the stream conventions used here:
  * `\r` ends a paragraph and `\n` ends a section. Tables use `\x1A` (table
@@ -25,13 +29,13 @@
  * its structural rows live in `tableSource[tableId]`.
  *
  * UNSUPPORTED: images, charts, drawings, shapes, comments, tracked changes,
- * macros, footnotes and endnotes, hyperlinks, lists and numbering, page borders
- * and page numbering, theme styles and theme-derived colors, named style
- * definitions other than the heading styles above, cell borders, merged cells
- * with spans, nested tables, floating and inline objects, and property values
- * the Univer model has no field for (for example a run border's line size or a
- * decimal tab stop's alignment). A read/write round-trip does not preserve
- * these. Macro-bearing packages are read without executing or retaining macros.
+ * macros, footnotes and endnotes, page borders and page numbering, theme styles
+ * and theme-derived colors, named style definitions other than the heading
+ * styles above, cell borders, merged cells with spans, nested tables, floating
+ * and inline objects, and property values the Univer model has no field for
+ * (for example a run border's line size or a decimal tab stop's alignment). A
+ * read/write round-trip does not preserve these. Macro-bearing packages are
+ * read without executing or retaining macros.
  */
 import { XMLParser } from 'fast-xml-parser'
 import { SyntaxValidator } from 'fast-xml-validator'
@@ -41,9 +45,12 @@ import {
   BaselineOffset,
   BorderStyleTypes,
   BooleanNumber,
+  BulletAlignment,
   ColumnSeparatorType,
+  CustomRangeType,
   DashStyleType,
   HorizontalAlign,
+  ListGlyphType,
   PageOrientType,
   SectionType,
   SpacingRule,
@@ -54,12 +61,19 @@ import {
 import type {
   IBorderData,
   IBorderStyleData,
+  IBullet,
+  ICustomRange,
   ICustomTable,
   IDocumentBody,
   IDocumentData,
   IDocumentStyle,
   IFooters,
   IHeaders,
+  IHyperlink,
+  IHyperLinkCustomRange,
+  IListData,
+  ILists,
+  INestingLevel,
   IParagraph,
   IParagraphBorder,
   IParagraphStyle,
@@ -88,9 +102,11 @@ import { OfficeExchangeError } from '../errors.ts'
 const DOCUMENT_XML = 'word/document.xml'
 const STYLES_XML = 'word/styles.xml'
 const SETTINGS_XML = 'word/settings.xml'
+const NUMBERING_XML = 'word/numbering.xml'
 const DOCUMENT_RELS = 'word/_rels/document.xml.rels'
 const HEADER_PART = /^word\/header[^/]*\.xml$/u
 const FOOTER_PART = /^word\/footer[^/]*\.xml$/u
+const STORY_RELS_PART = /^word\/_rels\/(?:header|footer)[^/]*\.xml\.rels$/u
 const DEFAULT_COLUMN_SPACING = 720
 const DEFAULT_PAGE_MARGIN = 1440 / 15
 const PARAGRAPH = '\r'
@@ -101,6 +117,9 @@ const TABLE_CELL_START = '\x1C'
 const TABLE_CELL_END = '\x1D'
 const TABLE_ROW_END = '\x0E'
 const TABLE_END = '\x0F'
+const CUSTOM_RANGE_START = '\x1F'
+const CUSTOM_RANGE_END = '\x1E'
+const HYPERLINK_RANGE_TYPE: number = CustomRangeType.HYPERLINK
 const TAB = '\t'
 
 const ENTITY_COUNT_LIMIT = 10_000
@@ -265,6 +284,70 @@ const SECTION_TYPES: readonly (readonly [string, SectionType])[] = [
   ['oddPage', SectionType.ODD_PAGE],
 ]
 
+/** OOXML `w:numFmt` values and their Univer list glyph type. */
+const NUMBER_FORMATS: readonly (readonly [string, ListGlyphType])[] = [
+  ['decimal', ListGlyphType.DECIMAL],
+  ['decimalZero', ListGlyphType.DECIMAL_ZERO],
+  ['upperRoman', ListGlyphType.UPPER_ROMAN],
+  ['lowerRoman', ListGlyphType.LOWER_ROMAN],
+  ['upperLetter', ListGlyphType.UPPER_LETTER],
+  ['lowerLetter', ListGlyphType.LOWER_LETTER],
+  ['ordinal', ListGlyphType.ORDINAL],
+  ['cardinalText', ListGlyphType.CARDINAL_TEXT],
+  ['ordinalText', ListGlyphType.ORDINAL_TEXT],
+  ['hex', ListGlyphType.HEX],
+  ['chicago', ListGlyphType.CHICAGO],
+  ['ideographDigital', ListGlyphType.IDEOGRAPH_DIGITAL],
+  ['japaneseCounting', ListGlyphType.JAPANESE_COUNTING],
+  ['aiueo', ListGlyphType.AIUEO],
+  ['iroha', ListGlyphType.IROHA],
+  ['decimalFullWidth', ListGlyphType.DECIMAL_FULL_WIDTH],
+  ['decimalHalfWidth', ListGlyphType.DECIMAL_HALF_WIDTH],
+  ['japaneseLegal', ListGlyphType.JAPANESE_LEGAL],
+  ['japaneseDigitalTenThousand', ListGlyphType.JAPANESE_DIGITAL_TEN_THOUSAND],
+  ['decimalEnclosedCircle', ListGlyphType.DECIMAL_ENCLOSED_CIRCLE],
+  ['decimalFullWidth2', ListGlyphType.DECIMAL_FULL_WIDTH2],
+  ['aiueoFullWidth', ListGlyphType.AIUEO_FULL_WIDTH],
+  ['irohaFullWidth', ListGlyphType.IROHA_FULL_WIDTH],
+  ['bullet', ListGlyphType.BULLET],
+  ['ganada', ListGlyphType.GANADA],
+  ['chosung', ListGlyphType.CHOSUNG],
+  ['decimalEnclosedFullstop', ListGlyphType.DECIMAL_ENCLOSED_FULLSTOP],
+  ['decimalEnclosedParen', ListGlyphType.DECIMAL_ENCLOSED_PAREN],
+  ['decimalEnclosedCircleChinese', ListGlyphType.DECIMAL_ENCLOSED_CIRCLE_CHINESE],
+  ['ideographEnclosedCircle', ListGlyphType.IDEOGRAPH_ENCLOSED_CIRCLE],
+  ['ideographTraditional', ListGlyphType.IDEOGRAPH_TRADITIONAL],
+  ['ideographZodiac', ListGlyphType.IDEOGRAPH_ZODIAC],
+  ['ideographZodiacTraditional', ListGlyphType.IDEOGRAPH_ZODIAC_TRADITIONAL],
+  ['taiwaneseCounting', ListGlyphType.TAIWANESE_COUNTING],
+  ['ideographLegalTraditional', ListGlyphType.IDEOGRAPH_LEGAL_TRADITIONAL],
+  ['taiwaneseCountingThousand', ListGlyphType.TAIWANESE_COUNTING_THOUSAND],
+  ['taiwaneseDigital', ListGlyphType.TAIWANESE_DIGITAL],
+  ['chineseCounting', ListGlyphType.CHINESE_COUNTING],
+  ['chineseLegalSimplified', ListGlyphType.CHINESE_LEGAL_SIMPLIFIED],
+  ['chineseCountingThousand', ListGlyphType.CHINESE_COUNTING_THOUSAND],
+  ['koreanDigital', ListGlyphType.KOREAN_DIGITAL],
+  ['koreanCounting', ListGlyphType.KOREAN_COUNTING],
+  ['koreanLegal', ListGlyphType.KOREAN_LEGAL],
+  ['koreanDigital2', ListGlyphType.KOREAN_DIGITAL2],
+  ['vietnameseCounting', ListGlyphType.VIETNAMESE_COUNTING],
+  ['russianLower', ListGlyphType.RUSSIAN_LOWER],
+  ['russianUpper', ListGlyphType.RUSSIAN_UPPER],
+  ['none', ListGlyphType.NONE],
+  ['numberInDash', ListGlyphType.NUMBER_IN_DASH],
+  ['hebrew1', ListGlyphType.HEBREW1],
+  ['hebrew2', ListGlyphType.HEBREW2],
+  ['arabicAlpha', ListGlyphType.ARABIC_ALPHA],
+  ['arabicAbjad', ListGlyphType.ARABIC_ABJAD],
+  ['hindiVowels', ListGlyphType.HINDI_VOWELS],
+  ['hindiConsonants', ListGlyphType.HINDI_CONSONANTS],
+  ['hindiNumbers', ListGlyphType.HINDI_NUMBERS],
+  ['hindiCounting', ListGlyphType.HINDI_COUNTING],
+  ['thaiLetters', ListGlyphType.THAI_LETTERS],
+  ['thaiNumbers', ListGlyphType.THAI_NUMBERS],
+  ['thaiCounting', ListGlyphType.THAI_COUNTING],
+]
+
 /** Header/footer reference variants declared by `w:headerReference` and `w:footerReference`. */
 type StoryVariant = 'default' | 'first' | 'even'
 
@@ -334,8 +417,56 @@ interface ReadContext {
   readonly sectionBreaks: ISectionBreak[]
   readonly tables: ICustomTable[]
   readonly tableSource: ITables
+  readonly customRanges: IHyperLinkCustomRange[]
   readonly bounds: OfficeExchangeConfig
   cells: number
+}
+
+/**
+ * Numbering definitions read from `word/numbering.xml`, keyed by the list type
+ * each paragraph's bullet names.
+ */
+interface NumberingCatalog {
+  /** List definitions keyed by list type. */
+  readonly lists: ILists
+  /** `w:numId` mapped to the list type its definition produced. */
+  readonly listTypeByNumId: ReadonlyMap<string, string>
+  /** Per-instance level starts keyed by `${numId}:${level}`. */
+  readonly startByNumLevel: ReadonlyMap<string, number>
+}
+
+/** One external hyperlink relationship a part's writer must declare. */
+interface LinkRel {
+  /** Relationship id used by `r:id`. */
+  readonly relId: string
+  /** External target URL. */
+  readonly target: string
+}
+
+/** Numbering definitions and paragraph `w:numId` assignments for one write. */
+interface NumberingPlan {
+  /** Encoded `word/numbering.xml`, when the snapshot declares lists or bullets. */
+  readonly xml: string | undefined
+  /** List type mapped to the `w:numId` its paragraphs reference. */
+  readonly numIdByListType: ReadonlyMap<string, number>
+}
+
+/** Hyperlink relationships for one part, keyed by their target URL. */
+interface LinkPlan {
+  /** Relationships to declare in the part's relationship XML. */
+  readonly rels: readonly LinkRel[]
+  /** Relationship id for a URL, when the part declares it. */
+  readonly relIdOf: (url: string) => string | undefined
+}
+
+/** A hyperlink range clipped to one paragraph. */
+interface ParagraphLink {
+  /** Inclusive stream offset of the start token. */
+  readonly start: number
+  /** Exclusive stream offset after the end token. */
+  readonly end: number
+  /** Target URL or bookmark anchor. */
+  readonly properties: IHyperlink
 }
 
 /** A table cell's content range inside `dataStream`. */
@@ -394,6 +525,10 @@ interface StoryPart {
   readonly relId: string
   /** Encoded part XML. */
   readonly xml: string
+  /** Package entry name of the part's relationship XML, when it declares links. */
+  readonly relsPartName?: string
+  /** Encoded relationship XML for hyperlinks inside the part. */
+  readonly relsXml?: string
 }
 
 /** Header or footer parts plus the relationship ids their sections use. */
@@ -417,8 +552,9 @@ interface SectionPlan {
 /**
  * Read `.docx` bytes into a Univer document snapshot. Paragraph text, paragraph
  * breaks, run and paragraph formatting, `word/styles.xml` defaults, heading
- * styles, flow tables, section page setup, and header/footer text are mapped;
- * the unsupported features listed in the module note are not.
+ * styles, flow tables, section page setup, header/footer text, list numbering,
+ * and hyperlinks are mapped; the unsupported features listed in the module note
+ * are not.
  * @param bytes - Complete DOCX package bytes.
  * @param config - Bounds applied before parsing; defaults when omitted.
  * @returns Document snapshot with Univer stream tokens, run styles, table and
@@ -445,21 +581,23 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
   }
   const body = parseDocumentBody(parts.document)
   const relationships = readRelationships(parts.relationships)
+  const numbering = parts.numbering === undefined ? emptyNumbering() : readNumbering(parts.numbering)
   const identifiers: StoryPartIds = {
     headers: new Set(parts.headers.keys()),
     footers: new Set(parts.footers.keys()),
   }
   const context = createReadContext(bounds)
   for (const child of childElements(body)) {
-    if (child.tag === 'p') appendParagraph(context, child, relationships, identifiers)
-    if (child.tag === 'tbl') appendTable(context, child)
+    if (child.tag === 'p') appendParagraph(context, child, relationships, identifiers, numbering)
+    if (child.tag === 'tbl') appendTable(context, child, relationships, numbering)
   }
   const finalSection = findChild(body, 'sectPr')
   finalizeBody(context, finalSection === undefined ? undefined : readSectionSetup(finalSection, relationships, identifiers))
-  const headers = readStoryParts(parts.headers, 'hdr', bounds, (id, body, tableSource) => (
+  const storyRelationships = readStoryRelationships(parts.storyRelationships)
+  const headers = readStoryParts(parts.headers, 'hdr', bounds, numbering, storyRelationships, (id, body, tableSource) => (
     { headerId: id, body, tableSource }
   ))
-  const footers = readStoryParts(parts.footers, 'ftr', bounds, (id, body, tableSource) => (
+  const footers = readStoryParts(parts.footers, 'ftr', bounds, numbering, storyRelationships, (id, body, tableSource) => (
     { footerId: id, body, tableSource }
   ))
   const documentStyle = readDocumentStyle(parts.styles)
@@ -474,11 +612,13 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
       paragraphs: context.paragraphs,
       sectionBreaks: context.sectionBreaks,
       tables: context.tables,
+      customRanges: context.customRanges,
     },
     documentStyle,
     tableSource: context.tableSource,
     resources: [],
   }
+  if (Object.keys(numbering.lists).length > 0) snapshot.lists = numbering.lists
   if (headers.size > 0) snapshot.headers = Object.fromEntries(headers)
   if (footers.size > 0) snapshot.footers = Object.fromEntries(footers)
   return snapshot
@@ -504,25 +644,39 @@ function writeDocumentBytes(data: IDocumentData, config?: OfficeExchangeConfig):
   const stream = data.body?.dataStream ?? ''
   const paragraphs = new Map<number, IParagraph>()
   for (const paragraph of data.body?.paragraphs ?? []) paragraphs.set(paragraph.startIndex, paragraph)
+  const numbering = planNumbering(data)
   let nextRelId = 2
   const settings = writeSettingsXml(data.documentStyle)
   if (settings !== undefined) nextRelId += 1
-  const headers = planStoryParts(data.headers, 'header', nextRelId, bounds)
-  const footers = planStoryParts(data.footers, 'footer', headers.nextRelId, bounds)
+  const numberingRelId = numbering.xml === undefined ? undefined : nextRelId++
+  const headers = planStoryParts(data.headers, 'header', nextRelId, bounds, numbering)
+  const footers = planStoryParts(data.footers, 'footer', headers.nextRelId, bounds, numbering)
+  const links = planLinks(data.body?.customRanges, footers.nextRelId)
   const relIds = new Map([...headers.relIds, ...footers.relIds])
   const sections = planSections(data.body?.sectionBreaks ?? [], relIds)
-  const bodyXml = writeBody(stream, paragraphs, data, sections, relIds, bounds)
+  const bodyXml = writeBody(stream, paragraphs, data, sections, relIds, links, numbering, bounds)
   const entries: Record<string, Uint8Array> = {
-    '[Content_Types].xml': strToU8(contentTypesXml(headers.parts, footers.parts, settings !== undefined)),
+    '[Content_Types].xml': strToU8(contentTypesXml(
+      headers.parts,
+      footers.parts,
+      settings !== undefined,
+      numbering.xml !== undefined,
+    )),
     '_rels/.rels': strToU8(rootRelsXml()),
     'word/_rels/document.xml.rels': strToU8(
-      documentRelsXml(headers.parts, footers.parts, settings !== undefined),
+      documentRelsXml(headers.parts, footers.parts, settings !== undefined, numberingRelId, links.rels),
     ),
     [DOCUMENT_XML]: strToU8(documentXml(bodyXml, sections.finalXml)),
     [STYLES_XML]: strToU8(stylesXml(data.documentStyle)),
   }
   if (settings !== undefined) entries[SETTINGS_XML] = strToU8(settings)
-  for (const part of [...headers.parts, ...footers.parts]) entries[part.partName] = strToU8(part.xml)
+  if (numbering.xml !== undefined) entries[NUMBERING_XML] = strToU8(numbering.xml)
+  for (const part of [...headers.parts, ...footers.parts]) {
+    entries[part.partName] = strToU8(part.xml)
+    if (part.relsPartName !== undefined && part.relsXml !== undefined) {
+      entries[part.relsPartName] = strToU8(part.relsXml)
+    }
+  }
   const zippable: Zippable = {}
   for (const name of Object.keys(entries).sort()) {
     const content = entries[name]
@@ -546,9 +700,126 @@ function createReadContext(bounds: OfficeExchangeConfig): ReadContext {
     sectionBreaks: [],
     tables: [],
     tableSource: {},
+    customRanges: [],
     bounds,
     cells: 0,
   }
+}
+
+function emptyNumbering(): NumberingCatalog {
+  return { lists: {}, listTypeByNumId: new Map(), startByNumLevel: new Map() }
+}
+
+/**
+ * Read `word/numbering.xml` into list definitions and paragraph bullet lookups.
+ * @param xml - Decoded numbering part.
+ * @returns One list definition per `w:num`, plus the level starts per instance.
+ * @throws {OfficeExchangeError} `conversion-failed` when the part is not well formed.
+ */
+function readNumbering(xml: Uint8Array): NumberingCatalog {
+  const root = parseRootElement(xml, 'numbering', 'numbering XML')
+  const abstracts = new Map<string, readonly INestingLevel[]>()
+  const instances: XmlElement[] = []
+  for (const child of childElements(root)) {
+    if (child.tag === 'abstractNum') {
+      const id = attribute(child, '@_abstractNumId')
+      if (id !== undefined) abstracts.set(id, readNestingLevels(child))
+    }
+    if (child.tag === 'num') instances.push(child)
+  }
+  const lists: ILists = {}
+  const listTypeByNumId = new Map<string, string>()
+  const startByNumLevel = new Map<string, number>()
+  for (const instance of instances) {
+    const numId = attribute(instance, '@_numId')
+    if (numId === undefined) continue
+    const abstractId = optionalAttribute(findChild(instance, 'abstractNumId'), '@_val')
+    const levels = (abstractId === undefined ? undefined : abstracts.get(abstractId)) ?? [defaultNestingLevel(0)]
+    const definition: INestingLevel[] = [...levels]
+    for (const override of childElements(instance)) {
+      if (override.tag !== 'lvlOverride') continue
+      const level = numberAttribute(override, '@_ilvl') ?? 0
+      const start = numberAttribute(findChild(override, 'startOverride'), '@_val')
+      if (start === undefined) continue
+      definition[level] = { ...(definition[level] ?? defaultNestingLevel(level)), startNumber: start }
+      startByNumLevel.set(`${numId}:${level}`, start)
+    }
+    const listType = listKeyOf(numId)
+    lists[listType] = { listType, nestingLevel: definition }
+    listTypeByNumId.set(numId, listType)
+  }
+  return { lists, listTypeByNumId, startByNumLevel }
+}
+
+function readNestingLevels(abstractNum: XmlElement): readonly INestingLevel[] {
+  const byLevel = new Map<number, INestingLevel>()
+  let index = 0
+  for (const child of childElements(abstractNum)) {
+    if (child.tag !== 'lvl') continue
+    const level = numberAttribute(child, '@_ilvl') ?? index
+    byLevel.set(level, readNestingLevel(child, level))
+    index += 1
+  }
+  if (byLevel.size === 0) return [defaultNestingLevel(0)]
+  const last = Math.max(...byLevel.keys())
+  const levels: INestingLevel[] = []
+  for (let level = 0; level <= last; level += 1) levels.push(byLevel.get(level) ?? defaultNestingLevel(level))
+  return levels
+}
+
+function readNestingLevel(element: XmlElement, level: number): INestingLevel {
+  const formatName = optionalAttribute(findChild(element, 'numFmt'), '@_val')
+  const glyphType = formatName === undefined
+    ? ListGlyphType.DECIMAL
+    : lookup(NUMBER_FORMATS, formatName) ?? ListGlyphType.CUSTOM
+  const text = optionalAttribute(findChild(element, 'lvlText'), '@_val') ?? ''
+  const nesting: INestingLevel = {
+    bulletAlignment: BulletAlignment.START,
+    glyphFormat: text.length > 0 ? text : `%${String(level + 1)}.`,
+    glyphType,
+    startNumber: numberAttribute(findChild(element, 'start'), '@_val') ?? 0,
+  }
+  if (glyphType === ListGlyphType.BULLET) {
+    nesting.glyphFormat = ` %${String(level + 1)}`
+    if (text.length > 0) nesting.glyphSymbol = text
+  }
+  if (isEnabled(element, 'isLgl') === true) nesting.isLegal = true
+  const paragraph = findChild(element, 'pPr')
+  const paragraphProperties = paragraph === undefined ? undefined : readParagraphStyle(paragraph)
+  if (paragraphProperties !== undefined) nesting.paragraphProperties = paragraphProperties
+  const run = findChild(element, 'rPr')
+  const textStyle = run === undefined ? undefined : readTextStyle(run)
+  if (textStyle !== undefined) nesting.textStyle = textStyle
+  return nesting
+}
+
+function defaultNestingLevel(level: number): INestingLevel {
+  return {
+    bulletAlignment: BulletAlignment.START,
+    glyphFormat: `%${String(level + 1)}.`,
+    glyphType: ListGlyphType.DECIMAL,
+    startNumber: 0,
+  }
+}
+
+function listKeyOf(numId: string): string {
+  return `numbering-${numId}`
+}
+
+function ensureList(catalog: NumberingCatalog, listType: string): IListData {
+  const existing = catalog.lists[listType]
+  if (existing !== undefined) return existing
+  const created: IListData = { listType, nestingLevel: [defaultNestingLevel(0)] }
+  catalog.lists[listType] = created
+  return created
+}
+
+function readStoryRelationships(
+  parts: ReadonlyMap<string, Uint8Array>,
+): ReadonlyMap<string, DocumentRelationships> {
+  const relationships = new Map<string, DocumentRelationships>()
+  for (const [id, xml] of parts) relationships.set(id, readRelationships(xml))
+  return relationships
 }
 
 function append(context: ReadContext, text: string): void {
@@ -562,7 +833,12 @@ function lastCharacter(context: ReadContext): string | undefined {
   return last === undefined || last.length === 0 ? undefined : last[last.length - 1]
 }
 
-function appendParagraphBreak(context: ReadContext, styleId?: string, formatting?: IParagraphStyle): void {
+function appendParagraphBreak(
+  context: ReadContext,
+  styleId?: string,
+  formatting?: IParagraphStyle,
+  bullet?: IBullet,
+): void {
   append(context, PARAGRAPH)
   const paragraph: IParagraph = {
     startIndex: context.length - 1,
@@ -572,6 +848,7 @@ function appendParagraphBreak(context: ReadContext, styleId?: string, formatting
   const namedStyle = styleId === undefined ? undefined : NAMED_STYLE_BY_ID[styleId]
   if (namedStyle !== undefined) paragraph.paragraphStyle = { ...formatting, namedStyleType: namedStyle }
   else if (formatting !== undefined) paragraph.paragraphStyle = formatting
+  if (bullet !== undefined) paragraph.bullet = bullet
   context.paragraphs.push(paragraph)
 }
 
@@ -580,16 +857,20 @@ function appendParagraph(
   element: XmlElement,
   relationships?: DocumentRelationships,
   identifiers?: StoryPartIds,
+  numbering?: NumberingCatalog,
 ): void {
   const properties = findChild(element, 'pPr')
   const style = properties === undefined ? undefined : findChild(properties, 'pStyle')
   const styleId = style === undefined ? undefined : attribute(style, '@_val')
   const formatting = properties === undefined ? undefined : readParagraphStyle(properties)
+  const bullet = properties === undefined || numbering === undefined
+    ? undefined
+    : readBullet(properties, numbering)
   for (const child of childElements(element)) {
-    if (child.tag !== 'r') continue
-    appendRun(context, child)
+    if (child.tag === 'r') appendRun(context, child)
+    if (child.tag === 'hyperlink') appendHyperlink(context, child, relationships)
   }
-  appendParagraphBreak(context, styleId, formatting)
+  appendParagraphBreak(context, styleId, formatting, bullet)
   if (properties === undefined || relationships === undefined || identifiers === undefined) return
   const section = findChild(properties, 'sectPr')
   if (section === undefined) return
@@ -599,6 +880,73 @@ function appendParagraph(
     ...readSectionSetup(section, relationships, identifiers),
   })
   append(context, SECTION_BREAK)
+}
+
+/**
+ * Map `w:numPr` into the paragraph's list bullet.
+ * @param properties - Paragraph properties containing `w:numPr`.
+ * @param numbering - Numbering definitions from the package.
+ * @returns The paragraph bullet, or `undefined` for an unnumbered paragraph.
+ */
+function readBullet(properties: XmlElement, numbering: NumberingCatalog): IBullet | undefined {
+  const numberingProperties = findChild(properties, 'numPr')
+  if (numberingProperties === undefined) return undefined
+  const numId = optionalAttribute(findChild(numberingProperties, 'numId'), '@_val')
+  if (numId === undefined || numId === '0') return undefined
+  const nestingLevel = numberAttribute(findChild(numberingProperties, 'ilvl'), '@_val') ?? 0
+  const listType = numbering.listTypeByNumId.get(numId) ?? listKeyOf(numId)
+  ensureList(numbering, listType)
+  const bullet: IBullet = {
+    listType,
+    listId: `num-${numId}`,
+    nestingLevel,
+  }
+  const start = numbering.startByNumLevel.get(`${numId}:${String(nestingLevel)}`)
+  if (start !== undefined) bullet.startNumber = start
+  return bullet
+}
+
+/**
+ * Append a `w:hyperlink`'s runs inside custom-range tokens and record the range.
+ * @param context - Document stream being assembled.
+ * @param element - Hyperlink element.
+ * @param relationships - Relationships that resolve an external target.
+ */
+function appendHyperlink(
+  context: ReadContext,
+  element: XmlElement,
+  relationships: DocumentRelationships | undefined,
+): void {
+  const relationshipId = attribute(element, '@_id')
+  const anchor = attribute(element, '@_anchor')
+  const relationship = relationshipId === undefined ? undefined : relationships?.get(relationshipId)
+  const url = relationship !== undefined
+    && relationship.type.endsWith('/hyperlink')
+    && relationship.target.length > 0
+    ? relationship.target
+    : undefined
+  if (url === undefined && anchor === undefined) {
+    for (const child of childElements(element)) {
+      if (child.tag === 'r') appendRun(context, child)
+    }
+    return
+  }
+  const start = context.length
+  append(context, CUSTOM_RANGE_START)
+  for (const child of childElements(element)) {
+    if (child.tag === 'r') appendRun(context, child)
+  }
+  append(context, CUSTOM_RANGE_END)
+  const properties: IHyperlink = {}
+  if (url !== undefined) properties.url = url
+  if (anchor !== undefined) properties.bookmarkId = anchor
+  context.customRanges.push({
+    startIndex: start,
+    endIndex: context.length - 1,
+    rangeId: `hyperlink-${String(context.customRanges.length + 1)}`,
+    rangeType: CustomRangeType.HYPERLINK,
+    properties,
+  })
 }
 
 /**
@@ -1028,7 +1376,12 @@ function parseStylesDocument(stylesXml: Uint8Array): XmlElement | undefined {
   return parsed.map(toElement).find(element => element?.tag === 'styles')
 }
 
-function appendTable(context: ReadContext, element: XmlElement): void {
+function appendTable(
+  context: ReadContext,
+  element: XmlElement,
+  relationships?: DocumentRelationships,
+  numbering?: NumberingCatalog,
+): void {
   if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
   const tableId = `table-${context.tables.length + 1}`
   const startIndex = context.length
@@ -1045,7 +1398,7 @@ function appendTable(context: ReadContext, element: XmlElement): void {
       countCell(context)
       append(context, TABLE_CELL_START)
       for (const block of childElements(cell)) {
-        if (block.tag === 'p') appendParagraph(context, block)
+        if (block.tag === 'p') appendParagraph(context, block, relationships, undefined, numbering)
       }
       if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
       context.sectionBreaks.push({
@@ -1148,6 +1501,8 @@ function finalizeBody(context: ReadContext, section?: SectionSetup): void {
  * @param parts - Part identities mapped to their decoded XML.
  * @param root - Root element name: `hdr` for headers, `ftr` for footers.
  * @param bounds - Bounds applied while parsing tables.
+ * @param numbering - Numbering definitions shared with the document body.
+ * @param relationships - Relationship maps for each header and footer part.
  * @param build - Builds one segment entry from its identity, body, and table metadata.
  * @returns Segment identity mapped to its entry.
  */
@@ -1155,15 +1510,18 @@ function readStoryParts<Entry>(
   parts: ReadonlyMap<string, Uint8Array>,
   root: 'hdr' | 'ftr',
   bounds: OfficeExchangeConfig,
+  numbering: NumberingCatalog,
+  relationships: ReadonlyMap<string, DocumentRelationships>,
   build: (id: string, body: IDocumentBody, tableSource: ITables) => Entry,
 ): Map<string, Entry> {
   const stories = new Map<string, Entry>()
   for (const [id, xml] of parts) {
     const element = parseRootElement(xml, root, `${root === 'hdr' ? 'header' : 'footer'} XML`)
     const context = createReadContext(bounds)
+    const storyRelationships = relationships.get(id)
     for (const child of childElements(element)) {
-      if (child.tag === 'p') appendParagraph(context, child)
-      if (child.tag === 'tbl') appendTable(context, child)
+      if (child.tag === 'p') appendParagraph(context, child, storyRelationships, undefined, numbering)
+      if (child.tag === 'tbl') appendTable(context, child, storyRelationships, numbering)
     }
     finalizeBody(context)
     const body: IDocumentBody = {
@@ -1172,10 +1530,161 @@ function readStoryParts<Entry>(
       paragraphs: context.paragraphs,
       sectionBreaks: context.sectionBreaks,
       tables: context.tables,
+      customRanges: context.customRanges,
     }
     stories.set(id, build(id, body, context.tableSource))
   }
   return stories
+}
+
+/**
+ * Assign list types to numbering ids and encode `word/numbering.xml`.
+ * @param data - Document snapshot, including header and footer bullets.
+ * @returns The part XML, or `undefined` when the snapshot declares no lists.
+ */
+function planNumbering(data: IDocumentData): NumberingPlan {
+  const lists = data.lists ?? {}
+  const listTypes = Object.keys(lists)
+  for (const paragraph of allParagraphs(data)) {
+    const listType = paragraph.bullet?.listType
+    if (listType !== undefined && !listTypes.includes(listType)) listTypes.push(listType)
+  }
+  if (listTypes.length === 0) return { xml: undefined, numIdByListType: new Map() }
+  const numIdByListType = new Map<string, number>()
+  for (const [index, listType] of listTypes.entries()) numIdByListType.set(listType, index + 1)
+  return { xml: numberingXml(listTypes, lists, listStarts(data)), numIdByListType }
+}
+
+/** Paragraph-level list starts keyed by list type, then nesting level. */
+function listStarts(data: IDocumentData): ReadonlyMap<string, ReadonlyMap<number, number>> {
+  const starts = new Map<string, Map<number, number>>()
+  for (const paragraph of allParagraphs(data)) {
+    const bullet = paragraph.bullet
+    if (bullet?.startNumber === undefined) continue
+    const levels = starts.get(bullet.listType) ?? new Map<number, number>()
+    levels.set(bullet.nestingLevel, bullet.startNumber)
+    starts.set(bullet.listType, levels)
+  }
+  return starts
+}
+
+/** Every paragraph in the document body, headers, and footers. */
+function allParagraphs(data: IDocumentData): readonly IParagraph[] {
+  const paragraphs: IParagraph[] = [...(data.body?.paragraphs ?? [])]
+  for (const header of Object.values(data.headers ?? {})) paragraphs.push(...(header.body.paragraphs ?? []))
+  for (const footer of Object.values(data.footers ?? {})) paragraphs.push(...(footer.body.paragraphs ?? []))
+  return paragraphs
+}
+
+function numberingXml(
+  listTypes: readonly string[],
+  lists: ILists,
+  starts: ReadonlyMap<string, ReadonlyMap<number, number>>,
+): string {
+  let abstractNumbers = ''
+  let instances = ''
+  for (const [index, listType] of listTypes.entries()) {
+    const levels = lists[listType]?.nestingLevel ?? [defaultNestingLevel(0)]
+    abstractNumbers += `<w:abstractNum w:abstractNumId="${String(index)}">`
+      + '<w:multiLevelType w:val="hybridMultilevel"/>'
+      + levels.map((level, levelIndex) => writeNestingLevel(level, levelIndex)).join('')
+      + '</w:abstractNum>'
+    instances += `<w:num w:numId="${String(index + 1)}">`
+      + `<w:abstractNumId w:val="${String(index)}"/>`
+    for (const [level, start] of [...(starts.get(listType) ?? new Map<number, number>()).entries()]) {
+      instances += `<w:lvlOverride w:ilvl="${String(level)}"><w:startOverride w:val="${String(start)}"/></w:lvlOverride>`
+    }
+    instances += '</w:num>'
+  }
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+    + `${abstractNumbers}${instances}</w:numbering>`
+}
+
+function writeNestingLevel(level: INestingLevel, index: number): string {
+  const glyphType = level.glyphType ?? ListGlyphType.DECIMAL
+  const format = nameOf(NUMBER_FORMATS, glyphType) ?? 'decimal'
+  const text = glyphType === ListGlyphType.BULLET
+    ? level.glyphSymbol ?? level.glyphFormat
+    : level.glyphFormat.length > 0
+      ? level.glyphFormat
+      : `%${String(index + 1)}.`
+  let xml = `<w:lvl w:ilvl="${String(index)}">`
+    + `<w:start w:val="${String(level.startNumber)}"/>`
+    + `<w:numFmt w:val="${format}"/>`
+    + `<w:lvlText w:val="${escapeXml(text)}"/>`
+  if (level.isLegal === true) xml += '<w:isLgl/>'
+  const paragraphProperties = level.paragraphProperties === undefined
+    ? ''
+    : writeParagraphFormatting(level.paragraphProperties)
+  if (paragraphProperties.length > 0) xml += `<w:pPr>${paragraphProperties}</w:pPr>`
+  const runProperties = writeRunProperties(level.textStyle)
+  if (runProperties.length > 0) xml += runProperties
+  return `${xml}</w:lvl>`
+}
+
+/**
+ * Assign external hyperlink relationships for one part.
+ * @param ranges - Custom ranges from the part's body.
+ * @param firstRelId - First relationship number available in the part.
+ * @returns The relationship declarations and a URL lookup.
+ */
+function planLinks(ranges: readonly ICustomRange[] | undefined, firstRelId: number): LinkPlan {
+  const relIdByUrl = new Map<string, string>()
+  const rels: LinkRel[] = []
+  for (const range of ranges ?? []) {
+    const url = hyperlinkPropertiesOf(range)?.url
+    if (url === undefined || relIdByUrl.has(url)) continue
+    const relId = `rId${String(firstRelId + rels.length)}`
+    relIdByUrl.set(url, relId)
+    rels.push({ relId, target: url })
+  }
+  return { rels, relIdOf: url => relIdByUrl.get(url) }
+}
+
+/**
+ * Read a hyperlink custom range's target.
+ * @param range - Custom range from a document body.
+ * @returns The URL or bookmark identity, or `undefined` for another range type.
+ */
+function hyperlinkPropertiesOf(range: ICustomRange): IHyperlink | undefined {
+  const properties = range.properties
+  if (range.rangeType !== HYPERLINK_RANGE_TYPE || properties === undefined) return undefined
+  const link: IHyperlink = {}
+  const url = stringPropertyOf(properties, 'url')
+  if (url !== undefined && url.length > 0) link.url = url
+  const bookmarkId = stringPropertyOf(properties, 'bookmarkId')
+  if (bookmarkId !== undefined && bookmarkId.length > 0) link.bookmarkId = bookmarkId
+  return link.url === undefined && link.bookmarkId === undefined ? undefined : link
+}
+
+function stringPropertyOf(properties: Readonly<Record<string, unknown>>, name: string): string | undefined {
+  const value = properties[name]
+  return typeof value === 'string' ? value : undefined
+}
+
+/**
+ * Clip the hyperlink ranges that intersect one paragraph.
+ * @param ranges - Custom ranges from the part's body.
+ * @param start - Inclusive paragraph start offset.
+ * @param end - Exclusive paragraph end offset.
+ * @returns Ranges with their stream bounds and targets, sorted by start.
+ */
+function paragraphLinks(
+  ranges: readonly ICustomRange[] | undefined,
+  start: number,
+  end: number,
+): readonly ParagraphLink[] {
+  const links: ParagraphLink[] = []
+  for (const range of ranges ?? []) {
+    const properties = hyperlinkPropertiesOf(range)
+    if (properties === undefined) continue
+    const linkStart = Math.max(start, range.startIndex)
+    const linkEnd = Math.min(end, range.endIndex + 1)
+    if (linkEnd <= linkStart) continue
+    links.push({ start: linkStart, end: linkEnd, properties })
+  }
+  return links.sort((left, right) => left.start - right.start)
 }
 
 function writeBody(
@@ -1184,6 +1693,8 @@ function writeBody(
   story: StoryData,
   sections: SectionPlan,
   relIds: ReadonlyMap<string, string>,
+  links: LinkPlan,
+  numbering: NumberingPlan,
   bounds: OfficeExchangeConfig,
 ): string {
   const cells = { count: 0 }
@@ -1194,13 +1705,13 @@ function writeBody(
     const token = stream[index]
     if (token === TABLE_START) {
       const table = readTableRange(stream, index)
-      xml += writeTable(stream, index, table, paragraphs, story, bounds, cells)
+      xml += writeTable(stream, index, table, paragraphs, story, bounds, cells, links, numbering)
       index = table.end
       cursor = index
     } else if (token === PARAGRAPH) {
       const section = stream[index + 1] === SECTION_BREAK ? sections.breakAt.get(index + 1) : undefined
       const properties = section === undefined ? '' : writeSectionProperties(section, relIds)
-      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, properties)
+      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, properties, links, numbering)
       cursor = section === undefined ? index + 1 : index + 2
       index = cursor
     } else {
@@ -1218,9 +1729,16 @@ function writeBody(
  * Write one header or footer body.
  * @param story - Header or footer segment content.
  * @param bounds - Table-cell bound applied while writing.
+ * @param links - Hyperlink relationships this part declares.
+ * @param numbering - Numbering ids shared with the document body.
  * @returns OOXML block content for the part root.
  */
-function writeStoryBody(story: StoryData & { readonly body: IDocumentBody }, bounds: OfficeExchangeConfig): string {
+function writeStoryBody(
+  story: StoryData & { readonly body: IDocumentBody },
+  bounds: OfficeExchangeConfig,
+  links: LinkPlan,
+  numbering: NumberingPlan,
+): string {
   const paragraphs = new Map<number, IParagraph>()
   for (const paragraph of story.body.paragraphs ?? []) paragraphs.set(paragraph.startIndex, paragraph)
   return writeBody(
@@ -1229,6 +1747,8 @@ function writeStoryBody(story: StoryData & { readonly body: IDocumentBody }, bou
     story,
     { breakAt: new Map(), finalXml: '' },
     new Map(),
+    links,
+    numbering,
     bounds,
   )
 }
@@ -1239,6 +1759,7 @@ function writeStoryBody(story: StoryData & { readonly body: IDocumentBody }, bou
  * @param kind - Whether the parts are headers or footers.
  * @param firstRelId - First document relationship number available.
  * @param bounds - Table-cell bound applied while writing story bodies.
+ * @param numbering - Numbering ids shared with the document body.
  * @returns The parts, their relationship ids, and the next free relationship number.
  */
 function planStoryParts(
@@ -1246,6 +1767,7 @@ function planStoryParts(
   kind: 'header' | 'footer',
   firstRelId: number,
   bounds: OfficeExchangeConfig,
+  numbering: NumberingPlan,
 ): StoryPlan {
   const ids = entries === undefined ? [] : Object.keys(entries).sort()
   const parts: StoryPart[] = []
@@ -1256,15 +1778,31 @@ function planStoryParts(
     if (entry === undefined) continue
     const partName = `word/${kind}${String(index + 1)}.xml`
     const relId = `rId${String(firstRelId + index)}`
+    const links = planLinks(entry.body.customRanges, 1)
     parts.push({
       id,
       partName,
       relId,
-      xml: storyXml(kind, writeStoryBody(entry, bounds)),
+      xml: storyXml(kind, writeStoryBody(entry, bounds, links, numbering)),
+      ...(links.rels.length === 0
+        ? {}
+        : { relsPartName: `word/_rels/${partName.slice('word/'.length)}.rels`, relsXml: storyRelsXml(links.rels) }),
     })
     relIds.set(id, relId)
   }
   return { parts, relIds, nextRelId: firstRelId + parts.length }
+}
+
+function storyRelsXml(rels: readonly LinkRel[]): string {
+  let relationships = ''
+  for (const rel of rels) {
+    relationships += `<Relationship Id="${rel.relId}"`
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+      + ` Target="${escapeXml(rel.target)}" TargetMode="External"/>`
+  }
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+    + `${relationships}</Relationships>`
 }
 
 function storyXml(kind: 'header' | 'footer', content: string): string {
@@ -1425,6 +1963,8 @@ function writeTable(
   story: StoryData,
   bounds: OfficeExchangeConfig,
   cells: { count: number },
+  links: LinkPlan,
+  numbering: NumberingPlan,
 ): string {
   const source = tableSourceAt(story, start)
   const sourceColumns = source?.tableColumns ?? []
@@ -1456,7 +1996,7 @@ function writeTable(
       const width = sourceCell?.size?.width.v ?? widths[cellIndex] ?? DEFAULT_COLUMN_WIDTH
       xml += '<w:tc><w:tcPr>'
         + `<w:tcW w:w="${String(Math.max(1, Math.round(width * TWIPS_PER_PIXEL)))}" w:type="dxa"/>`
-        + `</w:tcPr>${writeCell(stream, cell, paragraphs, story)}</w:tc>`
+        + `</w:tcPr>${writeCell(stream, cell, paragraphs, story, links, numbering)}</w:tc>`
     }
     xml += '</w:tr>'
   }
@@ -1473,6 +2013,8 @@ function writeCell(
   cell: ParsedCell,
   paragraphs: ReadonlyMap<number, IParagraph>,
   story: StoryData,
+  links: LinkPlan,
+  numbering: NumberingPlan,
 ): string {
   let xml = ''
   let cursor = cell.start
@@ -1480,7 +2022,7 @@ function writeCell(
   while (index < cell.end) {
     const token = stream[index]
     if (token === PARAGRAPH) {
-      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, '')
+      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, '', links, numbering)
       cursor = index + 1
       index += 1
     } else if (token === TABLE_START) {
@@ -1495,7 +2037,9 @@ function writeCell(
   if (remainder.length > 0) {
     throw new OfficeExchangeError('conversion-failed', 'Table cell text must end with a paragraph break')
   }
-  return xml.length === 0 ? writeParagraph(stream, cell.start, cell.start, undefined, story, '') : xml
+  return xml.length === 0
+    ? writeParagraph(stream, cell.start, cell.start, undefined, story, '', links, numbering)
+    : xml
 }
 
 function writeParagraph(
@@ -1505,18 +2049,61 @@ function writeParagraph(
   paragraph: IParagraph | undefined,
   story: StoryData,
   sectionProperties: string,
+  links: LinkPlan,
+  numbering: NumberingPlan,
 ): string {
-  const properties = paragraphProperties(paragraph, sectionProperties)
-  let xml = `<w:p>${properties}`
-  const runs = runSlices(story.body?.textRuns ?? [], start, end)
-  if (runs.length === 0) {
-    xml += writeRun(stream.slice(start, end), undefined)
-  } else {
-    for (const run of runs) {
-      xml += writeRun(stream.slice(run.start, run.end), run.style)
-    }
+  const properties = paragraphProperties(paragraph, sectionProperties, numbering)
+  return `<w:p>${properties}${writeParagraphContent(stream, start, end, story, links)}</w:p>`
+}
+
+function writeParagraphContent(
+  stream: string,
+  start: number,
+  end: number,
+  story: StoryData,
+  links: LinkPlan,
+): string {
+  const ranges = paragraphLinks(story.body?.customRanges, start, end)
+  if (ranges.length === 0) return writeTextRuns(stream, start, end, story.body?.textRuns ?? [])
+  const boundaries = new Set<number>([start, end])
+  for (const range of ranges) {
+    boundaries.add(range.start)
+    boundaries.add(range.end)
   }
-  return `${xml}</w:p>`
+  const sorted = [...boundaries].sort((left, right) => left - right)
+  let xml = ''
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    const sliceStart = sorted[index]
+    const sliceEnd = sorted[index + 1]
+    /* v8 ignore next -- Boundaries come in sorted pairs, so both offsets are always present. */
+    if (sliceStart === undefined || sliceEnd === undefined) continue
+    const content = writeTextRuns(stream, sliceStart, sliceEnd, story.body?.textRuns ?? [])
+    const range = ranges.find(candidate => candidate.start <= sliceStart && candidate.end >= sliceEnd)
+    xml += range === undefined ? content : writeHyperlink(range.properties, links, content)
+  }
+  return xml
+}
+
+function writeTextRuns(stream: string, start: number, end: number, textRuns: readonly ITextRun[]): string {
+  const runs = runSlices(textRuns, start, end)
+  if (runs.length === 0) return writeRun(stream.slice(start, end), undefined)
+  let xml = ''
+  for (const run of runs) xml += writeRun(stream.slice(run.start, run.end), run.style)
+  return xml
+}
+
+function writeHyperlink(properties: IHyperlink, links: LinkPlan, content: string): string {
+  const attributes: string[] = []
+  if (properties.url !== undefined) {
+    const relId = links.relIdOf(properties.url)
+    if (relId !== undefined) attributes.push(`r:id="${relId}"`)
+  }
+  if (properties.bookmarkId !== undefined) {
+    attributes.push(`w:anchor="${escapeXml(properties.bookmarkId)}"`)
+  }
+  /* v8 ignore next -- Every planned hyperlink range declares a URL or bookmark anchor. */
+  if (attributes.length === 0) return content
+  return `<w:hyperlink ${attributes.join(' ')}>${content}</w:hyperlink>`
 }
 
 interface RunSlice {
@@ -1550,14 +2137,33 @@ function runSlices(textRuns: readonly ITextRun[], start: number, end: number): r
   return slices
 }
 
-function paragraphProperties(paragraph: IParagraph | undefined, sectionProperties: string): string {
+function paragraphProperties(
+  paragraph: IParagraph | undefined,
+  sectionProperties: string,
+  numbering: NumberingPlan,
+): string {
   const styleId = paragraph?.styleId ?? styleIdForNamedStyle(paragraph?.paragraphStyle?.namedStyleType)
   const formatting = paragraph?.paragraphStyle === undefined
     ? ''
     : writeParagraphFormatting(paragraph.paragraphStyle)
-  if (styleId === undefined && formatting.length === 0 && sectionProperties.length === 0) return ''
+  const numberProperties = writeNumberingProperties(paragraph?.bullet, numbering)
+  if (
+    styleId === undefined
+    && formatting.length === 0
+    && numberProperties.length === 0
+    && sectionProperties.length === 0
+  ) return ''
   const named = styleId === undefined ? '' : `<w:pStyle w:val="${escapeXml(styleId)}"/>`
-  return `<w:pPr>${named}${formatting}${sectionProperties}</w:pPr>`
+  return `<w:pPr>${named}${numberProperties}${formatting}${sectionProperties}</w:pPr>`
+}
+
+function writeNumberingProperties(bullet: IBullet | undefined, numbering: NumberingPlan): string {
+  if (bullet === undefined) return ''
+  const numId = numbering.numIdByListType.get(bullet.listType)
+  /* v8 ignore next -- planNumbering assigns an id to every bullet list type. */
+  if (numId === undefined) return ''
+  return `<w:numPr><w:ilvl w:val="${String(bullet.nestingLevel)}"/>`
+    + `<w:numId w:val="${String(numId)}"/></w:numPr>`
 }
 
 function writeParagraphFormatting(style: IParagraphStyle): string {
@@ -1762,12 +2368,16 @@ interface PackageParts {
   readonly styles: Uint8Array | undefined
   /** Decoded `word/settings.xml`, when present. */
   readonly settings: Uint8Array | undefined
+  /** Decoded `word/numbering.xml`, when present. */
+  readonly numbering: Uint8Array | undefined
   /** Decoded `word/_rels/document.xml.rels`, when present. */
   readonly relationships: Uint8Array | undefined
   /** Header parts keyed by their segment identity. */
   readonly headers: ReadonlyMap<string, Uint8Array>
   /** Footer parts keyed by their segment identity. */
   readonly footers: ReadonlyMap<string, Uint8Array>
+  /** Header and footer relationship parts keyed by their segment identity. */
+  readonly storyRelationships: ReadonlyMap<string, Uint8Array>
 }
 
 function readPackage(bytes: Uint8Array): PackageParts {
@@ -1793,9 +2403,11 @@ function readPackage(bytes: Uint8Array): PackageParts {
         return file.name === DOCUMENT_XML
           || file.name === STYLES_XML
           || file.name === SETTINGS_XML
+          || file.name === NUMBERING_XML
           || file.name === DOCUMENT_RELS
           || HEADER_PART.test(path)
           || FOOTER_PART.test(path)
+          || STORY_RELS_PART.test(path)
       },
     })
   } catch (error) {
@@ -1804,19 +2416,29 @@ function readPackage(bytes: Uint8Array): PackageParts {
   }
   const headers = new Map<string, Uint8Array>()
   const footers = new Map<string, Uint8Array>()
+  const storyRelationships = new Map<string, Uint8Array>()
   for (const [name, content] of Object.entries(entries)) {
     const path = name.toLowerCase()
     if (HEADER_PART.test(path)) headers.set(partIdOf(name), content)
     if (FOOTER_PART.test(path)) footers.set(partIdOf(name), content)
+    if (STORY_RELS_PART.test(path)) storyRelationships.set(storyIdOf(name), content)
   }
   return {
     document: entries[DOCUMENT_XML],
     styles: entries[STYLES_XML],
     settings: entries[SETTINGS_XML],
+    numbering: entries[NUMBERING_XML],
     relationships: entries[DOCUMENT_RELS],
     headers,
     footers,
+    storyRelationships,
   }
+}
+
+/** Header/footer identity from its relationship part name (`word/_rels/header1.xml.rels`). */
+function storyIdOf(partName: string): string {
+  const name = partName.slice(partName.lastIndexOf('/') + 1)
+  return name.slice(0, -'.xml.rels'.length)
 }
 
 /**
@@ -2005,11 +2627,16 @@ function contentTypesXml(
   headers: readonly StoryPart[],
   footers: readonly StoryPart[],
   settings: boolean,
+  numbering: boolean,
 ): string {
   let overrides = ''
   if (settings) {
     overrides += '<Override PartName="/word/settings.xml"'
       + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>'
+  }
+  if (numbering) {
+    overrides += '<Override PartName="/word/numbering.xml"'
+      + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>'
   }
   for (const part of headers) {
     overrides += `<Override PartName="/${part.partName}"`
@@ -2043,6 +2670,8 @@ function documentRelsXml(
   headers: readonly StoryPart[],
   footers: readonly StoryPart[],
   settings: boolean,
+  numberingRelId: number | undefined,
+  links: readonly LinkRel[],
 ): string {
   let relationships = '<Relationship Id="rId1"'
     + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"'
@@ -2051,6 +2680,11 @@ function documentRelsXml(
     relationships += '<Relationship Id="rId2"'
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings"'
       + ' Target="settings.xml"/>'
+  }
+  if (numberingRelId !== undefined) {
+    relationships += `<Relationship Id="rId${String(numberingRelId)}"`
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"'
+      + ' Target="numbering.xml"/>'
   }
   for (const part of headers) {
     relationships += `<Relationship Id="${part.relId}"`
@@ -2061,6 +2695,11 @@ function documentRelsXml(
     relationships += `<Relationship Id="${part.relId}"`
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer"'
       + ` Target="${part.partName.slice('word/'.length)}"/>`
+  }
+  for (const rel of links) {
+    relationships += `<Relationship Id="${rel.relId}"`
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+      + ` Target="${escapeXml(rel.target)}" TargetMode="External"/>`
   }
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
