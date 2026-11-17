@@ -2,6 +2,7 @@ import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 import { Context, LoggerLevel } from '@forwork/cordis'
 import SessionStore, {
   SESSION_FORMAT_VERSION,
+  DocumentId,
   Session,
   SessionId,
   SessionLogOffset,
@@ -175,6 +176,62 @@ describe('incremental DeepSeek session-log upload', () => {
       body: body(), signal: SIGNAL, sessionId: session.id,
     })
     expect(prepared.fields).not.toHaveProperty('dsh_session_log')
+  })
+
+  it('does not contribute the session log without an explicit opt-in', async () => {
+    const ctx = new Context()
+    contexts.push(ctx)
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(DeepSeekLlmApiExtensionRegistry)
+    await ctx.plugin(SessionLogDeepSeek, {})
+    const session = ctx.sessions.create(SessionId('default-off'))
+    session.append('turn/start', { turn: 1 })
+
+    const prepared = await ctx.deepseekLlmApiExtensions.prepare({
+      body: body(), signal: SIGNAL, sessionId: session.id,
+    })
+    expect(prepared.fields).not.toHaveProperty('dsh_session_log')
+    expect(SessionLogDeepSeek.acceptedThrough(session)).toBe(-1)
+  })
+
+  it('excludes document facts from the uploaded field while keeping them in the local log', async () => {
+    const { ctx, session } = await harness('document-excluded')
+    const documentId = DocumentId('document-excluded:report.docx')
+    session.append('turn/start', { turn: 1 })
+    session.append('document/open', { documentId, path: 'report.docx', format: 'docx', contentVersion: 0 })
+    session.append('document/edit', {
+      documentId,
+      actor: 'agent',
+      fromVersion: 0,
+      toVersion: 1,
+      operation: [{ kind: 'cell', sheetId: 'sheet-1', row: 0, column: 0, value: 1 }],
+      inverse: [{ kind: 'cell', sheetId: 'sheet-1', row: 0, column: 0, value: null }],
+    })
+    session.append('step/start', { turn: 1, step: 1 })
+
+    const prepared = await ctx.deepseekLlmApiExtensions.prepare({ body: body(), signal: SIGNAL, sessionId: session.id })
+    expect(prepared.fields.dsh_session_log?.events.map(event => event.type))
+      .toEqual(['turn/start', 'step/start'])
+    expect(session.snapshotEvents().map(event => event.type))
+      .toEqual(['turn/start', 'document/open', 'document/edit', 'step/start'])
+  })
+
+  it('omits the field silently when only excluded document facts are pending', async () => {
+    const { ctx, session } = await harness('document-only')
+    session.append('document/open', {
+      documentId: DocumentId('document-only:report.docx'),
+      path: 'report.docx',
+      format: 'docx',
+      contentVersion: 0,
+    })
+    const warnings: unknown[][] = []
+    ctx.logger.exporter({ levels: { default: LoggerLevel.WARN }, export: (message) => { if (message.type === 'warn') warnings.push(message.args) } })
+
+    const prepared = await ctx.deepseekLlmApiExtensions.prepare({ body: body(), signal: SIGNAL, sessionId: session.id })
+    expect(prepared.fields).not.toHaveProperty('dsh_session_log')
+    expect(warnings).toEqual([])
+    expect(SessionLogDeepSeek.acceptedThrough(session)).toBe(-1)
+    expect(session.snapshotEvents().map(event => event.type)).toEqual(['document/open'])
   })
 
   it('uploads the full first prefix, records acceptance, then sends only the appended suffix', async () => {

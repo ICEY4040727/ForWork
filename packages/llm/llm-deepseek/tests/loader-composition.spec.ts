@@ -238,12 +238,13 @@ describe('llm-deepseek real dynamic composition', () => {
     expect(SessionLogDeepSeek.acceptedThrough(session)).toBe(-1)
   })
 
-  it('sends the canonical session suffix by default through Loader composition', async () => {
+  it('sends the canonical session suffix when the composition opts in', async () => {
     vi.stubEnv('FORWORK_API_KEY', 'entry-key')
     const server = await mockServer([{ kind: 'sse', events: textEvents }])
     const { ctx } = await loadComposition({
       withDynamic: false,
       baseURL: server.url,
+      enableSessionLog: true,
     })
     const session = ctx.sessions.create(SessionId('extension-composition-enabled'))
     session.append('turn/start', { turn: 1 })
@@ -268,10 +269,27 @@ describe('llm-deepseek real dynamic composition', () => {
     expect(SessionLogDeepSeek.acceptedThrough(session)).toBe(0)
   })
 
+  it('omits the session-log field from Loader composition without an opt-in', async () => {
+    vi.stubEnv('FORWORK_API_KEY', 'entry-key')
+    const server = await mockServer([{ kind: 'sse', events: textEvents }])
+    const { ctx } = await loadComposition({ withDynamic: false, baseURL: server.url })
+    const session = ctx.sessions.create(SessionId('extension-composition-default-off'))
+    session.append('turn/start', { turn: 1 })
+
+    await assemble(ctx, { model: 'deepseek-v4-flash', messages: [], sessionId: session.id })
+    expect(server.requests[0]).not.toHaveProperty('dsh_session_log')
+    expect(SessionLogDeepSeek.acceptedThrough(session)).toBe(-1)
+  })
+
   it.each([false, true])('applies a registered upload exclusion through HTTP with consumer first=%s', async (exclusionFirst) => {
     vi.stubEnv('FORWORK_API_KEY', 'entry-key')
     const server = await mockServer([{ kind: 'sse', events: textEvents }, { kind: 'sse', events: textEvents }])
-    const { ctx } = await loadComposition({ withDynamic: false, baseURL: server.url, exclusionFirst })
+    const { ctx } = await loadComposition({
+      withDynamic: false,
+      baseURL: server.url,
+      enableSessionLog: true,
+      exclusionFirst,
+    })
     const session = ctx.sessions.create(SessionId('excluded-composition'))
     session.append('turn/start', { turn: 1 })
 

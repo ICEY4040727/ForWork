@@ -33,6 +33,11 @@ async function setup(enabled: boolean) {
   return { ctx, fiber, getDeviceIdentity, emit }
 }
 
+it('defaults the collection policy to off', () => {
+  expect(Analytics.Config({}).enabled.get()).toBe(false)
+  expect(Analytics.Config({ enabled: true }).enabled.get()).toBe(true)
+})
+
 it('disabled collection does not read identity or submit an event', async () => {
   const b = await setup(false)
   expect(b.ctx.productAnalytics.enabled()).toBe(false)

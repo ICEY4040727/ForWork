@@ -547,7 +547,7 @@ export interface Config {
 ```ts config-catalog
 /** Application-owned collection policy; no user settings surface. */
 export interface Config {
-  /** Live application collection policy; ordinary Web does not mount this service. */
+  /** Live application collection policy; ordinary Web does not mount this service; defaults to `false` (opt-in). */
   enabled: Volatile<boolean>
   /** Running Desktop release, absent when unavailable. */
   appVersion?: string
@@ -3078,7 +3078,7 @@ export interface JsonRpcConfig {
 ```ts config-catalog
 /** Session-log request contribution configuration. */
 export interface Config {
-  /** Contribute `dsh_session_log` to official DeepSeek requests. Defaults to `true`. */
+  /** Contribute `dsh_session_log` to official DeepSeek requests. Defaults to `false`; opt-in only. */
   enabled: Volatile<boolean>
   /**
    * Largest serialized `dsh_session_log` field, in UTF-8 bytes, that one request carries.

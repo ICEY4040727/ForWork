@@ -45,7 +45,7 @@ export const inject = ['deepseekLlmApiExtensions', 'sessions']
 
 /** Session-log request contribution configuration. */
 export interface Config {
-  /** Contribute `dsh_session_log` to official DeepSeek requests. Defaults to `true`. */
+  /** Contribute `dsh_session_log` to official DeepSeek requests. Defaults to `false`; opt-in only. */
   enabled: Volatile<boolean>
   /**
    * Largest serialized `dsh_session_log` field, in UTF-8 bytes, that one request carries.
@@ -57,7 +57,7 @@ export interface Config {
 
 /** Validated Session-log request contribution configuration. */
 export const Config = z.object({
-  enabled: z.boolean().default(true).volatile(),
+  enabled: z.boolean().default(false).volatile(),
   maxBytes: z.number().step(1).min(1).default(8 * 1024 * 1024),
 })
 
@@ -209,8 +209,10 @@ export class SessionLogDeepSeekService extends Service {
         }
 
         const afterSeq = acceptedThrough(session)
+        // Document facts stay local per FR-013; they are never uploaded in the log field.
         // oxlint-disable-next-line typescript/no-deprecated -- Existing Session history read; migration deferred.
         const pending = session.snapshotEvents(SessionLogOffset(afterSeq + 1))
+          .filter(event => !event.type.startsWith('document/'))
         const envelope = {
           version: 1,
           sessionFormatVersion: session.header.version,
