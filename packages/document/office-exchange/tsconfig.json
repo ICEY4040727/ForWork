@@ -21,6 +21,9 @@
       "path": "../../util/values"
     },
     {
+      "path": "../../util/timeout"
+    },
+    {
       "path": "../../typert/protocol"
     },
     {

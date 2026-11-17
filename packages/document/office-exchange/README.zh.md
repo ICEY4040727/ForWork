@@ -91,7 +91,7 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 
 ### 失败策略
 
-失败是带稳定 `code` 的 `OfficeExchangeError` 值。无法打开文件的读取报告带路径的 `conversion-failed`，而不是泄漏 Node 错误。读取时非空的 `unsupported` 列表意味着写入路径必须拒绝，而不是保存有损文件；产品会指出违规特性并提供替代方案。
+失败是带稳定 `code` 的 `OfficeExchangeError` 值。无法打开文件的读取报告带路径的 `conversion-failed`，而不是泄漏 Node 错误。读取时非空的 `unsupported` 列表意味着写入路径必须拒绝，而不是保存有损文件；产品会指出违规特性并提供替代方案。旧格式转换超过 `maxConversionMs` 时会中止引擎并报告 `too-large`，源文件保持不变。
 
 -----
 

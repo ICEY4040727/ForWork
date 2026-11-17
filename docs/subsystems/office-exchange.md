@@ -30,7 +30,7 @@ The [document package family](../../packages/document/README.md) moves Office fi
 
 `ctx.officeExchange.read(path, signal?)` returns an `ExchangeReadResult`. `ctx.officeExchange.write(snapshot, format, signal?)` returns the encoded bytes without writing a file. `detectUnsupported(path, signal?)` reports loss-prone features without returning content. `convertLegacy(path, signal?, outputDir?)` returns the path of the editable file; an omitted `outputDir` writes into a fresh temporary directory outside any workspace.
 
-`OfficeExchangeConfig` bounds every provider operation: `maxFileBytes` (25 MiB by default), `maxCells` (2,000,000), and `maxConversionMs` (60,000 ms). The provider resolves the bounds once at mount and rejects a non-positive or non-integer value with `RangeError` instead of truncating work. Every operation failure is an `OfficeExchangeError` whose stable `code` is `unsupported-format`, `unsupported-feature`, `too-large`, `conversion-failed`, `not-implemented`, or `out-of-scope`.
+`OfficeExchangeConfig` bounds every provider operation: `maxFileBytes` (25 MiB by default), `maxCells` (2,000,000), and `maxConversionMs` (60,000 ms). The provider resolves the bounds once at mount and rejects a non-positive or non-integer value with `RangeError` instead of truncating work. A legacy conversion that exceeds `maxConversionMs` is aborted and reported as `too-large`, leaving the source untouched. Every operation failure is an `OfficeExchangeError` whose stable `code` is `unsupported-format`, `unsupported-feature`, `too-large`, `conversion-failed`, `not-implemented`, or `out-of-scope`.
 
 ## The officeDocument Remote
 

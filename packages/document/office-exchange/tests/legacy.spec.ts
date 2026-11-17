@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ConversionError, createConverter } from '@deepseek-ai/libreoffice-kit'
 import { expect, it } from 'vitest'
+import { DEFAULT_OFFICE_EXCHANGE_CONFIG, resolveConfig } from '../src/config.ts'
 import { OfficeExchangeError } from '../src/errors.ts'
 import { convertLegacyFile, legacyTarget } from '../src/provider/legacy.ts'
 import { readWorkbook } from '../src/provider/xlsx.ts'
@@ -80,7 +81,7 @@ it('returns undefined for unknown, editable, and extensionless paths', () => {
 
 it('rejects an unsupported extension before creating the output directory', async () => {
   const outputDir = join(tmpdir(), `dsh-office-exchange-unsupported-${randomUUID()}`)
-  const error = await rejectionOf(convertLegacyFile('report.docx', outputDir))
+  const error = await rejectionOf(convertLegacyFile('report.docx', outputDir, { config: DEFAULT_OFFICE_EXCHANGE_CONFIG }))
   if (!(error instanceof OfficeExchangeError)) throw error
   expect(error.code).toBe('unsupported-format')
   expect(existsSync(outputDir)).toBe(false)
@@ -89,7 +90,10 @@ it('rejects an unsupported extension before creating the output directory', asyn
 it('rejects an already-aborted request without starting a conversion', async () => {
   const reason = new Error('cancelled before conversion')
   await expect(
-    convertLegacyFile(FIXTURE, join(tmpdir(), 'dsh-office-exchange-aborted'), AbortSignal.abort(reason)),
+    convertLegacyFile(FIXTURE, join(tmpdir(), 'dsh-office-exchange-aborted'), {
+      config: DEFAULT_OFFICE_EXCHANGE_CONFIG,
+      signal: AbortSignal.abort(reason),
+    }),
   ).rejects.toBe(reason)
 })
 
@@ -103,7 +107,7 @@ it('converts the .xls fixture to .xlsx without modifying the source', { timeout:
   const workspace = await mkdtemp(join(tmpdir(), 'dsh-office-exchange-legacy-'))
   try {
     const outputDir = join(workspace, 'converted')
-    const outputPath = await convertLegacyFile(FIXTURE, outputDir)
+    const outputPath = await convertLegacyFile(FIXTURE, outputDir, { config: DEFAULT_OFFICE_EXCHANGE_CONFIG })
     expect(outputPath).toBe(join(outputDir, 'legacy.xlsx'))
     const info = await stat(outputPath)
     expect(info.isFile()).toBe(true)
@@ -117,6 +121,27 @@ it('converts the .xls fixture to .xlsx without modifying the source', { timeout:
 
     const sourceAfter = new Uint8Array(await readFile(FIXTURE))
     expect(hashOf(sourceAfter)).toBe(hashOf(sourceBefore))
+  } finally {
+    await rm(workspace, { recursive: true, force: true })
+  }
+})
+
+it('fails an over-budget conversion as too-large without modifying the source', { timeout: 180_000 }, async (context) => {
+  const reason = await unavailableReason()
+  if (reason !== undefined) {
+    context.skip(`LibreOffice unavailable: ${reason}`)
+    return
+  }
+  const sourceBefore = new Uint8Array(await readFile(FIXTURE))
+  const workspace = await mkdtemp(join(tmpdir(), 'dsh-office-exchange-deadline-'))
+  try {
+    const error = await rejectionOf(
+      convertLegacyFile(FIXTURE, join(workspace, 'converted'), { config: resolveConfig({ maxConversionMs: 1 }) }),
+    )
+    if (!(error instanceof OfficeExchangeError)) throw error
+    expect(error.code).toBe('too-large')
+    expect(error.message).toContain('maxConversionMs')
+    expect(hashOf(new Uint8Array(await readFile(FIXTURE)))).toBe(hashOf(sourceBefore))
   } finally {
     await rm(workspace, { recursive: true, force: true })
   }

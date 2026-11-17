@@ -62,6 +62,7 @@
     "@forwork/schemastery": "workspace:~",
     "@forwork/brand": "workspace:*",
     "@forwork/session-document": "workspace:*",
+    "@forwork/timeout": "workspace:*",
     "@forwork/typert-protocol": "workspace:*",
     "exceljs": "4.4.0",
     "fast-xml-parser": "5.11.1",

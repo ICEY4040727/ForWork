@@ -30,7 +30,7 @@
 
 `ctx.officeExchange.read(path, signal?)` 返回 `ExchangeReadResult`。`ctx.officeExchange.write(snapshot, format, signal?)` 返回编码后的字节，但不写文件。`detectUnsupported(path, signal?)` 报告易丢失特性而不返回内容。`convertLegacy(path, signal?, outputDir?)` 返回可编辑文件的路径；省略 `outputDir` 时写入任意工作区之外的临时目录。
 
-`OfficeExchangeConfig` 约束每个提供方操作：`maxFileBytes`（默认 25 MiB）、`maxCells`（2,000,000）和 `maxConversionMs`（60,000 毫秒）。提供方在挂载时一次性解析这些上限，并以 `RangeError` 拒绝非正数或非整数值，而不是截断工作。每次操作失败都是 `OfficeExchangeError`，其稳定 `code` 为 `unsupported-format`、`unsupported-feature`、`too-large`、`conversion-failed`、`not-implemented` 或 `out-of-scope`。
+`OfficeExchangeConfig` 约束每个提供方操作：`maxFileBytes`（默认 25 MiB）、`maxCells`（2,000,000）和 `maxConversionMs`（60,000 毫秒）。提供方在挂载时一次性解析这些上限，并以 `RangeError` 拒绝非正数或非整数值，而不是截断工作。超过 `maxConversionMs` 的旧格式转换会被中止并报告为 `too-large`，源文件保持不变。每次操作失败都是 `OfficeExchangeError`，其稳定 `code` 为 `unsupported-format`、`unsupported-feature`、`too-large`、`conversion-failed`、`not-implemented` 或 `out-of-scope`。
 
 ## officeDocument Remote
 

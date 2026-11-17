@@ -91,7 +91,7 @@ Drafts are version-bound: the record carries the `contentVersion` the snapshot w
 
 ### Failure policy
 
-Failures are `OfficeExchangeError` values with a stable `code`. Reads that cannot open a file report `conversion-failed` with the path instead of leaking a Node error. A non-empty `unsupported` list on read means the write path must refuse rather than save a lossy file; the product names the offending feature and offers an alternative.
+Failures are `OfficeExchangeError` values with a stable `code`. Reads that cannot open a file report `conversion-failed` with the path instead of leaking a Node error. A non-empty `unsupported` list on read means the write path must refuse rather than save a lossy file; the product names the offending feature and offers an alternative. A legacy conversion that exceeds `maxConversionMs` aborts the engine and reports `too-large`, leaving the source file unchanged.
 
 -----
 

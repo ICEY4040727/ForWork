@@ -168,15 +168,17 @@ export class LocalOfficeExchange extends OfficeExchange {
    * fresh temporary directory outside any workspace.
    * @returns Absolute path of the converted file inside `outputDir` or the fresh
    * temporary directory.
-   * @throws {OfficeExchangeError} `unsupported-format` for another extension and
+   * @throws {OfficeExchangeError} `unsupported-format` for another extension,
+   * `too-large` when the conversion exceeds `maxConversionMs`, and
    * `conversion-failed` when the engine is unavailable or conversion fails.
    */
   async convertLegacy(path: string, signal?: AbortSignal, outputDir?: string): Promise<string> {
     signal?.throwIfAborted()
-    if (outputDir !== undefined) return await convertLegacyFile(path, outputDir, signal)
+    const request = { config: this.config, signal }
+    if (outputDir !== undefined) return await convertLegacyFile(path, outputDir, request)
     const directory = await mkdtemp(join(tmpdir(), 'dsh-office-exchange-'))
     try {
-      return await convertLegacyFile(path, directory, signal)
+      return await convertLegacyFile(path, directory, request)
     } catch (cause) {
       await Promise.allSettled([rm(directory, { recursive: true, force: true })])
       throw cause
