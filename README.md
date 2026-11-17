@@ -2,11 +2,11 @@
 
 English | [中文](README.zh.md)
 
-ForWork (`forwork`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
+ForWork (`forwork`) is a local-first office-document agent.
 
 It is built on an **everything-is-a-plugin** architecture and powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512).
 
-Documentation: [https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+Documentation: [https://github.com/ICEY4040727/ForWork](https://github.com/ICEY4040727/ForWork)
 
 ## Developer preview
 

@@ -6,8 +6,8 @@
   en: c4224efb502cebc1
   zh: 8cc8b5fbbf848494
 /agent-note-forwork-identity-exceptions-for-protocol-tokens-and-the-external-office-kit/problem:
-  en: afeff34c97fb1ca7
-  zh: 225de2b590e4c8b0
+  en: 09be222df949137a
+  zh: f456ab468ec9dc3d
 /agent-note-forwork-identity-exceptions-for-protocol-tokens-and-the-external-office-kit/decision:
   en: 99ddc5f940c4ce6f
   zh: 70cb8843ef65f804
@@ -17,6 +17,9 @@
 /agent-note-forwork-identity-exceptions-for-protocol-tokens-and-the-external-office-kit/decision/external-office-kit:
   en: 6b07f38af8817f25
   zh: 75f8c700ffc8cec6
+/agent-note-forwork-identity-exceptions-for-protocol-tokens-and-the-external-office-kit/decision/deferred-deepseek-named-identifiers-t102:
+  en: 656263f4695e1363
+  zh: f668d9c99680dd38
 /agent-note-forwork-identity-exceptions-for-protocol-tokens-and-the-external-office-kit/alternatives-considered:
   en: 20205e5afff619e8
   zh: c412af4811c9ba64

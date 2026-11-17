@@ -3,8 +3,8 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write README.md
 /forwork:
-  en: 9e6e9c81ad2fdbad
-  zh: eb30a5914577baba
+  en: bd93c77977c727e2
+  zh: 2e814086d0db6dcb
 /forwork/developer-preview:
   en: 60b9b6dad0f6b222
   zh: e8742e1fcec1456c

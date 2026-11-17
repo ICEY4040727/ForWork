@@ -6,7 +6,7 @@ English | [中文](2026-11-17-forwork-identity-exceptions.zh.md)
 
 ## Problem
 
-[verify-forwork-identity](../../../../scripts/verify-forwork-identity.ts) rejects DeepSeek identity tokens from shipped surfaces: the `@deepseek-ai` package scope, the DeepSeek Harness brand, the legacy `DEEPSEEK_*` environment names, the legacy `dsh` command names, and the legacy artifact prefixes. Two groups of names cannot become ForWork names by a string replacement, and an unexplained pass over them is indistinguishable from a missed violation.
+[verify-forwork-identity](../../../../scripts/verify-forwork-identity.ts) rejects DeepSeek identity tokens from shipped surfaces: the `@deepseek-ai` package scope, the lowercase `deepseek-harness` product token, the standalone `DeepSeek` brand word, the DeepSeek Harness brand, the legacy `DEEPSEEK_*` environment names, the legacy `dsh` command names, and the legacy artifact prefixes. Two groups of names cannot become ForWork names by a string replacement, and an unexplained pass over them is indistinguishable from a missed violation.
 
 The first group is protocol vocabulary that shipped profiles, published plugin manifests, and existing user homes already carry: the `dsh.bundle`, `dsh.client`, and `dsh.profile` package-manifest keys, the `DSH_*` environment family that includes `$DSH_HOME`, and the `dsh-app://` Electron protocol.
 
@@ -38,6 +38,14 @@ The tokens remain the shipped protocol vocabulary, not identity violations. Movi
 - A ForWork build of the engine would mean publishing a multi-gigabyte native artifact, qualifying it for every platform, and taking over the MPL-2.0 obligations and the `THIRD_PARTY_NOTICES.md` entries that `corepack pnpm run verify-third-party-notices` requires.
 
 The identity scan's `ALLOWED_DEEPSEEK_PACKAGES` holds exactly `@deepseek-ai/libreoffice-kit`. The allowlist matches that literal and its `-<suffix>` engine packages, and nothing else in the `@deepseek-ai` scope. It stays an exact package allowlist; admitting the whole scope would let any upstream package keep its name.
+
+### Deferred DeepSeek-named identifiers (T102)
+
+The [identity scan](../../../../scripts/verify-forwork-identity.ts) covers `python/`, the root READMEs, `docs/`, `website/.vitepress/config.ts`, `apps/*/config/`, and `apps/desktop/scripts/`. Its `deepseek-harness-token` and `deepseek-brand-word` rules report the remaining downstream names instead of hiding them.
+
+Two groups stay under [T102](../../../../specs/001-office-agent-framework/tasks.md): the Python distributions and modules (`deepseek-harness-sdk`, `deepseek-harness-runtime-bin`, `deepseek_harness`, `deepseek_harness_runtime`, `DeepSeekHarness`, and the `deepseek-harness-sdk-runtime-<platform>-<arch>` wheels), and the `@forwork/*deepseek*` provider packages together with their locale copy. The scan allowlists those exact files by path until T102 renames them.
+
+Two further artifacts are deferred by decision rather than by task. The `<Documents>/deepseek-harness` default workspace directory moves only with a data migration. The navigation wordmark stays a DeepSeek glyph asset until a designer supplies the ForWork mark; the SVG carries path outlines, so the token scan cannot see it. Provider documentation and source comments that name the external DeepSeek model, search, and web services stay allowlisted as references to that provider, not as this product's identity.
 
 ## Alternatives considered
 

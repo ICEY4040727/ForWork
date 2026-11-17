@@ -6,7 +6,7 @@ Status: implemented
 
 ## 问题
 
-[verify-forwork-identity](../../../../scripts/verify-forwork-identity.ts) 拒绝出现在已发布面（shipped surfaces）中的 DeepSeek 身份令牌：`@deepseek-ai` 包作用域、DeepSeek Harness 品牌、遗留的 `DEEPSEEK_*` 环境变量名、遗留的 `dsh` 命令名，以及遗留的产物前缀。有两组名称无法靠字符串替换改成 ForWork 名称，而对它们不加说明地放行，与漏掉违规无法区分。
+[verify-forwork-identity](../../../../scripts/verify-forwork-identity.ts) 拒绝出现在已发布面（shipped surfaces）中的 DeepSeek 身份令牌：`@deepseek-ai` 包作用域、小写 `deepseek-harness` 产品令牌、独立的 `DeepSeek` 品牌词、DeepSeek Harness 品牌、遗留的 `DEEPSEEK_*` 环境变量名、遗留的 `dsh` 命令名，以及遗留的产物前缀。有两组名称无法靠字符串替换改成 ForWork 名称，而对它们不加说明地放行，与漏掉违规无法区分。
 
 第一组是已发布的 profile、已发布的第三方插件清单和现有用户 home 已经在使用的协议词汇：`dsh.bundle`、`dsh.client`、`dsh.profile` 三个包清单键，包含 `$DSH_HOME` 的 `DSH_*` 环境变量族，以及 `dsh-app://` Electron 协议。
 
@@ -38,6 +38,14 @@ Status: implemented
 - 由 ForWork 自行构建引擎，意味着发布数 GB 的原生产物、为每个平台做资格认证，并接手 MPL-2.0 义务以及 `corepack pnpm run verify-third-party-notices` 所要求的 `THIRD_PARTY_NOTICES.md` 条目。
 
 身份扫描的 `ALLOWED_DEEPSEEK_PACKAGES` 精确包含 `@deepseek-ai/libreoffice-kit`。allowlist 匹配该字面量及其 `-<suffix>` 引擎包，`@deepseek-ai` 作用域下的其他包一律不匹配。它保持为精确的包 allowlist；放行整个作用域会让任何上游包保留原名。
+
+### 延后的 DeepSeek 命名标识符（T102）
+
+[身份扫描](../../../../scripts/verify-forwork-identity.ts)覆盖 `python/`、根 README、`docs/`、`website/.vitepress/config.ts`、`apps/*/config/` 与 `apps/desktop/scripts/`。它的 `deepseek-harness-token` 与 `deepseek-brand-word` 规则会报告其余下游名称，而不是把它们隐藏起来。
+
+两组名称仍归 [T102](../../../../specs/001-office-agent-framework/tasks.md)：Python 发行包与模块（`deepseek-harness-sdk`、`deepseek-harness-runtime-bin`、`deepseek_harness`、`deepseek_harness_runtime`、`DeepSeekHarness`，以及 `deepseek-harness-sdk-runtime-<platform>-<arch>` wheel），以及 `@forwork/*deepseek*` 提供方包及其本地化文案。扫描按精确路径放行这些文件，直到 T102 完成改名。
+
+另有若干产物是出于决策而非任务而延后。`<Documents>/deepseek-harness` 默认工作区目录只能随数据迁移一起改名。导航栏字标在设计师提供 ForWork 标识之前仍是 DeepSeek 字形资产；该 SVG 只包含路径轮廓，令牌扫描无法看到它。指名外部 DeepSeek 模型、搜索与 Web 服务的提供方文档和源码注释，仍作为对该提供方的引用而非本产品身份被放行。
 
 ## 考虑过的替代方案
 

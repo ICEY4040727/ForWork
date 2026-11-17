@@ -7,7 +7,7 @@
 import type { CredentialRef } from '@forwork/credentials'
 import { WebError } from '@forwork/web'
 
-const USER_AGENT = 'deepseek-harness/0.0.1'
+const USER_AGENT = 'forwork/0.0.1'
 
 /** Account token tried before the API key of an operation. */
 interface DeepSeekWebAccountAuth {
