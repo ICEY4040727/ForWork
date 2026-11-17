@@ -108,6 +108,94 @@ it('drops run formatting and paragraph alignment, and reports it', async () => {
   expect(writtenXml).not.toContain('w:jc')
 })
 
+it('drops strikethrough and highlighting, and reports them', async () => {
+  const bytes = documentPackage(
+    '<w:p><w:r><w:rPr><w:strike/><w:highlight w:val="yellow"/></w:rPr><w:t>marked</w:t></w:r></w:p>',
+  )
+  expectDetected(bytes, { kind: 'run-formatting', detail: DOCUMENT_XML })
+  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
+  expect(writtenXml).not.toContain('w:strike')
+  expect(writtenXml).not.toContain('w:highlight')
+})
+
+it('drops paragraph spacing and indentation, and reports them', async () => {
+  const bytes = documentPackage(
+    '<w:p><w:pPr><w:spacing w:after="240" w:line="360"/><w:ind w:left="720"/></w:pPr>'
+    + '<w:r><w:t>spaced</w:t></w:r></w:p>',
+  )
+  expectDetected(bytes, { kind: 'paragraph-formatting', detail: DOCUMENT_XML })
+  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
+  expect(writtenXml).not.toContain('w:spacing')
+  expect(writtenXml).not.toContain('w:ind')
+})
+
+it('drops paragraph, run, and cell borders, and reports them', async () => {
+  const bytes = documentPackage(
+    '<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="8"/></w:pBdr></w:pPr>'
+    + '<w:r><w:rPr><w:bdr w:val="single" w:sz="8"/></w:rPr><w:t>bordered</w:t></w:r></w:p>'
+    + '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="single"/></w:tcBorders></w:tcPr>'
+    + '<w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>',
+  )
+  expectDetected(bytes, { kind: 'borders', detail: DOCUMENT_XML })
+  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
+  expect(writtenXml).not.toContain('w:pBdr')
+  expect(writtenXml).not.toContain('<w:bdr')
+  expect(writtenXml).not.toContain('w:tcBorders')
+})
+
+it('drops footnotes and endnotes with their parts, and reports them', async () => {
+  const bytes = documentPackage(
+    '<w:p><w:r><w:t>body</w:t></w:r><w:r><w:footnoteReference w:id="1"/></w:r>'
+    + '<w:r><w:endnoteReference w:id="2"/></w:r></w:p>',
+    {
+      'word/footnotes.xml': '<w:footnotes><w:footnote w:id="1"><w:p><w:r><w:t>footnote text</w:t></w:r></w:p></w:footnote></w:footnotes>',
+      'word/endnotes.xml': '<w:endnotes><w:endnote w:id="2"><w:p><w:r><w:t>endnote text</w:t></w:r></w:p></w:endnote></w:endnotes>',
+    },
+  )
+  expectDetected(bytes, { kind: 'footnotes', detail: 'word/footnotes.xml' })
+  const written = await documentRoundTrip(bytes)
+  expect(Object.keys(written)).not.toContain('word/footnotes.xml')
+  expect(Object.keys(written)).not.toContain('word/endnotes.xml')
+  expect(written[DOCUMENT_XML]).not.toContain('w:footnoteReference')
+  expect(written[DOCUMENT_XML]).not.toContain('w:endnoteReference')
+  expect(written[DOCUMENT_XML]).not.toContain('footnote text')
+  expect(written[DOCUMENT_XML]).not.toContain('endnote text')
+})
+
+it('collapses a second section, and reports it', async () => {
+  const bytes = documentPackage(
+    '<w:p><w:pPr><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:pPr>'
+    + '<w:r><w:t>first section</w:t></w:r></w:p>'
+    + '<w:p><w:r><w:t>second section</w:t></w:r></w:p>'
+    + '<w:sectPr><w:pgSz w:w="15840" w:h="12240" w:orient="landscape"/></w:sectPr>',
+  )
+  expectDetected(bytes, { kind: 'sections', detail: DOCUMENT_XML })
+  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
+  expect(writtenXml.match(/<w:sectPr(?=[\s/>])/gu)?.length).toBe(1)
+  expect(writtenXml).not.toContain('w:orient')
+  expect(writtenXml).toContain('first section')
+  expect(writtenXml).toContain('second section')
+})
+
+it('drops a linked image and its external target, and reports it', async () => {
+  const bytes = documentPackage(
+    '<w:p><w:r><w:drawing><wp:inline xmlns:wp="urn:probe"><a:graphic'
+    + ' xmlns:a="urn:probe"><a:graphicData><pic:pic xmlns:pic="urn:probe"><pic:blipFill>'
+    + '<a:blip r:link="rId7"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>'
+    + '</w:drawing></w:r></w:p>',
+    {
+      'word/_rels/document.xml.rels': '<Relationships><Relationship Id="rId7"'
+        + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+        + ' Target="https://example.test/linked.png" TargetMode="External"/></Relationships>',
+    },
+  )
+  expectDetected(bytes, { kind: 'external-image', detail: 'word/_rels/document.xml.rels' })
+  const written = await documentRoundTrip(bytes)
+  expect(written[DOCUMENT_XML]).not.toContain('r:link')
+  expect(written['word/_rels/document.xml.rels']).not.toContain('example.test')
+  expect(written['word/_rels/document.xml.rels']).not.toContain('TargetMode')
+})
+
 it('drops merged-cell spans, and reports them', async () => {
   const bytes = documentPackage(
     '<w:tbl><w:tblGrid><w:gridCol w:w="1200"/><w:gridCol w:w="1200"/></w:tblGrid>'

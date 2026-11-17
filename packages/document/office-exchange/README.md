@@ -60,10 +60,10 @@ Every failure is an `OfficeExchangeError` with a stable `code`; bounds resolve o
 
 `read` and `detectUnsupported` report every construct an edit-and-save would drop; a non-empty list refuses the save instead of writing a lossy file.
 
-- Documents: macros, tracked changes, comments, charts, drawings, shapes, headers and footers, embedded objects, inline images (`word/media/`), hyperlinks, lists and numbering (`word/numbering.xml` definitions or `w:numPr`), unsupported run formatting (font, size, color) and paragraph alignment, merged-cell spans (a `w:gridSpan` above one or any `w:vMerge`), and tables nested inside a cell.
+- Documents: macros, tracked changes, comments, charts, drawings, shapes, headers and footers, embedded objects, inline images (`word/media/`), linked images whose only source is an external target, hyperlinks, lists and numbering (`word/numbering.xml` definitions or `w:numPr`), unsupported run formatting (font, size, color, strike, highlight) and paragraph alignment, paragraph spacing and indentation, paragraph, run, and cell borders, footnotes and endnotes (their package parts or `w:footnoteReference`/`w:endnoteReference`), multiple sections, merged-cell spans (a `w:gridSpan` above one or any `w:vMerge`), and tables nested inside a cell.
 - Workbooks: charts, drawings, comments, macros, embedded objects, conditional formatting, data validation, frozen panes, sheet tab colors, and cell hyperlink targets.
 
-Bold, italic, underline, heading styles, number formats, fills, borders, merged ranges, row heights, and column widths round-trip, so detection does not report them.
+Bold, italic, underline, heading styles, number formats, fills, workbook cell borders, merged ranges, row heights, and column widths round-trip, so detection does not report them. A single section's default page setup is present in every Word file and is not reported.
 
 ### Remote surface
 
@@ -139,6 +139,8 @@ None; the seam neither assembles nor sends a provider request.
 - `LocalOfficeExchange` reads and writes local paths only; workspace confinement belongs to the tool and session layers that supply the path.
 - Legacy conversion requires the LibreOffice kit; an unavailable engine fails the conversion instead of falling back.
 - PowerPoint editing is read-only until a slide unit and its conversion are added.
+- A one-section document's page size, orientation, and margins are not inspected: every Word file carries an explicit default `w:sectPr`, so non-default page setup in a single section is dropped without a distinct report. Multiple sections are reported.
+- Theme parts and theme-derived styles in `word/styles.xml` are not inspected; theme font and color references on runs are reported as text formatting.
 - `convertLegacy` keeps converted editable files under `<workspaceRoot>/.dsh/office-tmp/`, which the `officeDocument` Remote can read under the same root check. A failed conversion removes the directory it just created; a successful one persists until the user or session deletes it, and nothing removes it automatically yet.
 - Recovery drafts accumulate under `<workspaceRoot>/.dsh/office-tmp/drafts/` until `clearDraft` removes them; nothing prunes drafts for documents that are no longer open yet.
 - The client reports a missing file through `markDocumentMissing`, but no client trigger detects a move yet: `rebindDocument` is exposed on the Remote surface without an automatic caller. The open set is process-local for deduplication, so a Host restart makes the next read append `document/open` again; the projection keeps the document's position and version.

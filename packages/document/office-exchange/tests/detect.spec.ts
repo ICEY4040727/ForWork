@@ -246,6 +246,135 @@ it('does not report bold, italic, and underline runs as unsupported formatting',
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
+it('detects strikethrough and highlighting as run formatting', () => {
+  for (const property of [
+    '<w:strike/>',
+    '<w:strike w:val="true"/>',
+    '<w:dstrike/>',
+    '<w:highlight w:val="yellow"/>',
+  ]) {
+    const bytes = packageOf({ [DOCUMENT_XML]: bodyOf(`<w:p><w:r><w:rPr>${property}</w:rPr><w:t>x</w:t></w:r></w:p>`) })
+    expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'run-formatting', detail: DOCUMENT_XML }])
+  }
+})
+
+it('does not report disabled strike or a cleared highlight', () => {
+  for (const property of ['<w:strike w:val="false"/>', '<w:highlight w:val="none"/>']) {
+    const bytes = packageOf({ [DOCUMENT_XML]: bodyOf(`<w:p><w:r><w:rPr>${property}</w:rPr><w:t>x</w:t></w:r></w:p>`) })
+    expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  }
+})
+
+it('detects paragraph spacing and indentation', () => {
+  for (const property of [
+    '<w:spacing w:after="240" w:line="360"/>',
+    '<w:ind w:left="720" w:firstLine="360"/>',
+  ]) {
+    const bytes = packageOf({ [DOCUMENT_XML]: bodyOf(`<w:p><w:pPr>${property}</w:pPr><w:r><w:t>x</w:t></w:r></w:p>`) })
+    expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'paragraph-formatting', detail: DOCUMENT_XML }])
+  }
+})
+
+it('does not report a paragraph that only names a style', () => {
+  const bytes = packageOf({
+    [DOCUMENT_XML]: bodyOf('<w:p><w:pPr><w:pStyle w:val="Normal"/></w:pPr><w:r><w:t>plain</w:t></w:r></w:p>'),
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+})
+
+it('detects paragraph, run, and cell borders', () => {
+  for (const content of [
+    '<w:p><w:pPr><w:pBdr><w:top w:val="single"/></w:pBdr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>',
+    '<w:p><w:r><w:rPr><w:bdr w:val="single"/></w:rPr><w:t>x</w:t></w:r></w:p>',
+    '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="single"/></w:tcBorders></w:tcPr><w:p/></w:tc></w:tr></w:tbl>',
+  ]) {
+    expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: bodyOf(content) })))
+      .toEqual([{ kind: 'borders', detail: DOCUMENT_XML }])
+  }
+})
+
+it('does not report the table borders the writer emits', () => {
+  const bytes = packageOf({
+    [DOCUMENT_XML]: bodyOf(
+      '<w:tbl><w:tblPr><w:tblBorders><w:top w:val="single" w:sz="4" w:color="auto"/></w:tblBorders></w:tblPr>'
+      + '<w:tr><w:tc><w:p/></w:tc></w:tr></w:tbl>',
+    ),
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+})
+
+it('detects footnote and endnote parts and body references', () => {
+  for (const [path, note] of [['word/footnotes.xml', 'footnote'], ['word/endnotes.xml', 'endnote']] as const) {
+    const part = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, [path]: `<w:${note}s/>` })
+    expect(detectUnsupportedFeatures(part)).toEqual([{ kind: 'footnotes', detail: path }])
+
+    const reference = packageOf({
+      [DOCUMENT_XML]: bodyOf(`<w:p><w:r><w:${note}Reference w:id="1"/></w:r></w:p>`),
+    })
+    expect(detectUnsupportedFeatures(reference)).toEqual([{ kind: 'footnotes', detail: DOCUMENT_XML }])
+  }
+})
+
+it('does not report notes for a document without note parts or references', () => {
+  expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT }))).toEqual([])
+})
+
+it('detects a second section', () => {
+  const bytes = packageOf({
+    [DOCUMENT_XML]: bodyOf(
+      '<w:p><w:pPr><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:pPr></w:p>'
+      + '<w:p/><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>',
+    ),
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'sections', detail: DOCUMENT_XML }])
+})
+
+it('does not report the single default section every document carries', () => {
+  const bytes = packageOf({
+    [DOCUMENT_XML]: bodyOf(
+      '<w:p/><w:sectPr><w:pgSz w:w="12240" w:h="15840"/>'
+      + '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>',
+    ),
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+})
+
+it('detects an image relationship whose target is external', () => {
+  const bytes = packageOf({
+    [DOCUMENT_XML]: bodyOf('<w:p><w:r><w:drawing><a:blip r:link="rId9"/></w:drawing></w:r></w:p>'),
+    'word/_rels/document.xml.rels': '<Relationships><Relationship Id="rId9"'
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+      + ' Target="https://example.test/a.png" TargetMode="External"/></Relationships>',
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'external-image', detail: 'word/_rels/document.xml.rels' }])
+})
+
+it('detects an external image reference without a relationship part', () => {
+  const bytes = packageOf({
+    [DOCUMENT_XML]: bodyOf('<w:p><w:r><w:drawing><a:blip r:link="rId9"/></w:drawing></w:r></w:p>'),
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'external-image', detail: DOCUMENT_XML }])
+})
+
+it('does not report embedded images or external hyperlink relationships as linked images', () => {
+  const embedded = packageOf({
+    [DOCUMENT_XML]: PLAIN_DOCUMENT,
+    'word/media/image1.png': new Uint8Array([0]),
+    'word/_rels/document.xml.rels': '<Relationships><Relationship Id="rId9"'
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+      + ' Target="media/image1.png"/></Relationships>',
+  })
+  expect(detectUnsupportedFeatures(embedded)).toEqual([{ kind: 'image', detail: 'word/media/image1.png' }])
+
+  const hyperlink = packageOf({
+    [DOCUMENT_XML]: PLAIN_DOCUMENT,
+    'word/_rels/document.xml.rels': '<Relationships><Relationship Id="rId9"'
+      + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+      + ' Target="https://example.test/" TargetMode="External"/></Relationships>',
+  })
+  expect(detectUnsupportedFeatures(hyperlink)).toEqual([])
+})
+
 it('detects merged cell spans', () => {
   const horizontal = packageOf({
     [DOCUMENT_XML]: bodyOf(

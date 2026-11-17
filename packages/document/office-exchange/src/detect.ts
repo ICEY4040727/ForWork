@@ -7,7 +7,14 @@ import { OfficeExchangeError } from './errors.ts'
 import type { UnsupportedFeature, UnsupportedFeatureKind } from './types.ts'
 
 const DOCUMENT_XML = 'word/document.xml'
+const DOCUMENT_RELS = 'word/_rels/document.xml.rels'
 const NUMBERING_XML = 'word/numbering.xml'
+
+/** Parts that hold footnote and endnote definitions. */
+const NOTE_PARTS: ReadonlySet<string> = new Set(['word/footnotes.xml', 'word/endnotes.xml'])
+
+/** Attribute values that switch an OOXML property off. */
+const DISABLED_VALUE = /^(?:0|false|off)$/u
 
 const MACRO_PATHS: ReadonlySet<string> = new Set([
   'word/vbaproject.bin',
@@ -45,9 +52,14 @@ const UNSUPPORTED_KIND_ORDER: readonly UnsupportedFeatureKind[] = [
   'header-footer',
   'embedded-object',
   'image',
+  'external-image',
   'hyperlink',
   'numbering',
   'run-formatting',
+  'paragraph-formatting',
+  'borders',
+  'footnotes',
+  'sections',
   'merged-cells',
   'nested-table',
   'conditional-formatting',
@@ -75,6 +87,8 @@ interface PackageContents {
   readonly entryNames: readonly string[]
   /** Decoded `word/document.xml`, when the package contains it. */
   readonly documentXml: Uint8Array | undefined
+  /** Decoded `word/_rels/document.xml.rels`, when the package declares relationships. */
+  readonly documentRelsXml: Uint8Array | undefined
   /** Decoded `word/numbering.xml`, when the package declares numbering. */
   readonly numberingXml: Uint8Array | undefined
   /** Decoded worksheet parts, in central-directory order. */
@@ -99,7 +113,7 @@ export function detectUnsupportedFeatures(
     )
   }
 
-  const { entryNames, documentXml, numberingXml, worksheetParts } = readPackage(bytes)
+  const { entryNames, documentXml, documentRelsXml, numberingXml, worksheetParts } = readPackage(bytes)
   const details = new Map<UnsupportedFeatureKind, string>()
   const record = (kind: UnsupportedFeatureKind, detail: string): void => {
     if (!details.has(kind)) details.set(kind, detail)
@@ -115,8 +129,12 @@ export function detectUnsupportedFeatures(
     if (isHeaderOrFooterPart(path)) record('header-footer', name)
     if (hasPrefix(path, EMBEDDING_PREFIXES)) record('embedded-object', name)
     if (hasPrefix(path, MEDIA_PREFIXES)) record('image', name)
+    if (NOTE_PARTS.has(path)) record('footnotes', name)
   }
 
+  if (documentRelsXml !== undefined && hasExternalImageRelationship(strFromU8(documentRelsXml))) {
+    record('external-image', DOCUMENT_RELS)
+  }
   if (documentXml !== undefined) detectDocumentFeatures(strFromU8(documentXml), record)
   if (numberingXml !== undefined && hasNumberingDefinitions(strFromU8(numberingXml))) {
     record('numbering', NUMBERING_XML)
@@ -146,6 +164,12 @@ function detectDocumentFeatures(
   if (/<w:hyperlink(?=[\s/>])/u.test(xml)) record('hyperlink', DOCUMENT_XML)
   if (/<w:numPr(?=[\s/>])/u.test(xml)) record('numbering', DOCUMENT_XML)
   if (hasUnsupportedTextFormatting(xml)) record('run-formatting', DOCUMENT_XML)
+  if (hasRunEmphasis(xml)) record('run-formatting', DOCUMENT_XML)
+  if (hasParagraphSpacingOrIndent(xml)) record('paragraph-formatting', DOCUMENT_XML)
+  if (hasBorderFormatting(xml)) record('borders', DOCUMENT_XML)
+  if (hasNoteReference(xml)) record('footnotes', DOCUMENT_XML)
+  if (hasMultipleSections(xml)) record('sections', DOCUMENT_XML)
+  if (/<a:blip(?=[\s/>])[^>]*\br:link=/u.test(xml)) record('external-image', DOCUMENT_XML)
   if (hasMergedCellSpan(xml)) record('merged-cells', DOCUMENT_XML)
   if (hasNestedTable(xml)) record('nested-table', DOCUMENT_XML)
 }
@@ -190,6 +214,98 @@ function hasUnsupportedTextFormatting(xml: string): boolean {
   }
   for (const block of xml.matchAll(/<w:pPr(?:\s[^>]*)?>[\s\S]*?<\/w:pPr>/gu)) {
     if (/<w:jc(?=[\s/>])/u.test(block[0])) return true
+  }
+  return false
+}
+
+/**
+ * Report whether a run applies strikethrough or highlighting, which the writer
+ * does not emit. A property switched off by its value applies no formatting.
+ * @param xml - Decoded `word/document.xml`.
+ * @returns `true` when a run enables strike, double strike, or a visible highlight.
+ */
+function hasRunEmphasis(xml: string): boolean {
+  for (const block of xml.matchAll(/<w:rPr(?:\s[^>]*)?>[\s\S]*?<\/w:rPr>/gu)) {
+    if (hasEnabledProperty(block[0], /<w:(?:strike|dstrike)(?=[\s/>])[^>]*>/gu)) return true
+    if (hasEnabledProperty(block[0], /<w:highlight(?=[\s/>])[^>]*>/gu, 'none')) return true
+  }
+  return false
+}
+
+/**
+ * Report whether a property element is present and not switched off.
+ * @param xml - An `w:rPr` block.
+ * @param pattern - Global pattern matching the property element.
+ * @param disabledValue - A `w:val` that means "no formatting"; `none` for most properties.
+ * @returns `true` when any matched property is enabled.
+ */
+function hasEnabledProperty(xml: string, pattern: RegExp, disabledValue?: string): boolean {
+  for (const match of xml.matchAll(pattern)) {
+    const value = /\bw:val="([^"]*)"/u.exec(match[0])?.[1]
+    if (value === undefined) return true
+    if (disabledValue !== undefined) {
+      if (value !== disabledValue) return true
+      continue
+    }
+    if (!DISABLED_VALUE.test(value)) return true
+  }
+  return false
+}
+
+/**
+ * Report whether a paragraph sets spacing or indentation, which the writer
+ * does not emit.
+ * @param xml - Decoded `word/document.xml`.
+ * @returns `true` when a paragraph's properties carry `w:spacing` or `w:ind`.
+ */
+function hasParagraphSpacingOrIndent(xml: string): boolean {
+  for (const block of xml.matchAll(/<w:pPr(?:\s[^>]*)?>[\s\S]*?<\/w:pPr>/gu)) {
+    if (/<w:(?:spacing|ind)(?=[\s/>])/u.test(block[0])) return true
+  }
+  return false
+}
+
+/**
+ * Report whether a paragraph, run, or table cell declares a border. Table
+ * borders (`w:tblBorders`) are written by the provider and are not a loss.
+ * @param xml - Decoded `word/document.xml`.
+ * @returns `true` when a paragraph, run, or cell border element is present.
+ */
+function hasBorderFormatting(xml: string): boolean {
+  return /<w:(?:pBdr|bdr|tcBorders)(?=[\s/>])/u.test(xml)
+}
+
+/**
+ * Report whether the body references a footnote or endnote.
+ * @param xml - Decoded `word/document.xml`.
+ * @returns `true` when a footnote or endnote reference is present.
+ */
+function hasNoteReference(xml: string): boolean {
+  return /<w:(?:footnote|endnote)Reference(?=[\s/>])/u.test(xml)
+}
+
+/**
+ * Report whether the document defines more than one section. Every document
+ * carries one final `w:sectPr`; a single section is therefore not a loss, while
+ * the writer collapses a second section's layout into its own fixed one.
+ * @param xml - Decoded `word/document.xml`.
+ * @returns `true` when more than one `w:sectPr` element is present.
+ */
+function hasMultipleSections(xml: string): boolean {
+  return (xml.match(/<w:sectPr(?=[\s/>])/gu)?.length ?? 0) > 1
+}
+
+/**
+ * Report whether the document's relationships carry an image outside the
+ * package. Hyperlink relationships also use an external target, so the
+ * relationship type must name an image.
+ * @param xml - Decoded `word/_rels/document.xml.rels`.
+ * @returns `true` when an image relationship has `TargetMode="External"`.
+ */
+function hasExternalImageRelationship(xml: string): boolean {
+  for (const match of xml.matchAll(/<Relationship(?=[\s/>])[^>]*>/gu)) {
+    if (!/\bTargetMode="External"/u.test(match[0])) continue
+    if (/\bType="[^"]*\/image"/u.test(match[0])) return true
   }
   return false
 }
@@ -255,7 +371,10 @@ function readPackage(bytes: Uint8Array): PackageContents {
           )
         }
         const path = file.name.toLowerCase()
-        return file.name === DOCUMENT_XML || file.name === NUMBERING_XML || isWorksheetPart(path)
+        return file.name === DOCUMENT_XML
+          || file.name === DOCUMENT_RELS
+          || file.name === NUMBERING_XML
+          || isWorksheetPart(path)
       },
     })
   } catch (error) {
@@ -266,12 +385,13 @@ function readPackage(bytes: Uint8Array): PackageContents {
 
   const worksheetParts: PackagePart[] = []
   for (const [name, content] of Object.entries(entries)) {
-    if (name === DOCUMENT_XML || name === NUMBERING_XML) continue
+    if (name === DOCUMENT_XML || name === DOCUMENT_RELS || name === NUMBERING_XML) continue
     worksheetParts.push({ name, xml: strFromU8(content) })
   }
   return {
     entryNames,
     documentXml: entries[DOCUMENT_XML],
+    documentRelsXml: entries[DOCUMENT_RELS],
     numberingXml: entries[NUMBERING_XML],
     worksheetParts,
   }

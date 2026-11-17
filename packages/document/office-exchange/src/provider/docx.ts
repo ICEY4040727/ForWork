@@ -19,7 +19,8 @@
  * UNSUPPORTED: images, charts, drawings, shapes, comments, tracked changes,
  * headers, footers, macros, footnotes and endnotes, hyperlinks, lists and
  * numbering, sections and page layout, theme styles, fonts, colors, sizes,
- * alignment, borders, merged cells with spans, nested tables, and every style
+ * alignment, strikethrough, highlighting, paragraph spacing, indentation,
+ * borders, merged cells with spans, nested tables, and every style
  * other than the heading styles above. A read/write round-trip does not
  * preserve these. Macro-bearing packages are read without executing or
  * retaining macros.
