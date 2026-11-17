@@ -65,6 +65,8 @@ Every failure is an `OfficeExchangeError` with a stable `code`; bounds resolve o
 
 Bold, italic, underline, heading styles, number formats, fills, workbook cell borders, merged ranges, row heights, and column widths round-trip, so detection does not report them. A single section's default page setup is present in every Word file and is not reported.
 
+A file opens as editable only when detection reports no unsupported feature. Explicit run and paragraph formatting — fonts, sizes, colors, alignment, spacing, indentation, borders, strikethrough, and highlighting — is refused rather than silently dropped, so a save never writes a document that lost formatting the editor does not model.
+
 ### Remote surface
 
 The plugin also mounts `ctx.officeDocument`, a session-scoped Remote surface over the same seam. Its generated Client namespace is `remote.officeDocument`; mount the package in the Host composition and add `@forwork/office-exchange/remote` to the Client assembly.

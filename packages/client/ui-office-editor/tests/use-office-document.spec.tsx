@@ -232,6 +232,22 @@ describe('useOfficeDocument save', () => {
     expect(remote.save).not.toHaveBeenCalled()
   })
 
+  it('disables save for a document that declares explicit run formatting', async () => {
+    const remote = makeRemote()
+    const documentSnapshot: OfficeDocumentSnapshot = { kind: 'document', data: { id: 'doc' } }
+    remote.read.mockResolvedValueOnce(success(readResult('v1', {
+      format: 'docx',
+      snapshot: documentSnapshot,
+      unsupported: [{ kind: 'run-formatting' }],
+    })))
+    const { result } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('unsupported') })
+    expect(result.current.unsupported).toEqual([{ kind: 'run-formatting' }])
+    expect(result.current.canSave).toBe(false)
+  })
+
   it('refuses save before a snapshot has been read', async () => {
     const remote = makeRemote()
     remote.read.mockImplementationOnce(() => new Promise(() => {}))

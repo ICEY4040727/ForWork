@@ -27,7 +27,7 @@ corepack pnpm exec tsc -b packages/document/office-exchange
 
 1. Open the fixture document, replace one paragraph's text, save, reopen.
 
-**Expected**: the target paragraph changes; all other paragraphs, tables, and images are preserved.
+**Expected**: the target paragraph changes; all other paragraphs, tables, and images are preserved. A `.docx` opens as editable only when it contains no detected unsupported feature; explicit run and paragraph formatting (fonts, sizes, colors, alignment, spacing, indentation, borders) is refused rather than silently dropped.
 
 ## Scenario S3 — Agent edit converges (US2)
 
@@ -45,9 +45,9 @@ corepack pnpm exec tsc -b packages/document/office-exchange
 
 ## Scenario S5 — Unsupported feature is refused (FR-008)
 
-1. Open the macro-bearing fixture and attempt a save.
+1. Open the macro-bearing fixture, or a document carrying explicit run/paragraph formatting, and attempt a save.
 
-**Expected**: the save is refused with `unsupported-feature` naming the feature; the file is not rewritten.
+**Expected**: the save is refused with `unsupported-feature` naming the feature; the file is not rewritten and the formatting is refused rather than lost.
 
 ## Scenario S6 — Rename rebinds identity (FR-015)
 

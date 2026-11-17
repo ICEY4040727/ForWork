@@ -65,6 +65,8 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 
 粗体、斜体、下划线、标题样式、数字格式、填充、工作簿单元格边框、合并区域、行高与列宽都能往返，因此检测不会报告它们。单节的默认页面设置存在于每个 Word 文件中，不会被报告。
 
+仅当检测未报告任何不支持特性时，文件才以可编辑状态打开。显式的文字与段落格式（字体、字号、颜色、对齐、间距、缩进、边框、删除线与突出显示）会被拒绝，而不是静默丢弃，因此保存永远不会写出丢失编辑器未建模格式的文档。
+
 ### Remote 表面
 
 该插件还挂载 `ctx.officeDocument`，一个在同一 seam 之上的 Session 作用域 Remote 表面。它生成的 Client 命名空间是 `remote.officeDocument`；把该包挂载进 Host 组合，并把 `@forwork/office-exchange/remote` 加入 Client 组装。

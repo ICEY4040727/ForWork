@@ -10,7 +10,7 @@ const TEXT = 'Office preview 中文文档'
 /**
  * Create a valid Office document containing Latin and Chinese text; generated Word and PowerPoint documents have two pages.
  * @param extension - Office application and format to exercise.
- * @param font - Latin family requested by generated OOXML documents; binary fixtures retain their stored fonts.
+ * @param font - Latin family requested by generated PowerPoint documents; binary fixtures retain their stored fonts.
  * @returns Compressed document bytes accepted by the production converter.
  */
 export function realOfficeBytes(extension: 'doc' | 'docx' | 'xls' | 'xlsx' | 'ppt' | 'pptx', font = 'Liberation Sans'): Uint8Array {
@@ -23,7 +23,7 @@ export function realOfficeBytes(extension: 'doc' | 'docx' | 'xls' | 'xlsx' | 'pp
     case 'docx':
       main = 'word/document.xml'
       parts = { [main]: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml' }
-      files[main] = `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${[0, 1].map(index => `<w:p><w:r><w:rPr><w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:eastAsia="宋体"/></w:rPr>${index === 1 ? '<w:br w:type="page"/>' : ''}<w:t>${TEXT}</w:t></w:r></w:p>`).join('')}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>`
+      files[main] = `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${[0, 1].map(index => `<w:p><w:r>${index === 1 ? '<w:br w:type="page"/>' : ''}<w:t>${TEXT}</w:t></w:r></w:p>`).join('')}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>`
       break
     case 'xlsx':
       main = 'xl/workbook.xml'

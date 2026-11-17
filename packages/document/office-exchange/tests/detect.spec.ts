@@ -236,6 +236,13 @@ it('detects unsupported run formatting and paragraph alignment', () => {
   expect(detectUnsupportedFeatures(aligned)).toEqual([{ kind: 'run-formatting', detail: DOCUMENT_XML }])
 })
 
+it('detects a run that declares only a default font element', () => {
+  const bytes = packageOf({
+    [DOCUMENT_XML]: bodyOf('<w:p><w:r><w:rPr><w:rFonts/></w:rPr><w:t>x</w:t></w:r></w:p>'),
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'run-formatting', detail: DOCUMENT_XML }])
+})
+
 it('does not report bold, italic, and underline runs as unsupported formatting', () => {
   const bytes = packageOf({
     [DOCUMENT_XML]: bodyOf(
@@ -466,6 +473,22 @@ it('reports a workbook kind once across worksheets', () => {
   expect(detectUnsupportedFeatures(bytes)).toEqual([
     { kind: 'conditional-formatting', detail: WORKSHEET_XML },
   ])
+})
+
+it('keeps the minimal editable web fixture free of detected losses across a round trip', async () => {
+  const text = 'Office preview 中文文档'
+  const bytes = packageOf({
+    [DOCUMENT_XML]: '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
+      + `<w:p><w:r><w:t>${text}</w:t></w:r></w:p>`
+      + `<w:p><w:r><w:br w:type="page"/><w:t>${text}</w:t></w:r></w:p>`
+      + '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>'
+      + '</w:body></w:document>',
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  const original = await readDocument(bytes)
+  const rewritten = await writeDocument(original)
+  expect(detectUnsupportedFeatures(rewritten)).toEqual([])
+  expect((await readDocument(rewritten)).body?.dataStream).toBe(original.body?.dataStream)
 })
 
 it('keeps the supported round-trip fixtures free of detected losses', async () => {
