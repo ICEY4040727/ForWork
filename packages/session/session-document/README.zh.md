@@ -55,7 +55,7 @@ const { record, version } = applyChange({
 const undo = undoChange(record)
 ```
 
-`applyChange` 是版本守卫。它不拥有存储，因此调用方把实时文档版本作为 `currentVersion` 传入；只有当 `fromVersion` 等于它时变更才被接受。被接受的变更产生新记录以及 `toVersion = fromVersion + 1`。记录携带结构化步骤及其逆操作，从不携带单元快照，因此文档撤销可从 Session 日志重建。`undoChange` 返回逆操作步骤与要恢复的版本；`T056` 消费它。
+`applyChange` 是版本守卫。它不拥有存储，因此调用方把实时文档版本作为 `currentVersion` 传入；只有当 `fromVersion` 等于它时变更才被接受。被接受的变更产生新记录以及 `toVersion = fromVersion + 1`。记录携带结构化步骤及其逆操作，从不携带单元快照，因此变更可从 Session 日志重建。`undoChange` 把一条记录投影为审计与恢复用途的逆操作步骤和要恢复的版本。运行时撤销与重做使用编辑器运行时自身的原生历史，绝不是第二套逆操作栈。
 
 `changeId` 默认使用确定性的 `documentId:toVersion`；显式传入时保持原值。每次拒绝都是带稳定 code 的 `OfficeDocumentError`：
 

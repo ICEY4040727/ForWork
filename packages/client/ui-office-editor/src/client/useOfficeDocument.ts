@@ -13,6 +13,12 @@
  * rather than an external edit, so a later command still reports the version the
  * Host recorded.
  *
+ * An agent command this tab applied already put the saved content in the live
+ * unit. The save that follows it publishes the version the command reported, so
+ * the hook adopts the new file version in place instead of re-reading: the unit
+ * stays mounted and the editor's native undo history keeps the agent edit. A
+ * file change no applied command accounts for still reloads or prompts.
+ *
  * Edits are captured as idle-debounced recovery drafts through the same
  * Remote. A draft found after a successful read is offered only as a recovery
  * choice: it is never applied automatically, and a draft captured from an
@@ -254,7 +260,10 @@ export interface UseOfficeDocumentResult {
    * @returns the live content version.
    */
   currentContentVersion(): number
-  /** Advance the content version after the adapter applied an agent command. */
+  /**
+   * Advance the content version after the adapter applied an agent command and
+   * expect the Host's save of that command's snapshot to publish it.
+   */
   markApplied(): void
   /**
    * Save the live unit at the version the read observed.
@@ -341,6 +350,8 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
   const hostVersionRef = useRef(input.contentVersion)
   const lastHostVersion = useRef(input.contentVersion)
   const hostSaved = useRef(false)
+  /** Version an accepted agent command reported, whose Host save this tab expects. */
+  const selfSaveVersion = useRef<number | undefined>(undefined)
   observedRef.current = observedVersion
   rootRef.current = workspaceRoot
   pathRef.current = path
@@ -352,11 +363,15 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     () => Math.max(contentVersionRef.current, hostVersionRef.current ?? 0),
     [],
   )
-  const advanceContentVersion = useCallback((): void => {
+  const advanceContentVersion = useCallback((): number => {
     const next = Math.max(contentVersionRef.current, hostVersionRef.current ?? 0) + 1
     contentVersionRef.current = next
     setContentVersionState(next)
+    return next
   }, [])
+  const markApplied = useCallback((): void => {
+    selfSaveVersion.current = advanceContentVersion()
+  }, [advanceContentVersion])
 
   const reportDraftError = useCallback((failure: RemoteFailure): void => {
     setDraftError(mapOfficeFailure(failure))
@@ -388,6 +403,9 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     const controller = new AbortController()
     const lifetime = AbortSignal.any([signal, controller.signal])
     let live = true
+    // A fresh read is the new base for the unit, so any save a command staged
+    // before it no longer describes this content.
+    selfSaveVersion.current = undefined
     observedAtRead.current = observedRef.current
     setState(current => ({ ...current, status: 'loading', error: undefined }))
     // A rebind moves `path` without re-reading: the live unit keeps its edits,
@@ -501,6 +519,31 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
       dirty,
     })
     if (verdict === 'none') return
+    const expected = selfSaveVersion.current
+    if (expected !== undefined) {
+      // The expected version comes from the same `document` projection the Host
+      // reads, so it is the evidence that this tab's save landed. While the
+      // projection is absent or behind, the change is held rather than
+      // reloaded: the version guard still refuses a save at the stale version.
+      if (dirty) {
+        selfSaveVersion.current = undefined
+      } else if (reported === expected) {
+        // The Host saved the snapshot this tab's agent command returned. The
+        // live unit already holds that content: adopt the published version in
+        // place so the mounted unit and its native undo history survive.
+        selfSaveVersion.current = undefined
+        hostSaved.current = false
+        observedAtRead.current = observedVersion
+        setExternalChange(false)
+        setState(current => ({ ...current, version: observedVersion }))
+        return
+      } else if (reported !== undefined && reported > expected) {
+        // Another save advanced past this command, so this change is not it.
+        selfSaveVersion.current = undefined
+      } else {
+        return
+      }
+    }
     // A version the Host advanced itself wrote the file: reload its content
     // without presenting the change as somebody else's edit.
     if (hostSaved.current && !dirty) {
@@ -541,6 +584,9 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
         error: undefined,
         status: 'ready',
       }))
+      // This write published the live unit itself; any staged command save it
+      // supersedes no longer describes the file.
+      selfSaveVersion.current = undefined
       advanceContentVersion()
       setRecovery(undefined)
       setRecovered(false)
@@ -613,7 +659,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     dismissDraftError,
     discardDraft,
     currentContentVersion,
-    markApplied: advanceContentVersion,
+    markApplied,
     save,
     reload,
     dismissExternalChange,

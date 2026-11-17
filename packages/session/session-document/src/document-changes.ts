@@ -7,6 +7,11 @@
  * file. A caller passes the live document version as `currentVersion`, and the
  * change is accepted only when its `fromVersion` matches that value.
  *
+ * A record's inverse is the durable audit and recovery description of the
+ * change. It is not the runtime undo path: undo and redo act on the editor
+ * runtime's own native history, which both actors share, and replaying an
+ * inverse beside that stack would diverge from the live unit.
+ *
  * All functions are pure and return new values; inputs are never mutated.
  *
  * @module @forwork/session-document/document-changes
@@ -91,7 +96,7 @@ export interface AppliedChange {
   readonly version: number
 }
 
-/** The document-level undo primitive: the inverse steps and the version to restore. */
+/** One accepted change projected into audit and recovery terms. */
 export interface ChangeUndo {
   /** Structured steps that exactly reverse the accepted change. */
   readonly operation: DocumentEditOperation
@@ -165,10 +170,13 @@ export function applyChange(input: ApplyChangeInput): AppliedChange {
 }
 
 /**
- * Undo one accepted change at the document level.
+ * Project one accepted change into the inverse steps and prior version an audit
+ * or recovery reader reports.
  *
- * The caller applies the returned `operation` and records the returned
- * `version` as the live document version; this function mutates nothing.
+ * The returned operation describes what reversing the change would require and
+ * the version to restore; nothing here mutates a document, and this is not the
+ * editor's undo path. Runtime undo and redo use the editor's native history,
+ * which holds the same agent and user edits in one stack.
  *
  * @param record - an accepted change.
  * @returns the record's inverse steps and the version to restore.

@@ -27,7 +27,7 @@ Office 编辑把 Session 中打开的 Word 或 Excel 文件变成实时编辑单
 
 两个版本值回答不同的问题。`officeDocument` 读取返回不透明的文件系统版本，`save` 把它作为 `expectedVersion` 传回：文件系统的 `replaceIfVersion` 守卫仅在文件仍持有该版本时发布写入，否则 Remote 抛出 `office-document/conflict`。数字 `contentVersion` 在文档打开时为 `0`，每次接受的保存加一；智能体命令用 `fromVersion` 与它比较，`document` 投影报告它。
 
-文件在外部变化时，编辑器会重新加载干净的 tab；脏 tab 则在丢弃编辑前提示。保存没有无条件回退，带有不支持特性的文档既不能从编辑器保存，也不能从工具保存。
+文件在外部变化时，编辑器会重新加载干净的 tab；脏 tab 则在丢弃编辑前提示。该 tab 已应用的 agent command 之后的保存不是外部变化：实时单元已持有被保存的快照，因此 tab 原地采用已发布的文件版本，编辑器的原生撤销历史保留这次智能体编辑。保存没有无条件回退，带有不支持特性的文档既不能从编辑器保存，也不能从工具保存。
 
 ## 数据路径
 

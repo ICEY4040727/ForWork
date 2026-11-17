@@ -27,7 +27,7 @@ kind: "package-reference"
 
 Web bundle 负责挂载这个包。在右侧 Sidebar 打开 `.docx` 或 `.xlsx` 文件后，地址由 `office` 类型接管，并打开可编辑的表格或段落表面。表格与文字处理文档在 adapter 后分别使用 Univer preset。保存通过 `officeDocument` Remote 按读取时观察到的版本写入；版本过期会显示为冲突。报告了不支持特性的文件不能保存，面板会列出将丢失的特性。
 
-针对当前打开文档的 agent command 通过 Session 的 `document/command` 事件流进入该 tab。该 tab 返回实时快照与数字内容版本，通过已挂载的 adapter 应用编辑步骤；版本过期时回复冲突，存在未保存的用户编辑时拒绝，并忽略面向其他文档的命令。
+针对当前打开文档的 agent command 通过 Session 的 `document/command` 事件流进入该 tab。该 tab 返回实时快照与数字内容版本，通过已挂载的 adapter 应用编辑步骤；版本过期时回复冲突，存在未保存的用户编辑时拒绝，并忽略面向其他文档的命令。被接受的编辑之后的保存保持同一个已挂载单元，因此编辑器的撤销仍能还原智能体的改动。
 
 旧版 `.doc`、`.xls` 或 `.ppt` 源文件通过同一个 Remote 转换，并在该 tab 的位置重新打开副本；原文件永远不会被写入。转换后的 tab 显示一条可关闭的提示，标注原始文件。正文还会列出该 Session 中打开的 Office 文档，点击即可聚焦。
 
@@ -96,7 +96,7 @@ Session 中的第一个触发点会读取 `document` projection，并按 project
 - 单次恢复记录按 Session 保存且只存在于本窗口；恢复执行后才到达的 projection 不会重新打开任何内容。
 - 恢复草稿由 `officeDocument` Remote 存放在 `<workspaceRoot>/.dsh/office-tmp/drafts/`，只在文档打开时读取。提供恢复的时机是每次打开 tab，因此外部变化后的重新读取不会再次检查草稿。
 - 移动检测需要文件 feed 对新路径的另一次观察，例如在第二个 tab 中打开它。如果没有任何打开的 feed 报告重命名，tab 会保留在旧路径，直到文档重新打开。
-- 内容版本由 Host 记录的保存、agent command 与本地保存共享。Host 自身保存触发重载时，会采用 Host 报告的版本，而不是把变化呈现为外部编辑；有未保存编辑的单元仍会询问。
+- 内容版本由 Host 记录的保存、agent command 与本地保存共享。Host 自身保存触发重载时，会采用 Host 报告的版本，而不是把变化呈现为外部编辑；有未保存编辑的单元仍会询问。该 tab 已应用的 agent command 之后的保存会在不重新读取、不重新挂载的情况下推进该版本，因此编辑器的原生撤销历史得以保留。
 - Univer core 与 presets 使用 Apache-2.0；这个包把 `@univerjs/core`、`@univerjs/presets`、`@univerjs/preset-sheets-core` 与 `@univerjs/preset-docs-core` 固定在 1.4.0 供编辑器表面使用。
 
 <a id="dev-note"></a>

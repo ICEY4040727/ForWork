@@ -27,7 +27,7 @@ A document's Session-scoped identity is `<sessionId>:<path>`, produced by `docum
 
 Two version values answer different questions. The `officeDocument` read returns an opaque filesystem version, and `save` passes it back as `expectedVersion`: the filesystem `replaceIfVersion` guard publishes the write only while the file still holds that version, otherwise the Remote raises `office-document/conflict`. The numeric `contentVersion` starts at `0` when a document opens and advances by one for each accepted save; an agent command compares its `fromVersion` against it, and the `document` projection reports it.
 
-The editor reloads a clean tab when the file changes externally and prompts before discarding edits on a dirty tab. A save has no unconditional fallback, and a document with unsupported features cannot be saved from either the editor or the tools.
+The editor reloads a clean tab when the file changes externally and prompts before discarding edits on a dirty tab. The save that follows an agent command this tab applied is not an external change: the live unit already holds the saved snapshot, so the tab adopts the published file version in place and the editor's native undo history keeps the agent edit. A save has no unconditional fallback, and a document with unsupported features cannot be saved from either the editor or the tools.
 
 ## Data paths
 

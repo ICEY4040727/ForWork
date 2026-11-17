@@ -27,7 +27,7 @@ Client plugin package for an embedded Office editor in the right Sidebar. It reg
 
 The Web bundle mounts the package. Opening a `.docx` or `.xlsx` file in the right Sidebar claims the address with the `office` type and opens an editable sheet or paragraph surface. Spreadsheets and word-processing documents use separate Univer presets behind the adapter. Saving writes through the `officeDocument` Remote at the version the read observed; a stale version surfaces as a conflict. A file that reports an unsupported feature cannot be saved, and the panel names the features that would be lost.
 
-An agent command for the open document reaches this tab through the Session's `document/command` feed. The tab answers with the live snapshot and its numeric content version, applies edit steps through the mounted adapter, refuses a stale edit as a conflict, refuses while user edits are unsaved, and ignores commands for another document.
+An agent command for the open document reaches this tab through the Session's `document/command` feed. The tab answers with the live snapshot and its numeric content version, applies edit steps through the mounted adapter, refuses a stale edit as a conflict, refuses while user edits are unsaved, and ignores commands for another document. The save that follows an accepted edit keeps the same mounted unit, so the editor's undo still reverses the agent's change.
 
 A legacy `.doc`, `.xls`, or `.ppt` source is converted through the same Remote and reopened as a copy in that tab's place; the original is never written. The converted tab shows a dismissible banner naming the source. The body also lists the Session's open Office documents and focuses one when clicked.
 
@@ -96,7 +96,7 @@ None; the package neither assembles nor sends a provider request.
 - The one-pass restore record is keyed by Session and lives for this window only; a projection that arrives after the pass does not reopen anything.
 - Recovery drafts are stored by the `officeDocument` Remote under `<workspaceRoot>/.dsh/office-tmp/drafts/` and are read only when a document opens. The offer is per tab open, so an external-change reload does not check for a draft again.
 - Move detection needs another file-feed observation of the new path, such as opening it in a second tab. A rename that no open feed reports leaves the tab on its old path until the document is reopened.
-- The content version is shared by the Host's recorded saves, agent commands, and local saves. A Host save that reloads the tab adopts the version the Host reports instead of presenting an external change; a dirty unit still prompts.
+- The content version is shared by the Host's recorded saves, agent commands, and local saves. A Host save that reloads the tab adopts the version the Host reports instead of presenting an external change; a dirty unit still prompts. The save that follows an agent command this tab applied advances that version without a re-read or remount, so the editor's native undo history survives it.
 - Univer core and presets are Apache-2.0; the package pins `@univerjs/core`, `@univerjs/presets`, `@univerjs/preset-sheets-core`, and `@univerjs/preset-docs-core` at 1.4.0 for the editor surface.
 
 <a id="dev-note"></a>

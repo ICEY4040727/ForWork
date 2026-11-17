@@ -359,6 +359,93 @@ describe('useOfficeDocument external change', () => {
   })
 })
 
+describe('useOfficeDocument agent command save', () => {
+  it('adopts the published version in place when the Host save matches the applied command', async () => {
+    const remote = makeRemote()
+    remote.read.mockResolvedValueOnce(success(readResult('v1')))
+    const { result, rerender } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face, { contentVersion: 0 }),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    act(() => { result.current.markApplied() })
+    expect(result.current.contentVersion).toBe(1)
+
+    rerender(input(remote.face, { contentVersion: 0, observedVersion: 'v2' }))
+    expect(result.current.version).toBe('v1')
+    expect(remote.read).toHaveBeenCalledOnce()
+
+    rerender(input(remote.face, { contentVersion: 1, observedVersion: 'v2' }))
+    expect(result.current.version).toBe('v2')
+    expect(result.current.snapshot).toBe(snapshot)
+    expect(result.current.externalChange).toBe(false)
+    expect(remote.read).toHaveBeenCalledOnce()
+  })
+
+  it('prompts for a file change while the unit gained user edits after the command', async () => {
+    const remote = makeRemote()
+    const { result, rerender } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face, { contentVersion: 0 }),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    act(() => { result.current.markApplied() })
+
+    rerender(input(remote.face, { contentVersion: 1, observedVersion: 'v2', dirty: true }))
+    await waitFor(() => { expect(result.current.externalChange).toBe(true) })
+    expect(remote.read).toHaveBeenCalledOnce()
+  })
+
+  it('holds a file change until the projection reports the applied command version', async () => {
+    const remote = makeRemote()
+    const { result, rerender } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    act(() => { result.current.markApplied() })
+
+    rerender(input(remote.face, { observedVersion: 'v2' }))
+    expect(result.current.version).toBe('v1')
+    expect(result.current.externalChange).toBe(false)
+    expect(remote.read).toHaveBeenCalledOnce()
+
+    rerender(input(remote.face, { contentVersion: 1, observedVersion: 'v2' }))
+    expect(result.current.version).toBe('v2')
+    expect(remote.read).toHaveBeenCalledOnce()
+  })
+
+  it('reloads when another save advanced the projection past the applied command version', async () => {
+    const remote = makeRemote()
+    remote.read.mockResolvedValueOnce(success(readResult('v1')))
+    remote.read.mockResolvedValueOnce(success(readResult('v2')))
+    const { result, rerender } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face, { contentVersion: 0 }),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    act(() => { result.current.markApplied() })
+
+    rerender(input(remote.face, { contentVersion: 2, observedVersion: 'v2' }))
+    await waitFor(() => { expect(result.current.version).toBe('v2') })
+    expect(remote.read).toHaveBeenCalledTimes(2)
+  })
+
+  it('drops a staged command save when a fresh read starts', async () => {
+    const remote = makeRemote()
+    remote.read.mockResolvedValueOnce(success(readResult('v1')))
+    remote.read.mockResolvedValueOnce(success(readResult('v2')))
+    remote.read.mockResolvedValueOnce(success(readResult('v3')))
+    const { result, rerender } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face, { contentVersion: 0 }),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    act(() => { result.current.markApplied() })
+    act(() => { result.current.reload() })
+    await waitFor(() => { expect(result.current.version).toBe('v2') })
+
+    rerender(input(remote.face, { contentVersion: 1, observedVersion: 'v3' }))
+    await waitFor(() => { expect(result.current.version).toBe('v3') })
+    expect(remote.read).toHaveBeenCalledTimes(3)
+  })
+})
+
 describe('mapOfficeFailure', () => {
   it('maps every declared Remote code', () => {
     expect(mapOfficeFailure(new RemoteError('office-document/conflict', 'm', { path: PATH })).code).toBe('conflict')

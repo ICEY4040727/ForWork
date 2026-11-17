@@ -55,7 +55,7 @@ const { record, version } = applyChange({
 const undo = undoChange(record)
 ```
 
-`applyChange` is the version guard. It owns no storage, so the caller passes the live document version as `currentVersion`; the change is accepted only when `fromVersion` equals it. An accepted change yields a new record and `toVersion = fromVersion + 1`. The record carries the structured steps and their inverse, never a unit snapshot, so document undo is reconstructable from the Session log. `undoChange` returns the inverse steps and the version to restore; `T056` consumes it.
+`applyChange` is the version guard. It owns no storage, so the caller passes the live document version as `currentVersion`; the change is accepted only when `fromVersion` equals it. An accepted change yields a new record and `toVersion = fromVersion + 1`. The record carries the structured steps and their inverse, never a unit snapshot, so the change stays reconstructable from the Session log. `undoChange` projects a record into audit and recovery terms: the inverse steps and the version to restore. Runtime undo and redo are the editor runtime's native history, never a second inverse stack.
 
 `changeId` defaults to the deterministic `documentId:toVersion`; passed explicitly, it is kept. Every refusal is an `OfficeDocumentError` with a stable code:
 
