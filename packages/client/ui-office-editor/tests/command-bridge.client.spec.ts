@@ -298,7 +298,9 @@ describe('attachSessionCommandBridge', () => {
   it('registers the attached target and releases the same registration on detach', () => {
     const feed = new FakeFeed()
     const { target } = fakeTarget()
-    const registerCommandTarget = vi.fn(async () => undefined)
+    const registerCommandTarget = vi.fn(
+      async (_sessionId: string, _documentId: string, _registrationId: string) => undefined,
+    )
     const unregisterCommandTarget = vi.fn(async () => undefined)
     const dispose = attachSessionCommandBridge({ eventSource: feed }, 'session-1', target, {
       read: async () => undefined,
