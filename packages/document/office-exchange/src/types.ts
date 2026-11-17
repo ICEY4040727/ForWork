@@ -48,8 +48,6 @@ export type UnsupportedFeatureKind =
   | 'external-image'
   | 'hyperlink'
   | 'numbering'
-  | 'run-formatting'
-  | 'paragraph-formatting'
   | 'borders'
   | 'footnotes'
   | 'sections'

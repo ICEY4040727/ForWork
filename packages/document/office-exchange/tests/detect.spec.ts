@@ -218,7 +218,7 @@ it('does not report numbering for a styled paragraph or an empty numbering part'
   expect(detectUnsupportedFeatures(styled)).toEqual([])
 })
 
-it('detects unsupported run formatting and paragraph alignment', () => {
+it('does not report run formatting or paragraph alignment the writer maps', () => {
   const variants = [
     '<w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial"/></w:rPr>',
     '<w:rPr><w:sz w:val="40"/></w:rPr>',
@@ -227,20 +227,20 @@ it('detects unsupported run formatting and paragraph alignment', () => {
   ]
   for (const properties of variants) {
     const bytes = packageOf({ [DOCUMENT_XML]: bodyOf(`<w:p><w:r>${properties}<w:t>styled</w:t></w:r></w:p>`) })
-    expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'run-formatting', detail: DOCUMENT_XML }])
+    expect(detectUnsupportedFeatures(bytes)).toEqual([])
   }
 
   const aligned = packageOf({
     [DOCUMENT_XML]: bodyOf('<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:t>centered</w:t></w:r></w:p>'),
   })
-  expect(detectUnsupportedFeatures(aligned)).toEqual([{ kind: 'run-formatting', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(aligned)).toEqual([])
 })
 
-it('detects a run that declares only a default font element', () => {
+it('does not report a run that declares only a default font element', () => {
   const bytes = packageOf({
     [DOCUMENT_XML]: bodyOf('<w:p><w:r><w:rPr><w:rFonts/></w:rPr><w:t>x</w:t></w:r></w:p>'),
   })
-  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'run-formatting', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
 it('does not report bold, italic, and underline runs as unsupported formatting', () => {
@@ -253,7 +253,7 @@ it('does not report bold, italic, and underline runs as unsupported formatting',
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('detects strikethrough and highlighting as run formatting', () => {
+it('does not report strikethrough or highlighting the writer maps', () => {
   for (const property of [
     '<w:strike/>',
     '<w:strike w:val="true"/>',
@@ -261,7 +261,7 @@ it('detects strikethrough and highlighting as run formatting', () => {
     '<w:highlight w:val="yellow"/>',
   ]) {
     const bytes = packageOf({ [DOCUMENT_XML]: bodyOf(`<w:p><w:r><w:rPr>${property}</w:rPr><w:t>x</w:t></w:r></w:p>`) })
-    expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'run-formatting', detail: DOCUMENT_XML }])
+    expect(detectUnsupportedFeatures(bytes)).toEqual([])
   }
 })
 
@@ -272,13 +272,13 @@ it('does not report disabled strike or a cleared highlight', () => {
   }
 })
 
-it('detects paragraph spacing and indentation', () => {
+it('does not report paragraph spacing or indentation the writer maps', () => {
   for (const property of [
     '<w:spacing w:after="240" w:line="360"/>',
     '<w:ind w:left="720" w:firstLine="360"/>',
   ]) {
     const bytes = packageOf({ [DOCUMENT_XML]: bodyOf(`<w:p><w:pPr>${property}</w:pPr><w:r><w:t>x</w:t></w:r></w:p>`) })
-    expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'paragraph-formatting', detail: DOCUMENT_XML }])
+    expect(detectUnsupportedFeatures(bytes)).toEqual([])
   }
 })
 
@@ -289,15 +289,19 @@ it('does not report a paragraph that only names a style', () => {
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('detects paragraph, run, and cell borders', () => {
-  for (const content of [
+it('detects cell borders and leaves mapped paragraph and run borders alone', () => {
+  const mapped = [
     '<w:p><w:pPr><w:pBdr><w:top w:val="single"/></w:pBdr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>',
     '<w:p><w:r><w:rPr><w:bdr w:val="single"/></w:rPr><w:t>x</w:t></w:r></w:p>',
-    '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="single"/></w:tcBorders></w:tcPr><w:p/></w:tc></w:tr></w:tbl>',
-  ]) {
-    expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: bodyOf(content) })))
-      .toEqual([{ kind: 'borders', detail: DOCUMENT_XML }])
+  ]
+  for (const content of mapped) {
+    expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: bodyOf(content) }))).toEqual([])
   }
+
+  const cell = '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="single"/>'
+    + '</w:tcBorders></w:tcPr><w:p/></w:tc></w:tr></w:tbl>'
+  expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: bodyOf(cell) })))
+    .toEqual([{ kind: 'borders', detail: DOCUMENT_XML }])
 })
 
 it('does not report the table borders the writer emits', () => {

@@ -66,8 +66,6 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
   'external-image': 'feature.externalImage',
   hyperlink: 'feature.hyperlink',
   numbering: 'feature.numbering',
-  'run-formatting': 'feature.runFormatting',
-  'paragraph-formatting': 'feature.paragraphFormatting',
   borders: 'feature.borders',
   footnotes: 'feature.footnotes',
   sections: 'feature.sections',

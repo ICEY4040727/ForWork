@@ -94,52 +94,13 @@ it('drops list numbering and the numbering part, and reports it', async () => {
   expect(written[DOCUMENT_XML]).not.toContain('w:numPr')
 })
 
-it('drops run formatting and paragraph alignment, and reports it', async () => {
+it('drops cell borders, and reports them', async () => {
   const bytes = documentPackage(
-    '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr>'
-    + '<w:rFonts w:ascii="Arial" w:hAnsi="Arial"/><w:sz w:val="40"/><w:color w:val="FF0000"/>'
-    + '</w:rPr><w:t>styled</w:t></w:r></w:p>',
-  )
-  expectDetected(bytes, { kind: 'run-formatting', detail: DOCUMENT_XML })
-  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
-  expect(writtenXml).not.toContain('w:rFonts')
-  expect(writtenXml).not.toContain('w:sz')
-  expect(writtenXml).not.toContain('w:color')
-  expect(writtenXml).not.toContain('w:jc')
-})
-
-it('drops strikethrough and highlighting, and reports them', async () => {
-  const bytes = documentPackage(
-    '<w:p><w:r><w:rPr><w:strike/><w:highlight w:val="yellow"/></w:rPr><w:t>marked</w:t></w:r></w:p>',
-  )
-  expectDetected(bytes, { kind: 'run-formatting', detail: DOCUMENT_XML })
-  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
-  expect(writtenXml).not.toContain('w:strike')
-  expect(writtenXml).not.toContain('w:highlight')
-})
-
-it('drops paragraph spacing and indentation, and reports them', async () => {
-  const bytes = documentPackage(
-    '<w:p><w:pPr><w:spacing w:after="240" w:line="360"/><w:ind w:left="720"/></w:pPr>'
-    + '<w:r><w:t>spaced</w:t></w:r></w:p>',
-  )
-  expectDetected(bytes, { kind: 'paragraph-formatting', detail: DOCUMENT_XML })
-  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
-  expect(writtenXml).not.toContain('w:spacing')
-  expect(writtenXml).not.toContain('w:ind')
-})
-
-it('drops paragraph, run, and cell borders, and reports them', async () => {
-  const bytes = documentPackage(
-    '<w:p><w:pPr><w:pBdr><w:top w:val="single" w:sz="8"/></w:pBdr></w:pPr>'
-    + '<w:r><w:rPr><w:bdr w:val="single" w:sz="8"/></w:rPr><w:t>bordered</w:t></w:r></w:p>'
-    + '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="single"/></w:tcBorders></w:tcPr>'
+    '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="single"/></w:tcBorders></w:tcPr>'
     + '<w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>',
   )
   expectDetected(bytes, { kind: 'borders', detail: DOCUMENT_XML })
   const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
-  expect(writtenXml).not.toContain('w:pBdr')
-  expect(writtenXml).not.toContain('<w:bdr')
   expect(writtenXml).not.toContain('w:tcBorders')
 })
 
