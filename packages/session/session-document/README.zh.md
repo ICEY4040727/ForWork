@@ -77,7 +77,7 @@ recordDocumentClose(session, { documentId, reason })
 
 ### 读取打开集合
 
-`document` projection 持有 `{ order, documents }`：显示顺序，以及每个打开文档的一条条目，包含其身份、当前路径、格式、内容版本、`open` 或 `missing` 状态与不支持特性。`document/open` 插入或更新条目，`document/save` 与 `document/edit` 推进其版本，`document/rebind` 替换路径，`document/missing` 标记为不可用，`document/close` 删除它。未知事件保持同一个 state 引用，因此不运行任何下游工作。线缆视图是同一个值，并带有供 Client 恢复的 schema。
+`document` projection 持有 `{ order, documents }`：显示顺序，以及每个打开文档的一条条目，包含其身份、当前路径、格式、内容版本、`open` 或 `missing` 状态与不支持特性。`document/open` 插入或更新条目，`document/save` 与 `document/edit` 推进其版本，`document/rebind` 替换路径，`document/missing` 标记为不可用，`document/close` 删除它。未知事件保持同一个 state 引用，因此不运行任何下游工作。线缆视图是同一个值，并带有供 Client 恢复的 schema。只知道当前定位符的调用方（例如重启后的文件读取）用 `openDocumentAtPath` 解析已有条目，而不是从路径派生第二个身份。
 
 该插件的 prompt 区段为正在组装的 Agent 的 Session 渲染打开集合；没有 Agent 或没有打开文档时不渲染内容。每行以条目的精确 `documentId` 开头，文档工具调用正是原样传回该身份。projection 与区段都随挂载 fiber 释放。
 
@@ -161,7 +161,7 @@ Open documents in this session:
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **文件系统观察由调用方提供。** `rebindDocument` 信任 `exists` 标志，`markDocumentMissing` 信任其调用方；探测路径的注册表属于消费方，不属于此包。Office 编辑器会从其资源失败中报告文件缺失，但目前没有 Client 触发器报告移动：`rebindDocument` 存在于 Remote 表面却没有自动调用方。
+- **文件系统观察由调用方提供。** `rebindDocument` 信任 `exists` 标志，`markDocumentMissing` 信任其调用方；探测路径的注册表属于消费方，不属于此包。Office 编辑器会从其资源失败中报告文件缺失，并在变更跟踪器于新路径观察到同一内容版本时请求 Remote 重绑定；没有任何打开的 tab 或 feed 观察到的移动会让文档留在旧路径，直到它重新打开。
 - **恢复与草稿恢复止于决策。** `restoreSet` 展开 projection，`recoveryDecision` 对草稿分类；打开 tab、每个 Session 只执行一次、报告缺失路径以及保存后清除草稿，都属于拥有这些 tab 的 Client。
 - **projection 不携带不支持特性事实。** `document/open` 目前没有承载它们的字段，因此条目初始为空；在事实携带该列表之前，Exchange 读取结果仍是保存拒绝的权威。
 - **版本守卫不串行化写入方。** 调用方必须从唯一的权威文档所有者传入实时 `currentVersion`；该库检测不匹配，但无法阻止两个并发调用读到同一版本。

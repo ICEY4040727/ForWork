@@ -2,6 +2,7 @@
 import { brandString } from '@forwork/brand'
 import type { SessionId } from '@forwork/session/types'
 import type { LegacyOfficeFormat } from '@forwork/office-exchange/types'
+import type { DocumentProjectionView } from '@forwork/session-document/client'
 import { fileAddressFor, isAbsoluteWorkspacePath, parseFileAddress } from '@forwork/util-workspace-path'
 
 /** One open document target: the Session whose workspace owns it and the path handed to the Remote. */
@@ -35,6 +36,27 @@ export function openTargetOf(address: string): OfficeOpenTarget {
  */
 export function officeDocumentIdentity(sessionId: SessionId, path: string): string {
   return `${sessionId}:${path}`
+}
+
+/**
+ * The identity the projection already holds for one locator.
+ *
+ * A document rebound from another path keeps its original identity and stores
+ * only the new locator, so a tab opened at that locator must adopt the projected
+ * identity instead of deriving a second one from the path.
+ * @param view - the Session's `document` projection value, when published.
+ * @param path - the locator the tab addresses.
+ * @returns the projected identity, or `undefined` when no open document carries that path.
+ */
+export function projectedDocumentIdAt(
+  view: DocumentProjectionView | undefined,
+  path: string,
+): string | undefined {
+  if (view === undefined) return undefined
+  for (const documentId of view.order) {
+    if (view.documents[documentId]?.path === path) return documentId
+  }
+  return undefined
 }
 
 /**

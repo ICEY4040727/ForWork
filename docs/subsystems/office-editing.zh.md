@@ -53,7 +53,7 @@ Office 编辑把 Session 中打开的 Word 或 Excel 文件变成实时编辑单
 
 脏状态驱动三种行为：一次编辑在 2 s 内没有后续编辑后调度一份恢复草稿；Sidebar 关闭被否决，随后面板提供保存并关闭、丢弃并关闭或取消；外部变化在丢弃前提示。`DocumentPanel` 列出 Session 打开的 Office tab，并在点击时聚焦其中一个。旧格式打开会转换源文件，并在原 tab 位置重新打开副本，同时显示标出原文件的可关闭提示。
 
-恢复在每个 Session 每窗口运行一次，触发条件是第一个挂载的 Office 正文或 Session 成为主视图 Session。它读取缓存的 `document` 投影，并通过 Sidebar 的每 Session 打开路径按投影顺序打开每个文档；投影报告缺失的文档出现在可关闭提示中，而不是一个失效的 tab。
+恢复在每个 Session 每窗口运行一次，触发条件是第一个挂载的 Office 正文或 Session 成为主视图 Session。它读取缓存的 `document` 投影，并通过 Sidebar 的每 Session 打开路径按投影顺序打开每个文档；每个地址都绑定到投影的 `documentId`，因此重绑定到新路径的文档会按 Session 记录的身份重新打开。投影报告缺失的文档出现在可关闭提示中，而不是一个失效的 tab。
 
 ## 智能体命令桥
 

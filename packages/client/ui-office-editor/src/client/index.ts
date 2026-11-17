@@ -75,6 +75,7 @@ export function apply(ctx: ClientContext): void {
     sessions: ctx.sessions.list,
     openTabs: ctx.sidebarRight.openTabs,
     restore,
+    bindDocument: (address, documentId) => { changes.bindDocument(address, documentId) },
     openResourceIn: (sessionId, address) => { ctx.sidebarRight.openResourceIn(sessionId, address) },
   }), 'ui-office-editor: activation restore')
   ctx.effect(() => ctx.sidebarRight.registerCloseHandler(OFFICE_KIND, (sessionId, tab) => {
@@ -85,11 +86,12 @@ export function apply(ctx: ClientContext): void {
     changes.forget(tab.id)
     notices.forget(tab.contentId)
     const target = openTargetOf(tab.contentId)
-    void ctx.remote.officeDocument.closeDocument(
-      sessionId,
-      officeDocumentIdentity(sessionId, target.path),
-      'closed',
-    ).then((result) => {
+    // A rebound document keeps the identity it was opened with, so the close
+    // fact names the same document instead of one re-derived from the old address.
+    const documentId = changes.documentIdAt(tab.contentId)
+      ?? officeDocumentIdentity(sessionId, target.path)
+    changes.releaseDocument(tab.contentId, documentId)
+    void ctx.remote.officeDocument.closeDocument(sessionId, documentId, 'closed').then((result) => {
       if (!result.ok) ctx.logger.warn(`ui-office-editor: could not record closing "${tab.title}": ${result.error.message}`)
     })
   }), 'ui-office-editor: close')

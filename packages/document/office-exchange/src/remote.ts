@@ -22,6 +22,7 @@ import {
   createDocumentIdentity,
   documentIdFor,
   markDocumentMissing as markIdentityMissing,
+  openDocumentAtPath,
   rebindDocument as rebindIdentity,
   recordDocumentClose,
   recordDocumentMissing,
@@ -29,7 +30,7 @@ import {
   recordDocumentRebind,
   recordDocumentSave,
 } from '@forwork/session-document'
-import type { DocumentIdentityBinding } from '@forwork/session-document'
+import type { DocumentIdentityBinding, DocumentProjectionEntry } from '@forwork/session-document'
 import { Remote, RemoteError, TypertRemoteService } from '@forwork/typert-protocol'
 import type { JsonValue } from '@forwork/util-values'
 import { assertWithinRoots } from './authority.ts'
@@ -553,14 +554,41 @@ export class OfficeDocumentRemote extends TypertRemoteService {
    * Append `document/open` for the first read of a document in this process.
    * A repeat read of the same identity updates no fact: the open set already
    * names the document. A locator a rebind already tracks also opens nothing.
+   *
+   * After a restart the in-process table is empty, so the Session projection is
+   * the only remaining record of a rebind. A document the projection still holds
+   * at this locator keeps its identity and its content version; a missing entry
+   * reopens with that identity, and a locator the projection does not hold opens
+   * under its own path-derived identity.
    */
   private recordOpen(scope: WorkspaceFileScope, path: string, format: DocumentFormat): void {
     const session = this.sessionOf(scope)
-    const documentId = documentIdFor(scope.sessionId, path)
     const documents = this.openDocumentsFor(session)
-    if (this.trackedIdAt(documents, documentId, path) !== undefined) return
-    recordDocumentOpen(session, { documentId, path, format, contentVersion: 0 })
-    documents.set(documentId, { binding: createDocumentIdentity(documentId, path), format, contentVersion: 0 })
+    const canonicalId = documentIdFor(scope.sessionId, path)
+    if (this.trackedIdAt(documents, canonicalId, path) !== undefined) return
+    const projected = this.projectedOpenAt(session, path)
+    const documentId = projected?.documentId ?? canonicalId
+    const contentVersion = projected?.contentVersion ?? 0
+    if (projected?.status !== 'open') {
+      recordDocumentOpen(session, { documentId, path, format, contentVersion })
+    }
+    documents.set(documentId, { binding: createDocumentIdentity(documentId, path), format, contentVersion })
+  }
+
+  /**
+   * The document the Session projection still holds at one locator.
+   *
+   * The projection is optional in a Host composition that records no document
+   * facts; without it, identity stays path-derived as before.
+   * @param session - Session whose committed log owns the projection.
+   * @param path - workspace-relative locator the read resolved.
+   * @returns the open entry at that locator, or `undefined` when the projection is absent or holds none.
+   */
+  private projectedOpenAt(session: Session, path: string): DocumentProjectionEntry | undefined {
+    const projections = this.ctx.get('sessionProjections')
+    if (projections === undefined) return undefined
+    const view = projections.snapshot(session, ['document']).values.document
+    return view === undefined ? undefined : openDocumentAtPath(view, path)
   }
 
   /**

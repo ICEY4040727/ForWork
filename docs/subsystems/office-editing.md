@@ -53,7 +53,7 @@ The `office` tab type claims Session-scoped `dsh-resource://file/session/<sessio
 
 Dirty state drives three behaviors: an edit schedules a recovery draft after 2 s without another edit; a Sidebar close is vetoed, and the panel then offers save-and-close, discard-and-close, or cancel; an external change prompts before discarding. `DocumentPanel` lists the Session's open Office tabs and focuses one when clicked. A legacy open converts the source and reopens the copy in the tab's place with a dismissible notice naming the original.
 
-Restore runs once per Session per window, triggered either by the first Office body that mounts or by the Session becoming the main-view Session. It reads the cached `document` projection and opens each document in projection order through the Sidebar's per-Session open path; a document the projection reports missing appears in a dismissible notice instead of a dead tab.
+Restore runs once per Session per window, triggered either by the first Office body that mounts or by the Session becoming the main-view Session. It reads the cached `document` projection and opens each document in projection order through the Sidebar's per-Session open path; each address is bound to the projection's `documentId`, so a document rebound to a new path reopens under the identity the Session recorded. A document the projection reports missing appears in a dismissible notice instead of a dead tab.
 
 ## The agent command bridge
 

@@ -92,6 +92,7 @@ function input(remote: OfficeDocumentRemote, overrides: Partial<UseOfficeDocumen
     remote,
     sessionId: SESSION_ID,
     path: PATH,
+    documentId: `${SESSION_ID}:${PATH}`,
     signal: SIGNAL,
     observedVersion: 'v1',
     workspaceRoot: '/work',

@@ -6,8 +6,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { brandString } from '@forwork/brand'
 import type { TabId } from '@forwork/client-ui-dockkit'
 import type { SessionId } from '@forwork/session/types'
+import type { DocumentId } from '@forwork/session/src/document-events.ts'
+import type { DocumentProjectionView } from '@forwork/session-document/client'
 import { createOfficeTabChanges, externalChangeVerdict } from '../src/client/changes.ts'
-import { openTargetOf } from '../src/client/target.ts'
+import { openTargetOf, projectedDocumentIdAt } from '../src/client/target.ts'
 
 const TAB = brandString<TabId>('tab-1')
 const OTHER = brandString<TabId>('tab-2')
@@ -211,6 +213,74 @@ describe('document move tracking', () => {
     changes.observeFile(SESSION, DOCUMENT, OLD, 'v1')
     changes.observeFile(SESSION, DOCUMENT, OLD, undefined)
     expect(() => { changes.observeFile(SESSION, DOCUMENT, NEW, 'v1') }).not.toThrow()
+  })
+
+  it('publishes the moved path under the unchanged document identity', () => {
+    const { changes } = tracked()
+    expect(changes.locations.getSnapshot()).toEqual({ [DOCUMENT]: OLD })
+
+    changes.observeFile(SESSION, DOCUMENT, OLD, undefined)
+    changes.observeFile(SESSION, DOCUMENT, NEW, 'v1')
+
+    expect(changes.locations.getSnapshot()).toEqual({ [DOCUMENT]: NEW })
+    changes.forgetDocument(DOCUMENT)
+    changes.forgetDocument(DOCUMENT)
+    expect(changes.locations.getSnapshot()).toEqual({})
+  })
+
+  it('publishes a location when a document is first followed or re-addressed', () => {
+    const changes = createOfficeTabChanges()
+    changes.trackDocument(SESSION, DOCUMENT, OLD)
+    expect(changes.locations.getSnapshot()).toEqual({ [DOCUMENT]: OLD })
+
+    const settled = changes.locations.getSnapshot()
+    changes.trackDocument(SESSION, DOCUMENT, OLD)
+    expect(changes.locations.getSnapshot()).toBe(settled)
+
+    changes.trackDocument(SESSION, DOCUMENT, 'work/next.xlsx')
+    expect(changes.locations.getSnapshot()).toEqual({ [DOCUMENT]: 'work/next.xlsx' })
+  })
+})
+
+describe('document identity bindings', () => {
+  const ADDRESS = 'dsh-resource://file/session/s-1/work/budget.xlsx'
+  const DOCUMENT = `${SESSION}:work/budget.xlsx`
+
+  it('binds an address to the projection identity and releases it on close', () => {
+    const changes = createOfficeTabChanges()
+    expect(changes.documentIdAt(ADDRESS)).toBeUndefined()
+
+    changes.bindDocument(ADDRESS, DOCUMENT)
+    expect(changes.documentIdAt(ADDRESS)).toBe(DOCUMENT)
+
+    changes.releaseDocument(ADDRESS, `${SESSION}:other.xlsx`)
+    expect(changes.documentIdAt(ADDRESS)).toBe(DOCUMENT)
+
+    changes.releaseDocument(ADDRESS, DOCUMENT)
+    expect(changes.documentIdAt(ADDRESS)).toBeUndefined()
+  })
+})
+
+describe('projectedDocumentIdAt', () => {
+  const PRESENT = brandString<DocumentId>(`${SESSION}:work/budget.xlsx`)
+  const view: DocumentProjectionView = {
+    order: [brandString<DocumentId>(`${SESSION}:dangling.xlsx`), PRESENT],
+    documents: {
+      [PRESENT]: {
+        documentId: PRESENT,
+        path: 'work/budget.xlsx',
+        format: 'xlsx',
+        contentVersion: 1,
+        status: 'open',
+        unsupported: [],
+      },
+    },
+  }
+
+  it('finds the projected identity at a locator and skips a dangling order entry', () => {
+    expect(projectedDocumentIdAt(view, 'work/budget.xlsx')).toBe(PRESENT)
+    expect(projectedDocumentIdAt(view, 'work/other.xlsx')).toBeUndefined()
+    expect(projectedDocumentIdAt(undefined, 'work/budget.xlsx')).toBeUndefined()
   })
 })
 

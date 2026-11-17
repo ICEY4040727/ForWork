@@ -10,7 +10,7 @@
  * path survives in the plugin's notice store.
  */
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest'
-import { cleanup, waitFor } from '@testing-library/react'
+import { act, cleanup, render, waitFor } from '@testing-library/react'
 import { RemoteError } from '@forwork/typert-protocol'
 import type { RemoteResult } from '@forwork/typert-protocol'
 import { sessionFileAddress } from '@forwork/util-workspace-path'
@@ -18,7 +18,8 @@ import type { OfficeDocumentReadResult, OfficeDocumentSaveResult } from '@forwor
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
 import { convertedAddress, legacyFormatOf, workspaceRootOf } from '../src/client/target.ts'
 import { en } from '../src/client/locales.ts'
-import { SESSION_ID, renderPanel } from './panel.tsx'
+import { OfficePanel } from '../src/client/OfficePanel.tsx'
+import { SESSION_ID, TAB_ID, panelFixture, renderPanel } from './panel.tsx'
 
 afterEach(cleanup)
 
@@ -91,6 +92,19 @@ describe('legacy path helpers', () => {
 })
 
 describe('legacy open', () => {
+  it('waits to convert a dirty unit so a rebind never drops live edits', async () => {
+    const remote = remoteWith(async () => success(CONVERTED))
+    const fixture = panelFixture({ address: SOURCE_ADDRESS, meta: meta(), remote: remote.face })
+    fixture.changes.markDirty(TAB_ID, true)
+
+    render(<OfficePanel {...fixture.props} />)
+    await act(async () => {})
+    expect(remote.convert).not.toHaveBeenCalled()
+
+    act(() => { fixture.changes.markDirty(TAB_ID, false) })
+    await waitFor(() => { expect(remote.convert).toHaveBeenCalledOnce() })
+  })
+
   it('converts the source and opens the copy in a new tab with the source recorded', async () => {
     const remote = remoteWith(async () => success(CONVERTED))
     const view = renderPanel({ address: SOURCE_ADDRESS, meta: meta(), remote: remote.face })

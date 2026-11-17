@@ -245,6 +245,8 @@ function panelProps(options: PanelOptions = {}): OfficePanelProps {
     attachCommandBridge: vi.fn(() => () => {}),
     markTabDirty: options.onMarkDirty ?? vi.fn(),
     dismissCloseWarning: options.onDismissWarning ?? vi.fn(),
+    bindDocument: vi.fn(),
+    documentIdAt: () => undefined,
     trackDocument: vi.fn(),
     forgetDocument: vi.fn(),
     observeFile: vi.fn(),
@@ -255,6 +257,7 @@ function panelProps(options: PanelOptions = {}): OfficePanelProps {
     dismissRestoreNotice: vi.fn(),
     useSidebarTabs: (selector: (value: readonly SidebarRightOpenTab[]) => unknown) => selector([]),
     useLegacyNotice: (selector: (value: Record<string, never>) => unknown) => selector({}),
+    useDocumentLocations: (selector: (value: Record<string, string>) => unknown) => selector({}),
     useOfficeTab: (selector: (value: OfficeTabChangeSnapshot) => unknown) => selector(changes),
     t: (key: OfficeEditorKey) => en[key],
   } as OfficePanelProps

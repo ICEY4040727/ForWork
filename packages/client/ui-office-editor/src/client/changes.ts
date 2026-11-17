@@ -9,8 +9,12 @@
  * prompt. The same plugin-owned surface follows the workspace file change feed:
  * when a tracked document's path disappears and its content version reappears
  * at another path, the document is rebound to that path so the Session records
- * `document/rebind` instead of losing the open document. The store is created
- * in `apply` and never at module scope.
+ * `document/rebind` instead of losing the open document. A rebind publishes the
+ * document's new location under its unchanged identity, so the mounted body
+ * saves to the new path without re-deriving that identity. The surface also
+ * binds a tab address to the identity a restore read from the projection, so a
+ * reopened document keeps the projected identity instead of a path-derived one.
+ * The store is created in `apply` and never at module scope.
  */
 import { createSnapshotStore, type SnapshotStore } from '@forwork/client-store'
 import type { TabId } from '@forwork/client-ui-dockkit'
@@ -26,6 +30,9 @@ export interface OfficeTabChangeState {
 
 /** Every tracked tab, keyed by tab id. */
 export type OfficeTabChangeSnapshot = Readonly<Record<string, OfficeTabChangeState>>
+
+/** Current path of every followed document, keyed by document identity. */
+export type OfficeDocumentLocationSnapshot = Readonly<Record<string, string>>
 
 /** Record one open document's new location after its file moved. */
 export type OfficeDocumentRebind = (
@@ -71,8 +78,13 @@ class DocumentMoves {
   /**
    * @param rebind - records the move for one document; absent leaves the
    * tracker as an observation log for callers that do not record.
+   * @param locations - publishes each followed document's current path under
+   * its unchanged identity.
    */
-  constructor(private readonly rebind: OfficeDocumentRebind | undefined) {}
+  constructor(
+    private readonly rebind: OfficeDocumentRebind | undefined,
+    private readonly locations: SnapshotStore<OfficeDocumentLocationSnapshot>,
+  ) {}
 
   /**
    * Follow one open document at its current path.
@@ -86,6 +98,7 @@ class DocumentMoves {
       if (current.path !== pathKey(path)) {
         current.path = pathKey(path)
         current.missing = false
+        this.publish()
       }
       return
     }
@@ -96,6 +109,7 @@ class DocumentMoves {
       version: undefined,
       missing: false,
     })
+    this.publish()
   }
 
   /**
@@ -103,7 +117,7 @@ class DocumentMoves {
    * @param documentId - the closed document.
    */
   forget(documentId: string): void {
-    this.documents.delete(documentId)
+    if (this.documents.delete(documentId)) this.publish()
   }
 
   /**
@@ -169,7 +183,15 @@ class DocumentMoves {
     document.version = version
     document.missing = false
     this.observedOf(document.sessionId).set(path, version)
+    this.publish()
     this.rebind?.(document.sessionId, document.documentId, path)
+  }
+
+  /** Publish the current path of every followed document. */
+  private publish(): void {
+    const next: Record<string, string> = {}
+    for (const document of this.documents.values()) next[document.documentId] = document.path
+    this.locations.set(next)
   }
 }
 
@@ -195,6 +217,8 @@ function firstObserved(
 export interface OfficeTabChanges {
   /** Observable state the panel reads through the framework-bound hook. */
   readonly source: SnapshotStore<OfficeTabChangeSnapshot>
+  /** Observable current path per followed document, keyed by its identity. */
+  readonly locations: SnapshotStore<OfficeDocumentLocationSnapshot>
   /**
    * Record whether one tab's live unit has unsaved edits.
    * @param tabId - the tab whose unit changed.
@@ -222,6 +246,27 @@ export interface OfficeTabChanges {
    * @returns `true` when the close handler must refuse removal.
    */
   isDirty(tabId: TabId): boolean
+  /**
+   * Bind a tab address to the document identity its live unit uses.
+   *
+   * Restore binds the projection's identity before opening the address, so the
+   * reopened body and every later save name the document the Session records.
+   * @param address - the tab's `dsh-resource://file/...` address.
+   * @param documentId - Session-scoped identity of the open document.
+   */
+  bindDocument(address: string, documentId: string): void
+  /**
+   * Release a binding once its tab closes.
+   * @param address - the closed tab's address.
+   * @param documentId - the identity the binding must hold to be released.
+   */
+  releaseDocument(address: string, documentId: string): void
+  /**
+   * The identity bound to one address.
+   * @param address - the tab's file address.
+   * @returns the bound identity, or `undefined` when the address derives its own.
+   */
+  documentIdAt(address: string): string | undefined
   /**
    * Follow one open document so a file move keeps its identity.
    * @param sessionId - Session whose workspace owns the file.
@@ -251,13 +296,16 @@ export interface OfficeTabChanges {
  */
 export function createOfficeTabChanges(rebind?: OfficeDocumentRebind): OfficeTabChanges {
   const source = createSnapshotStore<OfficeTabChangeSnapshot>({})
-  const moves = new DocumentMoves(rebind)
+  const locations = createSnapshotStore<OfficeDocumentLocationSnapshot>({})
+  const moves = new DocumentMoves(rebind, locations)
+  const identities = new Map<string, string>()
 
   const write = (tabId: TabId, next: OfficeTabChangeState): void => {
     source.set({ ...source.getSnapshot(), [tabId]: next })
   }
   return {
     source,
+    locations,
     markDirty(tabId, dirty) {
       const current = source.getSnapshot()[tabId]
       write(tabId, { dirty, warned: dirty ? current?.warned ?? false : false })
@@ -283,6 +331,15 @@ export function createOfficeTabChanges(rebind?: OfficeDocumentRebind): OfficeTab
     },
     isDirty(tabId) {
       return source.getSnapshot()[tabId]?.dirty === true
+    },
+    bindDocument(address, documentId) {
+      identities.set(address, documentId)
+    },
+    releaseDocument(address, documentId) {
+      if (identities.get(address) === documentId) identities.delete(address)
+    },
+    documentIdAt(address) {
+      return identities.get(address)
     },
     trackDocument(sessionId, documentId, path) {
       moves.track(sessionId, documentId, path)

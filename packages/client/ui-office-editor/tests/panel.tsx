@@ -18,6 +18,7 @@ import type { WorkspaceFileStat } from '@forwork/api-workspace-files/types'
 import type { RemoteFailure } from '@forwork/typert-protocol'
 import { createMockAdapter } from '../src/client/adapter.ts'
 import { createOfficeTabChanges } from '../src/client/changes.ts'
+import type { OfficeDocumentRebind } from '../src/client/changes.ts'
 import { createOfficeLegacyNotices } from '../src/client/notices.ts'
 import { createOfficeRestore } from '../src/client/restore.ts'
 import { OfficePanel } from '../src/client/OfficePanel.tsx'
@@ -70,6 +71,10 @@ export interface PanelInput {
   readonly attachCommandBridge?: OfficePanelInjected['attachCommandBridge']
   /** The resource failure the panel observes; absent while the resource is healthy. */
   readonly failure?: RemoteFailure
+  /** The shared change surface; a fresh one by default. */
+  readonly changes?: ReturnType<typeof createOfficeTabChanges>
+  /** The sink a fresh change surface records an observed move through. */
+  readonly rebind?: OfficeDocumentRebind
 }
 
 /**
@@ -90,10 +95,11 @@ export function panelFixture(input: PanelInput): {
   trackDocument: Mock<OfficePanelInjected['trackDocument']>
   observeFile: Mock<OfficePanelInjected['observeFile']>
   forgetDocument: Mock<OfficePanelInjected['forgetDocument']>
+  resourceAddresses: string[]
 } {
   const address = input.address ?? 'dsh-resource://file/session/s-1/work/budget.xlsx'
   const tabId = input.tabId ?? TAB_ID
-  const changes = createOfficeTabChanges()
+  const changes = input.changes ?? createOfficeTabChanges(input.rebind)
   const notices = createOfficeLegacyNotices()
   const restore = input.restore ?? createOfficeRestore()
   const openTabs = createSnapshotStore<readonly SidebarRightOpenTab[]>(input.openTabs ?? [])
@@ -106,9 +112,16 @@ export function panelFixture(input: PanelInput): {
   const dismissCloseWarning = vi.fn<OfficePanelInjected['dismissCloseWarning']>((tabId) => {
     changes.dismissWarning(tabId)
   })
-  const trackDocument = vi.fn<OfficePanelInjected['trackDocument']>()
-  const observeFile = vi.fn<OfficePanelInjected['observeFile']>()
-  const forgetDocument = vi.fn<OfficePanelInjected['forgetDocument']>()
+  const trackDocument = vi.fn<OfficePanelInjected['trackDocument']>((sessionId, documentId, path) => {
+    changes.trackDocument(sessionId, documentId, path)
+  })
+  const observeFile = vi.fn<OfficePanelInjected['observeFile']>((sessionId, documentId, path, version) => {
+    changes.observeFile(sessionId, documentId, path, version)
+  })
+  const forgetDocument = vi.fn<OfficePanelInjected['forgetDocument']>((documentId) => {
+    changes.forgetDocument(documentId)
+  })
+  const resourceAddresses: string[] = []
   const actions: SidebarRightTabActions = input.actions ?? {
     bindCommands: vi.fn(() => () => {}),
     openResource,
@@ -127,14 +140,19 @@ export function panelFixture(input: PanelInput): {
       },
     }),
     useProjection: (key: string) => key === 'document' ? input.projection : undefined,
-    useResource: () => input.failure !== undefined
-      ? { status: 'failed', value: input.meta, failure: input.failure }
-      : { status: input.meta === undefined ? 'loading' : 'live', value: input.meta, failure: undefined },
+    useResource: (resourceAddress: string) => {
+      resourceAddresses.push(resourceAddress)
+      return input.failure !== undefined
+        ? { status: 'failed', value: input.meta, failure: input.failure }
+        : { status: input.meta === undefined ? 'loading' : 'live', value: input.meta, failure: undefined }
+    },
     remote: input.remote,
     mountEditor: input.mount ?? ((container, mountInput) => adapter.mount(container, mountInput)),
     attachCommandBridge: input.attachCommandBridge ?? attachCommandBridge,
     markTabDirty,
     dismissCloseWarning,
+    bindDocument: (address: string, documentId: string) => { changes.bindDocument(address, documentId) },
+    documentIdAt: (address: string) => changes.documentIdAt(address),
     trackDocument,
     forgetDocument,
     observeFile,
@@ -144,6 +162,7 @@ export function panelFixture(input: PanelInput): {
     restore,
     dismissRestoreNotice: (sessionId: SessionId) => { restore.dismissMissing(sessionId) },
     useOfficeTab: bindObservable(changes.source),
+    useDocumentLocations: bindObservable(changes.locations),
     useLegacyNotice: bindObservable(notices.source),
     useSidebarTabs: bindObservable(openTabs),
     useRestore: bindObservable(restore.source),
@@ -151,7 +170,7 @@ export function panelFixture(input: PanelInput): {
   } as OfficePanelProps
   return {
     props, changes, notices, restore, openTabs, openResource, adapter, attachCommandBridge, markMissing,
-    trackDocument, observeFile, forgetDocument,
+    trackDocument, observeFile, forgetDocument, resourceAddresses,
   }
 }
 

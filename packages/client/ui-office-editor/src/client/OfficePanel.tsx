@@ -16,7 +16,7 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@forwork/client-ui-s
 import type { UnsupportedFeatureKind } from '@forwork/office-exchange/types'
 import type {} from '@forwork/client-resources/client'
 import type {} from '@forwork/api-workspace-files/client'
-import { pathPartsOf } from '@forwork/util-workspace-path'
+import { pathPartsOf, fileAddressFor } from '@forwork/util-workspace-path'
 import type { OfficeEditorHandle } from './adapter.ts'
 import type { OfficeCommandTarget } from './command-bridge.ts'
 import type { OfficePanelInjected } from './face.ts'
@@ -26,7 +26,7 @@ import type { OfficeDocumentFailureCode } from './useOfficeDocument.ts'
 import { useOfficeDocument } from './useOfficeDocument.ts'
 import { useDocumentRestore } from './restore.ts'
 import { OFFICE_KIND, basenameOf } from './definition.ts'
-import { openTargetOf, officeDocumentIdentity, workspaceRootOf } from './target.ts'
+import { openTargetOf, officeDocumentIdentity, projectedDocumentIdAt, workspaceRootOf } from './target.ts'
 import type { OfficeEditorKey } from './locales.ts'
 import css from './OfficePanel.module.css'
 
@@ -81,17 +81,34 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
  * @returns the file name, the open-document list, save and warning state, and the mounted editor surface.
  */
 export function OfficePanel({
-  useTabInfo, useProjection, useResource, useSidebarTabs, useRestore, useLegacyNotice, mountEditor, attachCommandBridge,
-  markTabDirty, dismissCloseWarning, markMissing, rememberLegacySource, dismissLegacyNotice, dismissRestoreNotice,
-  trackDocument, forgetDocument, observeFile, useOfficeTab, remote, restore, t,
+  useTabInfo, useProjection, useResource, useSidebarTabs, useRestore, useLegacyNotice, useDocumentLocations, mountEditor,
+  attachCommandBridge, markTabDirty, dismissCloseWarning, markMissing, rememberLegacySource, dismissLegacyNotice,
+  dismissRestoreNotice, bindDocument, documentIdAt, trackDocument, forgetDocument, observeFile, useOfficeTab, remote,
+  restore, t,
 }: OfficePanelProps): ReactNode {
   const { tab } = useTabInfo()
-  const meta = useResource<'file'>(tab.contentId)
-  const target = useMemo(() => openTargetOf(tab.contentId), [tab.contentId])
+  const addressTarget = useMemo(() => openTargetOf(tab.contentId), [tab.contentId])
+  const projection = useProjection('document')
+  const locations = useDocumentLocations(value => value)
+  const bound = documentIdAt(tab.contentId)
   const documentId = useMemo(
-    () => officeDocumentIdentity(target.sessionId, target.path),
-    [target.sessionId, target.path],
+    () => bound
+      ?? projectedDocumentIdAt(projection, addressTarget.path)
+      ?? officeDocumentIdentity(addressTarget.sessionId, addressTarget.path),
+    [bound, projection, addressTarget],
   )
+  const livePath = locations[documentId] ?? projection?.documents[documentId]?.path ?? addressTarget.path
+  const target = useMemo(
+    () => ({ sessionId: addressTarget.sessionId, path: livePath }),
+    [addressTarget.sessionId, livePath],
+  )
+  const resourceAddress = useMemo(
+    () => livePath === addressTarget.path
+      ? tab.contentId
+      : fileAddressFor(addressTarget.sessionId, undefined, livePath),
+    [livePath, addressTarget, tab.contentId],
+  )
+  const meta = useResource<'file'>(resourceAddress)
   const workspaceRoot = useMemo(
     () => workspaceRootOf(target.path, meta.value?.absolutePath),
     [target.path, meta.value?.absolutePath],
@@ -99,18 +116,21 @@ export function OfficePanel({
   const changes = useOfficeTab(value => value)
   const notice = useLegacyNotice(value => value[tab.contentId])
   const openTabs = useSidebarTabs(value => value)
-  const projection = useProjection('document')
   useDocumentRestore({
     sessionId: target.sessionId,
     projection,
     openTabs,
+    bindDocument,
     actions: tab.actions,
     restore,
   })
   useEffect(() => {
+    bindDocument(tab.contentId, documentId)
+  }, [bindDocument, tab.contentId, documentId])
+  useEffect(() => {
     trackDocument(target.sessionId, documentId, target.path)
-    return () => { forgetDocument(documentId) }
-  }, [trackDocument, forgetDocument, target.sessionId, documentId, target.path])
+  }, [trackDocument, target.sessionId, documentId, target.path])
+  useEffect(() => () => { forgetDocument(documentId) }, [forgetDocument, documentId])
   useEffect(() => {
     if (meta.status === 'failed') {
       if (meta.failure?.code === 'workspace-file/not-found') {
@@ -134,6 +154,7 @@ export function OfficePanel({
     remote,
     sessionId: target.sessionId,
     path: target.path,
+    documentId,
     signal: tab.signal,
     observedVersion: meta.value?.version,
     workspaceRoot,
@@ -143,8 +164,8 @@ export function OfficePanel({
   })
   useEffect(() => {
     if (meta.status !== 'failed' || meta.failure?.code !== 'workspace-file/not-found') return
-    markMissing(target.sessionId, officeDocumentIdentity(target.sessionId, target.path))
-  }, [markMissing, meta.failure, meta.status, target.sessionId, target.path])
+    markMissing(target.sessionId, documentId)
+  }, [markMissing, meta.failure, meta.status, target.sessionId, documentId])
   const documents = useMemo<readonly OfficeDocumentEntry[]>(() => openTabs
     .filter(entry => entry.sessionId === target.sessionId && entry.kind === OFFICE_KIND)
     .map(entry => ({

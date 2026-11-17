@@ -77,7 +77,7 @@ Each helper appends one ordinary Session event and returns it. Facts are append-
 
 ### Read the open set
 
-The `document` projection holds `{ order, documents }`: the display order and one entry per open document with its identity, current path, format, content version, `open` or `missing` status, and unsupported features. `document/open` inserts or updates an entry, `document/save` and `document/edit` advance its version, `document/rebind` replaces the path, `document/missing` marks it unavailable, and `document/close` removes it. Unknown events keep the same state reference, so no downstream work runs. The wire view is the same value with a schema for client restore.
+The `document` projection holds `{ order, documents }`: the display order and one entry per open document with its identity, current path, format, content version, `open` or `missing` status, and unsupported features. `document/open` inserts or updates an entry, `document/save` and `document/edit` advance its version, `document/rebind` replaces the path, `document/missing` marks it unavailable, and `document/close` removes it. Unknown events keep the same state reference, so no downstream work runs. The wire view is the same value with a schema for client restore. A caller that knows only a current locator, such as a file read after a restart, resolves the existing entry with `openDocumentAtPath` instead of deriving a second identity from the path.
 
 The plugin's prompt section renders the open set for the assembling Agent's Session, or nothing when there is no Agent or no open document. Each line leads with the entry's exact `documentId`, the identity a document tool call passes back unchanged. Both the projection and the section are disposed with the mounting fiber.
 
@@ -161,7 +161,7 @@ The list changes only when a `document/*` fact changes the open set or an entry'
 
 <a id="known-limitations-and-deferred-work"></a>
 
-- **Filesystem observations are caller-supplied.** `rebindDocument` trusts the `exists` flag and `markDocumentMissing` trusts its caller; a registry that probes paths belongs with the consumer, not here. The Office editor reports a missing file from its resource failure, but no client trigger reports a move yet: `rebindDocument` exists on the Remote surface without an automatic caller.
+- **Filesystem observations are caller-supplied.** `rebindDocument` trusts the `exists` flag and `markDocumentMissing` trusts its caller; a registry that probes paths belongs with the consumer, not here. The Office editor reports a missing file from its resource failure and asks the Remote to rebind when its change tracker observes the same content version at a new path; a move no open tab or feed observes leaves the document at its old path until it reopens.
 - **Restore and recovery stop at the decision.** `restoreSet` expands the projection and `recoveryDecision` classifies a draft; opening tabs, choosing one pass per Session, reporting missing paths, and clearing a draft after save all belong to the client that owns the tabs.
 - **The projection carries no unsupported-feature facts.** `document/open` currently has no field for them, so the entry starts empty; the Exchange read result stays the authority for a save refusal until a fact carries the list.
 - **The version guard does not serialize writers.** Callers must pass the live `currentVersion` from one authoritative document owner; the library detects a mismatch but cannot prevent two concurrent calls from reading the same version.

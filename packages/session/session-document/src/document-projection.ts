@@ -109,6 +109,27 @@ function sameEntry(left: DocumentProjectionEntry, right: DocumentProjectionEntry
 }
 
 /**
+ * The open entry whose current locator is `path`.
+ *
+ * A rebind keeps an entry's identity and replaces only its path, so a reader
+ * that knows only the current locator (a file read after a restart) resolves the
+ * identity the Session already recorded instead of deriving a second one.
+ * @param state - the open-document state.
+ * @param path - workspace-relative locator, in the same spelling the projection stores.
+ * @returns the matching entry, or `undefined` when no open document carries that path.
+ */
+export function openDocumentAtPath(
+  state: DocumentProjectionState,
+  path: string,
+): DocumentProjectionEntry | undefined {
+  for (const documentId of state.order) {
+    const entry = state.documents[documentId]
+    if (entry !== undefined && entry.path === path) return entry
+  }
+  return undefined
+}
+
+/**
  * Fold one committed Session event into the open-document set.
  * @param state - state covering all prior events.
  * @param event - the next committed Session event.

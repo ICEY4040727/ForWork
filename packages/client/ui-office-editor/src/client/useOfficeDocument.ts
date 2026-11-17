@@ -39,7 +39,7 @@ import type {
 } from '@forwork/office-exchange/types'
 import { externalChangeVerdict } from './changes.ts'
 import { createDraftScheduler, draftRecoveryDecision } from './drafts.ts'
-import { convertedAddress, legacyFormatOf, officeDocumentIdentity } from './target.ts'
+import { convertedAddress, legacyFormatOf } from './target.ts'
 
 /** The `officeDocument` Remote methods this hook calls. */
 export interface OfficeDocumentRemote {
@@ -178,8 +178,13 @@ export interface UseOfficeDocumentInput {
   readonly remote: OfficeDocumentRemote
   /** Session whose workspace owns the path. */
   readonly sessionId: SessionId
-  /** Workspace path of the open file. */
+  /** Workspace path of the open file; a rebind moves it to the file's new location. */
   readonly path: string
+  /**
+   * Session-scoped identity of the open document. It stays fixed when a rebind
+   * changes the path, so drafts and command targets keep naming one document.
+   */
+  readonly documentId: string
   /** Tab lifetime; aborts reads and writes when the record ends. */
   readonly signal: AbortSignal
   /** File version the `file` resource currently reports. */
@@ -314,7 +319,7 @@ export function mapOfficeFailure(failure: RemoteFailure): OfficeDocumentFailure 
  * @returns the visible state and the panel's actions.
  */
 export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocumentResult {
-  const { remote, sessionId, path, signal, observedVersion, workspaceRoot, openConverted, dirty } = input
+  const { remote, sessionId, path, documentId, signal, observedVersion, workspaceRoot, openConverted, dirty } = input
   const legacy = legacyFormatOf(path)
   const [state, setState] = useState<OfficeDocumentState>(INITIAL)
   const [saving, setSaving] = useState(false)
@@ -328,6 +333,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
   const observedRef = useRef(observedVersion)
   const observedAtRead = useRef<string | undefined>(undefined)
   const rootRef = useRef(workspaceRoot)
+  const pathRef = useRef(path)
   const draftCheckedFor = useRef<string | undefined>(undefined)
   const statusRef = useRef(state.status)
   const fileVersionRef = useRef(state.version)
@@ -337,10 +343,10 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
   const hostSaved = useRef(false)
   observedRef.current = observedVersion
   rootRef.current = workspaceRoot
+  pathRef.current = path
   statusRef.current = state.status
   fileVersionRef.current = state.version
   hostVersionRef.current = input.contentVersion
-  const documentId = useMemo(() => officeDocumentIdentity(sessionId, path), [sessionId, path])
   const contentVersion = Math.max(contentVersionState, input.contentVersion ?? 0)
   const currentContentVersion = useCallback(
     () => Math.max(contentVersionRef.current, hostVersionRef.current ?? 0),
@@ -384,7 +390,10 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     let live = true
     observedAtRead.current = observedRef.current
     setState(current => ({ ...current, status: 'loading', error: undefined }))
-    void remote.read(sessionId, path, lifetime).then((result) => {
+    // A rebind moves `path` without re-reading: the live unit keeps its edits,
+    // and the read path is taken at read time so an explicit reload uses the
+    // file's current location.
+    void remote.read(sessionId, pathRef.current, lifetime).then((result) => {
       if (!live) return
       if (!result.ok) {
         setState({ ...INITIAL, status: 'error', error: mapOfficeFailure(result.error) })
@@ -435,10 +444,12 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
       live = false
       controller.abort()
     }
-  }, [remote, sessionId, path, signal, generation, legacy, documentId])
+  }, [remote, sessionId, signal, generation, legacy, documentId])
 
   useEffect(() => {
-    if (legacy === undefined || signal.aborted) return
+    // A rebind can change the suffix. Converting then would replace the tab and
+    // drop live edits, so conversion waits until the unit is clean.
+    if (legacy === undefined || signal.aborted || dirty) return
     const controller = new AbortController()
     const lifetime = AbortSignal.any([signal, controller.signal])
     let live = true
@@ -474,7 +485,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
       live = false
       controller.abort()
     }
-  }, [remote, sessionId, path, signal, legacy, openConverted])
+  }, [remote, sessionId, path, signal, legacy, openConverted, dirty])
 
   useEffect(() => {
     const reported = input.contentVersion

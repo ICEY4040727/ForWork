@@ -63,10 +63,16 @@ function openedTabs(...paths: readonly string[]): readonly SidebarRightOpenTab[]
 }
 
 describe('restorePlan', () => {
-  it('splits open paths from missing ones, keeping projection order', () => {
+  it('splits open documents from missing paths, keeping projection order and identity', () => {
     const view = projectionOf([REPORT, GONE, NOTES], [GONE])
 
-    expect(restorePlan(view)).toEqual({ open: [REPORT, NOTES], missing: [GONE] })
+    expect(restorePlan(view)).toEqual({
+      open: [
+        { documentId: `${SESSION_ID}:${REPORT}`, path: REPORT },
+        { documentId: `${SESSION_ID}:${NOTES}`, path: NOTES },
+      ],
+      missing: [GONE],
+    })
   })
 
   it('reports nothing for an empty open set', () => {
@@ -78,7 +84,10 @@ describe('restorePlan', () => {
     const danglingId = brandString<DocumentId>(`${SESSION_ID}:${GONE}`)
     const dangling: DocumentProjectionView = { ...view, order: [danglingId, ...view.order] }
 
-    expect(restorePlan(dangling)).toEqual({ open: [REPORT], missing: [] })
+    expect(restorePlan(dangling)).toEqual({
+      open: [{ documentId: `${SESSION_ID}:${REPORT}`, path: REPORT }],
+      missing: [],
+    })
   })
 })
 
@@ -127,6 +136,31 @@ describe('useDocumentRestore', () => {
 
     expect(view.fixture.openResource.mock.calls.map(call => call[0]))
       .toEqual([addressOf(REPORT), addressOf(NOTES)])
+    expect(view.fixture.changes.documentIdAt(addressOf(REPORT))).toBe(`${SESSION_ID}:${REPORT}`)
+    expect(view.fixture.changes.documentIdAt(addressOf(NOTES))).toBe(`${SESSION_ID}:${NOTES}`)
+  })
+
+  it('binds a rebound document to the identity the projection kept', () => {
+    const remote = makeDraftRemote()
+    const documentId = brandString<DocumentId>(`${SESSION_ID}:${GONE}`)
+    const projection: DocumentProjectionView = {
+      order: [documentId],
+      documents: {
+        [documentId]: {
+          documentId,
+          path: REPORT,
+          format: 'docx',
+          contentVersion: 4,
+          status: 'open',
+          unsupported: [],
+        },
+      },
+    }
+
+    const view = renderPanel({ projection, remote: remote.face })
+
+    expect(view.fixture.openResource).toHaveBeenCalledExactlyOnceWith(addressOf(REPORT))
+    expect(view.fixture.changes.documentIdAt(addressOf(REPORT))).toBe(documentId)
   })
 
   it('runs one pass per Session across mounted bodies and later projection updates', () => {
@@ -238,10 +272,12 @@ describe('restoreOnSessionActivation', () => {
     const sessions = createSnapshotStore(sessionList(projectionOf([REPORT, GONE], [GONE])))
     const openTabs = createSnapshotStore<readonly SidebarRightOpenTab[]>([])
     const restore = createOfficeRestore()
+    const bindDocument = vi.fn()
     const openResourceIn = vi.fn()
 
-    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, openResourceIn })
+    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, bindDocument, openResourceIn })
 
+    expect(bindDocument).toHaveBeenCalledExactlyOnceWith(addressOf(REPORT), `${SESSION_ID}:${REPORT}`)
     expect(openResourceIn).toHaveBeenCalledExactlyOnceWith(SESSION_ID, addressOf(REPORT))
     expect(restore.source.getSnapshot().missing[SESSION_ID]).toEqual([GONE])
     stop()
@@ -253,7 +289,7 @@ describe('restoreOnSessionActivation', () => {
     const restore = createOfficeRestore()
     const openResourceIn = vi.fn()
 
-    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, openResourceIn })
+    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, bindDocument: vi.fn(), openResourceIn })
     sessions.set(sessionList(projectionOf([REPORT, NOTES])))
     sessions.set(sessionList(projectionOf([REPORT, NOTES])))
     expect(openResourceIn).toHaveBeenCalledOnce()
@@ -266,7 +302,7 @@ describe('restoreOnSessionActivation', () => {
     const restore = createOfficeRestore()
     const openResourceIn = vi.fn()
 
-    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, openResourceIn })
+    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, bindDocument: vi.fn(), openResourceIn })
     expect(openResourceIn).not.toHaveBeenCalled()
 
     sessions.set(sessionList({ order: [], documents: {} }))
@@ -286,7 +322,7 @@ describe('restoreOnSessionActivation', () => {
     const restore = createOfficeRestore()
     const openResourceIn = vi.fn()
 
-    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, openResourceIn })
+    const stop = restoreOnSessionActivation({ sessions, openTabs, restore, bindDocument: vi.fn(), openResourceIn })
     stop()
     sessions.set(sessionList(projectionOf([REPORT, NOTES])))
     expect(openResourceIn).toHaveBeenCalledOnce()

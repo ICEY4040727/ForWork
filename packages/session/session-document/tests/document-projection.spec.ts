@@ -6,6 +6,7 @@ import SessionStore from '@forwork/session'
 import {
   documentProjectionDefinition,
   foldDocumentProjection,
+  openDocumentAtPath,
   recordDocumentClose,
   recordDocumentMissing,
   recordDocumentOpen,
@@ -273,3 +274,33 @@ function closedEvent(): SessionEvent<'document/close'> {
     data: { documentId: SECOND, reason: 'closed' },
   }
 }
+
+describe('openDocumentAtPath', () => {
+  it('resolves a rebound document at its new locator under the original identity', () => {
+    const state = fold([
+      {
+        type: 'document/open',
+        seq: SessionSeq(0),
+        time: 0,
+        data: { documentId: FIRST, path: 'first.xlsx', format: 'xlsx', contentVersion: 2 },
+      },
+      {
+        type: 'document/rebind',
+        seq: SessionSeq(1),
+        time: 1,
+        data: { documentId: FIRST, fromPath: 'first.xlsx', toPath: 'renamed.xlsx' },
+      },
+    ])
+
+    expect(openDocumentAtPath(state, 'renamed.xlsx')).toMatchObject({
+      documentId: FIRST,
+      path: 'renamed.xlsx',
+      contentVersion: 2,
+    })
+    expect(openDocumentAtPath(state, 'first.xlsx')).toBeUndefined()
+  })
+
+  it('reports no entry for a path no open document carries', () => {
+    expect(openDocumentAtPath(empty(), 'first.xlsx')).toBeUndefined()
+  })
+})

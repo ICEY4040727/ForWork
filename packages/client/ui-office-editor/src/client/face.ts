@@ -5,7 +5,7 @@ import type { SessionId } from '@forwork/session/types'
 import type { SidebarRightOpenTab } from '@forwork/client-ui-sidebar-right/client'
 import type { OfficeAdapter, OfficeEditorHandle, OfficeMountInput } from './adapter.ts'
 import type { OfficeCommandTarget } from './command-bridge.ts'
-import type { OfficeTabChangeSnapshot, OfficeTabChanges } from './changes.ts'
+import type { OfficeTabChangeSnapshot, OfficeDocumentLocationSnapshot, OfficeTabChanges } from './changes.ts'
 import type { OfficeLegacyNoticeSnapshot, OfficeLegacyNotices } from './notices.ts'
 import type { OfficeDocumentRemote } from './useOfficeDocument.ts'
 import type { OfficeRestore, OfficeRestoreActions, OfficeRestoreState } from './restore.ts'
@@ -27,6 +27,18 @@ export interface OfficePanelInjected {
   readonly markTabDirty: (tabId: TabId, dirty: boolean) => void
   /** Dismiss the close prompt without saving or closing. */
   readonly dismissCloseWarning: (tabId: TabId) => void
+  /**
+   * Bind a tab address to the document identity its live unit uses.
+   * @param address - the tab's file address.
+   * @param documentId - Session-scoped identity of the open document.
+   */
+  readonly bindDocument: (address: string, documentId: string) => void
+  /**
+   * The identity already bound to one address.
+   * @param address - the tab's file address.
+   * @returns the bound identity, or `undefined` when the address derives its own.
+   */
+  readonly documentIdAt: (address: string) => string | undefined
   /**
    * Follow this tab's document so a file move keeps its identity.
    * @param sessionId - Session whose workspace owns the file.
@@ -73,6 +85,7 @@ export interface OfficePanelInjected {
   readonly dismissRestoreNotice: (sessionId: SessionId) => void
   readonly hooks: {
     readonly officeTab: HostObservable<OfficeTabChangeSnapshot>
+    readonly documentLocations: HostObservable<OfficeDocumentLocationSnapshot>
     readonly legacyNotice: HostObservable<OfficeLegacyNoticeSnapshot>
     readonly sidebarTabs: HostObservable<readonly SidebarRightOpenTab[]>
     readonly restore: HostObservable<OfficeRestoreState>
@@ -125,6 +138,8 @@ export function officePanelInjected(deps: OfficePanelDeps): OfficePanelInjected 
     attachCommandBridge,
     markTabDirty: (tabId, dirty) => { changes.markDirty(tabId, dirty) },
     dismissCloseWarning: (tabId) => { changes.dismissWarning(tabId) },
+    bindDocument: (address, documentId) => { changes.bindDocument(address, documentId) },
+    documentIdAt: address => changes.documentIdAt(address),
     trackDocument: (sessionId, documentId, path) => { changes.trackDocument(sessionId, documentId, path) },
     forgetDocument: (documentId) => { changes.forgetDocument(documentId) },
     observeFile: (sessionId, documentId, path, version) => {
@@ -140,6 +155,7 @@ export function officePanelInjected(deps: OfficePanelDeps): OfficePanelInjected 
     dismissRestoreNotice: (sessionId) => { restore.dismissMissing(sessionId) },
     hooks: {
       officeTab: changes.source,
+      documentLocations: changes.locations,
       legacyNotice: notices.source,
       sidebarTabs: openTabs,
       restore: restore.source,

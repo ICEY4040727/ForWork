@@ -1,6 +1,6 @@
 /** The `officeDocument` Remote surface reads, saves under a version guard, and confines paths. */
 import { createHash } from 'node:crypto'
-import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,6 +10,8 @@ import { SessionId } from '@forwork/session/types'
 import SessionStore from '@forwork/session'
 import type { SessionEvent } from '@forwork/session'
 import { documentIdFor } from '@forwork/session-document'
+import { documentProjectionDefinition } from '@forwork/session-document'
+import SessionProjectionRegistry from '@forwork/session-projection'
 import type { DocumentId } from '@forwork/session'
 import type { JsonValue } from '@forwork/util-values'
 import { ConversionError, createConverter } from '@deepseek-ai/libreoffice-kit'
@@ -390,4 +392,78 @@ it('marks a document missing once while keeping it open', async () => {
 it('refuses a document identity from another Session', async () => {
   await expect(ctx.officeDocument.closeDocument(scope, 'other-session:report.xlsx', 'closed', signal))
     .rejects.toMatchObject({ code: 'gateway/bad-request' })
+})
+
+it('keeps a path-derived identity when no document projection is registered', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-office-document-no-projection-'))
+  const localCtx = new Context()
+  const localEvents: SessionEvent[] = []
+  try {
+    await localCtx.plugin(LocalFileSystem, { cwd: root })
+    await localCtx.plugin(SessionStore)
+    await localCtx.plugin(SessionProjectionRegistry)
+    await localCtx.plugin(LocalOfficeExchange)
+    const localScope = { sessionId: SessionId('office-document-no-projection'), workspaceRoot: root }
+    const session = localCtx.sessions.create(localScope.sessionId, { meta: { cwd: root } })
+    localCtx.on('session/event', (subject, event) => {
+      if (subject === session) localEvents.push(event)
+    })
+    await copyFile(join(FIXTURES, 'roundtrip.xlsx'), join(root, 'roundtrip.xlsx'))
+
+    await localCtx.officeDocument.read(localScope, 'roundtrip.xlsx', signal)
+
+    expect(localEvents.filter(event => event.type === 'document/open').map(event => event.data.documentId))
+      .toEqual([documentIdFor(localScope.sessionId, 'roundtrip.xlsx')])
+  } finally {
+    await localCtx.fiber.dispose()
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+it('reopens a moved document under its projected identity after an Office restart', async () => {
+  const restartRoot = await mkdtemp(join(tmpdir(), 'dsh-office-document-restart-'))
+  const restartCtx = new Context()
+  const restartEvents: SessionEvent[] = []
+  try {
+    await restartCtx.plugin(LocalFileSystem, { cwd: restartRoot })
+    await restartCtx.plugin(SessionStore)
+    await restartCtx.plugin(SessionProjectionRegistry)
+    const projection = await restartCtx.sessionProjections.register(documentProjectionDefinition)
+    const restartScope = { sessionId: SessionId('office-document-restart'), workspaceRoot: restartRoot }
+    const session = restartCtx.sessions.create(restartScope.sessionId, { meta: { cwd: restartRoot } })
+    restartCtx.on('session/event', (subject, event) => {
+      if (subject === session) restartEvents.push(event)
+    })
+    const exchange = await restartCtx.plugin(LocalOfficeExchange)
+    await copyFile(join(FIXTURES, 'roundtrip.xlsx'), join(restartRoot, 'roundtrip.xlsx'))
+    await restartCtx.officeDocument.read(restartScope, 'roundtrip.xlsx', signal)
+    const documentId = documentIdFor(restartScope.sessionId, 'roundtrip.xlsx')
+    await rename(join(restartRoot, 'roundtrip.xlsx'), join(restartRoot, 'renamed.xlsx'))
+    await restartCtx.officeDocument.rebindDocument(restartScope, documentId, 'renamed.xlsx', signal)
+
+    await exchange.dispose()
+    await restartCtx.plugin(LocalOfficeExchange)
+
+    const reopened = await restartCtx.officeDocument.read(restartScope, 'renamed.xlsx', signal)
+    setWorkbookCell(reopened.snapshot, 1, 0, 'Sprocket')
+    await restartCtx.officeDocument.save(
+      restartScope, 'renamed.xlsx', reopened.snapshot, 'xlsx', reopened.version, { actor: 'user' }, signal,
+    )
+
+    expect(projection.stateOf(session).order).toEqual([documentId])
+    expect(projection.stateOf(session).documents[documentId]).toMatchObject({
+      documentId,
+      path: 'renamed.xlsx',
+      status: 'open',
+    })
+    expect(restartEvents.filter(event => event.type === 'document/open')).toHaveLength(1)
+    expect(restartEvents.filter(event => event.type === 'document/save').map(event => event.data)).toEqual([{
+      documentId,
+      actor: 'user',
+      contentVersion: 1,
+    }])
+  } finally {
+    await restartCtx.fiber.dispose()
+    await rm(restartRoot, { recursive: true, force: true })
+  }
 })

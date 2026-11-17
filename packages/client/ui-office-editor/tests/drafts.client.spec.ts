@@ -53,6 +53,7 @@ function input(remote: OfficeDocumentRemote, overrides: Partial<UseOfficeDocumen
     remote,
     sessionId: SESSION_ID,
     path: PATH,
+    documentId: DOCUMENT_ID,
     signal: SIGNAL,
     observedVersion: 'v1',
     workspaceRoot: '/work',
