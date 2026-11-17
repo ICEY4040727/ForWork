@@ -53,7 +53,7 @@ async function fixture(
   const base = `forwork-${version}-${os}-${arch}`
   const origin = environment === 'test'
     ? TEST_ORIGIN
-    : 'https://download.deepseek.com'
+    : 'https://github.com/ICEY4040727/ForWork/releases'
   await writeFile(join(artifactsRoot, `${target}-release.json`), `${JSON.stringify({
     schemaVersion: 1,
     channel,
@@ -199,7 +199,7 @@ describe('desktop upload plan', () => {
         const payload = plan.artifacts.find(file => file.filename.endsWith(target === 'win-x64' ? '.exe' : '.zip'))!
         expect(payload.key).toContain(`/bin/${target}/stable/`)
         expect(load(feed.contents!)).toMatchObject({ version, files: [{
-          url: `${environment === 'test' ? TEST_ORIGIN : 'https://download.deepseek.com'}/${payload.key}`,
+          url: `${environment === 'test' ? TEST_ORIGIN : 'https://github.com/ICEY4040727/ForWork/releases'}/${payload.key}`,
         }] })
         summaries.push({ environment, version, keys: plan.artifacts.map(file => file.key) })
       }
@@ -218,7 +218,7 @@ describe('desktop upload plan', () => {
     expect(load(plan.artifacts[2]!.contents!)).toMatchObject({
       version: '1.2.3',
       files: [{
-        url: 'https://download.deepseek.com/forwork-desk/bin/win-x64/forwork-1.2.3-win-x64.exe',
+        url: 'https://github.com/ICEY4040727/ForWork/releases/forwork-desk/bin/win-x64/forwork-1.2.3-win-x64.exe',
         sha512: digest('signed NSIS executable fixture'),
       }],
     })
@@ -293,7 +293,7 @@ describe('desktop upload plan', () => {
       'nightly.yml',
     ])
     expect(plan).toMatchObject({
-      publicUrl: 'https://download.deepseek.com/forwork-desk/feeds/win-x64/',
+      publicUrl: 'https://github.com/ICEY4040727/ForWork/releases/forwork-desk/feeds/win-x64/',
       bucket: PRODUCTION_BUCKET,
     })
   })

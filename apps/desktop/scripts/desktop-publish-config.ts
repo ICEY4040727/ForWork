@@ -2,12 +2,13 @@
 import { readFile } from 'node:fs/promises'
 import { isAbsolute, join } from 'node:path'
 import { z } from 'zod'
+import { DESKTOP_PRODUCTION_DOWNLOAD_ORIGIN } from './desktop-auto-update-environment.mjs'
 
 const singleLine = z.string().min(1).regex(/^[^\r\n\0]+$/u, 'expected a single-line value')
 const absolutePath = singleLine.refine(isAbsolute, 'expected an absolute path')
 const schema = z.strictObject({
   bucket: z.string().regex(/^[a-z0-9-]+-\d+$/u),
-  origin: z.url().refine((value) => { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password && url.pathname === '/' && !url.search && !url.hash }, 'expected an HTTPS origin'),
+  origin: z.url().refine((value) => { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash }, 'expected an HTTPS download base URL'),
   credentialsFile: absolutePath,
   macOS: z.strictObject({ signingIdentity: z.string().min(1), teamId: z.string().regex(/^[A-Z0-9]{10}$/u) }).optional(),
   windows: z.strictObject({ certificateThumbprint: z.string().regex(/^[A-Fa-f0-9]{40}$/u) }).optional(),
@@ -25,7 +26,7 @@ export type DesktopPublishConfig = z.infer<typeof schema>
 export async function readDesktopPublishConfig(configRoot: string, preset: 'test' | 'production'): Promise<DesktopPublishConfig> {
   if (!isAbsolute(configRoot)) throw new Error('desktop publish: configuration root must be absolute')
   const config = schema.parse(JSON.parse(await readFile(join(configRoot, 'publishing', `${preset}.json`), 'utf8')))
-  if (preset === 'production' && (config.origin !== 'https://download.deepseek.com' || !config.githubApp)) {
+  if (preset === 'production' && (config.origin !== DESKTOP_PRODUCTION_DOWNLOAD_ORIGIN || !config.githubApp)) {
     throw new Error('desktop publish: production requires its fixed origin and GitHub App configuration')
   }
   return config

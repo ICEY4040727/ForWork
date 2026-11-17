@@ -1,6 +1,9 @@
 /** Environment variable that selects the Desktop update deployment. */
 export const DESKTOP_AUTO_UPDATE_ENV: 'DSH_DESKTOP_AUTO_UPDATE_ENV'
 
+/** Public production download base shared by packaging, upload, and cache refresh. */
+export const DESKTOP_PRODUCTION_DOWNLOAD_ORIGIN: 'https://github.com/ICEY4040727/ForWork/releases'
+
 /** Supported Desktop update deployment. */
 export type DesktopAutoUpdateEnvironment = 'test' | 'production'
 

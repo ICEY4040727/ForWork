@@ -16,6 +16,9 @@ export function resolveDesktopUpdateChannel(env) {
   return channel
 }
 
+/** Public production download base shared by packaging, upload, and cache refresh. */
+export const DESKTOP_PRODUCTION_DOWNLOAD_ORIGIN = 'https://github.com/ICEY4040727/ForWork/releases'
+
 const UPDATE_ENVIRONMENTS = {
   test: {
     originEnvName: 'DOWNLOAD_TEST_ORIGIN',
@@ -26,7 +29,7 @@ const UPDATE_ENVIRONMENTS = {
   },
   production: {
     originEnvName: undefined,
-    fixedOrigin: 'https://download.deepseek.com',
+    fixedOrigin: DESKTOP_PRODUCTION_DOWNLOAD_ORIGIN,
     bucketEnvName: 'DOWNLOAD_PROD_COS_BUCKET',
     secretIdEnvName: 'DOWNLOAD_PROD_COS_SECRET_ID',
     secretKeyEnvName: 'DOWNLOAD_PROD_COS_SECRET_KEY',
