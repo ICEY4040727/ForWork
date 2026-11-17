@@ -10,6 +10,7 @@
  * owns no Context and no module state.
  */
 import type { DocumentEditOperation } from '@forwork/session/src/document-events.ts'
+import { randomUUID } from '@forwork/util-crypto'
 import type {
   OfficeCommandOperation,
   OfficeCommandResult,
@@ -133,8 +134,10 @@ export interface CommandBridge {
 /**
  * The `officeDocument` Remote members this bridge uses.
  *
- * `completeCommand` is optional because the Host half may not have published it
- * yet; an absent method leaves the pending Host call to its timeout.
+ * All command methods are optional because the Host half may not have published
+ * them yet; an absent settlement method leaves the pending Host call to its
+ * timeout, and an absent registration makes the Host answer
+ * `document-not-open`.
  */
 export interface OfficeCommandRemote {
   /**
@@ -142,6 +145,35 @@ export interface OfficeCommandRemote {
    * face; the bridge never calls it.
    */
   readonly read: (...args: never[]) => unknown
+  /**
+   * Register this attached target so the Host can tell a live document from an
+   * unresponsive one.
+   * @param sessionId - the Session whose commands the target answers.
+   * @param documentId - identity of the live document.
+   * @param registrationId - identity of this attachment.
+   * @param signal - caller cancellation.
+   * @returns completion of the registration.
+   */
+  registerCommandTarget?(
+    sessionId: string,
+    documentId: string,
+    registrationId: string,
+    signal?: AbortSignal,
+  ): Promise<unknown>
+  /**
+   * Release this attachment's registration.
+   * @param sessionId - the Session whose commands the target answered.
+   * @param documentId - identity of the document.
+   * @param registrationId - identity passed to {@link registerCommandTarget}.
+   * @param signal - caller cancellation.
+   * @returns completion of the release.
+   */
+  unregisterCommandTarget?(
+    sessionId: string,
+    documentId: string,
+    registrationId: string,
+    signal?: AbortSignal,
+  ): Promise<unknown>
   /**
    * Resolve one pending Host command with the renderer's result.
    * @param sessionId - the Session whose command is being settled.
@@ -263,12 +295,18 @@ export function attachSessionCommandBridge(
   remote: OfficeCommandRemote,
 ): () => void {
   if (binding === undefined) return () => {}
-  return createCommandBridge({
+  const registrationId = randomUUID()
+  void remote.registerCommandTarget?.(sessionId, target.documentId, registrationId)
+  const detach = createCommandBridge({
     source: sessionCommandSource(binding.eventSource),
     complete: (requestId, result) => {
       void remote.completeCommand?.(sessionId, requestId, result)
     },
   }).attach(target)
+  return () => {
+    detach()
+    void remote.unregisterCommandTarget?.(sessionId, target.documentId, registrationId)
+  }
 }
 
 /**

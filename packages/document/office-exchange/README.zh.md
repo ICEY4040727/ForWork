@@ -81,7 +81,7 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 - `writeDraft(workspaceFileScope, documentId, documentPath, contentVersion, snapshot)` 持久化一份恢复草稿并返回 `{ savedAt }`。草稿位于 `<workspaceRoot>/.dsh/office-tmp/drafts/<sha256(documentId)>.json`；摘要确保调用方选择的 id 无法命名草稿目录之外的路径。它替换已有草稿，且从不写入文档路径本身。
 - `readDraft(workspaceFileScope, documentId)` 返回 `{ documentId, path, contentVersion, snapshot, savedAt }`，文档没有草稿时返回 `null`。格式错误的草稿以 `office-document/conversion-failed` 拒绝。
 - `clearDraft(workspaceFileScope, documentId)` 删除草稿；对没有草稿的文档执行清除是无操作。
-- `completeCommand(workspaceFileScope, requestId, result)` 用实时编辑器的答案结算一个待处理的关联命令。该提供方还挂载 `ctx.officeCommandBroker`，这个服务拥有待处理请求、其超时（`commandTimeoutMs`）以及每个文档最后观察到的数字内容版本。未知、迟到或属于其他 Session 的结果会被忽略并记录日志，绝不应用。
+- `completeCommand(workspaceFileScope, requestId, result)` 用实时编辑器的答案结算一个待处理的关联命令。该提供方还挂载 `ctx.officeCommandBroker`，这个服务拥有待处理请求、其超时（`commandTimeoutMs`）以及每个文档最后观察到的数字内容版本。未知、迟到或属于其他 Session 的结果会被忽略并记录日志，绝不应用。 `registerCommandTarget(workspaceFileScope, documentId, registrationId)` 与 `unregisterCommandTarget(workspaceFileScope, documentId, registrationId)` 记录哪些实时 tab 可以应答：没有已注册目标的文档会立即以 `document-not-open` 答复，只有已注册但保持沉默的目标才会进入超时。
 
 `completeCommand` 应答由 Host 工具层追加的 `document/command` Session 事件；此包本身不追加该事件。结果联合为 `read`、`applied`、`pending-edits`、`conflict`、`unsupported-feature` 或 `document-not-open`；读取或已应用的答案携带实时快照与数字内容版本，冲突携带 `currentVersion`。Host 只在 `applied` 答案后写文件。
 

@@ -176,7 +176,9 @@ export type OfficeCommandResult =
 /**
  * The Host-side outcome of one command: the editor's answer or the elapsed
  * timeout. A timeout writes nothing and is reported as the tool's `timeout`
- * failure rather than a live-editor status.
+ * failure rather than a live-editor status. The broker answers
+ * `document-not-open` immediately when the document has no registered live
+ * target, so only a registered target that stays silent reaches the timeout.
  */
 export type OfficeCommandOutcome = OfficeCommandResult | {
   /** No result arrived before the configured timeout. */

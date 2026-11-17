@@ -2131,20 +2131,36 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'officeCommandBroker',
-    summary: 'Owns pending document commands and the last observed content version per document.',
-    description: 'Owns pending document commands and the last observed content version per document. One instance serves every Session in its composition; a result is accepted only for the Session that recorded the request.',
+    summary: 'Owns pending document commands, the live target registrations, and the last observed content version per document.',
+    description: 'Owns pending document commands, the live target registrations, and the last observed content version per document. One instance serves every Session in its composition; a result is accepted only for the Session that recorded the request.',
     methods: [
       {
         signature: 'async request(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome>',
-        description: 'Append one `document/command` request and wait for the live editor\'s answer.',
+        description: 'Append one `document/command` request and wait for the live editor\'s answer. A document with no registered live target is answered as `document-not-open` without appending a command or starting the timeout.',
         parameters: [{ name: 'request', description: 'session, document, operation, and expected version.' }, { name: 'signal', description: 'caller cancellation; aborting withdraws the pending request.' }],
-        returns: 'the editor\'s result, or `timeout` when no answer arrived in time.',
+        returns: 'the editor\'s result, `document-not-open` when no target is registered, or `timeout` when a registered target did not answer in time.',
         throws: ['the reason carried by an aborted `signal`, or an append failure.'],
       },
       {
         signature: 'complete(scope: WorkspaceFileScope, requestId: string, result: OfficeCommandResult): void',
         description: 'Resolve one pending request with the live editor\'s result.\n\nA result for an unknown request id, a request from another Session, or a request that already timed out is ignored and reported as a diagnostic; late answers never change durable state.',
         parameters: [{ name: 'scope', description: 'Session identity that produced the result.' }, { name: 'requestId', description: 'correlation id copied from the command event.' }, { name: 'result', description: 'the live editor\'s answer.' }],
+      },
+      {
+        signature: 'attachTarget(documentId: DocumentId, registrationId: string): void',
+        description: 'Register one live editor target that can answer commands for a document.\n\nA registration is identified by the caller\'s id so an attach after a detach for the same document does not retire the newer target.',
+        parameters: [{ name: 'documentId', description: 'stable identity of the document.' }, { name: 'registrationId', description: 'caller-minted identity of this attachment.' }],
+      },
+      {
+        signature: 'detachTarget(documentId: DocumentId, registrationId: string): void',
+        description: 'Release one live editor target registration.',
+        parameters: [{ name: 'documentId', description: 'stable identity of the document.' }, { name: 'registrationId', description: 'identity passed to {@link attachTarget}.' }],
+      },
+      {
+        signature: 'hasTarget(documentId: DocumentId): boolean',
+        description: 'Whether any live editor target is registered for one document.',
+        parameters: [{ name: 'documentId', description: 'stable identity of the document.' }],
+        returns: '`true` when at least one attachment can answer commands.',
       },
       {
         signature: 'versionOf(documentId: DocumentId): number',
@@ -2176,7 +2192,7 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Serialize a snapshot and replace the file only at the caller\'s version.',
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'snapshot', description: 'snapshot returned by {@link read}, optionally modified.' }, { name: 'format', description: 'target editable format; it must match the snapshot kind.' }, { name: 'expectedVersion', description: 'version returned by {@link read}; a changed file is refused.' }, { name: 'signal', description: 'caller cancellation.' }],
         returns: 'the version the guarded write published.',
-        throws: ['RemoteError with `office-document/conflict` when the file changed after the read.'],
+        throws: ['RemoteError with `office-document/unsupported-feature` when the source still at `expectedVersion` contains a feature an edit-and-save would drop.', 'RemoteError with `office-document/conflict` when the file changed after the read.'],
       },
       {
         signature: '@Remote closeDocument( workspaceFileScope: WorkspaceFileScope, documentId: string, reason: string, signal: AbortSignal, ): Promise<void>',
@@ -2237,10 +2253,22 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         throws: ['RemoteError with `gateway/bad-request` when a reported version is not a non-negative safe integer.'],
       },
       {
+        signature: '@Remote registerCommandTarget( workspaceFileScope: WorkspaceFileScope, documentId: string, registrationId: string, signal: AbortSignal, ): Promise<void>',
+        description: 'Register one live editor target for a document.\n\nThe renderer calls this when its command bridge attaches and releases the matching registration when that bridge detaches. A command dispatched while no registration exists is answered as `document-not-open` instead of waiting for the timeout.',
+        parameters: [{ name: 'workspaceFileScope', description: 'Session identity that owns the document.' }, { name: 'documentId', description: 'Session-scoped identity of the document.' }, { name: 'registrationId', description: 'caller-minted identity of this attachment.' }, { name: 'signal', description: 'caller cancellation; an aborted call registers nothing.' }],
+        throws: ['RemoteError when the identity belongs to another Session or no live Session exists.'],
+      },
+      {
+        signature: '@Remote unregisterCommandTarget( workspaceFileScope: WorkspaceFileScope, documentId: string, registrationId: string, signal: AbortSignal, ): Promise<void>',
+        description: 'Release one live editor target registration.',
+        parameters: [{ name: 'workspaceFileScope', description: 'Session identity that owns the document.' }, { name: 'documentId', description: 'Session-scoped identity of the document.' }, { name: 'registrationId', description: 'identity passed to {@link registerCommandTarget}.' }, { name: 'signal', description: 'caller cancellation; an aborted call releases nothing.' }],
+        throws: ['RemoteError when the identity belongs to another Session or no live Session exists.'],
+      },
+      {
         signature: 'async dispatchCommand(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome>',
         description: 'Dispatch one correlated command from a Host document tool.\n\nThe broker appends `document/command` and waits for the live editor; this method is the Host-only entry point behind the tool\'s command executor and is not a Remote endpoint.',
         parameters: [{ name: 'request', description: 'session, document, operation, and expected version.' }, { name: 'signal', description: 'caller cancellation; aborting withdraws the pending request.' }],
-        returns: 'the editor\'s result, or `timeout` when no answer arrived in time.',
+        returns: 'the editor\'s result, `document-not-open` without a registered target, or `timeout` when a registered target did not answer in time.',
         throws: ['RemoteError with `gateway/internal` when the broker is not mounted.'],
       },
     ],

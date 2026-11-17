@@ -11,11 +11,11 @@
    { requestId: string; documentId: string; operation: DocumentEditOperation; fromVersion: number }
    ```
    The event is additive and `ignorable`; it never carries a unit snapshot.
-3. The client subscribes to its session's `document/command` events. For a matching open document and a version that matches the live unit, it applies the operation through the adapter, then calls the `officeDocument` Remote:
+3. The client subscribes to its session's `document/command` events. While attached, it registers its live target through `registerCommandTarget(scope, documentId, registrationId)` and releases that registration through `unregisterCommandTarget` when it detaches. For a matching open document and a version that matches the live unit, it applies the operation through the adapter, then calls the `officeDocument` Remote:
    ```ts
    completeCommand(scope, requestId, result)
    ```
-4. The Host resolves the pending request with the result. A request that receives no result within the configured timeout (default 5000 ms) fails `timeout` and writes nothing.
+4. The Host resolves the pending request with the result. A document with no registered target fails `document-not-open` immediately. A request to a registered target that receives no result within the configured timeout (default 5000 ms) fails `timeout` and writes nothing.
 
 ## Result
 
@@ -32,7 +32,7 @@ type CommandResult =
 - `pending-edits` means the live unit has unsaved user edits; the Host writes nothing and returns the tool error.
 - `conflict` means the live version differs from `fromVersion`; the Host writes nothing.
 - `unsupported-feature` means applying or saving would drop content; the Host writes nothing.
-- `document-not-open` means no live editor instance matched; the Host writes nothing.
+- `document-not-open` means no live editor target was registered, or the registered target's unit was gone; the Host writes nothing.
 
 ## Read
 

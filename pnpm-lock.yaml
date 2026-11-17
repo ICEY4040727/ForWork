@@ -5061,6 +5061,9 @@ importers:
       '@forwork/typert-protocol':
         specifier: workspace:*
         version: link:../../typert/protocol
+      '@forwork/util-crypto':
+        specifier: workspace:*
+        version: link:../../util/crypto
       '@forwork/util-values':
         specifier: workspace:*
         version: link:../../util/values

@@ -440,6 +440,67 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   }
 
   /**
+   * Register one live editor target for a document.
+   *
+   * The renderer calls this when its command bridge attaches and releases the
+   * matching registration when that bridge detaches. A command dispatched while
+   * no registration exists is answered as `document-not-open` instead of
+   * waiting for the timeout.
+   * @param workspaceFileScope - Session identity that owns the document.
+   * @param documentId - Session-scoped identity of the document.
+   * @param registrationId - caller-minted identity of this attachment.
+   * @param signal - caller cancellation; an aborted call registers nothing.
+   * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+   */
+  @Remote
+  registerCommandTarget(
+    workspaceFileScope: WorkspaceFileScope,
+    documentId: string,
+    registrationId: string,
+    signal: AbortSignal,
+  ): Promise<void> {
+    try {
+      signal.throwIfAborted()
+      this.requireRegistrationId(registrationId)
+      const id = this.ownedDocumentId(workspaceFileScope, documentId)
+      this.sessionOf(workspaceFileScope)
+      this.commands().attachTarget(id, registrationId)
+      return Promise.resolve()
+    } catch (cause) {
+      const failure: Error = this.failure(cause, documentId, signal)
+      return Promise.reject(failure)
+    }
+  }
+
+  /**
+   * Release one live editor target registration.
+   * @param workspaceFileScope - Session identity that owns the document.
+   * @param documentId - Session-scoped identity of the document.
+   * @param registrationId - identity passed to {@link registerCommandTarget}.
+   * @param signal - caller cancellation; an aborted call releases nothing.
+   * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+   */
+  @Remote
+  unregisterCommandTarget(
+    workspaceFileScope: WorkspaceFileScope,
+    documentId: string,
+    registrationId: string,
+    signal: AbortSignal,
+  ): Promise<void> {
+    try {
+      signal.throwIfAborted()
+      this.requireRegistrationId(registrationId)
+      const id = this.ownedDocumentId(workspaceFileScope, documentId)
+      this.sessionOf(workspaceFileScope)
+      this.commands().detachTarget(id, registrationId)
+      return Promise.resolve()
+    } catch (cause) {
+      const failure: Error = this.failure(cause, documentId, signal)
+      return Promise.reject(failure)
+    }
+  }
+
+  /**
    * Dispatch one correlated command from a Host document tool.
    *
    * The broker appends `document/command` and waits for the live editor; this
@@ -447,7 +508,8 @@ export class OfficeDocumentRemote extends TypertRemoteService {
    * is not a Remote endpoint.
    * @param request - session, document, operation, and expected version.
    * @param signal - caller cancellation; aborting withdraws the pending request.
-   * @returns the editor's result, or `timeout` when no answer arrived in time.
+   * @returns the editor's result, `document-not-open` without a registered target, or
+   * `timeout` when a registered target did not answer in time.
    * @throws RemoteError with `gateway/internal` when the broker is not mounted.
    */
   async dispatchCommand(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome> {
@@ -517,6 +579,13 @@ export class OfficeDocumentRemote extends TypertRemoteService {
       contentVersion,
     })
     broker?.remember(documentId, contentVersion)
+  }
+
+  /** Require the caller to name its attachment with a non-empty id. */
+  private requireRegistrationId(registrationId: string): void {
+    if (registrationId.length === 0) {
+      throw new RemoteError('gateway/bad-request', 'A command target registration requires a non-empty id.', {})
+    }
   }
 
   /** Require a document identity that belongs to the Session on the wire. */

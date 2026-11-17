@@ -35,6 +35,7 @@ beforeEach(async () => {
   ctx.on('session/event', (subject, event) => {
     if (subject === session) events.push(event)
   })
+  await ctx.officeDocument.registerCommandTarget(scope, DOCUMENT, 'default-target', SIGNAL)
 })
 
 afterEach(async () => {
@@ -99,6 +100,54 @@ describe('document command broker', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('answers document-not-open without appending or starting a timer when no target is registered', async () => {
+    await ctx.officeDocument.unregisterCommandTarget(scope, DOCUMENT, 'default-target', SIGNAL)
+    vi.useFakeTimers()
+    try {
+      const before = events.length
+      const pending = ctx.officeCommandBroker.request({
+        session,
+        scope,
+        documentId: DOCUMENT,
+        operation: { kind: 'read' },
+        fromVersion: 0,
+      }, SIGNAL)
+      await expect(pending).resolves.toEqual({ status: 'document-not-open' })
+      expect(events.length).toBe(before)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps a document open while any of its target registrations remains', async () => {
+    await ctx.officeDocument.registerCommandTarget(scope, DOCUMENT, 'second-target', SIGNAL)
+    await ctx.officeDocument.registerCommandTarget(scope, DOCUMENT, 'second-target', SIGNAL)
+    await ctx.officeDocument.unregisterCommandTarget(scope, DOCUMENT, 'default-target', SIGNAL)
+    expect(ctx.officeCommandBroker.hasTarget(DOCUMENT)).toBe(true)
+
+    await ctx.officeDocument.unregisterCommandTarget(scope, DOCUMENT, 'second-target', SIGNAL)
+    expect(ctx.officeCommandBroker.hasTarget(DOCUMENT)).toBe(false)
+    await expect(ctx.officeCommandBroker.request({
+      session,
+      scope,
+      documentId: DOCUMENT,
+      operation: { kind: 'read' },
+      fromVersion: 0,
+    }, SIGNAL)).resolves.toEqual({ status: 'document-not-open' })
+  })
+
+  it('refuses a target registration without an attachment id or for another Session', async () => {
+    await expect(ctx.officeDocument.registerCommandTarget(scope, DOCUMENT, '', SIGNAL))
+      .rejects.toThrow(/non-empty id/)
+    await expect(ctx.officeDocument.registerCommandTarget(
+      { sessionId: SessionId('other-session'), workspaceRoot: root },
+      DOCUMENT,
+      'other-target',
+      SIGNAL,
+    )).rejects.toMatchObject({ code: 'gateway/bad-request' })
   })
 
   it('ignores an unknown or late result with a diagnostic', async () => {

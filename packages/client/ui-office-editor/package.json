@@ -69,6 +69,7 @@
     "@forwork/session": "workspace:*",
     "@forwork/session-document": "workspace:*",
     "@forwork/typert-protocol": "workspace:*",
+    "@forwork/util-crypto": "workspace:*",
     "@forwork/util-values": "workspace:*",
     "@forwork/util-workspace-path": "workspace:*",
     "@testing-library/react": "^16.3.3",

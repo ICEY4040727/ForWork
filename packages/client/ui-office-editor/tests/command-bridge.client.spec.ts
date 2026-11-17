@@ -283,13 +283,39 @@ describe('attachSessionCommandBridge', () => {
     const feed = new FakeFeed()
     const { target } = fakeTarget()
     const completeCommand = vi.fn()
+    const registerCommandTarget = vi.fn(async () => undefined)
     const dispose = attachSessionCommandBridge(undefined, 'session-1', target, {
       read: async () => undefined,
+      registerCommandTarget,
       completeCommand,
     })
     feed.appendCommand(command())
+    expect(registerCommandTarget).not.toHaveBeenCalled()
     expect(completeCommand).not.toHaveBeenCalled()
     dispose()
+  })
+
+  it('registers the attached target and releases the same registration on detach', () => {
+    const feed = new FakeFeed()
+    const { target } = fakeTarget()
+    const registerCommandTarget = vi.fn(async () => undefined)
+    const unregisterCommandTarget = vi.fn(async () => undefined)
+    const dispose = attachSessionCommandBridge({ eventSource: feed }, 'session-1', target, {
+      read: async () => undefined,
+      registerCommandTarget,
+      unregisterCommandTarget,
+    })
+
+    expect(registerCommandTarget).toHaveBeenCalledOnce()
+    const [sessionId, documentId, registrationId] = registerCommandTarget.mock.calls[0] ?? []
+    expect(sessionId).toBe('session-1')
+    expect(documentId).toBe('document-1')
+    expect(typeof registrationId).toBe('string')
+    expect(registrationId).not.toBe('')
+
+    dispose()
+    expect(unregisterCommandTarget).toHaveBeenCalledOnce()
+    expect(unregisterCommandTarget).toHaveBeenCalledWith('session-1', 'document-1', registrationId)
   })
 
   it('settles through the Session-scoped Remote method', () => {

@@ -63,15 +63,18 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
 
 ### `ctx.officeCommandBroker` — `OfficeCommandBroker`
 
-Owns pending document commands and the last observed content version per document. One instance serves every Session in its composition; a result is accepted only for the Session that recorded the request.
+Owns pending document commands, the live target registrations, and the last observed content version per document. One instance serves every Session in its composition; a result is accepted only for the Session that recorded the request.
 
 ```ts cordis-catalog
 /**
  * Append one `document/command` request and wait for the live editor's
  * answer.
+ * A document with no registered live target is answered as
+ * `document-not-open` without appending a command or starting the timeout.
  * @param request - session, document, operation, and expected version.
  * @param signal - caller cancellation; aborting withdraws the pending request.
- * @returns the editor's result, or `timeout` when no answer arrived in time.
+ * @returns the editor's result, `document-not-open` when no target is registered, or
+ * `timeout` when a registered target did not answer in time.
  * @throws the reason carried by an aborted `signal`, or an append failure.
  */
 async request(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome>
@@ -87,6 +90,30 @@ async request(request: DocumentCommandRequest, signal: AbortSignal): Promise<Off
  * @param result - the live editor's answer.
  */
 complete(scope: WorkspaceFileScope, requestId: string, result: OfficeCommandResult): void
+
+/**
+ * Register one live editor target that can answer commands for a document.
+ *
+ * A registration is identified by the caller's id so an attach after a detach
+ * for the same document does not retire the newer target.
+ * @param documentId - stable identity of the document.
+ * @param registrationId - caller-minted identity of this attachment.
+ */
+attachTarget(documentId: DocumentId, registrationId: string): void
+
+/**
+ * Release one live editor target registration.
+ * @param documentId - stable identity of the document.
+ * @param registrationId - identity passed to {@link attachTarget}.
+ */
+detachTarget(documentId: DocumentId, registrationId: string): void
+
+/**
+ * Whether any live editor target is registered for one document.
+ * @param documentId - stable identity of the document.
+ * @returns `true` when at least one attachment can answer commands.
+ */
+hasTarget(documentId: DocumentId): boolean
 
 /**
  * Read the last content version reported for one document.
@@ -135,6 +162,8 @@ The service is the producer of `document/*` facts for the editor: a first read a
  * @param expectedVersion - version returned by {@link read}; a changed file is refused.
  * @param signal - caller cancellation.
  * @returns the version the guarded write published.
+ * @throws RemoteError with `office-document/unsupported-feature` when the source still at
+ * `expectedVersion` contains a feature an edit-and-save would drop.
  * @throws RemoteError with `office-document/conflict` when the file changed after the read.
  */
 @Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>
@@ -245,6 +274,31 @@ The service is the producer of `document/*` facts for the editor: a first read a
 @Remote completeCommand( workspaceFileScope: WorkspaceFileScope, requestId: string, result: OfficeCommandResult, signal: AbortSignal, ): Promise<void>
 
 /**
+ * Register one live editor target for a document.
+ *
+ * The renderer calls this when its command bridge attaches and releases the
+ * matching registration when that bridge detaches. A command dispatched while
+ * no registration exists is answered as `document-not-open` instead of
+ * waiting for the timeout.
+ * @param workspaceFileScope - Session identity that owns the document.
+ * @param documentId - Session-scoped identity of the document.
+ * @param registrationId - caller-minted identity of this attachment.
+ * @param signal - caller cancellation; an aborted call registers nothing.
+ * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+ */
+@Remote registerCommandTarget( workspaceFileScope: WorkspaceFileScope, documentId: string, registrationId: string, signal: AbortSignal, ): Promise<void>
+
+/**
+ * Release one live editor target registration.
+ * @param workspaceFileScope - Session identity that owns the document.
+ * @param documentId - Session-scoped identity of the document.
+ * @param registrationId - identity passed to {@link registerCommandTarget}.
+ * @param signal - caller cancellation; an aborted call releases nothing.
+ * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+ */
+@Remote unregisterCommandTarget( workspaceFileScope: WorkspaceFileScope, documentId: string, registrationId: string, signal: AbortSignal, ): Promise<void>
+
+/**
  * Dispatch one correlated command from a Host document tool.
  *
  * The broker appends `document/command` and waits for the live editor; this
@@ -252,7 +306,8 @@ The service is the producer of `document/*` facts for the editor: a first read a
  * is not a Remote endpoint.
  * @param request - session, document, operation, and expected version.
  * @param signal - caller cancellation; aborting withdraws the pending request.
- * @returns the editor's result, or `timeout` when no answer arrived in time.
+ * @returns the editor's result, `document-not-open` without a registered target, or
+ * `timeout` when a registered target did not answer in time.
  * @throws RemoteError with `gateway/internal` when the broker is not mounted.
  */
 async dispatchCommand(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome>

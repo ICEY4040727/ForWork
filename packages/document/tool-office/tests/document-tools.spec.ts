@@ -6,8 +6,13 @@ import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@forw
 import { LocalFileSystem } from '@forwork/fs-local'
 import { ToolCallId } from '@forwork/llm'
 import { OfficeDocumentRemote } from '@forwork/office-exchange'
-import type { OfficeDocumentSnapshot, OfficeDocumentReadResult } from '@forwork/office-exchange'
+import type {
+  OfficeCommandResult,
+  OfficeDocumentSnapshot,
+  OfficeDocumentReadResult,
+} from '@forwork/office-exchange'
 import { SessionId } from '@forwork/session'
+import type { DocumentCommandEventData } from '@forwork/session'
 import { executeToolFixture } from '@forwork/tool-testkit'
 import { RemoteError } from '@forwork/typert-protocol'
 import type { JsonValue } from '@forwork/util-values'
@@ -104,6 +109,37 @@ async function call(name: string, arguments_: Record<string, unknown>, signal: A
   const result = await h.execute(name, arguments_, signal)
   expect(result.isError).toBe(false)
   return result.value ?? null
+}
+
+/**
+ * Register one minimal live target for a document and answer its appended
+ * commands. It implements the same registration and correlated-response
+ * interface the client bridge uses, without a browser or Univer runtime.
+ * @param h - mounted composition.
+ * @param path - workspace-relative document path.
+ * @param respond - result for one command, or `undefined` to stay silent.
+ * @returns release of the registration and its event listener.
+ */
+async function attachLiveTarget(
+  h: ToolTestHarness,
+  path: string,
+  respond: (request: DocumentCommandEventData) => Promise<OfficeCommandResult | undefined>,
+): Promise<() => Promise<void>> {
+  const documentId = documentIdFor(h, path)
+  const registrationId = `live-${documentId}`
+  await h.server.registerCommandTarget(h.scope, documentId, registrationId, SIGNAL)
+  const stop = h.ctx.on('session/event', (session, event) => {
+    if (session !== h.agent.session || event.type !== 'document/command') return
+    if (event.data.documentId !== documentId) return
+    void respond(event.data).then(async (result) => {
+      if (result === undefined) return
+      await h.server.completeCommand(h.scope, event.data.requestId, result, SIGNAL)
+    })
+  })
+  return async () => {
+    stop()
+    await h.server.unregisterCommandTarget(h.scope, documentId, registrationId, SIGNAL)
+  }
 }
 
 describe('document_read', () => {
@@ -530,6 +566,70 @@ describe('document_edit_paragraph', () => {
       operations: [{ index: 0, text: 'x' }],
     }))
     expect(result['code']).toBe('invalid-request')
+  })
+})
+
+describe('live renderer target', () => {
+  it('refuses promptly with document-not-open when no renderer target is registered', async () => {
+    await disposeHarness(h)
+    h = await createHarness({ commandTimeoutMs: 1_000 })
+    const path = await h.copy('roundtrip.xlsx')
+    const started = performance.now()
+
+    const result = objectOf(await call('document_read', { documentId: documentIdFor(h, path) }))
+
+    expect(result['code']).toBe('document-not-open')
+    expect(performance.now() - started).toBeLessThan(500)
+    expect(h.events.filter(event => event.type === 'document/command')).toHaveLength(0)
+  })
+
+  it('applies an edit through a registered target and saves it once', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const initial = await readWorkbook(path)
+    const sheetId = firstSheet(initial.snapshot)
+    const detach = await attachLiveTarget(h, path, async (request) => {
+      const current = await readWorkbook(path)
+      if (request.operation.kind !== 'edit') {
+        return { status: 'read', snapshot: current.snapshot, contentVersion: request.fromVersion }
+      }
+      return {
+        status: 'applied',
+        snapshot: withCell(current.snapshot, sheetId, 1, 0, 'Sprocket'),
+        contentVersion: request.fromVersion + 1,
+      }
+    })
+    try {
+      const save = vi.spyOn(h.server, 'save')
+      const result = objectOf(await call('document_edit_cells', {
+        documentId: documentIdFor(h, path),
+        fromVersion: 0,
+        operations: [{ sheetId, row: 1, column: 0, value: 'Sprocket' }],
+      }))
+
+      expect(result['status']).toBe('ok')
+      expect(result['contentVersion']).toBe(1)
+      expect(save).toHaveBeenCalledOnce()
+      expect(editFacts()).toBe(1)
+      const reread = await readWorkbook(path)
+      expect(cellValue(reread.snapshot, sheetId, 1, 0)).toBe('Sprocket')
+    } finally {
+      await detach()
+    }
+  })
+
+  it('times out when a registered target never answers', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const detach = await attachLiveTarget(h, path, async () => undefined)
+    try {
+      const save = vi.spyOn(h.server, 'save')
+      const result = objectOf(await call('document_read', { documentId: documentIdFor(h, path) }))
+
+      expect(result['code']).toBe('timeout')
+      expect(save).not.toHaveBeenCalled()
+      expect(editFacts()).toBe(0)
+    } finally {
+      await detach()
+    }
   })
 })
 

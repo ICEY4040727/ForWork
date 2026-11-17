@@ -171,7 +171,9 @@ export const VIEWER_ENDPOINT_CLASSES = {
   'officeDocument/read': 'owner-only', // owner Office editor; readers hold no workspace document read
   'officeDocument/readDraft': 'owner-only', // owner Office editor; readers hold no workspace document read
   'officeDocument/rebindDocument': 'owner-only', // owner Office editor; the move is the owner's workspace observation
+  'officeDocument/registerCommandTarget': 'owner-only', // owner Office editor; only the owner's live tab registers its command target
   'officeDocument/save': 'owner-only', // owner Office editor; the save replaces the owner's workspace file
+  'officeDocument/unregisterCommandTarget': 'owner-only', // owner Office editor; only the owner's live tab releases its command target
   'officeDocument/writeDraft': 'owner-only', // owner Office editor; drafts capture the owner's unsaved edits
   'officeToPdf/generation': 'owner-only', // owner document export
   'officeToPdf/render': 'owner-only', // owner document export

@@ -42,15 +42,17 @@ export interface ToolTestHarness {
 
 /**
  * Mount files and sessions, Office Exchange, its Remote, and the document tools.
- * @param config - tool caps for the mounted plugin.
+ * @param config - tool caps and the command timeout for the mounted plugins.
  * @returns the composition, cleaned up by {@link disposeHarness}.
  */
-export async function createHarness(config: { summaryCells?: number; maxEditSteps?: number } = {}): Promise<ToolTestHarness> {
+export async function createHarness(
+  config: { summaryCells?: number; maxEditSteps?: number; commandTimeoutMs?: number } = {},
+): Promise<ToolTestHarness> {
   const root = await mkdtemp(join(tmpdir(), 'dsh-tool-office-'))
   const ctx = new Context()
   await ctx.plugin(LocalFileSystem, { cwd: root })
   await mountAgentLoopTestDependencies(ctx)
-  await ctx.plugin(LocalOfficeExchange, { commandTimeoutMs: 25 })
+  await ctx.plugin(LocalOfficeExchange, { commandTimeoutMs: config.commandTimeoutMs ?? 25 })
   await ctx.plugin(ToolOffice, config)
   const loop = await mountAgentLoopTestHarness(ctx)
   const agent = await loop.create(SessionId('tool-office-test'), {}, { cwd: root })

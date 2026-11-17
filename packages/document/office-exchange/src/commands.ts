@@ -60,14 +60,16 @@ interface PendingCommand {
 }
 
 /**
- * Owns pending document commands and the last observed content version per
- * document. One instance serves every Session in its composition; a result is
- * accepted only for the Session that recorded the request.
+ * Owns pending document commands, the live target registrations, and the last
+ * observed content version per document. One instance serves every Session in
+ * its composition; a result is accepted only for the Session that recorded the
+ * request.
  */
 export class OfficeCommandBroker extends Service {
   static Config = CommandBrokerConfig
   private readonly pending = new Map<string, PendingCommand>()
   private readonly versions = new Map<string, number>()
+  private readonly targets = new Map<string, Set<string>>()
 
   /**
    * @param ctx - Host context whose service key is `officeCommandBroker`.
@@ -81,13 +83,17 @@ export class OfficeCommandBroker extends Service {
   /**
    * Append one `document/command` request and wait for the live editor's
    * answer.
+   * A document with no registered live target is answered as
+   * `document-not-open` without appending a command or starting the timeout.
    * @param request - session, document, operation, and expected version.
    * @param signal - caller cancellation; aborting withdraws the pending request.
-   * @returns the editor's result, or `timeout` when no answer arrived in time.
+   * @returns the editor's result, `document-not-open` when no target is registered, or
+   * `timeout` when a registered target did not answer in time.
    * @throws the reason carried by an aborted `signal`, or an append failure.
    */
   async request(request: DocumentCommandRequest, signal: AbortSignal): Promise<OfficeCommandOutcome> {
     signal.throwIfAborted()
+    if (!this.hasTarget(request.documentId)) return { status: 'document-not-open' }
     const requestId = randomUUID()
     const settled = new Promise<OfficeCommandOutcome>((resolve) => {
       const timer = setTimeout(() => {
@@ -133,6 +139,44 @@ export class OfficeCommandBroker extends Service {
     clearTimeout(pending.timer)
     this.pending.delete(requestId)
     pending.resolve(result)
+  }
+
+  /**
+   * Register one live editor target that can answer commands for a document.
+   *
+   * A registration is identified by the caller's id so an attach after a detach
+   * for the same document does not retire the newer target.
+   * @param documentId - stable identity of the document.
+   * @param registrationId - caller-minted identity of this attachment.
+   */
+  attachTarget(documentId: DocumentId, registrationId: string): void {
+    let registrations = this.targets.get(documentId)
+    if (registrations === undefined) {
+      registrations = new Set()
+      this.targets.set(documentId, registrations)
+    }
+    registrations.add(registrationId)
+  }
+
+  /**
+   * Release one live editor target registration.
+   * @param documentId - stable identity of the document.
+   * @param registrationId - identity passed to {@link attachTarget}.
+   */
+  detachTarget(documentId: DocumentId, registrationId: string): void {
+    const registrations = this.targets.get(documentId)
+    if (registrations === undefined) return
+    registrations.delete(registrationId)
+    if (registrations.size === 0) this.targets.delete(documentId)
+  }
+
+  /**
+   * Whether any live editor target is registered for one document.
+   * @param documentId - stable identity of the document.
+   * @returns `true` when at least one attachment can answer commands.
+   */
+  hasTarget(documentId: DocumentId): boolean {
+    return (this.targets.get(documentId)?.size ?? 0) > 0
   }
 
   /**
@@ -186,6 +230,7 @@ export class OfficeCommandBroker extends Service {
     for (const pending of this.pending.values()) clearTimeout(pending.timer)
     this.pending.clear()
     this.versions.clear()
+    this.targets.clear()
   }
 }
 
