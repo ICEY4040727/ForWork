@@ -28,6 +28,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessionId } from '@forwork/session/types'
 import type { RemoteFailure, RemoteResult } from '@forwork/typert-protocol'
 import type {
+  DocumentSaveAttribution,
   OfficeDocumentDraft,
   OfficeDocumentDraftWriteResult,
   OfficeDocumentReadResult,
@@ -65,6 +66,7 @@ export interface OfficeDocumentRemote {
    * @param snapshot - the live unit snapshot.
    * @param format - the target editable format.
    * @param expectedVersion - the version the read observed.
+   * @param attribution - who caused the save; a user save names the user.
    * @param signal - cancels the call.
    * @returns the version the write published, or the declared failure.
    */
@@ -74,6 +76,7 @@ export interface OfficeDocumentRemote {
     snapshot: OfficeDocumentSnapshot,
     format: OfficeFormat,
     expectedVersion: string,
+    attribution: DocumentSaveAttribution,
     signal?: AbortSignal,
   ): Promise<RemoteResult<OfficeDocumentSaveResult>>
   /**
@@ -508,7 +511,9 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     savingRef.current = true
     setSaving(true)
     try {
-      const result = await remote.save(sessionId, path, edited ?? snapshot, formatOf(snapshot), version, signal)
+      const result = await remote.save(
+        sessionId, path, edited ?? snapshot, formatOf(snapshot), version, { actor: 'user' }, signal,
+      )
       if (signal.aborted) return 'refused'
       if (!result.ok) {
         const error = mapOfficeFailure(result.error)

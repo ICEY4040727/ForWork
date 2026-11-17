@@ -9,7 +9,7 @@
 
 import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, rm } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { dirname, join, relative, sep } from 'node:path'
 import type { Context } from '@forwork/cordis'
 import z from '@forwork/schemastery'
 import type { IDocumentData, IWorkbookData } from '@univerjs/core'
@@ -39,6 +39,7 @@ import { OfficeExchangeError } from './errors.ts'
 import type { OfficeExchange } from './service.ts'
 import type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
 import type {
+  DocumentSaveAttribution,
   OfficeCommandOutcome,
   OfficeCommandResult,
   OfficeDocumentDraft,
@@ -112,6 +113,8 @@ export class OfficeDocumentRemote extends TypertRemoteService {
    * Read an editable Office file into a JSON snapshot bound to its version.
    * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
    * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
+   * The recorded document identity uses the same workspace-relative locator the editor tab uses,
+   * so two spellings of one file never open two documents.
    * @param signal - caller cancellation.
    * @returns the detected format, snapshot, unsupported features, and observed version.
    * @throws RemoteError when the path is out of scope, the format is not editable, or the read fails.
@@ -130,7 +133,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
         throw new OfficeExchangeError('conversion-failed', `"${path}" changed while it was being read.`)
       }
       const format = editableDocumentFormat(result.format)
-      this.recordOpen(workspaceFileScope, path, format)
+      this.recordOpen(workspaceFileScope, this.identityPath(workspaceFileScope, target), format)
       return {
         format,
         snapshot: wireSnapshot(result),
@@ -149,6 +152,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
    * @param snapshot - snapshot returned by {@link read}, optionally modified.
    * @param format - target editable format; it must match the snapshot kind.
    * @param expectedVersion - version returned by {@link read}; a changed file is refused.
+   * @param attribution - who caused the save and the agent turn, when one caused it.
    * @param signal - caller cancellation.
    * @returns the version the guarded write published.
    * @throws RemoteError with `office-document/unsupported-feature` when the source still at
@@ -162,6 +166,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     snapshot: OfficeDocumentSnapshot,
     format: OfficeFormat,
     expectedVersion: string,
+    attribution: DocumentSaveAttribution,
     signal: AbortSignal,
   ): Promise<OfficeDocumentSaveResult> {
     try {
@@ -174,7 +179,12 @@ export class OfficeDocumentRemote extends TypertRemoteService {
         { kind: 'replaceIfVersion', version: brandString<FsVersion>(expectedVersion) },
         signal,
       )
-      this.recordSave(workspaceFileScope, path, editableDocumentFormat(format))
+      this.recordSave(
+        workspaceFileScope,
+        this.identityPath(workspaceFileScope, target),
+        editableDocumentFormat(format),
+        attribution,
+      )
       return { version: outcome.version }
     } catch (cause) {
       throw this.failure(cause, path, signal)
@@ -542,43 +552,95 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   /**
    * Append `document/open` for the first read of a document in this process.
    * A repeat read of the same identity updates no fact: the open set already
-   * names the document.
+   * names the document. A locator a rebind already tracks also opens nothing.
    */
   private recordOpen(scope: WorkspaceFileScope, path: string, format: DocumentFormat): void {
     const session = this.sessionOf(scope)
     const documentId = documentIdFor(scope.sessionId, path)
     const documents = this.openDocumentsFor(session)
-    if (documents.has(documentId)) return
+    if (this.trackedIdAt(documents, documentId, path) !== undefined) return
     recordDocumentOpen(session, { documentId, path, format, contentVersion: 0 })
     documents.set(documentId, { binding: createDocumentIdentity(documentId, path), format, contentVersion: 0 })
   }
 
   /**
-   * Append `document/save` after a user save published a new file.
+   * Append `document/save` after a guarded save published a new file.
    *
-   * The user's in-memory changes stay in the editor, so no operation steps are
-   * available and no inverse is fabricated. A document this process has not
-   * read is opened first so the save has an entry to advance.
+   * The caller's in-memory changes stay in the editor, so no operation steps
+   * are available and no inverse is fabricated. A document this process has not
+   * read is opened first so the save has an entry to advance. The identity is
+   * the workspace-relative locator, so an agent save of a file the editor
+   * opened advances that entry instead of opening a second one.
    */
-  private recordSave(scope: WorkspaceFileScope, path: string, format: DocumentFormat): void {
+  private recordSave(
+    scope: WorkspaceFileScope,
+    path: string,
+    format: DocumentFormat,
+    attribution: DocumentSaveAttribution,
+  ): void {
     const session = this.sessionOf(scope)
     const documents = this.openDocumentsFor(session)
-    const tracked = [...documents].find(([, document]) => document.binding.path === path)
-    const documentId = tracked?.[0] ?? documentIdFor(scope.sessionId, path)
-    const entry = tracked?.[1]
+    const canonicalId = documentIdFor(scope.sessionId, path)
+    const documentId = this.trackedIdAt(documents, canonicalId, path) ?? canonicalId
+    const entry = documents.get(documentId)
     const broker = this.ctx.get('officeCommandBroker')
     const from = Math.max(entry?.contentVersion ?? 0, broker?.versionOf(documentId) ?? 0)
     const contentVersion = from + 1
     if (entry === undefined) {
       recordDocumentOpen(session, { documentId, path, format, contentVersion: 0 })
     }
-    recordDocumentSave(session, { documentId, actor: 'user', contentVersion })
+    recordDocumentSave(session, {
+      documentId,
+      actor: attribution.actor,
+      contentVersion,
+      ...attribution.turn === undefined ? {} : { turn: attribution.turn },
+    })
     documents.set(documentId, {
       binding: entry?.binding ?? createDocumentIdentity(documentId, path),
       format,
       contentVersion,
     })
     broker?.remember(documentId, contentVersion)
+  }
+
+  /**
+   * The identity this Session already tracks for one locator.
+   *
+   * The canonical id names the locator, and a rebind keeps the original id
+   * while its binding carries the new locator. Both resolve here, so a later
+   * read or save of the moved file advances the same document instead of
+   * opening a second one.
+   * @param documents - open-document table for the Session.
+   * @param canonicalId - identity derived from the current locator.
+   * @param path - workspace-relative locator.
+   * @returns the tracked identity, or `undefined` when this process has not read the file.
+   */
+  private trackedIdAt(
+    documents: Map<DocumentId, OpenDocument>,
+    canonicalId: DocumentId,
+    path: string,
+  ): DocumentId | undefined {
+    if (documents.has(canonicalId)) return canonicalId
+    for (const [documentId, entry] of documents) {
+      if (entry.binding.path === path) return documentId
+    }
+    return undefined
+  }
+
+  /**
+   * The workspace-relative locator every document consumer shares for one file.
+   *
+   * The editor tab addresses the file relative to the workspace, and the
+   * Session facts name documents by that locator. Deriving it from the confined
+   * target makes an absolute read and a relative read of the same file resolve
+   * to one `documentId`.
+   * @param scope - Session identity and workspace root on the wire.
+   * @param target - resolved target already confined to the workspace root.
+   * @returns the locator with `/` separators.
+   */
+  private identityPath(scope: WorkspaceFileScope, target: FsTarget): string {
+    const absolute = this.files().processPath(target)
+    return relative(scope.workspaceRoot, absolute).split(sep).join('/')
   }
 
   /** Require the caller to name its attachment with a non-empty id. */

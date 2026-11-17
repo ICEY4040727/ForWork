@@ -58,7 +58,7 @@ await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 <details>
 <summary>实现内部细节——点击展开</summary>
 
-`src/index.ts` 注册四个工具定义并从 `ctx.officeDocument` 构建 Host 运行时；部署上限来自经验证的插件 `Config`。`src/read.ts` 分发 `{ kind: 'read' }` 命令，并通过 `src/summary.ts` 总结返回的快照。`src/edit.ts` 拥有共享编辑路径：读取文件、从编辑前快照计算逆操作、分发 `{ kind: 'edit', steps }`，然后用命令前观察到的 filesystem 版本保存返回的快照，并追加一条 `actor: 'agent'` 的 `document/edit` 事实。`src/edit-cells.ts` 与 `src/edit-paragraph.ts` 验证各自的操作列表并构建类型化步骤；`src/convert.ts` 位于 Host 侧。`src/errors.ts` 把 Remote 与 Exchange 失败映射为模型面向的代码。
+`src/index.ts` 注册四个工具定义并从 `ctx.officeDocument` 构建 Host 运行时；部署上限来自经验证的插件 `Config`。`src/read.ts` 分发 `{ kind: 'read' }` 命令，并通过 `src/summary.ts` 总结返回的快照。`src/edit.ts` 拥有共享编辑路径：按身份中的工作区相对路径读取文件，使编辑器 tab 与打开事实保持同一个文档 id；从编辑前快照计算逆操作、分发 `{ kind: 'edit', steps }`，然后用命令前观察到的 filesystem 版本与智能体当前的打开 turn 保存返回的快照，并追加一条 `actor: 'agent'` 的 `document/edit` 事实。`src/edit-cells.ts` 与 `src/edit-paragraph.ts` 验证各自的操作列表并构建类型化步骤；`src/convert.ts` 位于 Host 侧。`src/errors.ts` 把 Remote 与 Exchange 失败映射为模型面向的代码。
 
 命令事件不携带快照。被拒绝、未应答或超时的命令不写入任何内容，也不追加编辑事实，因此只有被接受的保存才能改变持久文档内容。
 

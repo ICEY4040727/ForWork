@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 /**
  * The office tab type's registration, close veto, and mounted panel states.
  *
@@ -387,7 +387,7 @@ describe('ui-office-editor apply', () => {
     expect(face).toBeDefined()
     await face!.remote.read(SESSION_ID, 'work/budget.xlsx')
     await face!.remote.convertLegacy(SESSION_ID, 'work/legacy.doc')
-    await face!.remote.save(SESSION_ID, 'work/budget.xlsx', snapshot, 'xlsx', 'v1')
+    await face!.remote.save(SESSION_ID, 'work/budget.xlsx', snapshot, 'xlsx', 'v1', { actor: 'user' })
     await face!.remote.writeDraft(SESSION_ID, 'doc-1', 'work/budget.xlsx', 'v1', snapshot)
     await face!.remote.readDraft(SESSION_ID, 'doc-1')
     await face!.remote.clearDraft(SESSION_ID, 'doc-1')

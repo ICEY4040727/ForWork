@@ -98,8 +98,8 @@ export function apply(ctx: ClientContext): void {
       name: 'sidebar.right.pane.tab', key: OFFICE_ID, locale: NS,
       inject: () => officePanelInjected({
         read: (sessionId, path, signal) => ctx.remote.officeDocument.read(sessionId, path, signal),
-        save: (sessionId, path, snapshot, format, expectedVersion, signal) =>
-          ctx.remote.officeDocument.save(sessionId, path, snapshot, format, expectedVersion, signal),
+        save: (sessionId, path, snapshot, format, expectedVersion, attribution, signal) =>
+          ctx.remote.officeDocument.save(sessionId, path, snapshot, format, expectedVersion, attribution, signal),
         convert: (sessionId, path, signal) => ctx.remote.officeDocument.convertLegacy(sessionId, path, signal),
         writeDraft: (sessionId, documentId, documentPath, contentVersion, snapshot, signal) =>
           ctx.remote.officeDocument.writeDraft(

@@ -186,6 +186,7 @@ describe('agent write tools', () => {
       { kind: 'workbook', data: {} },
       'xlsx',
       'v1',
+      { actor: 'user' },
       SIGNAL,
     )).rejects.toMatchObject({ code: 'office-document/out-of-scope' })
   })

@@ -67,13 +67,13 @@ const undo = undoChange(record)
 
 ```text
 recordDocumentOpen(session, { documentId, path, format, contentVersion })
-recordDocumentSave(session, { documentId, actor: 'user', contentVersion })
+recordDocumentSave(session, { documentId, actor, contentVersion, turn? })
 recordDocumentRebind(session, { documentId, fromPath, toPath })
 recordDocumentMissing(session, { documentId, path })
 recordDocumentClose(session, { documentId, reason })
 ```
 
-每个助手追加一条普通 Session 事件并返回它。事实是仅追加的：之后的观察会追加新事实，而不是替换较早的事实。改动留在编辑器内的用户保存是 `document/save`；它记录作者与已发布版本，不携带操作步骤，也从不伪造逆操作。步骤已知的 agent 变更仍是 `document/edit`。
+每个助手追加一条普通 Session 事件并返回它。事实是仅追加的：之后的观察会追加新事实，而不是替换较早的事实。改动留在编辑器内的保存是 `document/save`；它记录作者（`user` 或 `agent`）、已发布版本，以及存在时的致因 turn，不携带操作步骤，也从不伪造逆操作。智能体编辑的步骤与逆操作仍留在 `document/edit`。
 
 ### 读取打开集合
 

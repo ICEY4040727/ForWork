@@ -8,6 +8,7 @@
 import type { WorkspaceFileScope } from '@forwork/api-workspace-files'
 import type {
   DocumentCommandRequest,
+  DocumentSaveAttribution,
   OfficeCommandOutcome,
   OfficeDocumentReadResult,
   OfficeDocumentSaveResult,
@@ -34,6 +35,7 @@ export interface OfficeDocumentPort {
    * @param snapshot - content to serialize.
    * @param format - target editable format.
    * @param expectedVersion - version returned by {@link read}.
+   * @param attribution - the agent that caused the save and its open turn.
    * @param signal - caller cancellation.
    * @returns the version the guarded write published.
    */
@@ -43,6 +45,7 @@ export interface OfficeDocumentPort {
     snapshot: OfficeDocumentSnapshot,
     format: OfficeFormat,
     expectedVersion: string,
+    attribution: DocumentSaveAttribution,
     signal: AbortSignal,
   ): Promise<OfficeDocumentSaveResult>
 
@@ -87,6 +90,12 @@ export interface DocumentToolRuntime {
   readonly documents: OfficeDocumentPort
   /** Live editor command transport and version observations. */
   readonly commands: DocumentCommandExecutor
+  /**
+   * The open turn of a Session, when one is running.
+   * @param session - Session whose durable turn boundary is read.
+   * @returns the turn number, or `undefined` between turns.
+   */
+  turnOf(session: Session): number | undefined
 }
 
 /** Deployment caps applied to one tool call. */

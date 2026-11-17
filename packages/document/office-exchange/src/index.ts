@@ -20,6 +20,7 @@ export { OfficeDocumentRemote, RemoteConfig } from './remote.ts'
 export { default } from './provider/index.ts'
 export type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
 export type {
+  DocumentSaveAttribution,
   EditableOfficeFormat,
   LegacyOfficeFormat,
   OfficeCommandOperation,

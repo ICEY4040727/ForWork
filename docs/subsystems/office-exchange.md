@@ -38,8 +38,8 @@ The Remote carries `OfficeDocumentSnapshot`, a JSON projection of a unit snapsho
 
 | Method | Behavior |
 |---|---|
-| `read(workspaceFileScope, path)` | Resolves `path` from the Session workspace root, confines it to that root, reads it through the filesystem seam under `maxBytes`, and returns `OfficeDocumentReadResult` (`format`, `snapshot`, `unsupported`, `version`) |
-| `save(workspaceFileScope, path, snapshot, format, expectedVersion)` | Serializes the snapshot and publishes it with a filesystem `replaceIfVersion` guard; returns `OfficeDocumentSaveResult` (`version`) |
+| `read(workspaceFileScope, path)` | Resolves `path` from the Session workspace root, confines it to that root, reads it through the filesystem seam under `maxBytes`, and returns `OfficeDocumentReadResult` (`format`, `snapshot`, `unsupported`, `version`); the open fact records the workspace-relative locator |
+| `save(workspaceFileScope, path, snapshot, format, expectedVersion, attribution)` | Serializes the snapshot and publishes it with a filesystem `replaceIfVersion` guard; returns `OfficeDocumentSaveResult` (`version`), and records `DocumentSaveAttribution` (`actor`, optional `turn`) on `document/save` |
 | `detectUnsupported(workspaceFileScope, path)` | Reports loss-prone features without returning content |
 | `convertLegacy(workspaceFileScope, path)` | Returns the path of the converted editable file in a fresh workspace-scoped directory |
 
@@ -147,6 +147,8 @@ The service is the producer of `document/*` facts for the editor: a first read a
  * Read an editable Office file into a JSON snapshot bound to its version.
  * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
  * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
+ * The recorded document identity uses the same workspace-relative locator the editor tab uses,
+ * so two spellings of one file never open two documents.
  * @param signal - caller cancellation.
  * @returns the detected format, snapshot, unsupported features, and observed version.
  * @throws RemoteError when the path is out of scope, the format is not editable, or the read fails.
@@ -160,13 +162,14 @@ The service is the producer of `document/*` facts for the editor: a first read a
  * @param snapshot - snapshot returned by {@link read}, optionally modified.
  * @param format - target editable format; it must match the snapshot kind.
  * @param expectedVersion - version returned by {@link read}; a changed file is refused.
+ * @param attribution - who caused the save and the agent turn, when one caused it.
  * @param signal - caller cancellation.
  * @returns the version the guarded write published.
  * @throws RemoteError with `office-document/unsupported-feature` when the source still at
  * `expectedVersion` contains a feature an edit-and-save would drop.
  * @throws RemoteError with `office-document/conflict` when the file changed after the read.
  */
-@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>
+@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, attribution: DocumentSaveAttribution, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>
 
 /**
  * Record that an open document left the editor.

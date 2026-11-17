@@ -42,6 +42,8 @@ export interface DocumentSaveFact {
   readonly actor: 'user' | 'agent'
   /** Document version the save published. */
   readonly contentVersion: number
+  /** Turn that caused the save, when a turn caused it. */
+  readonly turn?: number
 }
 
 /** One document that left the open set. */
@@ -88,7 +90,7 @@ export function recordDocumentOpen(session: Session, fact: DocumentOpenFact): Se
 /**
  * Append `document/save` for an accepted save with no exposed operation steps.
  * @param session - Session that owns the document.
- * @param fact - identity, author, and published content version.
+ * @param fact - identity, author, published content version, and causing turn.
  * @returns the committed `document/save` event.
  */
 export function recordDocumentSave(session: Session, fact: DocumentSaveFact): SessionEvent<'document/save'> {
@@ -96,6 +98,7 @@ export function recordDocumentSave(session: Session, fact: DocumentSaveFact): Se
     documentId: fact.documentId,
     actor: fact.actor,
     contentVersion: fact.contentVersion,
+    ...fact.turn === undefined ? {} : { turn: fact.turn },
   } satisfies DocumentSaveEventData)
 }
 

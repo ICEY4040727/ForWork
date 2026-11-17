@@ -10,6 +10,7 @@
  * @module @forwork/tool-office
  */
 
+import type {} from '@forwork/agent'
 import type { Context } from '@forwork/cordis'
 import z from '@forwork/schemastery'
 import type { DocumentCommandRequest, OfficeCommandOutcome } from '@forwork/office-exchange'
@@ -34,7 +35,7 @@ import type { DocumentToolCall, DocumentToolConfig, DocumentToolRuntime } from '
 export const name = 'tool-office'
 
 /** Services required by the Office document tools. */
-export const inject = ['tools', 'officeDocument']
+export const inject = ['agents', 'tools', 'officeDocument']
 
 /** Deployment caps for the Office document tools. */
 export interface Config {
@@ -284,6 +285,10 @@ function runtimeOf(ctx: Context): DocumentToolRuntime {
         documents.dispatchCommand(request, signal),
       currentVersion: documentId => broker?.versionOf(documentId) ?? 0,
       remember: (documentId, version) => { broker?.remember(documentId, version) },
+    },
+    turnOf: (session) => {
+      const boundary = ctx.agents.turnBoundaryOf(session)
+      return boundary.openTurnStartSeq === null ? undefined : boundary.lastTurn
     },
   }
 }

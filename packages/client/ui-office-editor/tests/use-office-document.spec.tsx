@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 /**
  * `useOfficeDocument`: reads, version-guarded saves, refusal, and external
  * changes. The Remote is a fake face; no Host service and no Univer runtime
@@ -12,6 +12,7 @@ import type { SessionId } from '@forwork/session/types'
 import { RemoteError } from '@forwork/typert-protocol'
 import type { RemoteResult } from '@forwork/typert-protocol'
 import type {
+  DocumentSaveAttribution,
   OfficeDocumentReadResult,
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,
@@ -52,6 +53,7 @@ type SaveSignature = (
   snapshot: OfficeDocumentSnapshot,
   format: OfficeFormat,
   expectedVersion: string,
+  attribution: DocumentSaveAttribution,
   signal?: AbortSignal,
 ) => Promise<RemoteResult<OfficeDocumentSaveResult>>
 

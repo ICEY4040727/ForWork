@@ -1,6 +1,6 @@
 /** The `officeDocument` Remote surface reads, saves under a version guard, and confines paths. */
 import { createHash } from 'node:crypto'
-import { copyFile, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -129,7 +129,7 @@ it('saves a modified workbook at the read version and reads the change back', as
   const read = await ctx.officeDocument.read(scope, path, signal)
   setWorkbookCell(read.snapshot, 1, 0, 'Sprocket')
 
-  const saved = await ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, signal)
+  const saved = await ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, { actor: 'user' }, signal)
   expect(saved.version).not.toBe(read.version)
 
   const reread = await ctx.officeDocument.read(scope, path, signal)
@@ -142,7 +142,7 @@ it('saves a modified document at the read version and reads the change back', as
   const read = await ctx.officeDocument.read(scope, path, signal)
   rewriteDocumentStream(read.snapshot, 'Quarterly', 'Financial')
 
-  const saved = await ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, signal)
+  const saved = await ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal)
   expect(saved.version).not.toBe(read.version)
 
   const reread = await ctx.officeDocument.read(scope, path, signal)
@@ -155,7 +155,7 @@ it('refuses a stale save as a conflict and leaves the file unchanged', async () 
   setWorkbookCell(read.snapshot, 1, 0, 'Sprocket')
 
   await writeFile(join(root, path), 'external change')
-  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, signal))
+  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, { actor: 'user' }, signal))
     .rejects.toMatchObject({ code: 'office-document/conflict' })
   expect(await readFile(join(root, path), 'utf8')).toBe('external change')
 })
@@ -165,7 +165,7 @@ it('refuses a save whose file disappeared as a conflict', async () => {
   const read = await ctx.officeDocument.read(scope, path, signal)
   setWorkbookCell(read.snapshot, 1, 0, 'Sprocket')
   await rm(join(root, path))
-  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, signal))
+  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, { actor: 'user' }, signal))
     .rejects.toMatchObject({ code: 'office-document/conflict' })
 })
 
@@ -178,7 +178,7 @@ it('refuses reads and saves outside the workspace root', async () => {
       .rejects.toMatchObject({ code: 'office-document/out-of-scope' })
 
     const snapshot: OfficeDocumentSnapshot = { kind: 'workbook', data: {} }
-    await expect(ctx.officeDocument.save(scope, path, snapshot, 'xlsx', 'version', signal))
+    await expect(ctx.officeDocument.save(scope, path, snapshot, 'xlsx', 'version', { actor: 'user' }, signal))
       .rejects.toMatchObject({ code: 'office-document/out-of-scope' })
   } finally {
     await rm(outside, { recursive: true, force: true })
@@ -264,12 +264,57 @@ it('appends document/save with the user actor and the next content version', asy
   const path = await copyFixture('roundtrip.xlsx')
   const read = await ctx.officeDocument.read(scope, path, signal)
   setWorkbookCell(read.snapshot, 1, 0, 'Sprocket')
-  await ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, signal)
+  await ctx.officeDocument.save(scope, path, read.snapshot, 'xlsx', read.version, { actor: 'user' }, signal)
 
   const saves = events.filter(event => event.type === 'document/save')
   expect(saves).toHaveLength(1)
   expect(saves[0]?.data).toEqual({
     documentId: documentIdOf(path),
+    actor: 'user',
+    contentVersion: 1,
+  })
+})
+
+it('keeps one document identity when the same file is read and saved by different paths', async () => {
+  const path = await copyFixture('roundtrip.xlsx')
+  const read = await ctx.officeDocument.read(scope, path, signal)
+  await ctx.officeDocument.read(scope, join(root, path), signal)
+  setWorkbookCell(read.snapshot, 1, 0, 'Sprocket')
+  await ctx.officeDocument.save(
+    scope, join(root, path), read.snapshot, 'xlsx', read.version, { actor: 'agent', turn: 3 }, signal,
+  )
+
+  const opens = events.filter(event => event.type === 'document/open')
+  expect(opens).toHaveLength(1)
+  expect(opens[0]?.data).toMatchObject({ documentId: documentIdOf(path), path })
+  const saves = events.filter(event => event.type === 'document/save')
+  expect(saves).toHaveLength(1)
+  expect(saves[0]?.data).toEqual({
+    documentId: documentIdOf(path),
+    actor: 'agent',
+    contentVersion: 1,
+    turn: 3,
+  })
+})
+
+it('keeps same-named files in different directories as distinct documents', async () => {
+  await mkdir(join(root, 'a'))
+  await mkdir(join(root, 'b'))
+  await copyFile(join(FIXTURES, 'roundtrip.xlsx'), join(root, 'a', 'report.xlsx'))
+  await copyFile(join(FIXTURES, 'roundtrip.xlsx'), join(root, 'b', 'report.xlsx'))
+  const first = await ctx.officeDocument.read(scope, 'a/report.xlsx', signal)
+  await ctx.officeDocument.read(scope, 'b/report.xlsx', signal)
+  await ctx.officeDocument.save(scope, 'a/report.xlsx', first.snapshot, 'xlsx', first.version, { actor: 'user' }, signal)
+
+  const opens = events.filter(event => event.type === 'document/open')
+  expect(opens.map(event => event.data.documentId)).toEqual([
+    documentIdOf('a/report.xlsx'),
+    documentIdOf('b/report.xlsx'),
+  ])
+  const saves = events.filter(event => event.type === 'document/save')
+  expect(saves).toHaveLength(1)
+  expect(saves[0]?.data).toEqual({
+    documentId: documentIdOf('a/report.xlsx'),
     actor: 'user',
     contentVersion: 1,
   })
@@ -303,6 +348,24 @@ it('rebinds a moved document without changing its identity', async () => {
     toPath: 'renamed.xlsx',
   })
   expect(events.filter(event => event.type === 'document/open')[0]).toBe(open)
+})
+
+it('saves a rebound document under the identity the rebind preserved', async () => {
+  const path = await copyFixture('roundtrip.xlsx')
+  await copyFile(join(root, path), join(root, 'renamed.xlsx'))
+  await ctx.officeDocument.read(scope, path, signal)
+  await ctx.officeDocument.rebindDocument(scope, documentIdOf(path), 'renamed.xlsx', signal)
+
+  const moved = await ctx.officeDocument.read(scope, 'renamed.xlsx', signal)
+  setWorkbookCell(moved.snapshot, 1, 0, 'Sprocket')
+  await ctx.officeDocument.save(
+    scope, 'renamed.xlsx', moved.snapshot, 'xlsx', moved.version, { actor: 'user' }, signal,
+  )
+
+  expect(events.filter(event => event.type === 'document/open')).toHaveLength(1)
+  const saves = events.filter(event => event.type === 'document/save')
+  expect(saves).toHaveLength(1)
+  expect(saves[0]?.data).toEqual({ documentId: documentIdOf(path), actor: 'user', contentVersion: 1 })
 })
 
 it('refuses a rebind outside the workspace root', async () => {

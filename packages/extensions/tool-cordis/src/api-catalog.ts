@@ -2183,14 +2183,14 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       {
         signature: '@Remote async read( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<OfficeDocumentReadResult>',
         description: 'Read an editable Office file into a JSON snapshot bound to its version.',
-        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'signal', description: 'caller cancellation.' }],
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root. The recorded document identity uses the same workspace-relative locator the editor tab uses, so two spellings of one file never open two documents.' }, { name: 'signal', description: 'caller cancellation.' }],
         returns: 'the detected format, snapshot, unsupported features, and observed version.',
         throws: ['RemoteError when the path is out of scope, the format is not editable, or the read fails.'],
       },
       {
-        signature: '@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>',
+        signature: '@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, attribution: DocumentSaveAttribution, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>',
         description: 'Serialize a snapshot and replace the file only at the caller\'s version.',
-        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'snapshot', description: 'snapshot returned by {@link read}, optionally modified.' }, { name: 'format', description: 'target editable format; it must match the snapshot kind.' }, { name: 'expectedVersion', description: 'version returned by {@link read}; a changed file is refused.' }, { name: 'signal', description: 'caller cancellation.' }],
+        parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'snapshot', description: 'snapshot returned by {@link read}, optionally modified.' }, { name: 'format', description: 'target editable format; it must match the snapshot kind.' }, { name: 'expectedVersion', description: 'version returned by {@link read}; a changed file is refused.' }, { name: 'attribution', description: 'who caused the save and the agent turn, when one caused it.' }, { name: 'signal', description: 'caller cancellation.' }],
         returns: 'the version the guarded write published.',
         throws: ['RemoteError with `office-document/unsupported-feature` when the source still at `expectedVersion` contains a feature an edit-and-save would drop.', 'RemoteError with `office-document/conflict` when the file changed after the read.'],
       },
@@ -6496,6 +6496,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'DocumentRowEdit',
     declaration: 'export interface DocumentRowEdit {\n    readonly sheetId: string;\n    readonly row: number;\n    readonly count: number;\n    readonly action: \'insert\' | \'delete\';\n}',
+  },
+  {
+    name: 'DocumentSaveAttribution',
+    declaration: 'export interface DocumentSaveAttribution {\n    readonly actor: \'user\' | \'agent\';\n    readonly turn?: number;\n}',
   },
   {
     name: 'DocumentStyleEdit',

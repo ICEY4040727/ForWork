@@ -38,8 +38,8 @@ Remote 携带 `OfficeDocumentSnapshot`，即单元快照的 JSON 投影：`{ kin
 
 | 方法 | 行为 |
 |---|---|
-| `read(workspaceFileScope, path)` | 从 Session 工作区根解析 `path`，将其限制在该根内，通过文件系统 seam 在 `maxBytes` 限制下读取，并返回 `OfficeDocumentReadResult`（`format`、`snapshot`、`unsupported`、`version`） |
-| `save(workspaceFileScope, path, snapshot, format, expectedVersion)` | 序列化快照并通过文件系统的 `replaceIfVersion` 守卫发布；返回 `OfficeDocumentSaveResult`（`version`） |
+| `read(workspaceFileScope, path)` | 从 Session 工作区根解析 `path`，将其限制在该根内，通过文件系统 seam 在 `maxBytes` 限制下读取，并返回 `OfficeDocumentReadResult`（`format`、`snapshot`、`unsupported`、`version`）；打开事实记录工作区相对定位符 |
+| `save(workspaceFileScope, path, snapshot, format, expectedVersion, attribution)` | 序列化快照并通过文件系统的 `replaceIfVersion` 守卫发布；返回 `OfficeDocumentSaveResult`（`version`），并在 `document/save` 上记录 `DocumentSaveAttribution`（`actor` 与可选 `turn`） |
 | `detectUnsupported(workspaceFileScope, path)` | 报告易丢失特性而不返回内容 |
 | `convertLegacy(workspaceFileScope, path)` | 返回位于全新工作区作用域目录中的转换后可编辑文件路径 |
 
@@ -147,6 +147,8 @@ The service is the producer of `document/*` facts for the editor: a first read a
  * Read an editable Office file into a JSON snapshot bound to its version.
  * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
  * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
+ * The recorded document identity uses the same workspace-relative locator the editor tab uses,
+ * so two spellings of one file never open two documents.
  * @param signal - caller cancellation.
  * @returns the detected format, snapshot, unsupported features, and observed version.
  * @throws RemoteError when the path is out of scope, the format is not editable, or the read fails.
@@ -160,13 +162,14 @@ The service is the producer of `document/*` facts for the editor: a first read a
  * @param snapshot - snapshot returned by {@link read}, optionally modified.
  * @param format - target editable format; it must match the snapshot kind.
  * @param expectedVersion - version returned by {@link read}; a changed file is refused.
+ * @param attribution - who caused the save and the agent turn, when one caused it.
  * @param signal - caller cancellation.
  * @returns the version the guarded write published.
  * @throws RemoteError with `office-document/unsupported-feature` when the source still at
  * `expectedVersion` contains a feature an edit-and-save would drop.
  * @throws RemoteError with `office-document/conflict` when the file changed after the read.
  */
-@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>
+@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, attribution: DocumentSaveAttribution, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>
 
 /**
  * Record that an open document left the editor.

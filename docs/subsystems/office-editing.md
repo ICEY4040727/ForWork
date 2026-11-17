@@ -34,16 +34,16 @@ The editor reloads a clean tab when the file changes externally and prompts befo
 | Flow | Sequence |
 |---|---|
 | open | `officeDocument.read` returns the format, snapshot, unsupported features, and file version to the editor adapter; the first read of a document in this process appends `document/open` once |
-| user save | the dirty unit calls `officeDocument.save` with its read version; the guarded write appends `document/save` |
+| user save | the dirty unit calls `officeDocument.save` with its read version and the `user` actor; the guarded write appends `document/save` |
 | agent read | `document_read` dispatches a `read` command through `officeCommandBroker`; the live tab answers with its snapshot and numeric version, and the tool returns a bounded summary |
-| agent edit | the tool reads the file to compute the inverse, dispatches the steps as one command, and after an `applied` answer performs one guarded save, which appends `document/save`, and appends `document/edit` with the steps and inverse, then reports the new numeric version |
+| agent edit | the tool reads the file at the identity's workspace-relative path to compute the inverse, dispatches the steps as one command, and after an `applied` answer performs one guarded save with the `agent` actor and open turn, which appends `document/save`, and appends `document/edit` with the steps and inverse, then reports the new numeric version |
 | legacy open | `convertLegacy` writes an editable copy under `.dsh/office-tmp/`; the tab opens the copy with a notice, and the original stays unchanged |
 | draft recovery | an idle dirty unit calls `writeDraft`; the next open calls `readDraft` and applies the recovery decision |
 | restore | the cached `document` projection supplies `restoreSet`, and the tabs reopen in projection order; a missing document is reported in a notice |
 
 ## Session facts and the document projection
 
-Seven `document/*` events carry the durable record: `open`, `save`, `edit`, `rebind`, `missing`, `close`, and `command`. They are append-only. `document/command` records a request, not a change; every accepted write appends `document/save`, and an accepted agent change also appends `document/edit` with its exact inverse. `session-document` defines the payloads and the fact writers.
+Seven `document/*` events carry the durable record: `open`, `save`, `edit`, `rebind`, `missing`, `close`, and `command`. They are append-only. `document/command` records a request, not a change; every accepted write appends `document/save` with its actor and any causing turn, and an accepted agent change also appends `document/edit` with its exact inverse. The open identity is the workspace-relative locator, so an absolute and a relative spelling of one file are one document. `session-document` defines the payloads and the fact writers.
 
 The `document` projection folds those facts into `{ order, documents }`: the display order and one entry per open document with its identity, current path, format, numeric content version, `open` or `missing` status, and unsupported features. `document/open` inserts or updates an entry, save and edit advance its version, rebind replaces the path, missing marks it unavailable, and close removes it; an unrelated event returns the same state reference. The plugin also renders the open set as a prompt section and exposes `restoreSet` and `recoveryDecision` to the Client. [Session Projection](session-projection.md) owns the projection seam, and the [persistence catalog](../persistence-catalog.md) carries the generated event types.
 
@@ -59,7 +59,7 @@ Restore runs once per Session per window, triggered either by the first Office b
 
 The read and edit tools never change the live unit directly. A read dispatches a `read` command; an edit first reads the file through `officeDocument.read` to compute the inverse, then dispatches the steps. The provider's `officeCommandBroker` appends one `document/command` and waits for the live tab, which answers exactly once with `read`, `applied`, `pending-edits`, `conflict`, `unsupported-feature`, or `document-not-open`. A request that times out writes nothing. The broker accepts an answer only for the Session that recorded the request, and it ignores and logs an unknown, late, or foreign answer.
 
-An accepted agent edit saves once. The tool verifies that the editor's numeric version is `fromVersion + 1`, saves the returned snapshot with the file version observed before the command, and appends `document/edit` with `actor: 'agent'`, the steps, and the inverse. A refusal leaves the file and the log unchanged. [tool-office](../../packages/document/tool-office/README.md) lists the model-visible result codes.
+An accepted agent edit saves once. The tool verifies that the editor's numeric version is `fromVersion + 1`, saves the returned snapshot with the file version observed before the command, records the save as `actor: 'agent'` with the open turn, and appends `document/edit` with the steps and the inverse. A refusal leaves the file and the log unchanged. [tool-office](../../packages/document/tool-office/README.md) lists the model-visible result codes.
 
 ## Drafts and recovery
 

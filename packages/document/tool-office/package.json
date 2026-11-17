@@ -34,6 +34,7 @@
     "@forwork/util-values": "workspace:*"
   },
   "peerDependencies": {
+    "@forwork/agent": "workspace:*",
     "@forwork/cordis": "workspace:~",
     "@forwork/api-workspace-files": "workspace:*",
     "@forwork/office-exchange": "workspace:*",

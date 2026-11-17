@@ -316,7 +316,7 @@ describe('document lifecycle edges', () => {
     await harness.ctx.officeDocument.closeDocument(harness.scope, documentIdFor(harness.scope.sessionId, path), 'closed', signal)
     const events = sessionEvents(harness)
 
-    await harness.ctx.officeDocument.save(harness.scope, path, read.snapshot, 'xlsx', read.version, signal)
+    await harness.ctx.officeDocument.save(harness.scope, path, read.snapshot, 'xlsx', read.version, { actor: 'user' }, signal)
 
     expect(events.filter(event => event.type === 'document/open')).toHaveLength(1)
     expect(events.filter(event => event.type === 'document/save')).toHaveLength(1)
@@ -390,7 +390,7 @@ describe('save validation', () => {
     const harness = await localHarness()
 
     await expect(harness.ctx.officeDocument.save(
-      harness.scope, 'budget.xlsx', { kind: 'document', data: {} }, 'xlsx', 'v1', signal,
+      harness.scope, 'budget.xlsx', { kind: 'document', data: {} }, 'xlsx', 'v1', { actor: 'user' }, signal,
     )).rejects.toMatchObject({ code: 'office-document/conversion-failed' })
   })
 
@@ -398,7 +398,7 @@ describe('save validation', () => {
     const harness = await localHarness()
 
     await expect(harness.ctx.officeDocument.save(
-      harness.scope, 'report.docx', { kind: 'workbook', data: {} }, 'docx', 'v1', signal,
+      harness.scope, 'report.docx', { kind: 'workbook', data: {} }, 'docx', 'v1', { actor: 'user' }, signal,
     )).rejects.toMatchObject({ code: 'office-document/conversion-failed' })
   })
 
@@ -407,7 +407,7 @@ describe('save validation', () => {
       const harness = await localHarness()
 
       await expect(harness.ctx.officeDocument.save(
-        harness.scope, 'budget.xlsx', { kind: 'workbook', data: {} }, format, 'v1', signal,
+        harness.scope, 'budget.xlsx', { kind: 'workbook', data: {} }, format, 'v1', { actor: 'user' }, signal,
       )).rejects.toMatchObject({ code: 'office-document/unsupported-format' })
     })
   }
@@ -416,7 +416,7 @@ describe('save validation', () => {
     const harness = await localHarness()
 
     await expect(harness.ctx.officeDocument.save(
-      harness.scope, 'budget.xlsx', { kind: 'workbook', data: [] }, 'xlsx', 'v1', signal,
+      harness.scope, 'budget.xlsx', { kind: 'workbook', data: [] }, 'xlsx', 'v1', { actor: 'user' }, signal,
     )).rejects.toMatchObject({ code: 'office-document/conversion-failed' })
   })
 
@@ -424,7 +424,7 @@ describe('save validation', () => {
     const harness = await localHarness()
 
     await expect(harness.ctx.officeDocument.save(
-      harness.scope, 'report.docx', { kind: 'document', data: [] }, 'docx', 'v1', signal,
+      harness.scope, 'report.docx', { kind: 'document', data: [] }, 'docx', 'v1', { actor: 'user' }, signal,
     )).rejects.toMatchObject({ code: 'office-document/conversion-failed' })
   })
 
@@ -435,7 +435,7 @@ describe('save validation', () => {
     const read = await harness.ctx.officeDocument.read(harness.scope, path, signal)
     await harness.ctx.officeDocument.closeDocument(harness.scope, documentIdFor(harness.scope.sessionId, path), 'closed', signal)
 
-    await expect(harness.ctx.officeDocument.save(harness.scope, path, read.snapshot, 'xlsx', read.version, signal))
+    await expect(harness.ctx.officeDocument.save(harness.scope, path, read.snapshot, 'xlsx', read.version, { actor: 'user' }, signal))
       .resolves.toMatchObject({ version: expect.any(String) })
   })
 })

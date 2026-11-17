@@ -97,6 +97,19 @@ export interface OfficeDocumentSaveResult {
 }
 
 /**
+ * Who caused one save and, for an agent command, the turn it ran in.
+ *
+ * The client's user save passes `actor: 'user'`; an agent tool passes
+ * `actor: 'agent'` with the open turn of the Session it is acting for.
+ */
+export interface DocumentSaveAttribution {
+  /** Who authorized the save; the Session fact actor is `user` or `agent`. */
+  readonly actor: 'user' | 'agent'
+  /** Turn that caused the save, when a turn exists. */
+  readonly turn?: number
+}
+
+/**
  * One recovery draft persisted for an open document. The snapshot is bound to
  * the file version it was captured from, so a restart can tell a current draft
  * from one based on an older file.

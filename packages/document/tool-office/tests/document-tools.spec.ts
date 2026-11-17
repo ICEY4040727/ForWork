@@ -266,6 +266,35 @@ describe('document_edit_cells', () => {
     expect(cellValue(reread.snapshot, sheetId, 1, 0)).toBe('Sprocket')
   })
 
+  it('attributes its guarded save to the agent and the open turn without opening twice', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const read = await readWorkbook(path)
+    const sheetId = firstSheet(read.snapshot)
+    h.agent.session.append('turn/start', { turn: 3 })
+    vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async request => ({
+      status: 'applied',
+      snapshot: withCell(read.snapshot, sheetId, 1, 0, 'Sprocket'),
+      contentVersion: request.fromVersion + 1,
+    }))
+
+    const result = objectOf(await call('document_edit_cells', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [{ sheetId, row: 1, column: 0, value: 'Sprocket' }],
+    }))
+
+    expect(result['status']).toBe('ok')
+    expect(h.events.filter(event => event.type === 'document/open')).toHaveLength(1)
+    const saves = h.events.filter(event => event.type === 'document/save')
+    expect(saves).toHaveLength(1)
+    expect(saves[0]?.data).toEqual({
+      documentId: documentIdFor(h, path),
+      actor: 'agent',
+      contentVersion: 1,
+      turn: 3,
+    })
+  })
+
   it('restores a prior formula in the inverse', async () => {
     const path = await h.copy('roundtrip.xlsx')
     const base = await readWorkbook(path)
@@ -669,6 +698,7 @@ describe('execution context', () => {
         currentVersion: () => 0,
         remember: () => {},
       },
+      turnOf: () => undefined,
     }
     await expect(executeDocumentTool(
       { name: 'document_read', documentId: 'x' },
@@ -683,6 +713,7 @@ describe('execution context', () => {
     const runtime: DocumentToolRuntime = {
       documents: h.server,
       commands: { execute: vi.fn(), currentVersion: () => 0, remember: () => {} },
+      turnOf: () => undefined,
     }
     registerDocumentTools({ register: (definition) => { registered.push(definition) } }, runtime, {
       summaryCells: 10,

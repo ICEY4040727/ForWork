@@ -213,11 +213,12 @@ export interface DocumentOpenEventData {
  * Payload of `document/save`: one accepted save that carried no structured
  * operation.
  *
- * The editor runtime owns the user's in-memory changes: a user save writes the
- * live unit without exposing individual steps to the Host. The fact therefore
- * records the author and the document version the save published instead of an
- * operation. An agent change stays `document/edit`, whose steps and inverse are
- * known. A user save never fabricates an inverse.
+ * The editor runtime owns in-memory changes: a save writes the live unit
+ * without exposing individual steps to the Host. The fact therefore records the
+ * author and the document version the save published instead of an operation.
+ * An agent edit's steps and inverse stay in `document/edit`, its guarded save
+ * appends this fact with `actor: 'agent'`, and `turn` names the causing turn
+ * when one exists. A save never fabricates an inverse.
  */
 export interface DocumentSaveEventData {
   /** Stable identity of the saved document. */

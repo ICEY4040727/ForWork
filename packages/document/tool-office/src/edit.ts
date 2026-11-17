@@ -142,7 +142,9 @@ export async function runEdit<T>(
     }
     const target = documentTarget(documentId, call.session.id, call.scope.workspaceRoot)
     await confinePath(target.absolutePath, call.scope.workspaceRoot)
-    const read = await call.runtime.documents.read(call.scope, target.absolutePath, call.signal)
+    // The id path is the locator the editor tab and the open fact already use;
+    // reading the absolute target instead would mint a second document id.
+    const read = await call.runtime.documents.read(call.scope, target.path, call.signal)
     if (read.unsupported.length > 0) {
       return failure('unsupported-feature', `"${documentId}" contains features the editor cannot preserve.`, {
         features: read.unsupported,
@@ -179,12 +181,14 @@ async function settleEdit<T>(
           `The editor applied the edit at version ${fromVersion} but reported ${outcome.contentVersion}.`,
         )
       }
+      const turn = call.runtime.turnOf(call.session)
       await call.runtime.documents.save(
         call.scope,
-        target.absolutePath,
+        target.path,
         outcome.snapshot,
         read.format,
         read.version,
+        { actor: 'agent', ...turn === undefined ? {} : { turn } },
         call.signal,
       )
       call.session.append('document/edit', {

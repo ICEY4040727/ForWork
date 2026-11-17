@@ -71,8 +71,8 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 
 该 Remote 从请求头派生的作用域解析实时 Session，并在其中记录 `document/*` 事实；`session-document` 插件把它们折叠为打开集合。
 
-- `read(workspaceFileScope, path)` 从 Session 的工作区根解析路径，用 `assertWithinRoots` 限制范围，在提供方的 `maxFileBytes` 边界内通过 filesystem seam 读取，并返回 `{ format, snapshot, unsupported, version }`。本进程中某文档的第一次读取会追加一次 `document/open`；之后的读取不更新任何事实。
-- `save(workspaceFileScope, path, snapshot, format, expectedVersion)` 在写入前通过 Exchange 重新检测当前源文件，若编辑并保存会丢失某个特性，则以 `office-document/unsupported-feature` 拒绝并指出第一个特性。否则通过提供方序列化快照，并以 filesystem `replaceIfVersion` 守卫发布。自读取以来发生变化的文件会以 `office-document/conflict` 拒绝；写入从不退化为无条件保存。被接受的保存追加带 `actor: 'user'` 与下一内容版本的 `document/save`；内存中的用户改动留在编辑器内，因此不记录操作步骤或逆操作。
+- `read(workspaceFileScope, path)` 从 Session 的工作区根解析路径，用 `assertWithinRoots` 限制范围，在提供方的 `maxFileBytes` 边界内通过 filesystem seam 读取，并返回 `{ format, snapshot, unsupported, version }`。本进程中某文档的第一次读取会追加一次 `document/open`；之后的读取不更新任何事实。打开事实记录工作区相对定位符，因此同一文件的绝对与相对拼写共享同一个文档身份。
+- `save(workspaceFileScope, path, snapshot, format, expectedVersion, attribution)` 在写入前通过 Exchange 重新检测当前源文件，若编辑并保存会丢失某个特性，则以 `office-document/unsupported-feature` 拒绝并指出第一个特性。否则通过提供方序列化快照，并以 filesystem `replaceIfVersion` 守卫发布。自读取以来发生变化的文件会以 `office-document/conflict` 拒绝；写入从不退化为无条件保存。被接受的保存追加带 `attribution.actor`（编辑器保存为 `user`，文档工具为 `agent`）与下一内容版本的 `document/save`；智能体在 turn 内保存时还会记录 `attribution.turn`。内存中的改动留在编辑器内，因此不记录操作步骤或逆操作。
 - `closeDocument(workspaceFileScope, documentId, reason)` 追加 `document/close`，并丢弃进程本地的打开条目。Host 重启后关闭的 tab 仍会留下持久事实。
 - `rebindDocument(workspaceFileScope, documentId, toPath)` 追加 `document/rebind` 并保留身份；旧路径与新路径都必须解析到工作区根内。
 - `markDocumentMissing(workspaceFileScope, documentId)` 追加一次 `document/missing` 并保持文档打开；之后的保存、编辑或重绑会把它重新标记为可用。

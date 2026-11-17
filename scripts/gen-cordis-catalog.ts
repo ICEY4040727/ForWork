@@ -370,6 +370,7 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   UnsupportedFeature: 'office-exchange.md',
   OfficeDocumentReadResult: 'office-exchange.md',
   OfficeDocumentSaveResult: 'office-exchange.md',
+  DocumentSaveAttribution: 'office-exchange.md',
   OfficeDocumentSnapshot: 'office-exchange.md',
   OfficeDocumentDraft: 'office-exchange.md',
   OfficeDocumentDraftWriteResult: 'office-exchange.md',

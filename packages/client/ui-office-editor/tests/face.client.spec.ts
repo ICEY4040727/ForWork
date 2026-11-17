@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 /** The panel's injected face binds the Remote, the adapter, and the shared tab state. */
 import { describe, expect, it, vi } from 'vitest'
 import { brandString } from '@forwork/brand'
@@ -37,7 +37,7 @@ describe('officePanelInjected', () => {
     })
     await face.remote.read(brandString<SessionId>('s-1'), 'work/budget.xlsx')
     await face.remote.convertLegacy(brandString<SessionId>('s-1'), 'work/legacy.doc')
-    await face.remote.save(brandString<SessionId>('s-1'), 'work/budget.xlsx', snapshot, 'xlsx', 'v1')
+    await face.remote.save(brandString<SessionId>('s-1'), 'work/budget.xlsx', snapshot, 'xlsx', 'v1', { actor: 'user' })
     await face.remote.writeDraft(brandString<SessionId>('s-1'), 'doc', 'work/budget.xlsx', 'v1', snapshot)
     await face.remote.readDraft(brandString<SessionId>('s-1'), 'doc')
     await face.remote.clearDraft(brandString<SessionId>('s-1'), 'doc')

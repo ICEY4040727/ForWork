@@ -87,6 +87,20 @@ describe('document facts', () => {
     }
   })
 
+  it('records the causing turn only when the save has one', async () => {
+    const { ctx, session, events } = await mount()
+    try {
+      recordDocumentSave(session, { documentId: DOCUMENT, actor: 'agent', contentVersion: 1, turn: 2 })
+      recordDocumentSave(session, { documentId: DOCUMENT, actor: 'user', contentVersion: 2 })
+
+      expect(events[0]?.data).toEqual({ documentId: DOCUMENT, actor: 'agent', contentVersion: 1, turn: 2 })
+      expect(events[1]?.data).toEqual({ documentId: DOCUMENT, actor: 'user', contentVersion: 2 })
+      expect(events[1]?.data).not.toHaveProperty('turn')
+    } finally {
+      await ctx.fiber.dispose()
+    }
+  })
+
   it('builds the identity the client and tools share', () => {
     expect(documentIdFor(SessionId('facts'), 'report.docx')).toBe(DOCUMENT)
   })

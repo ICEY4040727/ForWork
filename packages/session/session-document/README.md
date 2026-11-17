@@ -67,13 +67,13 @@ const undo = undoChange(record)
 
 ```text
 recordDocumentOpen(session, { documentId, path, format, contentVersion })
-recordDocumentSave(session, { documentId, actor: 'user', contentVersion })
+recordDocumentSave(session, { documentId, actor, contentVersion, turn? })
 recordDocumentRebind(session, { documentId, fromPath, toPath })
 recordDocumentMissing(session, { documentId, path })
 recordDocumentClose(session, { documentId, reason })
 ```
 
-Each helper appends one ordinary Session event and returns it. Facts are append-only: a later observation appends a new fact instead of replacing an earlier one. A user save whose changes stayed in the editor is `document/save`; it records the author and published version, carries no operation steps, and never fabricates an inverse. An agent change with known steps stays `document/edit`.
+Each helper appends one ordinary Session event and returns it. Facts are append-only: a later observation appends a new fact instead of replacing an earlier one. A save whose changes stayed in the editor is `document/save`; it records the author (`user` or `agent`), the published version, and the causing turn when one exists, carries no operation steps, and never fabricates an inverse. An agent edit's steps and inverse stay in `document/edit`.
 
 ### Read the open set
 

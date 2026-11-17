@@ -80,7 +80,7 @@ it('refuses a save whose source still reports unsupported content', async () => 
   expect(read.unsupported.map(feature => feature.kind)).toContain('macro')
   const before = await readFile(join(root, path))
 
-  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, signal))
+  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal))
     .rejects.toMatchObject({
       code: 'office-document/unsupported-feature',
       message: expect.stringContaining('macro'),
@@ -100,7 +100,7 @@ for (const [fixture, kind] of [
     expect(read.unsupported.map(feature => feature.kind)).toContain(kind)
     const before = await readFile(join(root, path))
 
-    await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, signal))
+    await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal))
       .rejects.toMatchObject({
         code: 'office-document/unsupported-feature',
         message: expect.stringContaining(kind),
@@ -115,7 +115,7 @@ it('appends no document/save for a refused save', async () => {
   const path = await copyFixture('unsupported-macro.docx')
   const read = await ctx.officeDocument.read(scope, path, signal)
 
-  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, signal))
+  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal))
     .rejects.toMatchObject({ code: 'office-document/unsupported-feature' })
 
   expect(events.filter(event => event.type === 'document/open')).toHaveLength(1)
@@ -131,7 +131,7 @@ it('saves a supported source and advances the file and content versions', async 
   const body = jsonObject(jsonObject(read.snapshot.data)['body'])
   body['dataStream'] = documentStream(read.snapshot).replace('Quarterly', 'Financial')
 
-  const saved = await ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, signal)
+  const saved = await ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal)
 
   expect(saved.version).not.toBe(read.version)
   expect(hashOf(await readFile(join(root, path)))).not.toBe(hashOf(before))
