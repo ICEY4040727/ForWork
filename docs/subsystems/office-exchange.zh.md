@@ -22,7 +22,7 @@
 | `.doc`、`.xls`、`.ppt` | 旧格式：`convertLegacy` 生成可编辑文件；对原文件调用 `read` 以 `unsupported-format` 拒绝 |
 | `.pptx` | 仅预览：`detectUnsupported` 可检查；`read` 与 `write` 以 `unsupported-format` 拒绝 |
 
-`UnitSnapshot` 是编辑器原生的可序列化快照，是以 `{ kind: 'workbook', data: IWorkbookData }` 与 `{ kind: 'document', data: IDocumentData }` 构成的可辨识联合。`read` 返回 `ExchangeReadResult`，包含检测到的 `format`、解析出的 `snapshot`，以及一次编辑并保存会丢失的全部 `UnsupportedFeature`。每个 `UnsupportedFeature` 携带 `kind`——`macro`、`tracked-changes`、`comment`、`chart`、`drawing`、`shape`、`image`、`hyperlink`、`conditional-formatting`、`data-validation`、`formula-recalc`、`embedded-object` 或 `other`——以及可选的、面向人类的 `detail`。非空列表意味着写入路径必须拒绝，而不是保存有损文件。
+`UnitSnapshot` 是编辑器原生的可序列化快照，是以 `{ kind: 'workbook', data: IWorkbookData }` 与 `{ kind: 'document', data: IDocumentData }` 构成的可辨识联合。`read` 返回 `ExchangeReadResult`，包含检测到的 `format`、解析出的 `snapshot`，以及一次编辑并保存会丢失的全部 `UnsupportedFeature`。每个 `UnsupportedFeature` 携带 `kind`——`macro`、`tracked-changes`、`comment`、`chart`、`drawing`、`shape`、`formula-recalc`、`embedded-object` 或 `other`——以及可选的、面向人类的 `detail`。非空列表意味着写入路径必须拒绝，而不是保存有损文件。
 
 `formatOf(path)` 按扩展名分类路径，`isEditableFormat` 收窄到 `docx`/`xlsx`，`isLegacyFormat` 收窄到 `doc`/`xls`/`ppt`。
 

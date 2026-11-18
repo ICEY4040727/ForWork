@@ -61,10 +61,6 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
   shape: 'feature.shape',
   'formula-recalc': 'feature.formulaRecalc',
   'embedded-object': 'feature.embeddedObject',
-  image: 'feature.image',
-  hyperlink: 'feature.hyperlink',
-  'conditional-formatting': 'feature.conditionalFormatting',
-  'data-validation': 'feature.dataValidation',
   other: 'feature.other',
 }
 

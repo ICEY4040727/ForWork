@@ -10223,7 +10223,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'UnsupportedFeatureKind',
-    declaration: 'export type UnsupportedFeatureKind = \'macro\' | \'tracked-changes\' | \'comment\' | \'chart\' | \'drawing\' | \'shape\' | \'image\' | \'hyperlink\' | \'conditional-formatting\' | \'data-validation\' | \'formula-recalc\' | \'embedded-object\' | \'other\';',
+    declaration: 'export type UnsupportedFeatureKind = \'macro\' | \'tracked-changes\' | \'comment\' | \'chart\' | \'drawing\' | \'shape\' | \'formula-recalc\' | \'embedded-object\' | \'other\';',
   },
   {
     name: 'UpdateBundleOptions',

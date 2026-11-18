@@ -61,9 +61,11 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 `read` 与 `detectUnsupported` 报告每一项在编辑并保存后会丢失的内容；列表非空时拒绝保存，而不是写入有损文件。
 
 - 文档：宏、修订记录、批注、图表、绘图、形状与嵌入对象。
-- 工作簿：图表、绘图、批注、宏、嵌入对象、工作表图片（`xl/media/`）、条件格式、数据验证，以及单元格超链接目标。
+- 工作簿：图表、批注部件与非图片绘图部件、宏与嵌入对象。
 
 文字格式（字体、字号、颜色、突出显示或底纹、删除线、全大写、小型大写、垂直对齐、各种下划线以及文字边框）、段落格式（对齐、间距、行距、缩进、制表位、大纲级别、底纹以及段落边框）、`word/styles.xml` 的文档默认值、粗体、斜体、下划线、标题样式、节页面设置（页面大小、方向、页边距、页眉/页脚距离、分栏以及分节类型）、带默认、首页与偶数页引用的页眉和页脚文字、带 `word/numbering.xml` 定义与逐段 `w:numPr` 的列表、带外部关系目标或 `w:anchor` 书签的超链接、表格结构（合并单元格、单元格边框、底纹、垂直对齐与边距、行高与标题行重复、表格宽度、对齐、缩进与布局，以及单元格内的嵌套表格）、数字格式、填充、工作簿单元格边框、水平与垂直对齐、自动换行与缩小字体填充、文字旋转、删除线、上标与下标、冻结窗格、工作表缩放、从右到左视图、行列标题可见性、工作表标签颜色、深度隐藏的工作表状态、行与列样式、合并区域、行高与列宽都能往返，因此检测不会报告它们。
+
+工作簿条件格式、数据验证、单元格超链接、单元格图片与工作表背景图片都会映射进表格插件模型并在保存时写回。条件格式规则、验证规则与绘图通过 `SHEET_CONDITIONAL_FORMATTING_PLUGIN`、`SHEET_DATA_VALIDATION_PLUGIN` 与 `SHEET_DRAWING_PLUGIN` 资源持久化在工作簿快照中；超链接目标持久化在所属单元格的富文本自定义区间里。检测不再报告这些内容。
 
 文档图片与脚注/尾注会被保留而不是映射：每个绘图、图片或注释引用所在的 run 都与其媒体部件、关系、注释部件和内容类型声明一起逐字节捕获，并在写入时原样写回。它们不会在编辑器中渲染，也不会成为可编辑内容；周围文字仍然可编辑。
 
@@ -147,6 +149,9 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 - 表格单元格的适应文字、隐藏标记与文字方向属性、`w:tblCellSpacing`、行的 `w:gridBefore`/`w:gridAfter` 偏移、浮动表格位置以及表格样式的条件格式不会被映射，会被丢弃。单元格的 `w:insideH`/`w:insideV` 边框仅在缺少对应外边时作为回退使用，并会按显式单元格边写出；单元格边框的线型变体会归入模型的实线、点线或虚线集合；自动表格宽度会按其解析后的网格宽度写出。
 - 主题部件与由主题派生的样式不会被检查：没有直接取值的主题字体与颜色引用会丢失，`word/styles.xml` 中除 Normal 与标题样式之外的样式不会被重建。引用这类样式的段落会保留其 `pStyle` id，其直接的文字与段落格式仍会保留。
 - 工作簿的行与列大纲级别在 Univer 模型中没有对应字段，会被丢弃；工作表滚动位置与打印设置同样如此。Excel 没有独立的“裁剪”换行标志，因此模型中使用裁剪策略的单元格会按不换行写出；Excel 的 `fill` 以及垂直 `distributed`/`justify` 对齐会映射到最接近的 Univer 对齐。
+- 唯一值、重复值与平均值条件格式在 ExcelJS 中没有写入器，因此保存时会写成等价的 `COUNTIF` 或 `AVERAGE` 表达式。Excel 内置集合之外的图标集不会渲染图标。ExcelJS 不保留规则的文本属性、命中即停（stop-if-true）以及数据条的渐变、边框、方向与轴选项，因此这些选项不会保留。
+- ExcelJS 读取时不保留超链接的屏幕提示，因此只有 URL 与显示文字能往返。列表、整数、小数、日期、时间、文本长度、自定义与任意以外的数据验证类型（复选框与多选列表）在保存时会被拒绝，而不是被丢弃。
+- 单元格图片以 base64 表格绘图保存，并按单元格锚点写回；工作表背景使用相同存储。绝对锚点图片与非图片绘图元素仍会通过 `drawing` 检测被拒绝。png、jpeg、gif 之外的媒体会随扩展名保留，但 ExcelJS 会把内容类型写成 `image/<extension>`，部分应用可能无法识别。
 - `convertLegacy` 把转换后的可编辑文件保留在 `<workspaceRoot>/.dsh/office-tmp/` 下，`officeDocument` Remote 可以在同一根检查下读取。失败的转换会删除它刚创建的目录；成功的转换会保留到用户或 Session 删除为止，目前没有任何机制自动清理。
 - 恢复草稿会累积在 `<workspaceRoot>/.dsh/office-tmp/drafts/` 下，直到 `clearDraft` 删除；目前还没有任何机制为不再打开的文档清理草稿。
 - Client 通过 `markDocumentMissing` 报告文件缺失，但目前没有 Client 触发器检测移动：`rebindDocument` 暴露在 Remote 表面上却没有自动调用方。打开集合是进程本地的，用于去重，因此 Host 重启后下一次读取会再次追加 `document/open`；projection 保留文档的位置与版本。
@@ -158,6 +163,6 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 <details>
 <summary>维护者工作上下文——点击展开</summary>
 
-许可检查（2026-11-14）：`@univerjs/core` 是 Apache-2.0，`exceljs` 是 MIT。`@univerjs/core` 保持为 peer 依赖，因为此包只导入其类型并在声明中输出；`exceljs` 是 `.xlsx` 提供方的运行时依赖。
+许可检查（2026-11-18）：`@univerjs/core` 与四个表格特性插件（`@univerjs/data-validation`、`@univerjs/drawing`、`@univerjs/sheets-conditional-formatting`、`@univerjs/sheets-data-validation`、`@univerjs/sheets-drawing`、`@univerjs/sheets-hyper-link`）是 Apache-2.0，`exceljs` 是 MIT。`@univerjs/core` 保持为 peer 依赖，因为此包只导入其类型并在声明中输出；表格特性插件由编辑器 Client 挂载。`exceljs` 是 `.xlsx` 提供方的运行时依赖。
 
 </details>

@@ -5073,6 +5073,12 @@ importers:
       '@univerjs/core':
         specifier: 1.4.0
         version: 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/data-validation':
+        specifier: 1.4.0
+        version: 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/drawing':
+        specifier: 1.4.0
+        version: 1.4.0(react@18.3.1)(rxjs@7.8.2)
       '@univerjs/preset-docs-core':
         specifier: 1.4.0
         version: 1.4.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
@@ -5080,6 +5086,18 @@ importers:
         specifier: 1.4.0
         version: 1.4.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)
       '@univerjs/presets':
+        specifier: 1.4.0
+        version: 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-conditional-formatting':
+        specifier: 1.4.0
+        version: 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-data-validation':
+        specifier: 1.4.0
+        version: 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-drawing':
+        specifier: 1.4.0
+        version: 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-hyper-link':
         specifier: 1.4.0
         version: 1.4.0(react@18.3.1)(rxjs@7.8.2)
       react:
@@ -22478,6 +22496,11 @@ packages:
     peerDependencies:
       rxjs: '>=7.0.0'
 
+  '@univerjs/data-validation@1.4.0':
+    resolution: {integrity: sha512-w367Ps5dbj/xVuARHJaVeqO788LsZFIeEzJ3gQ6V7+L4pYaQIQghw6PospEh168+Wp9+2OVn0jPr9fnhk7i7CA==}
+    peerDependencies:
+      rxjs: '>=7.0.0'
+
   '@univerjs/design@1.4.0':
     resolution: {integrity: sha512-JIfOjJqCfkAMRPLoly3K5EaTVB24XSk2Ax6xQ/yQH09VQmnCBjTg/zzLJB7b2DpESb/m2lT4AtuDhkk38U/LSQ==}
     peerDependencies:
@@ -22546,6 +22569,19 @@ packages:
     peerDependencies:
       rxjs: '>=7.0.0'
 
+  '@univerjs/sheets-conditional-formatting@1.4.0':
+    resolution: {integrity: sha512-lmBwJ9shvgiHFAY1z0unKk9FANj1D29l3odCXQxLwGUzATe3guZO/9TCdsS6wsuH+UzbVowjd8ThJl55xD9KNw==}
+    peerDependencies:
+      rxjs: '>=7.0.0'
+
+  '@univerjs/sheets-data-validation@1.4.0':
+    resolution: {integrity: sha512-5Ml1mqEMjVeJrZsip/yyJ50jYN0WgbjDqbcqyY/hDBq9PWy9iBMnlrFpXrXnm2Vjh1/1bgACa++dJx06uU4Vew==}
+    peerDependencies:
+      rxjs: '>=7.0.0'
+
+  '@univerjs/sheets-drawing@1.4.0':
+    resolution: {integrity: sha512-LdF6T3t9Nhnzchh1vGnTPuQGe8niSg+yaWw7B/RiDYxXzDkbPZ555GG3xT8VdxfEAiKkXlpYaWOfJt+27ot6Hg==}
+
   '@univerjs/sheets-formula-ui@1.4.0':
     resolution: {integrity: sha512-Vucg1NRkVGe3FlLfbDerMp3co6N5Dg0jxJs1PAk5FAQaIXCSLV5xEil+XE89/IBKItD5/YXqMgb3SP9PvXwFJQ==}
     peerDependencies:
@@ -22555,6 +22591,11 @@ packages:
 
   '@univerjs/sheets-formula@1.4.0':
     resolution: {integrity: sha512-RFvQABbMBeWjVrl7mqO9mgyjHqec86K6J4XhLv15W98k8Bvv0wfzJpKVRCPBJ94kYBq7joglsfPCsKXHyuoGCg==}
+    peerDependencies:
+      rxjs: '>=7.0.0'
+
+  '@univerjs/sheets-hyper-link@1.4.0':
+    resolution: {integrity: sha512-jHzk769hbI8sRM0YshKc4yTtLL9qmSXnUH1J2OnZlPwnpgr9xUFPIUEp7OPStVafass4ubmjcu21XHJsPN5Ovg==}
     peerDependencies:
       rxjs: '>=7.0.0'
 
@@ -30569,6 +30610,13 @@ snapshots:
     transitivePeerDependencies:
       - react
 
+  '@univerjs/data-validation@1.4.0(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs/core': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - react
+
   '@univerjs/design@1.4.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@radix-ui/react-dialog': 1.3.1(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -30720,6 +30768,38 @@ snapshots:
     transitivePeerDependencies:
       - react
 
+  '@univerjs/sheets-conditional-formatting@1.4.0(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs/core': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-formula': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-render': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - react
+
+  '@univerjs/sheets-data-validation@1.4.0(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs/core': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/data-validation': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-formula': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/protocol': 1.4.0
+      '@univerjs/sheets': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets-formula': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - react
+
+  '@univerjs/sheets-drawing@1.4.0(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs/core': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/drawing': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-render': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+    transitivePeerDependencies:
+      - react
+      - rxjs
+
   '@univerjs/sheets-formula-ui@1.4.0(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(rxjs@7.8.2)':
     dependencies:
       '@univerjs/core': 1.4.0(react@18.3.1)(rxjs@7.8.2)
@@ -30746,6 +30826,16 @@ snapshots:
       '@univerjs/docs': 1.4.0(react@18.3.1)(rxjs@7.8.2)
       '@univerjs/engine-formula': 1.4.0(react@18.3.1)(rxjs@7.8.2)
       '@univerjs/rpc': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/sheets': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      rxjs: 7.8.2
+    transitivePeerDependencies:
+      - react
+
+  '@univerjs/sheets-hyper-link@1.4.0(react@18.3.1)(rxjs@7.8.2)':
+    dependencies:
+      '@univerjs/core': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/docs': 1.4.0(react@18.3.1)(rxjs@7.8.2)
+      '@univerjs/engine-formula': 1.4.0(react@18.3.1)(rxjs@7.8.2)
       '@univerjs/sheets': 1.4.0(react@18.3.1)(rxjs@7.8.2)
       rxjs: 7.8.2
     transitivePeerDependencies:

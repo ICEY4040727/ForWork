@@ -189,21 +189,47 @@ it('classifies non-zip input as conversion-failed', () => {
   expect(codeOfThrown(() => detectUnsupportedFeatures(new Uint8Array(0)))).toBe('conversion-failed')
 })
 
-it('reports worksheet media but not preserved document media', () => {
+it('does not report worksheet media or preserved document media', () => {
   const worksheet = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, 'xl/media/image1.png': new Uint8Array([0]) })
-  expect(detectUnsupportedFeatures(worksheet)).toEqual([
-    { kind: 'image', detail: 'xl/media/image1.png' },
-  ])
+  expect(detectUnsupportedFeatures(worksheet)).toEqual([])
 
   const document = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, 'word/media/image1.png': new Uint8Array([0]) })
   expect(detectUnsupportedFeatures(document)).toEqual([])
+})
+
+it('reports a workbook drawing that is not a cell picture', () => {
+  const shape = packageOf({
+    'xl/drawings/drawing1.xml': '<xdr:wsDr><xdr:sp/></xdr:wsDr>',
+  })
+  expect(detectUnsupportedFeatures(shape)).toEqual([
+    { kind: 'drawing', detail: 'xl/drawings/drawing1.xml' },
+  ])
+
+  for (const element of ['xdr:cxnSp', 'xdr:grpSp', 'xdr:graphicFrame', 'xdr:absoluteAnchor']) {
+    const bytes = packageOf({
+      'xl/drawings/drawing1.xml': `<xdr:wsDr><${element}></${element}></xdr:wsDr>`,
+    })
+    expect(detectUnsupportedFeatures(bytes)).toEqual([
+      { kind: 'drawing', detail: 'xl/drawings/drawing1.xml' },
+    ])
+  }
+})
+
+it('does not report workbook drawings that contain only cell pictures', () => {
+  const bytes = packageOf({
+    'xl/drawings/drawing1.xml': '<xdr:wsDr><xdr:twoCellAnchor><xdr:pic></xdr:pic>'
+      + '</xdr:twoCellAnchor></xdr:wsDr>',
+    'xl/drawings/_rels/drawing1.xml.rels': '<Relationships/>',
+    'xl/media/image1.png': new Uint8Array([0]),
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
 it('does not report images for a package without media parts', () => {
   expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT }))).toEqual([])
 })
 
-it('leaves a document-body hyperlink alone and detects a worksheet hyperlink', () => {
+it('leaves document-body and worksheet hyperlinks alone', () => {
   const document = packageOf({
     [DOCUMENT_XML]: bodyOf('<w:p><w:hyperlink r:id="rId1"><w:r><w:t>link</w:t></w:r></w:hyperlink></w:p>'),
   })
@@ -212,7 +238,7 @@ it('leaves a document-body hyperlink alone and detects a worksheet hyperlink', (
   const worksheet = packageOf({
     [WORKSHEET_XML]: '<worksheet><hyperlinks><hyperlink ref="A1" r:id="rId1"/></hyperlinks></worksheet>',
   })
-  expect(detectUnsupportedFeatures(worksheet)).toEqual([{ kind: 'hyperlink', detail: WORKSHEET_XML }])
+  expect(detectUnsupportedFeatures(worksheet)).toEqual([])
 })
 
 it('does not report hyperlinks for plain text or plain cells', () => {
@@ -459,18 +485,16 @@ it('does not report sibling tables after a self-closing cell as nested', () => {
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('detects conditional formatting and data validation', () => {
+it('does not report conditional formatting or data validation', () => {
   const conditional = packageOf({
     [WORKSHEET_XML]: '<worksheet><conditionalFormatting sqref="A1:A5"/></worksheet>',
   })
-  expect(detectUnsupportedFeatures(conditional)).toEqual([
-    { kind: 'conditional-formatting', detail: WORKSHEET_XML },
-  ])
+  expect(detectUnsupportedFeatures(conditional)).toEqual([])
 
   const validation = packageOf({
     [WORKSHEET_XML]: '<worksheet><dataValidations><dataValidation type="list" sqref="B1"/></dataValidations></worksheet>',
   })
-  expect(detectUnsupportedFeatures(validation)).toEqual([{ kind: 'data-validation', detail: WORKSHEET_XML }])
+  expect(detectUnsupportedFeatures(validation)).toEqual([])
 })
 
 it('does not report frozen or split panes, which the writer now maps', () => {
@@ -492,13 +516,13 @@ it('does not report a sheet tab color, which the writer now maps', () => {
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('reports a workbook kind once across worksheets', () => {
+it('reports a workbook drawing kind once across drawing parts', () => {
   const bytes = packageOf({
-    [WORKSHEET_XML]: '<worksheet><conditionalFormatting sqref="A1:A5"/></worksheet>',
-    'xl/worksheets/sheet2.xml': '<worksheet><conditionalFormatting sqref="B1:B5"/></worksheet>',
+    'xl/drawings/drawing1.xml': '<xdr:wsDr><xdr:sp/></xdr:wsDr>',
+    'xl/drawings/drawing2.xml': '<xdr:wsDr><xdr:sp/></xdr:wsDr>',
   })
   expect(detectUnsupportedFeatures(bytes)).toEqual([
-    { kind: 'conditional-formatting', detail: WORKSHEET_XML },
+    { kind: 'drawing', detail: 'xl/drawings/drawing1.xml' },
   ])
 })
 

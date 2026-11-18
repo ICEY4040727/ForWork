@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-右侧 Sidebar 中内嵌 Office 文档编辑器的 Client 插件包。它为 Session 作用域的 `.docx` 与 `.xlsx` 地址注册 `office` tab 类型，通过 `officeDocument` Remote 读取和保存，并在 adapter 接缝后挂载 Univer Sheets 或 Docs 核心 preset。编辑会以空闲防抖方式写入恢复草稿，重新打开文档时只提供草稿供选择，不会静默应用。打开旧版 `.doc`、`.xls` 或 `.ppt` 源文件时会先转换，再在新 tab 中打开副本：可编辑副本在此打开并显示标注原始文件的提示，转换后的演示文稿仍由只读预览处理。
+右侧 Sidebar 中内嵌 Office 文档编辑器的 Client 插件包。它为 Session 作用域的 `.docx` 与 `.xlsx` 地址注册 `office` tab 类型，通过 `officeDocument` Remote 读取和保存，并在 adapter 接缝后挂载 Univer Sheets 核心 preset 及其条件格式、数据验证、超链接与绘图插件，或 Docs 核心 preset。编辑会以空闲防抖方式写入恢复草稿，重新打开文档时只提供草稿供选择，不会静默应用。打开旧版 `.doc`、`.xls` 或 `.ppt` 源文件时会先转换，再在新 tab 中打开副本：可编辑副本在此打开并显示标注原始文件的提示，转换后的演示文稿仍由只读预览处理。
 
 ## 目录
 
@@ -49,7 +49,7 @@ Session 中的第一个触发点会读取 `document` projection，并按 project
 
 `definition.ts` 声明 `office` 类型、它的 `.docx`/`.xlsx` pattern、需要转换的旧版 `.doc`/`.xls`/`.ppt` 源以及 Session 文件否决。`OfficePanel.tsx` 通过 `useResource` 读取文件元数据，对注入的 `officeDocument` Remote 调用 `useOfficeDocument`，并且只在读取成功后挂载 adapter。`useOfficeDocument.ts` 负责读取与保存状态、期望版本检查、失败分类、外部变化规则、恢复提供，以及通过 tab 自身的 `openResource` 重新打开副本的旧版转换。`command-bridge.ts` 把一个 tab 订阅到 Session 追加的 `document/command` 事实，在挂载期间通过 `officeDocument.registerCommandTarget` 注册实时目标并在卸载时释放，按实时文档身份、数字内容版本与脏状态对每个请求恰好结算一次，通过 adapter handle 应用编辑步骤，并通过 `officeDocument.completeCommand` 结算 Host 调用。`drafts.ts` 负责草稿捕获调度器：每个面板创建一个实例，干净状态后的第一次编辑立即写入，之后的编辑替换待写入候选直到空闲期结束，`flush` 立即写入并等待正在进行的写入，`cancel` 丢弃候选、恢复首次立即写入并等待进行中的写入，任何拒绝或失败都会进入 hook 的草稿失败状态。`useOfficeDocument.ts` 还会在 `pagehide` 与 `beforeunload` 时 flush。`changes.ts` 负责面板与关闭处理器共享的脏状态和关闭警告 snapshot store，也保存关闭处理器在警告或移除 tab 之前 flush 的待写入草稿写入器；`notices.ts` 按转换后 tab 的 content id 保存转换副本记录；`restore.ts` 保存每个 Session 的恢复记录，并提供按 projection 顺序打开缺失文档的 hook。`DocumentPanel.tsx` 从 `sidebarRight.openTabs` 列出该 Session 中打开的 `office` tab。`target.ts` 把地址映射为 Remote 路径，命名共享的文档身份，并用 workspace-path 助手构造转换副本地址。`face.ts` 为 slot 注册绑定 Remote、adapter、命令桥、这些 store 与打开 tab 清单。
 
-`adapter.ts` 负责运行时边界：`OfficeAdapter`、`OfficeEditorHandle`、`createAdapter(runtimeFactory?)` 以及一个可控的测试 adapter。默认工厂动态导入 `editor/sheets.ts` 或 `editor/docs.ts`；这些模块用 `UniverSheetsCorePreset` 或 `UniverDocsCorePreset`、各自的 en-US locale 默认导出与 CSS 构造 `createUniver`，从线缆快照创建单元，并从 preset 的命令信号报告变更。`editor/sheet-operations.ts` 在运行任何命令之前，把每一种已声明的步骤类型（cell、formula、row、column 与 style）校验并翻译为 Univer 命令，因此被拒绝的步骤不会改动工作簿。没有模块在顶层导入 Univer，因此 jsdom 测试永远不会加载它。撤销与重做使用 preset 头部的标准控件；handle 转发同一套原生历史。
+`adapter.ts` 负责运行时边界：`OfficeAdapter`、`OfficeEditorHandle`、`createAdapter(runtimeFactory?)` 以及一个可控的测试 adapter。默认工厂动态导入 `editor/sheets.ts` 或 `editor/docs.ts`；这些模块用 `UniverSheetsCorePreset` 加 `UniverDrawingPlugin`、`UniverSheetsConditionalFormattingPlugin`、`UniverDataValidationPlugin`、`UniverSheetsDataValidationPlugin`、`UniverSheetsHyperLinkPlugin` 与 `UniverSheetsDrawingPlugin`，或用 `UniverDocsCorePreset`，配合各自的 en-US locale 默认导出与 CSS 构造 `createUniver`，从线缆快照创建单元，并从 preset 的命令信号报告变更。`editor/sheet-operations.ts` 在运行任何命令之前，把每一种已声明的步骤类型（cell、formula、row、column 与 style）校验并翻译为 Univer 命令，因此被拒绝的步骤不会改动工作簿。没有模块在顶层导入 Univer，因此 jsdom 测试永远不会加载它。撤销与重做使用 preset 头部的标准控件；handle 转发同一套原生历史。
 
 `tsconfig.host.json` 与 `tsconfig.client.json` 分别编译两个插件面，`tsdown.config.ts` 产出浏览器 bundle 以及按需请求的 sheets 与 docs chunk。
 
@@ -89,7 +89,7 @@ Session 中的第一个触发点会读取 `document` projection，并按 project
 
 - 真实的 Univer 挂载需要浏览器（canvas、ResizeObserver、preset 样式）；单元测试替换运行时工厂，真实挂载由组装后的浏览器冒烟负责。
 - 关闭警告是 Sidebar 否决移除后显示在面板内的横幅，不是原生模态框。正文在隐藏期间保持挂载，因此该 tab 被激活时会看到待处理的提示。
-- 编辑器界面只携带 preset 的 en-US locale。
+- 编辑器界面只携带核心 preset，以及条件格式、数据验证与超链接插件的 en-US locale。
 - `.ppt` 转换出的副本是 `.pptx`，在文档预览中仍为只读，因此演示文稿不会在此编辑器中打开。
 - 转换副本提示来自本窗口的插件状态，打开文档列表来自 Sidebar 的打开 tab 清单。
 - 恢复由 Session 中的第一个触发点执行：挂载的 Office 正文，或该 Session 成为主视图 Session。激活路径读取 Session 列表缓存的 `document` projection，并通过 Sidebar 的按 Session 打开路径打开资源，因此不需要 Office tab。Sidebar 会持久化每个 Session 的 tab 布局，因此重启通常也会挂载这些正文。
@@ -98,7 +98,7 @@ Session 中的第一个触发点会读取 `document` projection，并按 project
 - 崩溃或强杀仍会丢失最后一次草稿写入之后捕获的编辑：空闲期是 2 秒，只有关闭或卸载事件才会 flush 待写入候选。`pagehide` 与 `beforeunload` 会启动 Remote 写入，但页面若立即结束，该写入可能来不及完成。
 - 移动检测需要文件 feed 对新路径的另一次观察，例如在第二个 tab 中打开它。如果没有任何打开的 feed 报告重命名，tab 会保留在旧路径，直到文档重新打开。
 - 内容版本由 Host 记录的保存、agent command 与本地保存共享。Host 自身保存触发重载时，会采用 Host 报告的版本，而不是把变化呈现为外部编辑；有未保存编辑的单元仍会询问。该 tab 已应用的 agent command 之后的保存会在不重新读取、不重新挂载的情况下推进该版本，因此编辑器的原生撤销历史得以保留。
-- Univer core 与 presets 使用 Apache-2.0；这个包把 `@univerjs/core`、`@univerjs/presets`、`@univerjs/preset-sheets-core` 与 `@univerjs/preset-docs-core` 固定在 1.4.0 供编辑器表面使用。
+- Univer core、presets 与表格特性插件使用 Apache-2.0；这个包把 `@univerjs/core`、`@univerjs/presets`、`@univerjs/preset-sheets-core`、`@univerjs/preset-docs-core`、`@univerjs/data-validation`、`@univerjs/drawing`、`@univerjs/sheets-conditional-formatting`、`@univerjs/sheets-data-validation`、`@univerjs/sheets-drawing` 与 `@univerjs/sheets-hyper-link` 固定在 1.4.0 供编辑器表面使用。
 
 <a id="dev-note"></a>
 ### 开发备注

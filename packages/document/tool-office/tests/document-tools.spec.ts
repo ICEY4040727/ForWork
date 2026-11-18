@@ -292,11 +292,11 @@ describe('document_read', () => {
 
     dispatch.mockResolvedValueOnce({
       status: 'unsupported-feature',
-      features: [{ kind: 'data-validation', detail: 'Sales' }],
+      features: [{ kind: 'comment', detail: 'Sales' }],
     })
     result = objectOf(await call('document_read', { documentId: documentIdFor(h, path) }))
     expect(result['code']).toBe('unsupported-feature')
-    expect(result['features']).toEqual([{ kind: 'data-validation', detail: 'Sales' }])
+    expect(result['features']).toEqual([{ kind: 'comment', detail: 'Sales' }])
   })
 
   it('refuses an applied answer for a read command', async () => {

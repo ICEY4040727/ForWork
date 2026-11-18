@@ -14,17 +14,16 @@ const MACRO_PATHS: ReadonlySet<string> = new Set([
   'ppt/vbaproject.bin',
 ])
 
-/** Worksheet parts whose own elements the workbook writer does not rebuild. */
-const WORKSHEET_PREFIX = 'xl/worksheets/'
-
-/** Worksheet media parts the workbook writer does not rebuild. */
-const WORKSHEET_MEDIA_PREFIX = 'xl/media/'
-
 const DRAWING_PREFIXES: readonly string[] = [
   'word/drawings/',
-  'xl/drawings/',
   'ppt/drawings/',
 ]
+
+/** Workbook drawing parts inspected for constructs the image mapping does not rebuild. */
+const WORKSHEET_DRAWING_PREFIX = 'xl/drawings/'
+
+/** Drawing elements that are not cell pictures the sheet-drawing mapping preserves. */
+const UNMAPPED_DRAWING_ELEMENT = /<(?:[A-Za-z0-9]+:)?(?:sp|cxnSp|grpSp|graphicFrame|absoluteAnchor)(?=[\s/>])/u
 
 const CHART_PREFIXES: readonly string[] = ['xl/charts/', 'ppt/charts/']
 
@@ -42,10 +41,6 @@ const UNSUPPORTED_KIND_ORDER: readonly UnsupportedFeatureKind[] = [
   'drawing',
   'shape',
   'embedded-object',
-  'image',
-  'hyperlink',
-  'conditional-formatting',
-  'data-validation',
 ]
 
 /** Package entries a plausible document can contain before the archive is treated as hostile. */
@@ -69,8 +64,8 @@ interface PackageContents {
   readonly documentXml: Uint8Array | undefined
   /** Decoded header and footer parts, in central-directory order. */
   readonly storyParts: readonly PackagePart[]
-  /** Decoded worksheet parts, in central-directory order. */
-  readonly worksheetParts: readonly PackagePart[]
+  /** Decoded workbook drawing parts, in central-directory order. */
+  readonly drawingParts: readonly PackagePart[]
 }
 
 /**
@@ -91,7 +86,7 @@ export function detectUnsupportedFeatures(
     )
   }
 
-  const { entryNames, documentXml, storyParts, worksheetParts } = readPackage(bytes)
+  const { entryNames, documentXml, storyParts, drawingParts } = readPackage(bytes)
   const details = new Map<UnsupportedFeatureKind, string>()
   const record = (kind: UnsupportedFeatureKind, detail: string): void => {
     if (!details.has(kind)) details.set(kind, detail)
@@ -105,12 +100,11 @@ export function detectUnsupportedFeatures(
     if (hasPrefix(path, DRAWING_PREFIXES)) record('drawing', name)
     if (path.includes('vmldrawing')) record('shape', name)
     if (hasPrefix(path, EMBEDDING_PREFIXES)) record('embedded-object', name)
-    if (path.startsWith(WORKSHEET_MEDIA_PREFIX)) record('image', name)
   }
 
   if (documentXml !== undefined) detectDocumentFeatures(strFromU8(documentXml), DOCUMENT_XML, record)
   for (const part of storyParts) detectDocumentFeatures(part.xml, part.name, record)
-  for (const part of worksheetParts) detectWorksheetFeatures(part, record)
+  for (const part of drawingParts) detectDrawingFeatures(part, record)
 
   const features: UnsupportedFeature[] = []
   for (const kind of UNSUPPORTED_KIND_ORDER) {
@@ -139,17 +133,17 @@ function detectDocumentFeatures(
 }
 
 /**
- * Record worksheet elements that the workbook writer does not rebuild.
- * @param part - Decoded `xl/worksheets/*.xml` part.
+ * Record workbook drawings whose anchors are not pictures. Cell pictures are
+ * mapped to sheet drawings; shapes, charts, groups, and absolute anchors are
+ * not, so a package containing them still refuses an edit-and-save.
+ * @param part - Decoded `xl/drawings/*.xml` part.
  * @param record - First-detail-per-kind recorder.
  */
-function detectWorksheetFeatures(
+function detectDrawingFeatures(
   part: PackagePart,
   record: (kind: UnsupportedFeatureKind, detail: string) => void,
 ): void {
-  if (/<conditionalFormatting(?=[\s/>])/u.test(part.xml)) record('conditional-formatting', part.name)
-  if (/<dataValidation(?=[\s/>])/u.test(part.xml)) record('data-validation', part.name)
-  if (/<hyperlink(?=[\s/>])/u.test(part.xml)) record('hyperlink', part.name)
+  if (UNMAPPED_DRAWING_ELEMENT.test(part.xml)) record('drawing', part.name)
 }
 
 function readPackage(bytes: Uint8Array): PackageContents {
@@ -176,7 +170,7 @@ function readPackage(bytes: Uint8Array): PackageContents {
         }
         const path = file.name.toLowerCase()
         return file.name === DOCUMENT_XML
-          || isWorksheetPart(path)
+          || isDrawingPart(path)
           || isHeaderOrFooterPart(path)
       },
     })
@@ -186,24 +180,24 @@ function readPackage(bytes: Uint8Array): PackageContents {
     throw new OfficeExchangeError('conversion-failed', `Cannot read OOXML package: ${reason}`)
   }
 
-  const worksheetParts: PackagePart[] = []
+  const drawingParts: PackagePart[] = []
   const storyParts: PackagePart[] = []
   for (const [name, content] of Object.entries(entries)) {
     if (name === DOCUMENT_XML) continue
     const xml = strFromU8(content)
-    if (isWorksheetPart(name.toLowerCase())) worksheetParts.push({ name, xml })
+    if (isDrawingPart(name.toLowerCase())) drawingParts.push({ name, xml })
     else storyParts.push({ name, xml })
   }
   return {
     entryNames,
     documentXml: entries[DOCUMENT_XML],
     storyParts,
-    worksheetParts,
+    drawingParts,
   }
 }
 
-function isWorksheetPart(path: string): boolean {
-  return path.startsWith(WORKSHEET_PREFIX) && path.endsWith('.xml')
+function isDrawingPart(path: string): boolean {
+  return path.startsWith(WORKSHEET_DRAWING_PREFIX) && path.endsWith('.xml')
 }
 
 function hasPrefix(path: string, prefixes: readonly string[]): boolean {

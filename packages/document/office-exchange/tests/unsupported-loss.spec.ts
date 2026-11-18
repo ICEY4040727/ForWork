@@ -12,10 +12,10 @@ import type { IWorkbookData, IWorksheetData } from '@univerjs/core'
 import { detectUnsupportedFeatures } from '../src/detect.ts'
 import { readDocument, writeDocument } from '../src/provider/docx.ts'
 import { readWorkbook, writeWorkbook } from '../src/provider/xlsx.ts'
-import type { UnsupportedFeature } from '../src/types.ts'
 
 const DOCUMENT_XML = 'word/document.xml'
 const WORKSHEET_XML = 'xl/worksheets/sheet1.xml'
+const ONE_PIXEL_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 const DOCUMENT_NAMESPACE = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
   + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
 
@@ -41,7 +41,7 @@ async function documentRoundTrip(bytes: Uint8Array): Promise<Record<string, stri
   return entriesOf(await writeDocument(await readDocument(bytes)))
 }
 
-async function workbookRoundTrip(build: (sheet: ExcelJS.Worksheet) => void): Promise<{
+async function workbookRoundTrip(build: (sheet: ExcelJS.Worksheet, workbook: ExcelJS.Workbook) => void): Promise<{
   source: Uint8Array
   written: Record<string, string>
   bytes: Uint8Array
@@ -49,7 +49,7 @@ async function workbookRoundTrip(build: (sheet: ExcelJS.Worksheet) => void): Pro
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet('Data')
   sheet.getCell('A1').value = 'kept'
-  build(sheet)
+  build(sheet, workbook)
   const source = new Uint8Array(await workbook.xlsx.writeBuffer())
   const bytes = await writeWorkbook(await readWorkbook(source))
   return { source, written: entriesOf(bytes), bytes }
@@ -65,8 +65,27 @@ function sheetOf(workbook: IWorkbookData, name: string): Partial<IWorksheetData>
   return workbook.sheets[id] ?? {}
 }
 
-function expectDetected(bytes: Uint8Array, feature: UnsupportedFeature): void {
-  expect(detectUnsupportedFeatures(bytes)).toContainEqual(feature)
+function resourceOf(workbook: IWorkbookData, name: string): unknown {
+  const entry = workbook.resources?.find(resource => resource.name === name)
+  if (entry === undefined) return undefined
+  return JSON.parse(entry.data)
+}
+
+async function conditionalFormattingRulesOf(bytes: Uint8Array): Promise<Array<{
+  rule: Record<string, unknown>
+  ranges: unknown
+}>> {
+  const workbook = await readWorkbook(bytes)
+  const resources = resourceOf(workbook, 'SHEET_CONDITIONAL_FORMATTING_PLUGIN') as
+    Record<string, Array<{ rule: Record<string, unknown>; ranges: unknown }>> | undefined
+  return resources?.['sheet-1'] ?? []
+}
+
+async function dataValidationRulesOf(bytes: Uint8Array): Promise<Array<Record<string, unknown>>> {
+  const workbook = await readWorkbook(bytes)
+  const resources = resourceOf(workbook, 'SHEET_DATA_VALIDATION_PLUGIN') as
+    Record<string, Array<Record<string, unknown>>> | undefined
+  return resources?.['sheet-1'] ?? []
 }
 
 it('preserves an inline image, its media part, and its relationship', async () => {
@@ -257,23 +276,44 @@ it('keeps a nested table and its content through a read/write round trip', async
   expect(reopened.body?.dataStream).toContain('inner')
 })
 
-it('drops conditional formatting, and reports it', async () => {
-  const { source, written } = await workbookRoundTrip((sheet) => {
+it('keeps conditional formatting through a write/read round trip', async () => {
+  const { source, written, bytes } = await workbookRoundTrip((sheet) => {
     sheet.addConditionalFormatting({
       ref: 'A1:A5',
       rules: [{ type: 'expression', formulae: ['$A1>3'], priority: 1, style: { font: { bold: true } } }],
     })
   })
-  expectDetected(source, { kind: 'conditional-formatting', detail: WORKSHEET_XML })
-  expect(sheetXml(written)).not.toContain('conditionalFormatting')
+  expect(detectUnsupportedFeatures(source)).toEqual([])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  expect(sheetXml(written)).toContain('conditionalFormatting')
+  expect(sheetXml(written)).toContain('$A1&gt;3')
+  const rules = await conditionalFormattingRulesOf(bytes)
+  expect(rules).toHaveLength(1)
+  expect(rules[0]?.rule).toMatchObject({ type: 'highlightCell', subType: 'formula', value: '=$A1>3' })
+  expect(rules[0]?.ranges).toEqual([{ startRow: 0, startColumn: 0, endRow: 4, endColumn: 0 }])
 })
 
-it('drops data validation, and reports it', async () => {
-  const { source, written } = await workbookRoundTrip((sheet) => {
-    sheet.getCell('B1').dataValidation = { type: 'list', allowBlank: true, formulae: ['"a,b"'] }
+it('keeps data validation through a write/read round trip', async () => {
+  const { source, written, bytes } = await workbookRoundTrip((sheet) => {
+    const rule = { type: 'list' as const, allowBlank: true, formulae: ['"a,b"'] }
+    for (const row of [1, 2, 3]) sheet.getCell(row, 2).dataValidation = rule
   })
-  expectDetected(source, { kind: 'data-validation', detail: WORKSHEET_XML })
-  expect(sheetXml(written)).not.toContain('dataValidation')
+  expect(detectUnsupportedFeatures(source)).toEqual([])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  expect(sheetXml(written)).toContain('dataValidation')
+  expect(sheetXml(written)).toContain('sqref="B1:B3"')
+  const rules = await dataValidationRulesOf(bytes)
+  expect(rules).toHaveLength(1)
+  expect(rules[0]).toMatchObject({
+    type: 'list',
+    allowBlank: true,
+    formula1: '["a","b"]',
+    ranges: [
+      { startRow: 0, startColumn: 1, endRow: 0, endColumn: 1 },
+      { startRow: 1, startColumn: 1, endRow: 1, endColumn: 1 },
+      { startRow: 2, startColumn: 1, endRow: 2, endColumn: 1 },
+    ],
+  })
 })
 
 it('keeps frozen panes through a write/read round trip', async () => {
@@ -299,15 +339,49 @@ it('keeps a sheet tab color through a write/read round trip', async () => {
   expect(sheetOf(await readWorkbook(bytes), 'Data').tabColor).toBe('#FF0000')
 })
 
-it('drops a cell hyperlink target, and reports it', async () => {
-  const { source, written } = await workbookRoundTrip((sheet) => {
-    sheet.getCell('C1').value = { text: 'link cell', hyperlink: 'https://example.test/' }
+it('keeps a cell hyperlink target through a write/read round trip', async () => {
+  const { source, written, bytes } = await workbookRoundTrip((sheet) => {
+    sheet.getCell('C1').value = { text: 'link cell', hyperlink: 'https://example.test/', tooltip: 'tip' }
   })
-  expectDetected(source, { kind: 'hyperlink', detail: WORKSHEET_XML })
-  expect(sheetXml(written)).not.toContain('<hyperlink')
+  expect(detectUnsupportedFeatures(source)).toEqual([])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  expect(sheetXml(written)).toContain('<hyperlink')
   const relationships = Object.entries(written)
     .filter(([name]) => name.endsWith('.rels'))
     .map(([, text]) => text)
     .join('')
-  expect(relationships).not.toContain('example.test')
+  expect(relationships).toContain('example.test')
+  const link = sheetOf(await readWorkbook(bytes), 'Data').cellData?.['0']?.['2']
+  expect(link?.p?.body?.customRanges?.[0]).toMatchObject({
+    rangeType: 0,
+    properties: { url: 'https://example.test/' },
+  })
+  expect(link?.p?.body?.dataStream).toBe('link cell\r\n')
+})
+
+it('keeps a cell image through a write/read round trip', async () => {
+  const { source, written, bytes } = await workbookRoundTrip((sheet, workbook) => {
+    const imageId = workbook.addImage({ base64: ONE_PIXEL_PNG, extension: 'png' })
+    sheet.addImage(imageId, { tl: { col: 1, row: 1 }, ext: { width: 20, height: 10 } })
+  })
+  expect(detectUnsupportedFeatures(source)).toEqual([])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  expect(Object.keys(written).some(name => name.startsWith('xl/media/'))).toBe(true)
+  expect(Object.entries(written).find(([name]) => name.startsWith('xl/drawings/drawing'))?.[1])
+    .toContain('xdr:pic')
+  const drawings = resourceOf(await readWorkbook(bytes), 'SHEET_DRAWING_PLUGIN') as
+    Record<string, { data: Record<string, { source: string }>; order: string[] }> | undefined
+  const sheetDrawings = drawings?.['sheet-1']
+  expect(sheetDrawings?.order).toHaveLength(1)
+  expect(Object.values(sheetDrawings?.data ?? {})[0]?.source).toBe(ONE_PIXEL_PNG)
+})
+
+it('keeps a worksheet background image through a write/read round trip', async () => {
+  const { source, written, bytes } = await workbookRoundTrip((sheet, workbook) => {
+    sheet.addBackgroundImage(workbook.addImage({ base64: ONE_PIXEL_PNG, extension: 'png' }))
+  })
+  expect(detectUnsupportedFeatures(source)).toEqual([])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  expect(sheetXml(written)).toContain('<picture')
+  expect(sheetOf(await readWorkbook(bytes), 'Data').backgroundImage?.source).toBe(ONE_PIXEL_PNG)
 })

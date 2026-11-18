@@ -42,10 +42,6 @@ export const zh = {
   'feature.shape': '形状',
   'feature.formulaRecalc': '公式重算',
   'feature.embeddedObject': '嵌入对象',
-  'feature.image': '图片',
-  'feature.hyperlink': '超链接',
-  'feature.conditionalFormatting': '条件格式',
-  'feature.dataValidation': '数据验证',
   'feature.other': '其他内容',
 } satisfies Record<string, string>
 
@@ -94,10 +90,6 @@ export const en = {
   'feature.shape': 'Shapes',
   'feature.formulaRecalc': 'Formula recalculation',
   'feature.embeddedObject': 'Embedded objects',
-  'feature.image': 'Images',
-  'feature.hyperlink': 'Hyperlinks',
-  'feature.conditionalFormatting': 'Conditional formatting',
-  'feature.dataValidation': 'Data validation',
   'feature.other': 'Other content',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -143,10 +135,6 @@ export const ja = {
   'feature.shape': '図形',
   'feature.formulaRecalc': '数式の再計算',
   'feature.embeddedObject': '埋め込みオブジェクト',
-  'feature.image': '画像',
-  'feature.hyperlink': 'ハイパーリンク',
-  'feature.conditionalFormatting': '条件付き書式',
-  'feature.dataValidation': 'データの入力規則',
   'feature.other': 'その他の内容',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -192,10 +180,6 @@ export const es = {
   'feature.shape': 'Formas',
   'feature.formulaRecalc': 'Recálculo de fórmulas',
   'feature.embeddedObject': 'Objetos incrustados',
-  'feature.image': 'Imágenes',
-  'feature.hyperlink': 'Hipervínculos',
-  'feature.conditionalFormatting': 'Formato condicional',
-  'feature.dataValidation': 'Validación de datos',
   'feature.other': 'Otro contenido',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -241,10 +225,6 @@ export const fr = {
   'feature.shape': 'Formes',
   'feature.formulaRecalc': 'Recalcul des formules',
   'feature.embeddedObject': 'Objets incorporés',
-  'feature.image': 'Images',
-  'feature.hyperlink': 'Liens hypertexte',
-  'feature.conditionalFormatting': 'Mise en forme conditionnelle',
-  'feature.dataValidation': 'Validation des données',
   'feature.other': 'Autre contenu',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -290,10 +270,6 @@ export const de = {
   'feature.shape': 'Formen',
   'feature.formulaRecalc': 'Formelneuberechnung',
   'feature.embeddedObject': 'Eingebettete Objekte',
-  'feature.image': 'Bilder',
-  'feature.hyperlink': 'Hyperlinks',
-  'feature.conditionalFormatting': 'Bedingte Formatierung',
-  'feature.dataValidation': 'Datenüberprüfung',
   'feature.other': 'Andere Inhalte',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -339,10 +315,6 @@ export const ru = {
   'feature.shape': 'Фигуры',
   'feature.formulaRecalc': 'Пересчёт формул',
   'feature.embeddedObject': 'Внедрённые объекты',
-  'feature.image': 'Изображения',
-  'feature.hyperlink': 'Гиперссылки',
-  'feature.conditionalFormatting': 'Условное форматирование',
-  'feature.dataValidation': 'Проверка данных',
   'feature.other': 'Прочее содержимое',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -388,9 +360,5 @@ export const pt = {
   'feature.shape': 'Formas',
   'feature.formulaRecalc': 'Recálculo de fórmulas',
   'feature.embeddedObject': 'Objetos incorporados',
-  'feature.image': 'Imagens',
-  'feature.hyperlink': 'Hiperlinks',
-  'feature.conditionalFormatting': 'Formatação condicional',
-  'feature.dataValidation': 'Validação de dados',
   'feature.other': 'Outro conteúdo',
 } satisfies Record<OfficeEditorKey, string>

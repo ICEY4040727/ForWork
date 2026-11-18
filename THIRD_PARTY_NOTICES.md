@@ -69,9 +69,15 @@ External packages installed for runtime use or embedded in distributed Host or b
 | [`@tanstack/react-virtual`](https://github.com/TanStack/virtual) | MIT |
 | [`@trycua/cua-driver`](https://github.com/trycua/cua) | MIT |
 | [`@univerjs/core`](https://github.com/dream-num/univer) | Apache-2.0 |
+| [`@univerjs/data-validation`](https://github.com/dream-num/univer) | Apache-2.0 |
+| [`@univerjs/drawing`](https://github.com/dream-num/univer) | Apache-2.0 |
 | [`@univerjs/preset-docs-core`](https://github.com/dream-num/univer) | Apache-2.0 |
 | [`@univerjs/preset-sheets-core`](https://github.com/dream-num/univer) | Apache-2.0 |
 | [`@univerjs/presets`](https://github.com/dream-num/univer) | Apache-2.0 |
+| [`@univerjs/sheets-conditional-formatting`](https://github.com/dream-num/univer) | Apache-2.0 |
+| [`@univerjs/sheets-data-validation`](https://github.com/dream-num/univer) | Apache-2.0 |
+| [`@univerjs/sheets-drawing`](https://github.com/dream-num/univer) | Apache-2.0 |
+| [`@univerjs/sheets-hyper-link`](https://github.com/dream-num/univer) | Apache-2.0 |
 | [`@vscode/ripgrep`](https://github.com/microsoft/vscode-ripgrep) | MIT |
 | [`@xterm/addon-fit`](https://github.com/xtermjs/xterm.js/tree/master/addons/addon-fit) | MIT |
 | [`@xterm/addon-serialize`](https://github.com/xtermjs/xterm.js/tree/master/addons/addon-serialize) | MIT |

@@ -1,12 +1,24 @@
 ﻿/**
- * The Univer Sheets runtime: the core preset, its English pack, and the CSS
- * the preset requires. Loaded only through the editor runtime chunk.
+ * The Univer Sheets runtime: the core preset, the feature plugins that carry
+ * conditional formatting, data validation, hyperlinks, and cell images, their
+ * English packs, and the CSS the core preset requires. Loaded only through the
+ * editor runtime chunk.
  */
 import { CommandType, LocaleType } from '@univerjs/core'
+import { UniverDataValidationPlugin } from '@univerjs/data-validation'
+import UniverDataValidationEnUS from '@univerjs/data-validation/locale/en-US'
+import { UniverDrawingPlugin } from '@univerjs/drawing'
 import { UniverSheetsCorePreset } from '@univerjs/preset-sheets-core'
 import UniverSheetsCoreEnUS from '@univerjs/preset-sheets-core/locales/en-US'
 import '@univerjs/preset-sheets-core/lib/index.css'
 import { createUniver } from '@univerjs/presets'
+import { UniverSheetsConditionalFormattingPlugin } from '@univerjs/sheets-conditional-formatting'
+import UniverSheetsConditionalFormattingEnUS from '@univerjs/sheets-conditional-formatting/locale/en-US'
+import { UniverSheetsDataValidationPlugin } from '@univerjs/sheets-data-validation'
+import UniverSheetsDataValidationEnUS from '@univerjs/sheets-data-validation/locale/en-US'
+import { UniverSheetsDrawingPlugin } from '@univerjs/sheets-drawing'
+import { UniverSheetsHyperLinkPlugin } from '@univerjs/sheets-hyper-link'
+import UniverSheetsHyperLinkEnUS from '@univerjs/sheets-hyper-link/locale/en-US'
 import type { DocumentEditOperation } from '@forwork/session/src/document-events.ts'
 import type { OfficeApplyOutcome } from '../command-bridge.ts'
 import type { OfficeRuntime, OfficeRuntimeMount } from '../adapter.ts'
@@ -30,9 +42,23 @@ export function mount(input: OfficeRuntimeMount): Promise<OfficeRuntime> {
   const { univer, univerAPI } = createUniver({
     locale: LocaleType.EN_US,
     locales: {
-      [LocaleType.EN_US]: localePack(UniverSheetsCoreEnUS as Record<string, unknown>),
+      [LocaleType.EN_US]: localePack({
+        ...UniverSheetsCoreEnUS,
+        ...UniverSheetsConditionalFormattingEnUS,
+        ...UniverSheetsDataValidationEnUS,
+        ...UniverSheetsHyperLinkEnUS,
+        ...UniverDataValidationEnUS,
+      } as Record<string, unknown>),
     },
     presets: [UniverSheetsCorePreset({ container })],
+    plugins: [
+      UniverDrawingPlugin,
+      UniverSheetsConditionalFormattingPlugin,
+      UniverDataValidationPlugin,
+      UniverSheetsDataValidationPlugin,
+      UniverSheetsHyperLinkPlugin,
+      UniverSheetsDrawingPlugin,
+    ],
   })
   const workbook = univerAPI.createWorkbook(data)
   const history = nativeHistory(univerAPI)
