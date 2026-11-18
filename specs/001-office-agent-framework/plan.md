@@ -28,6 +28,10 @@ Fork the MIT-licensed harness into **ForWork**, a Windows/macOS desktop product 
 
 **Scale/Scope**: v1 edits `.docx` and `.xlsx`; `.pptx` read-only; legacy conversion; one local user plus the agent; documents persist and restore per session
 
+### Decision: Univer Sheet Feature Plugins (FR-022)
+
+`.xlsx` conditional formatting, data validation, hyperlinks, and cell images require adding and vendoring `@univerjs/sheets-conditional-formatting`, `@univerjs/sheets-data-validation`, `@univerjs/sheets-hyper-link`, and `@univerjs/sheets-drawing` (Apache-2.0/MIT), mounted in the sheets preset and registered as `IResourceHook`s, so those features round-trip through the workbook snapshot and render in the live editor. Keeping the FR-008 refusal for these four features is the alternative; adding the plugins is chosen because FR-022 makes them preserved and editable, and the refusal narrows to worksheet features the sheet model cannot represent.
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*

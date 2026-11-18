@@ -4,7 +4,7 @@
 
 **Created**: 2026-11-13
 
-**Status**: Implemented
+**Status**: In progress — the shipped editor covers the earlier waves, while FR-021 and FR-022 remain to be implemented.
 
 **Input**: User description: "把作为智能体框架的 harness 改造成智能体操作办公文档的框架，在侧栏挂载完整的 Word、Excel、编辑器（这里指 Word/Excel 编辑器本身）；后续要求：不是可逆插件、可改 harness 核心、密钥自动配置、借用框架而非插件作者、独立签名、Windows/macOS 桌面。"
 
@@ -73,7 +73,7 @@ The user opens several documents across a session. The agent can refer to them a
 - Two writers (agent and user) save at nearly the same time: the version guard must reject the stale write and report a conflict.
 - A very large workbook or document exceeds the conversion bounds: the product must fail with a bounded, actionable message.
 - A legacy `.doc/.xls/.ppt` is opened: it is converted to a modern format; the original is not modified unless the user explicitly saves a converted copy.
-- A document contains a feature the engine cannot edit (macros, tracked changes, complex shapes): the product names the unsupported feature and refuses the lossy save.
+- A document contains a feature the engine cannot edit (for example a macro, tracked change, comment, chart, drawing/shape, embedded object, pivot table, or a worksheet feature outside the sheet model): the product names the unsupported feature and refuses the lossy save.
 - An open file is renamed or moved outside the app: the document keeps its identity and rebinds to the new location, or reports the file missing without silently closing it.
 - The app quits or crashes with unsaved edits: the user is warned before closing, and an interrupted session can recover its draft rather than losing work silently.
 - Conversion of a corrupt or password-protected file fails: the product reports the failure and leaves the source file untouched.
@@ -91,7 +91,7 @@ The user opens several documents across a session. The agent can refer to them a
 - **FR-005**: Agent edits and user edits MUST converge on one document state, with version-guarded writes and a visible conflict report.
 - **FR-006**: The product MUST record document open/edit/save/rebind/missing/close as durable session facts so the agent can reference documents across turns.
 - **FR-007**: The product MUST restore the open-document set after restart.
-- **FR-008**: The product MUST refuse and explain any save that would drop unsupported content.
+- **FR-008**: The product MUST refuse and explain any save that would drop content the editor cannot represent. `.docx` text, sections, tables, lists, hyperlinks, and images, and `.xlsx` cell edits, freeze panes, and tab colors, are supported and MUST NOT be refused. The remaining unsupported set is `.docx` macros, tracked changes, comments, charts, drawings/shapes, and embedded objects; and `.xlsx` charts, drawings, comments, pivot tables, and macros, plus—until FR-022 lands—conditional formatting, data validation, hyperlinks, and images.
 - **FR-009**: The product MUST be delivered as the ForWork desktop application under the `@forwork/*` npm scope, the `forwork-` artifact prefix, and the `forwork` CLI, with no remaining DeepSeek brand, telemetry, default model adapter, or upstream npm scope in product surfaces. Legally required `THIRD_PARTY_NOTICES.md` entries, protocol-internal `dsh.*`/`DSH_*` tokens, and the external LibreOffice conversion dependency are the only accepted references, each enforced by `verify-forwork-identity`.
 - **FR-010**: The product MUST operate fully offline for editing and saving, with no required external document server or cloud account.
 - **FR-011**: `.pptx` MUST be viewable but not editable in v1.
@@ -104,6 +104,8 @@ The user opens several documents across a session. The agent can refer to them a
 - **FR-018**: User-supplied model credentials MUST be stored in the operating system's secure store and MUST NOT be committed to the repository or written to logs.
 - **FR-019**: The product MUST remain updatable from its upstream framework base without losing local product changes; upstream updates MUST preserve local work and record conflict resolution.
 - **FR-020**: Agent document operations MUST apply to the same live document instance the editor displays, through one command path; an operation on a document that is not open in a live instance MUST be refused rather than applied to a detached copy. (Convergence and version-guarded writes are FR-005.)
+- **FR-021**: The agent MUST be able to insert and delete worksheet rows and columns and set a range style through structured `document_edit_cells` steps; an accepted call MUST apply atomically to the live editor with the same version-guarded save as cell edits, and a step the engine cannot apply MUST be rejected without partial application.
+- **FR-022**: The product MUST preserve `.xlsx` conditional formatting, data validation, hyperlinks, and images on a read→save round-trip and make them editable in the live sheet editor; the FR-008 refusal MUST remain only for worksheet features the sheet model cannot represent.
 
 ### Key Entities *(include if feature involves data)*
 
