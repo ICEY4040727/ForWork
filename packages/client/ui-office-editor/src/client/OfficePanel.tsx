@@ -70,8 +70,6 @@ const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
   'nested-table': 'feature.nestedTable',
   'conditional-formatting': 'feature.conditionalFormatting',
   'data-validation': 'feature.dataValidation',
-  'freeze-panes': 'feature.freezePanes',
-  'tab-color': 'feature.tabColor',
   other: 'feature.other',
 }
 

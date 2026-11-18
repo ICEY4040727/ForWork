@@ -51,8 +51,6 @@ export const zh = {
   'feature.nestedTable': '嵌套表格',
   'feature.conditionalFormatting': '条件格式',
   'feature.dataValidation': '数据验证',
-  'feature.freezePanes': '冻结窗格',
-  'feature.tabColor': '工作表标签颜色',
   'feature.other': '其他内容',
 } satisfies Record<string, string>
 
@@ -110,8 +108,6 @@ export const en = {
   'feature.nestedTable': 'Nested tables',
   'feature.conditionalFormatting': 'Conditional formatting',
   'feature.dataValidation': 'Data validation',
-  'feature.freezePanes': 'Frozen panes',
-  'feature.tabColor': 'Sheet tab colors',
   'feature.other': 'Other content',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -166,8 +162,6 @@ export const ja = {
   'feature.nestedTable': '入れ子の表',
   'feature.conditionalFormatting': '条件付き書式',
   'feature.dataValidation': 'データの入力規則',
-  'feature.freezePanes': 'ウィンドウ枠の固定',
-  'feature.tabColor': 'シート見出しの色',
   'feature.other': 'その他の内容',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -222,8 +216,6 @@ export const es = {
   'feature.nestedTable': 'Tablas anidadas',
   'feature.conditionalFormatting': 'Formato condicional',
   'feature.dataValidation': 'Validación de datos',
-  'feature.freezePanes': 'Paneles inmovilizados',
-  'feature.tabColor': 'Colores de pestaña',
   'feature.other': 'Otro contenido',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -278,8 +270,6 @@ export const fr = {
   'feature.nestedTable': 'Tableaux imbriqués',
   'feature.conditionalFormatting': 'Mise en forme conditionnelle',
   'feature.dataValidation': 'Validation des données',
-  'feature.freezePanes': 'Volets figés',
-  'feature.tabColor': 'Couleurs d’onglet',
   'feature.other': 'Autre contenu',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -334,8 +324,6 @@ export const de = {
   'feature.nestedTable': 'Verschachtelte Tabellen',
   'feature.conditionalFormatting': 'Bedingte Formatierung',
   'feature.dataValidation': 'Datenüberprüfung',
-  'feature.freezePanes': 'Fixierte Fensterbereiche',
-  'feature.tabColor': 'Registerfarben',
   'feature.other': 'Andere Inhalte',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -390,8 +378,6 @@ export const ru = {
   'feature.nestedTable': 'Вложенные таблицы',
   'feature.conditionalFormatting': 'Условное форматирование',
   'feature.dataValidation': 'Проверка данных',
-  'feature.freezePanes': 'Закреплённые области',
-  'feature.tabColor': 'Цвета ярлыков листов',
   'feature.other': 'Прочее содержимое',
 } satisfies Record<OfficeEditorKey, string>
 
@@ -446,7 +432,5 @@ export const pt = {
   'feature.nestedTable': 'Tabelas aninhadas',
   'feature.conditionalFormatting': 'Formatação condicional',
   'feature.dataValidation': 'Validação de dados',
-  'feature.freezePanes': 'Painéis congelados',
-  'feature.tabColor': 'Cores da guia',
   'feature.other': 'Outro conteúdo',
 } satisfies Record<OfficeEditorKey, string>

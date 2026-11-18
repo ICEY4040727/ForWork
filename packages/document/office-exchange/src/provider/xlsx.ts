@@ -2,40 +2,53 @@
  * XLSX mapping between OOXML workbooks and Univer `IWorkbookData`.
  *
  * SUPPORTED: sheet order and names, string/number/boolean/date values, A1
- * formulas with cached results, number formats, bold/italic/underline, font
- * family/size/ARGB color, solid fills, cell borders, merged ranges, row
- * heights, and column widths.
+ * formulas with cached results, number formats, bold/italic/underline/strike,
+ * vertical baseline, font family/size/ARGB color, horizontal and vertical
+ * alignment, wrap and shrink-to-fit, text rotation, solid fills, cell borders,
+ * row and column styles, merged ranges, row heights, column widths, frozen
+ * panes, zoom, right-to-left view, header visibility, tab colors, and the
+ * very-hidden sheet state.
  *
  * UNSUPPORTED: charts, drawings, images, comments, macros, PivotTables,
  * conditional formatting, data validation, theme-derived colors, array and
- * shared-formula metadata, hyperlink targets, error values (read as text), tab
- * colors, freeze panes, print settings, and workbook metadata. A read/write
- * round-trip does not preserve these.
+ * shared-formula metadata, hyperlink targets, error values (read as text),
+ * print settings, row and column outline levels, and workbook metadata. A
+ * read/write round-trip does not preserve these.
  */
 import ExcelJS, {
+  type Alignment as ExcelAlignment,
   type BorderStyle,
   type Borders,
   type Cell as ExcelCell,
   type CellValue as ExcelCellValue,
   type Color as ExcelColor,
+  type Fill as ExcelFill,
   type Font as ExcelFont,
+  type Style as ExcelStyle,
 } from 'exceljs'
 import type {
+  BaselineOffset,
   BooleanNumber,
   BorderStyleTypes,
   CellValueType,
   DateSystem,
+  HorizontalAlign,
   IBorderData,
   IColorStyle,
   ICellData,
   IColumnData,
+  IFreeze,
   IRowData,
   IStyleData,
+  ITextRotation,
   IWorkbookData,
   IWorksheetData,
   IRange,
   LocaleType,
   TextDecoration,
+  VerticalAlign,
+  WrapStrategy,
+  WorksheetHiddenState,
 } from '@univerjs/core'
 import { type OfficeExchangeConfig, resolveConfig } from '../config.ts'
 import { OfficeExchangeError } from '../errors.ts'
@@ -51,7 +64,24 @@ const DATE_1904 = 'date1904' as DateSystem
 const LOCALE_EN_US = 'enUS' as LocaleType
 const TEXT_DECORATION_SINGLE: TextDecoration = 12
 const TEXT_DECORATION_DOUBLE: TextDecoration = 10
+const HORIZONTAL_LEFT = 1 as HorizontalAlign
+const HORIZONTAL_CENTER = 2 as HorizontalAlign
+const HORIZONTAL_RIGHT = 3 as HorizontalAlign
+const HORIZONTAL_JUSTIFIED = 4 as HorizontalAlign
+const HORIZONTAL_DISTRIBUTED = 6 as HorizontalAlign
+const VERTICAL_TOP = 1 as VerticalAlign
+const VERTICAL_MIDDLE = 2 as VerticalAlign
+const VERTICAL_BOTTOM = 3 as VerticalAlign
+const WRAP_STRATEGY_WRAP = 3 as WrapStrategy
+const BASELINE_SUBSCRIPT = 2 as BaselineOffset
+const BASELINE_SUPERSCRIPT = 3 as BaselineOffset
+const VERY_HIDDEN = 2 as WorksheetHiddenState
+const VERTICAL_ROTATION = 'vertical'
+const DEFAULT_ZOOM_RATIO = 100
 const DETERMINISTIC_DATE = new Date('2000-01-01T00:00:00.000Z')
+
+/** Frozen-pane state of a sheet whose view pins no rows or columns. */
+const NO_FREEZE: IFreeze = { xSplit: 0, ySplit: 0, startRow: 0, startColumn: 0 }
 
 const BORDER_STYLE_BY_EXCEL: Readonly<Record<BorderStyle, BorderStyleTypes>> = {
   thin: 1,
@@ -83,6 +113,68 @@ const EXCEL_BORDER_BY_STYLE: Readonly<Record<number, BorderStyle>> = {
   11: 'mediumDashDotDot',
   12: 'slantDashDot',
   13: 'thick',
+}
+
+const UNIVER_HORIZONTAL_BY_EXCEL: Readonly<Record<string, HorizontalAlign>> = {
+  left: HORIZONTAL_LEFT,
+  center: HORIZONTAL_CENTER,
+  right: HORIZONTAL_RIGHT,
+  justify: HORIZONTAL_JUSTIFIED,
+  centerContinuous: HORIZONTAL_CENTER,
+  distributed: HORIZONTAL_DISTRIBUTED,
+  fill: HORIZONTAL_DISTRIBUTED,
+}
+
+const EXCEL_HORIZONTAL_BY_UNIVER: Readonly<Record<number, NonNullable<ExcelAlignment['horizontal']>>> = {
+  1: 'left',
+  2: 'center',
+  3: 'right',
+  4: 'justify',
+  5: 'justify',
+  6: 'distributed',
+}
+
+const UNIVER_VERTICAL_BY_EXCEL: Readonly<Record<string, VerticalAlign>> = {
+  top: VERTICAL_TOP,
+  middle: VERTICAL_MIDDLE,
+  bottom: VERTICAL_BOTTOM,
+  justify: VERTICAL_MIDDLE,
+  distributed: VERTICAL_MIDDLE,
+}
+
+const EXCEL_VERTICAL_BY_UNIVER: Readonly<Record<number, NonNullable<ExcelAlignment['vertical']>>> = {
+  1: 'top',
+  2: 'middle',
+  3: 'bottom',
+}
+
+const EXCEL_VERT_ALIGN_BY_BASELINE: Readonly<Record<number, NonNullable<ExcelFont['vertAlign']>>> = {
+  2: 'subscript',
+  3: 'superscript',
+}
+
+const BASELINE_BY_EXCEL: Readonly<Record<string, BaselineOffset>> = {
+  subscript: BASELINE_SUBSCRIPT,
+  superscript: BASELINE_SUPERSCRIPT,
+}
+
+/**
+ * Style fields shared by an ExcelJS cell, row, and column. ExcelJS exposes the
+ * same setters on all three, so one mapping serves both directions.
+ */
+interface ExcelStyleFields {
+  font?: Partial<ExcelFont>
+  numFmt?: string
+  fill?: ExcelFill
+  border?: Partial<Borders>
+  alignment?: Partial<ExcelAlignment>
+}
+
+/** The view facts that determine frozen panes, read structurally from ExcelJS. */
+interface ExcelViewState {
+  readonly state?: string
+  readonly xSplit?: number
+  readonly ySplit?: number
 }
 
 interface ReadValue {
@@ -189,7 +281,7 @@ export async function writeWorkbook(data: IWorkbookData, config?: OfficeExchange
         writeCell(worksheet.getCell(row, Number(columnKey) + 1), cell, data)
       }
     }
-    writeLayout(worksheet, sheet)
+    writeLayout(worksheet, sheet, data)
     for (const merge of sheet.mergeData ?? []) worksheet.mergeCells(mergeAddress(merge))
   }
   try {
@@ -212,8 +304,14 @@ function readWorksheet(
   worksheet.eachRow({ includeEmpty: true }, (row) => {
     const rowIndex = row.number - 1
     const height = parsed(row.height)
-    if (height !== undefined) rowData[rowIndex] = { h: pointsToPixels(height) }
-    if (row.hidden) rowData[rowIndex] = { ...rowData[rowIndex], hd: BOOLEAN_TRUE }
+    const rowStyle = readStyle(row)
+    if (height !== undefined || row.hidden || rowStyle !== undefined) {
+      rowData[rowIndex] = {
+        ...(height === undefined ? {} : { h: pointsToPixels(height) }),
+        ...(row.hidden ? { hd: BOOLEAN_TRUE } : {}),
+        ...(rowStyle === undefined ? {} : { s: rowStyle }),
+      }
+    }
     row.eachCell({ includeEmpty: false }, (cell) => {
       countCell()
       const columnIndex = Number(cell.col) - 1
@@ -221,23 +319,34 @@ function readWorksheet(
       cellData[rowIndex][columnIndex] = readCell(cell, date1904)
     })
   })
-  for (let column = 1; column <= worksheet.columnCount; column += 1) {
-    const source = worksheet.getColumn(column)
+  const columnSources = parsed(worksheet.columns) ?? []
+  for (const [index, source] of columnSources.entries()) {
     const width = parsed(source.width)
-    if (width !== undefined) columnData[column - 1] = { w: columnPixels(width) }
-    if (source.hidden) columnData[column - 1] = { ...columnData[column - 1], hd: BOOLEAN_TRUE }
+    const columnStyle = readStyle(source)
+    if (width !== undefined || source.hidden || columnStyle !== undefined) {
+      columnData[index] = {
+        /* v8 ignore next -- ExcelJS serializes a width for every listed column, so the absent arm has no reachable producer. */
+        ...(width === undefined ? {} : { w: columnPixels(width) }),
+        ...(source.hidden ? { hd: BOOLEAN_TRUE } : {}),
+        ...(columnStyle === undefined ? {} : { s: columnStyle }),
+      }
+    }
   }
   const properties = worksheet.properties
   const views = parsed(worksheet.views)
+  const view: Partial<ExcelJS.WorksheetViewCommon> | undefined = views?.[0]
+  const freezeView: ExcelViewState | undefined = views?.[0]
+  const headersHidden = parsed(view?.showRowColHeaders) === false
+  const sheetState = parsed(worksheet.state)
   return {
     id,
     name: worksheet.name,
-    tabColor: '',
-    hidden: worksheet.state === 'visible' ? BOOLEAN_FALSE : BOOLEAN_TRUE,
-    freeze: { xSplit: 0, ySplit: 0, startRow: 0, startColumn: 0 },
+    tabColor: readColor(parsed(properties.tabColor))?.rgb ?? '',
+    hidden: sheetState === 'veryHidden' ? VERY_HIDDEN : sheetState === 'hidden' ? BOOLEAN_TRUE : BOOLEAN_FALSE,
+    freeze: readFreeze(freezeView),
     rowCount: worksheet.rowCount,
     columnCount: worksheet.columnCount,
-    zoomRatio: 100,
+    zoomRatio: parsed(view?.zoomScale) ?? DEFAULT_ZOOM_RATIO,
     scrollTop: 0,
     scrollLeft: 0,
     defaultColumnWidth: columnPixels(parsed(properties.defaultColWidth) ?? 8.43),
@@ -246,11 +355,26 @@ function readWorksheet(
     cellData,
     rowData,
     columnData,
-    rowHeader: { width: 46 },
-    columnHeader: { height: 20 },
-    showGridlines: parsed(views?.[0]?.showGridLines) === false ? BOOLEAN_FALSE : BOOLEAN_TRUE,
-    rightToLeft: BOOLEAN_FALSE,
+    rowHeader: headersHidden ? { width: 46, hidden: BOOLEAN_TRUE } : { width: 46 },
+    columnHeader: headersHidden ? { height: 20, hidden: BOOLEAN_TRUE } : { height: 20 },
+    showGridlines: parsed(view?.showGridLines) === false ? BOOLEAN_FALSE : BOOLEAN_TRUE,
+    rightToLeft: parsed(view?.rightToLeft) === true ? BOOLEAN_TRUE : BOOLEAN_FALSE,
   }
+}
+
+/**
+ * Read a worksheet's frozen-pane state from its first view. ExcelJS normalizes
+ * `frozenSplit` to `frozen` while parsing, so both states name the same model.
+ * @param view - First worksheet view, or `undefined` when the sheet has none.
+ * @returns The frozen row and column counts, with the scrollable start at their boundary.
+ */
+function readFreeze(view: ExcelViewState | undefined): IFreeze {
+  if (view === undefined || (view.state !== 'frozen' && view.state !== 'frozenSplit')) return NO_FREEZE
+  /* v8 ignore next -- ExcelJS parses both pane splits as numbers; the fallback covers only the optional structural field. */
+  const xSplit = parsed(view.xSplit) ?? 0
+  /* v8 ignore next -- ExcelJS parses both pane splits as numbers; the fallback covers only the optional structural field. */
+  const ySplit = parsed(view.ySplit) ?? 0
+  return { xSplit, ySplit, startRow: ySplit, startColumn: xSplit }
 }
 
 function readMerge(worksheet: ExcelJS.Worksheet, range: string): IRange {
@@ -308,12 +432,15 @@ function readValue(value: ExcelCellValue | undefined, date1904: boolean): ReadVa
   return undefined
 }
 
-function readStyle(cell: ExcelCell): IStyleData | undefined {
+function readStyle(source: ExcelStyleFields): IStyleData | undefined {
   const style: IStyleData = {}
-  const font = parsed(cell.font)
+  const font = parsed(source.font)
   if (font !== undefined) {
     if (font.bold === true) style.bl = BOOLEAN_TRUE
     if (font.italic === true) style.it = BOOLEAN_TRUE
+    if (font.strike === true) style.st = { s: BOOLEAN_TRUE }
+    const vertAlign = parsed(font.vertAlign)
+    if (vertAlign !== undefined) style.va = BASELINE_BY_EXCEL[vertAlign]
     const underline = parsed(font.underline)
     if (underline !== undefined && underline !== false && underline !== 'none') {
       style.ul = {
@@ -330,16 +457,38 @@ function readStyle(cell: ExcelCell): IStyleData | undefined {
     const color = readColor(parsed(font.color))
     if (color !== undefined) style.cl = color
   }
-  const numFmt = parsed(cell.numFmt)
+  const alignment = parsed(source.alignment)
+  if (alignment !== undefined) {
+    const horizontal = parsed(alignment.horizontal)
+    if (horizontal !== undefined) style.ht = UNIVER_HORIZONTAL_BY_EXCEL[horizontal]
+    const vertical = parsed(alignment.vertical)
+    if (vertical !== undefined) style.vt = UNIVER_VERTICAL_BY_EXCEL[vertical]
+    if (alignment.wrapText === true) style.tb = WRAP_STRATEGY_WRAP
+    if (alignment.shrinkToFit === true) style.stf = BOOLEAN_TRUE
+    const rotation = readRotation(parsed(alignment.textRotation))
+    if (rotation !== undefined) style.tr = rotation
+  }
+  const numFmt = parsed(source.numFmt)
   if (numFmt !== undefined && numFmt !== 'General') style.n = { pattern: numFmt }
-  const fill = parsed(cell.fill)
+  const fill = parsed(source.fill)
   if (fill !== undefined && fill.type === 'pattern' && fill.pattern === 'solid') {
     const color = readColor(parsed(fill.fgColor))
     if (color !== undefined) style.bg = color
   }
-  const border = readBorder(parsed(cell.border))
+  const border = readBorder(parsed(source.border))
   if (border !== undefined) style.bd = border
   return Object.keys(style).length === 0 ? undefined : style
+}
+
+/**
+ * Map an ExcelJS alignment rotation to the Univer model. ExcelJS normalizes
+ * OOXML's 0-180 encoding to signed degrees and names vertical text.
+ * @param rotation - ExcelJS alignment rotation.
+ * @returns The Univer rotation, or `undefined` for the default horizontal text.
+ */
+function readRotation(rotation: number | typeof VERTICAL_ROTATION | undefined): ITextRotation | undefined {
+  if (rotation === undefined) return undefined
+  return rotation === VERTICAL_ROTATION ? { a: 0, v: BOOLEAN_TRUE } : { a: rotation }
 }
 
 function readBorder(border: Partial<Borders> | undefined): IBorderData | undefined {
@@ -374,7 +523,14 @@ function writeCell(cell: ExcelCell, data: ICellData, workbook: IWorkbookData): v
     cell.value = data.v
   }
   const style = resolveStyle(workbook, data.s)
-  if (style !== undefined) writeStyle(cell, style)
+  if (style === undefined) return
+  const excelStyle = excelStyleOf(style)
+  if (excelStyle === undefined) return
+  if (excelStyle.font !== undefined) cell.font = excelStyle.font
+  if (excelStyle.numFmt !== undefined) cell.numFmt = excelStyle.numFmt
+  if (excelStyle.fill !== undefined) cell.fill = excelStyle.fill
+  if (excelStyle.border !== undefined) cell.border = excelStyle.border
+  if (excelStyle.alignment !== undefined) cell.alignment = excelStyle.alignment
 }
 
 function resolveStyle(workbook: IWorkbookData, style: ICellData['s']): IStyleData | undefined {
@@ -382,10 +538,23 @@ function resolveStyle(workbook: IWorkbookData, style: ICellData['s']): IStyleDat
   return typeof style === 'string' ? workbook.styles[style] ?? undefined : style
 }
 
-function writeStyle(cell: ExcelCell, style: IStyleData): void {
+/**
+ * Translate a Univer cell style into the fields ExcelJS stores on a cell, row,
+ * or column.
+ * @param style - Univer style data.
+ * @returns ExcelJS style fields, or `undefined` when the style is empty.
+ */
+function excelStyleOf(style: IStyleData): ExcelStyleFields | undefined {
+  const data: ExcelStyleFields = {}
   const font: Partial<ExcelFont> = {}
   if (style.bl === BOOLEAN_TRUE) font.bold = true
   if (style.it === BOOLEAN_TRUE) font.italic = true
+  if (style.st?.s === BOOLEAN_TRUE) font.strike = true
+  if (style.va !== undefined && style.va !== null) {
+    const vertAlign = EXCEL_VERT_ALIGN_BY_BASELINE[style.va]
+    /* v8 ignore next -- Every BaselineOffset member has an ExcelJS name, so the lookup always resolves. */
+    if (vertAlign !== undefined) font.vertAlign = vertAlign
+  }
   if (style.ul?.s === BOOLEAN_TRUE) {
     font.underline = style.ul.t === TEXT_DECORATION_DOUBLE ? 'double' : 'single'
   }
@@ -393,14 +562,49 @@ function writeStyle(cell: ExcelCell, style: IStyleData): void {
   if (style.ff !== undefined && style.ff !== null) font.name = style.ff
   const fontColor = argbOf(style.cl)
   if (fontColor !== undefined) font.color = { argb: fontColor }
-  if (Object.keys(font).length > 0) cell.font = font
-  if (style.n !== undefined && style.n !== null) cell.numFmt = style.n.pattern
+  if (Object.keys(font).length > 0) data.font = font
+  if (style.n !== undefined && style.n !== null) data.numFmt = style.n.pattern
   const background = argbOf(style.bg)
   if (background !== undefined) {
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: background } }
+    data.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: background } }
   }
   const border = writeBorder(style.bd)
-  if (border !== undefined) cell.border = border
+  if (border !== undefined) data.border = border
+  const alignment = writeAlignment(style)
+  if (alignment !== undefined) data.alignment = alignment
+  return Object.keys(data).length === 0 ? undefined : data
+}
+
+/**
+ * Translate the Univer alignment style keys into an ExcelJS alignment.
+ * @param style - Univer style data.
+ * @returns ExcelJS alignment fields, or `undefined` when none are set.
+ */
+function writeAlignment(style: IStyleData): Partial<ExcelAlignment> | undefined {
+  const alignment: Partial<ExcelAlignment> = {}
+  if (style.ht !== undefined && style.ht !== null) {
+    const horizontal = EXCEL_HORIZONTAL_BY_UNIVER[style.ht]
+    if (horizontal !== undefined) alignment.horizontal = horizontal
+  }
+  if (style.vt !== undefined && style.vt !== null) {
+    const vertical = EXCEL_VERTICAL_BY_UNIVER[style.vt]
+    if (vertical !== undefined) alignment.vertical = vertical
+  }
+  if (style.tb === WRAP_STRATEGY_WRAP) alignment.wrapText = true
+  if (style.stf === BOOLEAN_TRUE) alignment.shrinkToFit = true
+  const rotation = writeRotation(style.tr)
+  if (rotation !== undefined) alignment.textRotation = rotation
+  return Object.keys(alignment).length === 0 ? undefined : alignment
+}
+
+/**
+ * Map a Univer text rotation back to the ExcelJS alignment rotation.
+ * @param rotation - Univer text rotation.
+ * @returns Signed degrees, `'vertical'`, or `undefined` for horizontal text.
+ */
+function writeRotation(rotation: IStyleData['tr']): number | typeof VERTICAL_ROTATION | undefined {
+  if (rotation === undefined || rotation === null) return undefined
+  return rotation.v === BOOLEAN_TRUE ? VERTICAL_ROTATION : rotation.a
 }
 
 function writeBorder(border: IStyleData['bd']): Partial<Borders> | undefined {
@@ -416,29 +620,80 @@ function writeBorder(border: IStyleData['bd']): Partial<Borders> | undefined {
   return Object.keys(result).length === 0 ? undefined : result
 }
 
-function writeLayout(worksheet: ExcelJS.Worksheet, sheet: Partial<IWorksheetData>): void {
+function writeLayout(worksheet: ExcelJS.Worksheet, sheet: Partial<IWorksheetData>, workbook: IWorkbookData): void {
   if (sheet.defaultRowHeight !== undefined) {
     worksheet.properties.defaultRowHeight = pixelsToPoints(sheet.defaultRowHeight)
   }
   if (sheet.defaultColumnWidth !== undefined) {
     worksheet.properties.defaultColWidth = pixelsToColumnWidth(sheet.defaultColumnWidth)
   }
-  if (sheet.showGridlines !== undefined) {
-    worksheet.views = [{ state: 'normal', showGridLines: sheet.showGridlines === BOOLEAN_TRUE }]
+  writeView(worksheet, sheet)
+  if (sheet.tabColor !== undefined && sheet.tabColor !== '') {
+    const tabColor = argbOf({ rgb: sheet.tabColor })
+    if (tabColor !== undefined) worksheet.properties.tabColor = { argb: tabColor }
   }
   if (sheet.hidden !== undefined) {
-    worksheet.state = sheet.hidden === BOOLEAN_FALSE ? 'visible' : 'hidden'
+    worksheet.state = sheet.hidden === VERY_HIDDEN
+      ? 'veryHidden'
+      : sheet.hidden === BOOLEAN_FALSE
+        ? 'visible'
+        : 'hidden'
   }
   for (const [rowKey, row] of entriesOf(sheet.rowData ?? {})) {
     const excelRow = worksheet.getRow(Number(rowKey) + 1)
     if (row.h !== undefined) excelRow.height = pixelsToPoints(row.h)
     if (row.hd === BOOLEAN_TRUE) excelRow.hidden = true
+    const style = resolveStyle(workbook, row.s)
+    if (style !== undefined) {
+      const excelStyle = excelStyleOf(style)
+      if (excelStyle !== undefined) styledRow(excelRow).style = excelStyle
+    }
   }
   for (const [columnKey, column] of entriesOf(sheet.columnData ?? {})) {
     const excelColumn = worksheet.getColumn(Number(columnKey) + 1)
     if (column.w !== undefined) excelColumn.width = pixelsToColumnWidth(column.w)
     if (column.hd === BOOLEAN_TRUE) excelColumn.hidden = true
+    const style = resolveStyle(workbook, column.s)
+    if (style !== undefined) {
+      const excelStyle = excelStyleOf(style)
+      if (excelStyle !== undefined) excelColumn.style = excelStyle
+    }
   }
+}
+
+/**
+ * Write the sheet's one view, combining the gridline, direction, header,
+ * zoom, and frozen-pane facts into a single replacement so no fact drops
+ * another.
+ * @param worksheet - Target worksheet.
+ * @param sheet - Sheet snapshot being written.
+ */
+function writeView(worksheet: ExcelJS.Worksheet, sheet: Partial<IWorksheetData>): void {
+  const shared: Partial<ExcelJS.WorksheetViewCommon> = {}
+  if (sheet.showGridlines !== undefined) shared.showGridLines = sheet.showGridlines === BOOLEAN_TRUE
+  if (sheet.rightToLeft !== undefined) shared.rightToLeft = sheet.rightToLeft === BOOLEAN_TRUE
+  if (sheet.rowHeader?.hidden === BOOLEAN_TRUE || sheet.columnHeader?.hidden === BOOLEAN_TRUE) {
+    shared.showRowColHeaders = false
+  }
+  if (sheet.zoomRatio !== undefined && sheet.zoomRatio !== DEFAULT_ZOOM_RATIO) {
+    shared.zoomScale = sheet.zoomRatio
+  }
+  const freeze = sheet.freeze
+  if (freeze !== undefined && (freeze.xSplit > 0 || freeze.ySplit > 0)) {
+    worksheet.views = [{ ...shared, state: 'frozen', xSplit: freeze.xSplit, ySplit: freeze.ySplit }]
+    return
+  }
+  if (Object.keys(shared).length > 0) worksheet.views = [{ ...shared, state: 'normal' }]
+}
+
+/**
+ * ExcelJS keeps a row-local style behind `<row s>` but its typings omit the
+ * runtime field that carries it.
+ * @param row - ExcelJS row.
+ * @returns The same row, with its runtime style field typed.
+ */
+function styledRow(row: ExcelJS.Row): ExcelJS.Row & { style?: Partial<ExcelStyle> } {
+  return row
 }
 
 function mergeAddress(range: IRange): string {

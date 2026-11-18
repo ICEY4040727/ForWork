@@ -52,8 +52,6 @@ export type UnsupportedFeatureKind =
   | 'nested-table'
   | 'conditional-formatting'
   | 'data-validation'
-  | 'freeze-panes'
-  | 'tab-color'
   | 'formula-recalc'
   | 'embedded-object'
   | 'other'

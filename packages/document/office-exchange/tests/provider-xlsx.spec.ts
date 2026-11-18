@@ -3,12 +3,19 @@ import { readFile } from 'node:fs/promises'
 import ExcelJS from 'exceljs'
 import { expect, it, vi } from 'vitest'
 import {
+  BaselineOffset,
   BooleanNumber,
   CellValueType,
   DateSystem,
+  HorizontalAlign,
   LocaleType,
   TextDecoration,
+  VerticalAlign,
+  WrapStrategy,
+  WorksheetHiddenState,
   type ICellData,
+  type IColumnData,
+  type IRowData,
   type IStyleData,
   type IWorkbookData,
   type IWorksheetData,
@@ -29,6 +36,11 @@ function cellAt(sheet: Partial<IWorksheetData>, row: number, column: number): IC
 
 function styleOf(cell: ICellData | undefined): IStyleData | undefined {
   const style = cell?.s
+  return style !== undefined && style !== null && typeof style !== 'string' ? style : undefined
+}
+
+function fieldStyleOf(entry: Partial<IRowData> | Partial<IColumnData> | undefined): IStyleData | undefined {
+  const style = entry?.s
   return style !== undefined && style !== null && typeof style !== 'string' ? style : undefined
 }
 
@@ -276,6 +288,135 @@ it('maps a 1900-system date to a serial number', async () => {
   workbook.addWorksheet('Dated').getCell('A1').value = new Date('2024-01-02T03:04:05.000Z')
   const snapshot = await readWorkbook(new Uint8Array(await workbook.xlsx.writeBuffer()))
   expect(typeof cellAt(sheetOf(snapshot, 'Dated'), 0, 0)?.v).toBe('number')
+})
+
+it('maps alignment, strike, baseline, view state, and row and column styles', async () => {
+  const workbook = new ExcelJS.Workbook()
+  const sheet = workbook.addWorksheet('Formatting')
+  const aligned = sheet.getCell('A1')
+  aligned.value = 'aligned'
+  aligned.alignment = {
+    horizontal: 'center',
+    vertical: 'top',
+    wrapText: true,
+    shrinkToFit: true,
+    textRotation: 45,
+  }
+  aligned.font = { strike: true, vertAlign: 'superscript' }
+  sheet.getCell('A2').value = 'rotated'
+  sheet.getCell('A2').alignment = { horizontal: 'right', vertical: 'bottom', textRotation: -30 }
+  sheet.getCell('A3').value = 'vertical'
+  sheet.getCell('A3').alignment = { textRotation: 'vertical' }
+  sheet.getCell('A4').value = 'subscript'
+  sheet.getCell('A4').font = { vertAlign: 'subscript' }
+  sheet.getCell('A5').value = 'row style'
+  sheet.getRow(5).font = { bold: true }
+  sheet.getColumn(2).alignment = { horizontal: 'center' }
+  sheet.views = [{
+    state: 'frozen',
+    xSplit: 2,
+    ySplit: 1,
+    topLeftCell: 'C2',
+    showGridLines: false,
+    zoomScale: 150,
+    rightToLeft: true,
+    showRowColHeaders: false,
+  }]
+  sheet.properties.tabColor = { argb: 'FF336699' }
+  const snapshot = await readWorkbook(new Uint8Array(await workbook.xlsx.writeBuffer()))
+  assertFormattingSheet(sheetOf(snapshot, 'Formatting'))
+  const reread = await readWorkbook(new Uint8Array(await writeWorkbook(snapshot)))
+  assertFormattingSheet(sheetOf(reread, 'Formatting'))
+})
+
+function assertFormattingSheet(data: Partial<IWorksheetData>): void {
+  const aligned = styleOf(cellAt(data, 0, 0))
+  expect(aligned?.ht).toBe(HorizontalAlign.CENTER)
+  expect(aligned?.vt).toBe(VerticalAlign.TOP)
+  expect(aligned?.tb).toBe(WrapStrategy.WRAP)
+  expect(aligned?.stf).toBe(BooleanNumber.TRUE)
+  expect(aligned?.tr).toEqual({ a: 45 })
+  expect(aligned?.st?.s).toBe(BooleanNumber.TRUE)
+  expect(aligned?.va).toBe(BaselineOffset.SUPERSCRIPT)
+  const rotated = styleOf(cellAt(data, 1, 0))
+  expect(rotated?.ht).toBe(HorizontalAlign.RIGHT)
+  expect(rotated?.vt).toBe(VerticalAlign.BOTTOM)
+  expect(rotated?.tr).toEqual({ a: -30 })
+  expect(styleOf(cellAt(data, 2, 0))?.tr).toEqual({ a: 0, v: BooleanNumber.TRUE })
+  expect(styleOf(cellAt(data, 3, 0))?.va).toBe(BaselineOffset.SUBSCRIPT)
+  expect(fieldStyleOf(data.rowData?.[4])?.bl).toBe(BooleanNumber.TRUE)
+  expect(fieldStyleOf(data.columnData?.[1])?.ht).toBe(HorizontalAlign.CENTER)
+  expect(data.freeze).toEqual({ xSplit: 2, ySplit: 1, startRow: 1, startColumn: 2 })
+  expect(data.zoomRatio).toBe(150)
+  expect(data.rightToLeft).toBe(BooleanNumber.TRUE)
+  expect(data.rowHeader?.hidden).toBe(BooleanNumber.TRUE)
+  expect(data.columnHeader?.hidden).toBe(BooleanNumber.TRUE)
+  expect(data.showGridlines).toBe(BooleanNumber.FALSE)
+  expect(data.tabColor).toBe('#336699')
+}
+
+it('reads frozen panes that pin only one axis, and writes them back', async () => {
+  const workbook = new ExcelJS.Workbook()
+  workbook.addWorksheet('Cols').views = [{ state: 'frozen', xSplit: 2 }]
+  workbook.addWorksheet('Rows').views = [{ state: 'frozen', ySplit: 1 }]
+  const snapshot = await readWorkbook(new Uint8Array(await workbook.xlsx.writeBuffer()))
+  expect(sheetOf(snapshot, 'Cols').freeze).toEqual({ xSplit: 2, ySplit: 0, startRow: 0, startColumn: 2 })
+  expect(sheetOf(snapshot, 'Rows').freeze).toEqual({ xSplit: 0, ySplit: 1, startRow: 1, startColumn: 0 })
+  const reread = await readWorkbook(new Uint8Array(await writeWorkbook(snapshot)))
+  expect(sheetOf(reread, 'Cols').freeze).toEqual({ xSplit: 2, ySplit: 0, startRow: 0, startColumn: 2 })
+  expect(sheetOf(reread, 'Rows').freeze).toEqual({ xSplit: 0, ySplit: 1, startRow: 1, startColumn: 0 })
+})
+
+it('maps the very-hidden sheet state through a write/read round trip', async () => {
+  const workbook = new ExcelJS.Workbook()
+  workbook.addWorksheet('Shown')
+  workbook.addWorksheet('Hidden').state = 'veryHidden'
+  const snapshot = await readWorkbook(new Uint8Array(await workbook.xlsx.writeBuffer()))
+  expect(sheetOf(snapshot, 'Hidden').hidden).toBe(WorksheetHiddenState.VERY_HIDDEN)
+  const reread = await readWorkbook(new Uint8Array(await writeWorkbook(snapshot)))
+  expect(sheetOf(reread, 'Hidden').hidden).toBe(WorksheetHiddenState.VERY_HIDDEN)
+})
+
+it('omits styles that map to no ExcelJS field and invalid tab colors', async () => {
+  const snapshot: IWorkbookData = {
+    id: 'empty-formatting',
+    name: '',
+    appVersion: '1.4.0',
+    locale: LocaleType.EN_US,
+    dateSystem: DateSystem.Date1900,
+    styles: {},
+    sheetOrder: ['empty', 'header'],
+    sheets: {
+      empty: {
+        id: 'empty',
+        name: 'Empty',
+        tabColor: 'not-a-color',
+        cellData: {
+          0: {
+            0: { v: 'no alignment', s: { ht: 0, vt: 0, tb: 2, va: null } },
+            1: { v: 'no rotation', s: { tr: null } },
+            2: { v: 'empty style', s: {} },
+          },
+        },
+        rowData: { 0: { s: {} } },
+        columnData: { 0: { s: {} }, 3: { hd: BooleanNumber.TRUE } },
+      },
+      header: {
+        id: 'header',
+        name: 'Header',
+        columnHeader: { height: 20, hidden: BooleanNumber.TRUE },
+      },
+    },
+  }
+  const reread = await readWorkbook(new Uint8Array(await writeWorkbook(snapshot)))
+  const empty = sheetOf(reread, 'Empty')
+  expect(empty.tabColor).toBe('')
+  expect(styleOf(cellAt(empty, 0, 0))).toBeUndefined()
+  expect(styleOf(cellAt(empty, 0, 1))).toBeUndefined()
+  expect(styleOf(cellAt(empty, 0, 2))).toBeUndefined()
+  const header = sheetOf(reread, 'Header')
+  expect(header.rowHeader?.hidden).toBe(BooleanNumber.TRUE)
+  expect(header.columnHeader?.hidden).toBe(BooleanNumber.TRUE)
 })
 
 it('rejects a workbook with more sheets than the configured cell limit', async () => {

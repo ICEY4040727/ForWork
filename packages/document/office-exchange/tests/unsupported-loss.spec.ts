@@ -7,6 +7,7 @@
 import ExcelJS from 'exceljs'
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { expect, it } from 'vitest'
+import type { IWorkbookData, IWorksheetData } from '@univerjs/core'
 import { detectUnsupportedFeatures } from '../src/detect.ts'
 import { readDocument, writeDocument } from '../src/provider/docx.ts'
 import { readWorkbook, writeWorkbook } from '../src/provider/xlsx.ts'
@@ -42,17 +43,25 @@ async function documentRoundTrip(bytes: Uint8Array): Promise<Record<string, stri
 async function workbookRoundTrip(build: (sheet: ExcelJS.Worksheet) => void): Promise<{
   source: Uint8Array
   written: Record<string, string>
+  bytes: Uint8Array
 }> {
   const workbook = new ExcelJS.Workbook()
   const sheet = workbook.addWorksheet('Data')
   sheet.getCell('A1').value = 'kept'
   build(sheet)
   const source = new Uint8Array(await workbook.xlsx.writeBuffer())
-  return { source, written: entriesOf(await writeWorkbook(await readWorkbook(source))) }
+  const bytes = await writeWorkbook(await readWorkbook(source))
+  return { source, written: entriesOf(bytes), bytes }
 }
 
 function sheetXml(entries: Record<string, string>): string {
   return entries[WORKSHEET_XML] ?? ''
+}
+
+function sheetOf(workbook: IWorkbookData, name: string): Partial<IWorksheetData> {
+  const id = workbook.sheetOrder.find(candidate => workbook.sheets[candidate]?.name === name)
+  if (id === undefined) throw new Error(`missing sheet ${name}`)
+  return workbook.sheets[id] ?? {}
 }
 
 function expectDetected(bytes: Uint8Array, feature: UnsupportedFeature): void {
@@ -192,20 +201,27 @@ it('drops data validation, and reports it', async () => {
   expect(sheetXml(written)).not.toContain('dataValidation')
 })
 
-it('drops frozen panes, and reports them', async () => {
-  const { source, written } = await workbookRoundTrip((sheet) => {
+it('keeps frozen panes through a write/read round trip', async () => {
+  const { source, written, bytes } = await workbookRoundTrip((sheet) => {
     sheet.views = [{ state: 'frozen', xSplit: 1, ySplit: 1, topLeftCell: 'B2', activeCell: 'B2' }]
   })
-  expectDetected(source, { kind: 'freeze-panes', detail: WORKSHEET_XML })
-  expect(sheetXml(written)).not.toContain('<pane')
+  expect(detectUnsupportedFeatures(source)).toEqual([])
+  expect(sheetXml(written)).toContain('<pane')
+  expect(sheetOf(await readWorkbook(bytes), 'Data').freeze).toEqual({
+    xSplit: 1,
+    ySplit: 1,
+    startRow: 1,
+    startColumn: 1,
+  })
 })
 
-it('drops a sheet tab color, and reports it', async () => {
-  const { source, written } = await workbookRoundTrip((sheet) => {
+it('keeps a sheet tab color through a write/read round trip', async () => {
+  const { source, written, bytes } = await workbookRoundTrip((sheet) => {
     sheet.properties.tabColor = { argb: 'FFFF0000' }
   })
-  expectDetected(source, { kind: 'tab-color', detail: WORKSHEET_XML })
-  expect(sheetXml(written)).not.toContain('tabColor')
+  expect(detectUnsupportedFeatures(source)).toEqual([])
+  expect(sheetXml(written)).toContain('tabColor')
+  expect(sheetOf(await readWorkbook(bytes), 'Data').tabColor).toBe('#FF0000')
 })
 
 it('drops a cell hyperlink target, and reports it', async () => {

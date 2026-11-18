@@ -55,8 +55,6 @@ const UNSUPPORTED_KIND_ORDER: readonly UnsupportedFeatureKind[] = [
   'nested-table',
   'conditional-formatting',
   'data-validation',
-  'freeze-panes',
-  'tab-color',
 ]
 
 /** Package entries a plausible document can contain before the archive is treated as hostile. */
@@ -176,8 +174,6 @@ function detectWorksheetFeatures(
 ): void {
   if (/<conditionalFormatting(?=[\s/>])/u.test(part.xml)) record('conditional-formatting', part.name)
   if (/<dataValidation(?=[\s/>])/u.test(part.xml)) record('data-validation', part.name)
-  if (/<pane\b[^>]*\bstate="frozen(?:Split)?"/u.test(part.xml)) record('freeze-panes', part.name)
-  if (/<tabColor(?=[\s/>])/u.test(part.xml)) record('tab-color', part.name)
   if (/<hyperlink(?=[\s/>])/u.test(part.xml)) record('hyperlink', part.name)
 }
 

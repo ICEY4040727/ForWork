@@ -473,11 +473,11 @@ it('detects conditional formatting and data validation', () => {
   expect(detectUnsupportedFeatures(validation)).toEqual([{ kind: 'data-validation', detail: WORKSHEET_XML }])
 })
 
-it('detects frozen panes but not split panes', () => {
+it('does not report frozen or split panes, which the writer now maps', () => {
   const frozen = packageOf({
     [WORKSHEET_XML]: '<worksheet><sheetViews><sheetView><pane xSplit="1" state="frozen"/></sheetView></sheetViews></worksheet>',
   })
-  expect(detectUnsupportedFeatures(frozen)).toEqual([{ kind: 'freeze-panes', detail: WORKSHEET_XML }])
+  expect(detectUnsupportedFeatures(frozen)).toEqual([])
 
   const split = packageOf({
     [WORKSHEET_XML]: '<worksheet><sheetViews><sheetView><pane xSplit="1" state="split"/></sheetView></sheetViews></worksheet>',
@@ -485,11 +485,11 @@ it('detects frozen panes but not split panes', () => {
   expect(detectUnsupportedFeatures(split)).toEqual([])
 })
 
-it('detects a sheet tab color', () => {
+it('does not report a sheet tab color, which the writer now maps', () => {
   const bytes = packageOf({
     [WORKSHEET_XML]: '<worksheet><sheetPr><tabColor rgb="FFFF0000"/></sheetPr></worksheet>',
   })
-  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'tab-color', detail: WORKSHEET_XML }])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
 it('reports a workbook kind once across worksheets', () => {
