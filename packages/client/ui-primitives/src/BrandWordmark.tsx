@@ -3,6 +3,8 @@ import { BRAND_MARK_FRAME_PATH, BRAND_MARK_LEAF_PATH } from './BrandMark.tsx'
 
 /** Display options for the official brand wordmark. */
 export interface BrandWordmarkProps extends IconProps {
+  /** Localized product name the wordmark sets; the component owns no fallback copy. */
+  name: string
   /** Whether to include the leading door mark; defaults to true. */
   includeMark?: boolean | undefined
 }
@@ -12,12 +14,13 @@ const WORDMARK_FONT_FAMILY = "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
 
 /**
  * Render the full brand wordmark.
+ * @param props.name - localized product name to set in the wordmark.
  * @param props.size - height in px (default 24; width follows the selected artwork).
  * @param props.className - extra class for layout placement.
  * @param props.includeMark - whether to include the leading door mark.
  * @returns the wordmark svg (aria-hidden decorative brand art).
  */
-export function BrandWordmark({ size = 24, className, includeMark = true }: BrandWordmarkProps) {
+export function BrandWordmark({ name, size = 24, className, includeMark = true }: BrandWordmarkProps) {
   const width = includeMark ? 182 : 156
   return (
     <svg
@@ -45,7 +48,7 @@ export function BrandWordmark({ size = 24, className, includeMark = true }: Bran
         textLength="148"
         lengthAdjust="spacingAndGlyphs"
       >
-        ForWork
+        {name}
       </text>
     </svg>
   )
