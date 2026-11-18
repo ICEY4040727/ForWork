@@ -113,7 +113,7 @@ it('does not report mapped list and hyperlink constructs inside header and foote
   expect(detectUnsupportedFeatures(parts)).toEqual([])
 })
 
-it('detects dropped constructs inside header and footer parts', () => {
+it('does not report image relationships inside header and footer parts', () => {
   const external = packageOf({
     [DOCUMENT_XML]: PLAIN_DOCUMENT,
     'word/footer1.xml': '<w:ftr/>',
@@ -121,9 +121,7 @@ it('detects dropped constructs inside header and footer parts', () => {
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
       + ' Target="https://example.test/a.png" TargetMode="External"/></Relationships>',
   })
-  expect(detectUnsupportedFeatures(external)).toEqual([
-    { kind: 'external-image', detail: 'word/_rels/footer1.xml.rels' },
-  ])
+  expect(detectUnsupportedFeatures(external)).toEqual([])
 })
 
 it('detects embedded objects', () => {
@@ -191,11 +189,14 @@ it('classifies non-zip input as conversion-failed', () => {
   expect(codeOfThrown(() => detectUnsupportedFeatures(new Uint8Array(0)))).toBe('conversion-failed')
 })
 
-it('detects inline image media parts', () => {
-  for (const path of ['word/media/image1.png', 'xl/media/image1.png']) {
-    const bytes = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, [path]: new Uint8Array([0]) })
-    expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'image', detail: path }])
-  }
+it('reports worksheet media but not preserved document media', () => {
+  const worksheet = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, 'xl/media/image1.png': new Uint8Array([0]) })
+  expect(detectUnsupportedFeatures(worksheet)).toEqual([
+    { kind: 'image', detail: 'xl/media/image1.png' },
+  ])
+
+  const document = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, 'word/media/image1.png': new Uint8Array([0]) })
+  expect(detectUnsupportedFeatures(document)).toEqual([])
 })
 
 it('does not report images for a package without media parts', () => {
@@ -336,15 +337,15 @@ it('does not report the table borders the writer emits', () => {
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('detects footnote and endnote parts and body references', () => {
+it('does not report footnote and endnote parts or body references', () => {
   for (const [path, note] of [['word/footnotes.xml', 'footnote'], ['word/endnotes.xml', 'endnote']] as const) {
     const part = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, [path]: `<w:${note}s/>` })
-    expect(detectUnsupportedFeatures(part)).toEqual([{ kind: 'footnotes', detail: path }])
+    expect(detectUnsupportedFeatures(part)).toEqual([])
 
     const reference = packageOf({
       [DOCUMENT_XML]: bodyOf(`<w:p><w:r><w:${note}Reference w:id="1"/></w:r></w:p>`),
     })
-    expect(detectUnsupportedFeatures(reference)).toEqual([{ kind: 'footnotes', detail: DOCUMENT_XML }])
+    expect(detectUnsupportedFeatures(reference)).toEqual([])
   }
 })
 
@@ -372,24 +373,24 @@ it('does not report the single default section every document carries', () => {
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('detects an image relationship whose target is external', () => {
+it('does not report an image relationship whose target is external', () => {
   const bytes = packageOf({
     [DOCUMENT_XML]: bodyOf('<w:p><w:r><w:drawing><a:blip r:link="rId9"/></w:drawing></w:r></w:p>'),
     'word/_rels/document.xml.rels': '<Relationships><Relationship Id="rId9"'
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
       + ' Target="https://example.test/a.png" TargetMode="External"/></Relationships>',
   })
-  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'external-image', detail: 'word/_rels/document.xml.rels' }])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('detects an external image reference without a relationship part', () => {
+it('does not report an external image reference without a relationship part', () => {
   const bytes = packageOf({
     [DOCUMENT_XML]: bodyOf('<w:p><w:r><w:drawing><a:blip r:link="rId9"/></w:drawing></w:r></w:p>'),
   })
-  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'external-image', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('does not report embedded images or external hyperlink relationships as linked images', () => {
+it('does not report preserved document media or external hyperlink relationships', () => {
   const embedded = packageOf({
     [DOCUMENT_XML]: PLAIN_DOCUMENT,
     'word/media/image1.png': new Uint8Array([0]),
@@ -397,7 +398,7 @@ it('does not report embedded images or external hyperlink relationships as linke
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
       + ' Target="media/image1.png"/></Relationships>',
   })
-  expect(detectUnsupportedFeatures(embedded)).toEqual([{ kind: 'image', detail: 'word/media/image1.png' }])
+  expect(detectUnsupportedFeatures(embedded)).toEqual([])
 
   const hyperlink = packageOf({
     [DOCUMENT_XML]: PLAIN_DOCUMENT,

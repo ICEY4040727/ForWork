@@ -232,19 +232,19 @@ describe('useOfficeDocument save', () => {
     expect(remote.save).not.toHaveBeenCalled()
   })
 
-  it('disables save for a document that declares footnotes', async () => {
+  it('disables save for a document that declares an unsupported feature', async () => {
     const remote = makeRemote()
     const documentSnapshot: OfficeDocumentSnapshot = { kind: 'document', data: { id: 'doc' } }
     remote.read.mockResolvedValueOnce(success(readResult('v1', {
       format: 'docx',
       snapshot: documentSnapshot,
-      unsupported: [{ kind: 'footnotes' }],
+      unsupported: [{ kind: 'tracked-changes' }],
     })))
     const { result } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
       initialProps: input(remote.face),
     })
     await waitFor(() => { expect(result.current.status).toBe('unsupported') })
-    expect(result.current.unsupported).toEqual([{ kind: 'footnotes' }])
+    expect(result.current.unsupported).toEqual([{ kind: 'tracked-changes' }])
     expect(result.current.canSave).toBe(false)
   })
 

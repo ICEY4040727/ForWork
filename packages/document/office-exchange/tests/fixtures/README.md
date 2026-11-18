@@ -9,6 +9,9 @@ unsupported-feature detection tests.
 | --- | --- |
 | `roundtrip.xlsx` | Editable workbook: `Sales` sheet with a bold header, three data rows, `=SUM(B2:B4)`, a merged cell, and `$#,##0.00` currency formatting; `Notes` sheet with text cells. Detects clean. |
 | `roundtrip.docx` | Minimal OOXML document: `Heading1` paragraph, normal paragraph with a bold run, and a 2x2 table. No macros, comments, tracked changes, headers, drawings, or embedded objects. Detects clean. |
+| `preserve-image.docx` | Inline picture with an embedded JPEG (`r:embed`), a `word/media/` part, its image relationship, and a JPEG content type. Detection must stay clean and the picture, media bytes, and relationship must survive a save. |
+| `preserve-external-image.docx` | Inline picture linked to an external target (`r:link`, `TargetMode="External"`) with no media part. Detection must stay clean and the picture and external relationship must survive a save. |
+| `preserve-notes.docx` | Body with `w:footnoteReference` and `w:endnoteReference` markers plus `word/footnotes.xml` and `word/endnotes.xml`, their relationships, and content types. Detection must stay clean and the note parts and reference runs must survive a save. |
 | `unsupported-macro.docx` | `roundtrip.docx` plus a `word/vbaProject.bin` entry. Detection must report `macro`. |
 | `unsupported-tracked.docx` | `roundtrip.docx` with `<w:ins>` and `<w:del>` revisions in `word/document.xml`. Detection must report `tracked-changes`. |
 | `unsupported-header.docx` | `roundtrip.docx` plus `word/header1.xml` with `Confidential header` text and its content-type override and relationship. Detection must report nothing, and the header text must survive a save. |

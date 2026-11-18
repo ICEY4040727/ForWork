@@ -264,6 +264,157 @@ function headerXml() {
 }
 
 /**
+ * Build a drawing run that references an image relationship.
+ * @param {string} attribute - `r:embed="rId5"` or `r:link="rId6"`.
+ * @returns {string} Run XML.
+ */
+function drawingRun(attribute) {
+  return `<w:r><w:drawing><wp:inline xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing">`
+    + '<wp:extent cx="952500" cy="952500"/>'
+    + '<wp:docPr id="1" name="Picture 1"/>'
+    + '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+    + '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+    + '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+    + '<pic:nvPicPr><pic:cNvPr id="0" name="image1.jpeg"/><pic:cNvPicPr/></pic:nvPicPr>'
+    + '<pic:blipFill><a:blip'
+    + ` ${attribute}/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>`
+    + '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="952500" cy="952500"/></a:xfrm>'
+    + '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+    + '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>'
+}
+
+/**
+ * Build the document part for an embedded or linked image fixture.
+ * @param {string} attribute - Image relationship attribute.
+ * @returns {string} Document part XML.
+ */
+function imageDocumentXml(attribute) {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    <w:p>
+      <w:r><w:t xml:space="preserve">Before image </w:t></w:r>
+      ${drawingRun(attribute)}
+      <w:r><w:t xml:space="preserve">after image.</w:t></w:r>
+    </w:p>
+    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+  </w:body>
+</w:document>
+`
+}
+
+/**
+ * Build the document part for the footnote/endnote fixture.
+ * @returns {string} Document part XML.
+ */
+function notesDocumentXml() {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    <w:p>
+      <w:r><w:t xml:space="preserve">Body text</w:t></w:r>
+      <w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="1"/></w:r>
+      <w:r><w:t xml:space="preserve"> with an endnote</w:t></w:r>
+      <w:r><w:endnoteReference w:id="2"/></w:r>
+    </w:p>
+    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+  </w:body>
+</w:document>
+`
+}
+
+/** A deterministic JPEG-signature payload; fixtures assert byte preservation, not decoding. */
+const JPEG_BYTES = Uint8Array.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46,
+  0x00, 0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+  0xff, 0xdb, 0x00, 0x43, 0x00, 0x08, 0x06, 0x06, 0x07, 0x06,
+  0x05, 0x08, 0x07, 0x07, 0x07, 0x09, 0x09, 0x08, 0x0a, 0x0c,
+  0xff, 0xd9,
+])
+
+/**
+ * Build the content types for the image fixtures.
+ * @param {{jpeg?: boolean, notes?: boolean}} options - Declarations to include.
+ * @returns {string} Content types XML.
+ */
+function preservationContentTypesXml({ jpeg = false, notes = false } = {}) {
+  const jpegDefault = jpeg
+    ? '\n  <Default Extension="jpeg" ContentType="image/jpeg"/>'
+    : ''
+  const noteOverrides = notes
+    ? '\n  <Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>'
+      + '\n  <Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>'
+    : ''
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>${jpegDefault}
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>${noteOverrides}
+</Types>
+`
+}
+
+/**
+ * Build a package that carries an embedded or linked image.
+ * @param {{external?: boolean}} options - Relationship target mode.
+ * @returns {Uint8Array} Deterministic archive bytes.
+ */
+function buildImageDocx({ external = false } = {}) {
+  const attribute = external ? 'r:link="rId6"' : 'r:embed="rId5"'
+  const relationship = external
+    ? '\n  <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="https://example.test/linked.jpeg" TargetMode="External"/>'
+    : '\n  <Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.jpeg"/>'
+  const entries = {
+    '[Content_Types].xml': strToU8(preservationContentTypesXml({ jpeg: !external })),
+    '_rels/.rels': strToU8(rootRelsXml()),
+    'word/_rels/document.xml.rels': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>${relationship}
+</Relationships>
+`),
+    'word/document.xml': strToU8(imageDocumentXml(attribute)),
+    'word/styles.xml': strToU8(stylesXml()),
+  }
+  if (!external) entries['word/media/image1.jpeg'] = JPEG_BYTES
+  return buildArchive(entries)
+}
+
+/**
+ * Build a package with a footnote and an endnote.
+ * @returns {Uint8Array} Deterministic archive bytes.
+ */
+function buildNotesDocx() {
+  return buildArchive({
+    '[Content_Types].xml': strToU8(preservationContentTypesXml({ notes: true })),
+    '_rels/.rels': strToU8(rootRelsXml()),
+    'word/_rels/document.xml.rels': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/>
+  <Relationship Id="rId8" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/>
+</Relationships>
+`),
+    'word/document.xml': strToU8(notesDocumentXml()),
+    'word/styles.xml': strToU8(stylesXml()),
+    'word/footnotes.xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:footnote>
+  <w:footnote w:id="1"><w:p><w:r><w:t>Footnote text</w:t></w:r></w:p></w:footnote>
+</w:footnotes>
+`),
+    'word/endnotes.xml': strToU8(`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:endnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:endnote>
+  <w:endnote w:id="2"><w:p><w:r><w:t>Endnote text</w:t></w:r></w:p></w:endnote>
+</w:endnotes>
+`),
+  })
+}
+
+/**
  * Build a minimal `.docx` package.
  * @param {{trackedChanges?: boolean, macro?: boolean, header?: boolean}} options - Variant switches.
  * @returns {Uint8Array} Deterministic archive bytes.
@@ -313,6 +464,9 @@ async function main() {
 
   writeFixture('roundtrip.xlsx', await buildRoundtripXlsx())
   writeFixture('roundtrip.docx', buildDocx())
+  writeFixture('preserve-image.docx', buildImageDocx())
+  writeFixture('preserve-external-image.docx', buildImageDocx({ external: true }))
+  writeFixture('preserve-notes.docx', buildNotesDocx())
   writeFixture('unsupported-macro.docx', buildDocx({ macro: true }))
   writeFixture('unsupported-tracked.docx', buildDocx({ trackedChanges: true }))
   writeFixture('unsupported-header.docx', buildDocx({ header: true }))

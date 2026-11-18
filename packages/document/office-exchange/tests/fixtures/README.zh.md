@@ -8,6 +8,9 @@
 | --- | --- |
 | `roundtrip.xlsx` | 可编辑工作簿：包含带粗体表头的 `Sales` 工作表、三行数据、`=SUM(B2:B4)`、一个合并单元格和 `$#,##0.00` 货币格式；`Notes` 工作表包含文本单元格。检测结果干净。 |
 | `roundtrip.docx` | 最小 OOXML 文档：一个 `Heading1` 段落、一个带粗体 run 的普通段落，以及一个 2x2 表格。不含宏、批注、修订、页眉、绘图或嵌入对象。检测结果干净。 |
+| `preserve-image.docx` | 带内嵌 JPEG 的内联图片（`r:embed`）、一个 `word/media/` 部件、对应图片关系以及 JPEG 内容类型。检测结果必须保持干净，图片、媒体字节与关系必须经受保存。 |
+| `preserve-external-image.docx` | 链接到外部目标（`r:link`、`TargetMode="External"`）且没有媒体部件的内联图片。检测结果必须保持干净，图片与外部关系必须经受保存。 |
+| `preserve-notes.docx` | 正文含 `w:footnoteReference` 与 `w:endnoteReference` 标记，并带有 `word/footnotes.xml`、`word/endnotes.xml` 及其关系与内容类型。检测结果必须保持干净，注释部件与引用 run 必须经受保存。 |
 | `unsupported-macro.docx` | `roundtrip.docx` 加上一个 `word/vbaProject.bin` 条目。检测必须报告 `macro`。 |
 | `unsupported-tracked.docx` | `roundtrip.docx` 在 `word/document.xml` 中带有 `<w:ins>` 与 `<w:del>` 修订。检测必须报告 `tracked-changes`。 |
 | `unsupported-header.docx` | `roundtrip.docx` 加上带 `Confidential header` 文本的 `word/header1.xml` 及其 content-type 覆盖与关系。检测不得报告任何内容，且保存后页眉文本必须保留。 |

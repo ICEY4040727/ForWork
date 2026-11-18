@@ -7,10 +7,6 @@ import { OfficeExchangeError } from './errors.ts'
 import type { UnsupportedFeature, UnsupportedFeatureKind } from './types.ts'
 
 const DOCUMENT_XML = 'word/document.xml'
-const DOCUMENT_RELS = 'word/_rels/document.xml.rels'
-
-/** Parts that hold footnote and endnote definitions. */
-const NOTE_PARTS: ReadonlySet<string> = new Set(['word/footnotes.xml', 'word/endnotes.xml'])
 
 const MACRO_PATHS: ReadonlySet<string> = new Set([
   'word/vbaproject.bin',
@@ -21,8 +17,8 @@ const MACRO_PATHS: ReadonlySet<string> = new Set([
 /** Worksheet parts whose own elements the workbook writer does not rebuild. */
 const WORKSHEET_PREFIX = 'xl/worksheets/'
 
-/** Media parts an image relationship needs, and a rewrite drops. */
-const MEDIA_PREFIXES: readonly string[] = ['word/media/', 'xl/media/']
+/** Worksheet media parts the workbook writer does not rebuild. */
+const WORKSHEET_MEDIA_PREFIX = 'xl/media/'
 
 const DRAWING_PREFIXES: readonly string[] = [
   'word/drawings/',
@@ -47,9 +43,7 @@ const UNSUPPORTED_KIND_ORDER: readonly UnsupportedFeatureKind[] = [
   'shape',
   'embedded-object',
   'image',
-  'external-image',
   'hyperlink',
-  'footnotes',
   'conditional-formatting',
   'data-validation',
 ]
@@ -73,12 +67,8 @@ interface PackageContents {
   readonly entryNames: readonly string[]
   /** Decoded `word/document.xml`, when the package contains it. */
   readonly documentXml: Uint8Array | undefined
-  /** Decoded `word/_rels/document.xml.rels`, when the package declares relationships. */
-  readonly documentRelsXml: Uint8Array | undefined
   /** Decoded header and footer parts, in central-directory order. */
   readonly storyParts: readonly PackagePart[]
-  /** Decoded header and footer relationship parts, in central-directory order. */
-  readonly storyRelsParts: readonly PackagePart[]
   /** Decoded worksheet parts, in central-directory order. */
   readonly worksheetParts: readonly PackagePart[]
 }
@@ -101,8 +91,7 @@ export function detectUnsupportedFeatures(
     )
   }
 
-  const { entryNames, documentXml, documentRelsXml, storyParts, storyRelsParts, worksheetParts }
-    = readPackage(bytes)
+  const { entryNames, documentXml, storyParts, worksheetParts } = readPackage(bytes)
   const details = new Map<UnsupportedFeatureKind, string>()
   const record = (kind: UnsupportedFeatureKind, detail: string): void => {
     if (!details.has(kind)) details.set(kind, detail)
@@ -116,18 +105,11 @@ export function detectUnsupportedFeatures(
     if (hasPrefix(path, DRAWING_PREFIXES)) record('drawing', name)
     if (path.includes('vmldrawing')) record('shape', name)
     if (hasPrefix(path, EMBEDDING_PREFIXES)) record('embedded-object', name)
-    if (hasPrefix(path, MEDIA_PREFIXES)) record('image', name)
-    if (NOTE_PARTS.has(path)) record('footnotes', name)
+    if (path.startsWith(WORKSHEET_MEDIA_PREFIX)) record('image', name)
   }
 
-  if (documentRelsXml !== undefined && hasExternalImageRelationship(strFromU8(documentRelsXml))) {
-    record('external-image', DOCUMENT_RELS)
-  }
   if (documentXml !== undefined) detectDocumentFeatures(strFromU8(documentXml), DOCUMENT_XML, record)
   for (const part of storyParts) detectDocumentFeatures(part.xml, part.name, record)
-  for (const part of storyRelsParts) {
-    if (hasExternalImageRelationship(part.xml)) record('external-image', part.name)
-  }
   for (const part of worksheetParts) detectWorksheetFeatures(part, record)
 
   const features: UnsupportedFeature[] = []
@@ -139,10 +121,11 @@ export function detectUnsupportedFeatures(
 }
 
 /**
- * Record document-body constructs that the document writer drops, because it
- * writes back paragraph text, run and paragraph formatting, heading styles,
- * section page setup, header and footer text, flow tables with merged cells,
- * cell formatting and nested tables, lists, and hyperlinks.
+ * Record document-body constructs the document writer drops. The writer maps
+ * paragraph text, run and paragraph formatting, heading styles, section page
+ * setup, header and footer text, flow tables with merged cells, cell formatting
+ * and nested tables, lists, and hyperlinks, and preserves images and note
+ * references opaquely; tracked changes are the remaining document-body loss.
  * @param xml - Decoded `word/document.xml` or a header/footer part.
  * @param detail - Part name reported with each detected kind.
  * @param record - First-detail-per-kind recorder.
@@ -153,8 +136,6 @@ function detectDocumentFeatures(
   record: (kind: UnsupportedFeatureKind, detail: string) => void,
 ): void {
   if (xml.includes('<w:ins ') || xml.includes('<w:del ')) record('tracked-changes', detail)
-  if (hasNoteReference(xml)) record('footnotes', detail)
-  if (/<a:blip(?=[\s/>])[^>]*\br:link=/u.test(xml)) record('external-image', detail)
 }
 
 /**
@@ -169,30 +150,6 @@ function detectWorksheetFeatures(
   if (/<conditionalFormatting(?=[\s/>])/u.test(part.xml)) record('conditional-formatting', part.name)
   if (/<dataValidation(?=[\s/>])/u.test(part.xml)) record('data-validation', part.name)
   if (/<hyperlink(?=[\s/>])/u.test(part.xml)) record('hyperlink', part.name)
-}
-
-/**
- * Report whether the body references a footnote or endnote.
- * @param xml - Decoded `word/document.xml`.
- * @returns `true` when a footnote or endnote reference is present.
- */
-function hasNoteReference(xml: string): boolean {
-  return /<w:(?:footnote|endnote)Reference(?=[\s/>])/u.test(xml)
-}
-
-/**
- * Report whether the document's relationships carry an image outside the
- * package. Hyperlink relationships also use an external target, so the
- * relationship type must name an image.
- * @param xml - Decoded `word/_rels/document.xml.rels` or a header/footer relationship part.
- * @returns `true` when an image relationship has `TargetMode="External"`.
- */
-function hasExternalImageRelationship(xml: string): boolean {
-  for (const match of xml.matchAll(/<Relationship(?=[\s/>])[^>]*>/gu)) {
-    if (!/\bTargetMode="External"/u.test(match[0])) continue
-    if (/\bType="[^"]*\/image"/u.test(match[0])) return true
-  }
-  return false
 }
 
 function readPackage(bytes: Uint8Array): PackageContents {
@@ -219,10 +176,8 @@ function readPackage(bytes: Uint8Array): PackageContents {
         }
         const path = file.name.toLowerCase()
         return file.name === DOCUMENT_XML
-          || file.name === DOCUMENT_RELS
           || isWorksheetPart(path)
           || isHeaderOrFooterPart(path)
-          || isStoryRelationshipPart(path)
       },
     })
   } catch (error) {
@@ -233,23 +188,16 @@ function readPackage(bytes: Uint8Array): PackageContents {
 
   const worksheetParts: PackagePart[] = []
   const storyParts: PackagePart[] = []
-  const storyRelsParts: PackagePart[] = []
   for (const [name, content] of Object.entries(entries)) {
-    if (name === DOCUMENT_XML || name === DOCUMENT_RELS) continue
+    if (name === DOCUMENT_XML) continue
     const xml = strFromU8(content)
-    if (isWorksheetPart(name.toLowerCase())) {
-      worksheetParts.push({ name, xml })
-      continue
-    }
-    if (isStoryRelationshipPart(name.toLowerCase())) storyRelsParts.push({ name, xml })
+    if (isWorksheetPart(name.toLowerCase())) worksheetParts.push({ name, xml })
     else storyParts.push({ name, xml })
   }
   return {
     entryNames,
     documentXml: entries[DOCUMENT_XML],
-    documentRelsXml: entries[DOCUMENT_RELS],
     storyParts,
-    storyRelsParts,
     worksheetParts,
   }
 }
@@ -270,8 +218,4 @@ function isCommentPart(path: string): boolean {
 
 function isHeaderOrFooterPart(path: string): boolean {
   return (path.startsWith('word/header') || path.startsWith('word/footer')) && path.endsWith('.xml')
-}
-
-function isStoryRelationshipPart(path: string): boolean {
-  return path.startsWith('word/_rels/') && path.endsWith('.rels')
 }

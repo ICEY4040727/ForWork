@@ -69,16 +69,30 @@ function expectDetected(bytes: Uint8Array, feature: UnsupportedFeature): void {
   expect(detectUnsupportedFeatures(bytes)).toContainEqual(feature)
 }
 
-it('drops an inline image and reports it', async () => {
-  const image = '<w:p><w:r><w:drawing><wp:inline xmlns:wp="urn:probe"><a:graphic'
+it('preserves an inline image, its media part, and its relationship', async () => {
+  const drawing = '<w:r><w:drawing><wp:inline xmlns:wp="urn:probe"><a:graphic'
     + ' xmlns:a="urn:probe"><a:graphicData><pic:pic xmlns:pic="urn:probe"><pic:blipFill>'
     + '<a:blip r:embed="rId5"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>'
-    + '</w:drawing></w:r></w:p>'
-  const bytes = documentPackage(image, { 'word/media/image1.png': new Uint8Array([1, 2, 3]) })
-  expectDetected(bytes, { kind: 'image', detail: 'word/media/image1.png' })
-  const written = await documentRoundTrip(bytes)
-  expect(Object.keys(written)).not.toContain('word/media/image1.png')
-  expect(written[DOCUMENT_XML]).not.toContain('w:drawing')
+    + '</w:drawing></w:r>'
+  const media = new Uint8Array([0xff, 0xd8, 0xff, 0xd9])
+  const relationship = '<Relationship Id="rId5"'
+    + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+    + ' Target="media/image1.jpeg"/>'
+  const bytes = documentPackage(`<w:p>${drawing}</w:p>`, {
+    'word/media/image1.jpeg': media,
+    'word/_rels/document.xml.rels': `<Relationships>${relationship}</Relationships>`,
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  const original = await readDocument(bytes)
+  expect(original.body?.docxRawBlocks).toEqual([{ startIndex: 0, xml: drawing }])
+  const written = await writeDocument(original)
+  const entries = unzipSync(written)
+  expect(entries['word/media/image1.jpeg']).toEqual(media)
+  expect(strFromU8(entries[DOCUMENT_XML] ?? new Uint8Array())).toContain(drawing)
+  expect(strFromU8(entries['word/_rels/document.xml.rels'] ?? new Uint8Array())).toContain(relationship)
+  expect(strFromU8(entries['[Content_Types].xml'] ?? new Uint8Array())).toContain('ContentType="image/jpeg"')
+  const reopened = await readDocument(written)
+  expect(reopened.body?.docxRawBlocks).toEqual([{ startIndex: 0, xml: drawing }])
 })
 
 it('keeps a hyperlink, its text, and its external target', async () => {
@@ -132,42 +146,71 @@ it('keeps cell borders through a read/write round trip', async () => {
   expect(rewritten?.borderLeft).toEqual(cell?.borderLeft)
 })
 
-it('drops footnotes and endnotes with their parts, and reports them', async () => {
+it('preserves footnotes and endnotes with their parts and references', async () => {
+  const footnoteRun = '<w:r><w:footnoteReference w:id="1"/></w:r>'
+  const endnoteRun = '<w:r><w:endnoteReference w:id="2"/></w:r>'
+  const footnotes = '<w:footnotes><w:footnote w:id="1"><w:p><w:r><w:t>footnote text</w:t></w:r></w:p></w:footnote></w:footnotes>'
+  const endnotes = '<w:endnotes><w:endnote w:id="2"><w:p><w:r><w:t>endnote text</w:t></w:r></w:p></w:endnote></w:endnotes>'
+  const footnoteRelationship = '<Relationship Id="rId7"'
+    + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes"'
+    + ' Target="footnotes.xml"/>'
+  const endnoteRelationship = '<Relationship Id="rId8"'
+    + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes"'
+    + ' Target="endnotes.xml"/>'
+  const contentTypes = '<Types>'
+    + '<Override PartName="/word/footnotes.xml"'
+    + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/>'
+    + '<Override PartName="/word/endnotes.xml"'
+    + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/>'
+    + '</Types>'
   const bytes = documentPackage(
-    '<w:p><w:r><w:t>body</w:t></w:r><w:r><w:footnoteReference w:id="1"/></w:r>'
-    + '<w:r><w:endnoteReference w:id="2"/></w:r></w:p>',
+    `<w:p><w:r><w:t>body</w:t></w:r>${footnoteRun}${endnoteRun}</w:p>`,
     {
-      'word/footnotes.xml': '<w:footnotes><w:footnote w:id="1"><w:p><w:r><w:t>footnote text</w:t></w:r></w:p></w:footnote></w:footnotes>',
-      'word/endnotes.xml': '<w:endnotes><w:endnote w:id="2"><w:p><w:r><w:t>endnote text</w:t></w:r></w:p></w:endnote></w:endnotes>',
+      '[Content_Types].xml': contentTypes,
+      'word/footnotes.xml': footnotes,
+      'word/endnotes.xml': endnotes,
+      'word/_rels/document.xml.rels': `<Relationships>${footnoteRelationship}${endnoteRelationship}</Relationships>`,
     },
   )
-  expectDetected(bytes, { kind: 'footnotes', detail: 'word/footnotes.xml' })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  const original = await readDocument(bytes)
+  expect(original.body?.docxRawBlocks).toEqual([
+    { startIndex: 4, xml: footnoteRun },
+    { startIndex: 4, xml: endnoteRun },
+  ])
   const written = await documentRoundTrip(bytes)
-  expect(Object.keys(written)).not.toContain('word/footnotes.xml')
-  expect(Object.keys(written)).not.toContain('word/endnotes.xml')
-  expect(written[DOCUMENT_XML]).not.toContain('w:footnoteReference')
-  expect(written[DOCUMENT_XML]).not.toContain('w:endnoteReference')
-  expect(written[DOCUMENT_XML]).not.toContain('footnote text')
-  expect(written[DOCUMENT_XML]).not.toContain('endnote text')
+  expect(written['word/footnotes.xml']).toBe(footnotes)
+  expect(written['word/endnotes.xml']).toBe(endnotes)
+  expect(written['[Content_Types].xml']).toContain('/word/footnotes.xml')
+  expect(written['[Content_Types].xml']).toContain('/word/endnotes.xml')
+  expect(written['word/_rels/document.xml.rels']).toContain(footnoteRelationship)
+  expect(written['word/_rels/document.xml.rels']).toContain(endnoteRelationship)
+  expect(written[DOCUMENT_XML]).toContain(footnoteRun)
+  expect(written[DOCUMENT_XML]).toContain(endnoteRun)
+  const reopened = await readDocument(await writeDocument(original))
+  expect(reopened.body?.docxRawBlocks).toEqual(original.body?.docxRawBlocks)
 })
 
-it('drops a linked image and its external target, and reports it', async () => {
-  const bytes = documentPackage(
-    '<w:p><w:r><w:drawing><wp:inline xmlns:wp="urn:probe"><a:graphic'
+it('preserves a linked image and its external target', async () => {
+  const drawing = '<w:r><w:drawing><wp:inline xmlns:wp="urn:probe"><a:graphic'
     + ' xmlns:a="urn:probe"><a:graphicData><pic:pic xmlns:pic="urn:probe"><pic:blipFill>'
     + '<a:blip r:link="rId7"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline>'
-    + '</w:drawing></w:r></w:p>',
-    {
-      'word/_rels/document.xml.rels': '<Relationships><Relationship Id="rId7"'
-        + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
-        + ' Target="https://example.test/linked.png" TargetMode="External"/></Relationships>',
-    },
-  )
-  expectDetected(bytes, { kind: 'external-image', detail: 'word/_rels/document.xml.rels' })
+    + '</w:drawing></w:r>'
+  const relationship = '<Relationship Id="rId7"'
+    + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"'
+    + ' Target="https://example.test/linked.png" TargetMode="External"/>'
+  const bytes = documentPackage(`<w:p>${drawing}</w:p>`, {
+    'word/_rels/document.xml.rels': `<Relationships>${relationship}</Relationships>`,
+  })
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  const original = await readDocument(bytes)
+  expect(original.body?.docxRawBlocks).toEqual([{ startIndex: 0, xml: drawing }])
   const written = await documentRoundTrip(bytes)
-  expect(written[DOCUMENT_XML]).not.toContain('r:link')
-  expect(written['word/_rels/document.xml.rels']).not.toContain('example.test')
-  expect(written['word/_rels/document.xml.rels']).not.toContain('TargetMode')
+  expect(written[DOCUMENT_XML]).toContain(drawing)
+  expect(written['word/_rels/document.xml.rels']).toContain('https://example.test/linked.png')
+  expect(written['word/_rels/document.xml.rels']).toContain('TargetMode="External"')
+  const reopened = await readDocument(await writeDocument(original))
+  expect(reopened.body?.docxRawBlocks).toEqual(original.body?.docxRawBlocks)
 })
 
 it('keeps merged-cell spans through a read/write round trip', async () => {

@@ -31,13 +31,23 @@
  * A table range in `body.tables` ends immediately after the table end token and
  * its structural rows live in `tableSource[tableId]`.
  *
- * UNSUPPORTED: images, charts, drawings, shapes, comments, tracked changes,
- * macros, footnotes and endnotes, page borders and page numbering, theme styles
- * and theme-derived colors, named style definitions other than the heading
- * styles above, floating and inline objects, and property values the Univer
- * model has no field for (for example a run border's line size or a decimal tab
- * stop's alignment). A read/write round-trip does not preserve these.
- * Macro-bearing packages are read without executing or retaining macros.
+ * PRESERVED OPAQUELY: each run that carries a `w:drawing` or `w:pict` and each
+ * run that carries a `w:footnoteReference` or `w:endnoteReference` is captured
+ * byte-for-byte in `body.docxRawBlocks`, together with the source media parts,
+ * note parts, relationships, and content-type declarations. The writer
+ * re-emits them unchanged, so images and note bodies survive an edit-and-save
+ * without becoming editable or rendered content. A raw block anchors at the
+ * stream offset before the run and adds no stream character, so paragraph and
+ * run offsets are unchanged.
+ *
+ * UNSUPPORTED: charts, drawing parts, shapes, comments, tracked changes,
+ * macros, page borders and page numbering, theme styles and theme-derived
+ * colors, named style definitions other than the heading styles above,
+ * floating objects with their own drawing parts, and property values the
+ * Univer model has no field for (for example a run border's line size or a
+ * decimal tab stop's alignment). A read/write round-trip does not preserve
+ * these. Macro-bearing packages are read without executing or retaining
+ * macros.
  */
 import { XMLParser } from 'fast-xml-parser'
 import { SyntaxValidator } from 'fast-xml-validator'
@@ -72,6 +82,7 @@ import type {
   IDocumentBody,
   IDocumentData,
   IDocumentStyle,
+  IDocxRawBlock,
   IFooters,
   IHeaders,
   IHyperlink,
@@ -115,6 +126,10 @@ const DOCUMENT_RELS = 'word/_rels/document.xml.rels'
 const HEADER_PART = /^word\/header[^/]*\.xml$/u
 const FOOTER_PART = /^word\/footer[^/]*\.xml$/u
 const STORY_RELS_PART = /^word\/_rels\/(?:header|footer)[^/]*\.xml\.rels$/u
+const MEDIA_PART = /^word\/media\//u
+const NOTE_PART = /^word\/(?:footnotes|endnotes)\.xml$/u
+const NOTE_RELS_PART = /^word\/_rels\/(?:footnotes|endnotes)\.xml\.rels$/u
+const CONTENT_TYPES_XML = '[Content_Types].xml'
 const DEFAULT_COLUMN_SPACING = 720
 const DEFAULT_PAGE_MARGIN = 1440 / 15
 const PARAGRAPH = '\r'
@@ -144,6 +159,38 @@ const DEFAULT_BORDER_COLOR = '000000'
 const DEFAULT_COLUMN_WIDTH = 160
 const DEFAULT_ROW_HEIGHT = 30
 const DETERMINISTIC_DATE = new Date('2026-01-01T00:00:00.000Z')
+
+/** Media extension defaults used when a source package declares none. */
+const IMAGE_CONTENT_TYPES: Readonly<Record<string, string>> = {
+  bmp: 'image/bmp',
+  emf: 'image/x-emf',
+  gif: 'image/gif',
+  jpe: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  jpg: 'image/jpeg',
+  png: 'image/png',
+  svg: 'image/svg+xml',
+  tif: 'image/tiff',
+  tiff: 'image/tiff',
+  wmf: 'image/x-wmf',
+}
+
+/** Content types of the note parts this provider preserves. */
+const NOTE_CONTENT_TYPES: Readonly<Record<string, string>> = {
+  'word/footnotes.xml': 'application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml',
+  'word/endnotes.xml': 'application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml',
+}
+
+/** Namespaces a preserved drawing run may reference without declaring them locally. */
+const PRESERVED_NAMESPACES = ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+  + ' xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"'
+  + ' xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"'
+  + ' xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
+  + ' xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"'
+  + ' xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"'
+  + ' xmlns:v="urn:schemas-microsoft-com:vml"'
+  + ' xmlns:o="urn:schemas-microsoft-com:office:office"'
+  + ' xmlns:w10="urn:schemas-microsoft-com:office:word"'
 
 const BOOLEAN_TRUE: BooleanNumber = 1
 const TEXT_DECORATION_SINGLE: TextDecoration = 12
@@ -433,6 +480,8 @@ interface ReadContext {
   readonly tables: ICustomTable[]
   readonly tableSource: ITables
   readonly customRanges: IHyperLinkCustomRange[]
+  readonly rawRuns: RawRunSource | undefined
+  readonly rawBlocks: IDocxRawBlock[]
   readonly bounds: OfficeExchangeConfig
   cells: number
   tableSerial: number
@@ -553,8 +602,6 @@ interface StoryPlan {
   readonly parts: readonly StoryPart[]
   /** Segment identity mapped to its relationship id. */
   readonly relIds: ReadonlyMap<string, string>
-  /** Relationship id after the last part in this plan. */
-  readonly nextRelId: number
 }
 
 /** Section properties addressed from the document stream and the body's final section. */
@@ -565,16 +612,88 @@ interface SectionPlan {
   readonly finalXml: string
 }
 
+/** One source package entry preserved byte-for-byte as base64. */
+interface PreservedPart {
+  /** Package entry name. */
+  readonly name: string
+  /** Base64 encoding of the entry bytes. */
+  readonly base64: string
+}
+
+/** Source relationship elements the writer re-emits beside its generated ones. */
+interface PreservedRelationships {
+  /** Elements from `word/_rels/document.xml.rels`. */
+  readonly document?: readonly string[]
+  /** Elements from header and footer relationship parts, keyed by segment identity. */
+  readonly stories?: Readonly<Record<string, readonly string[]>>
+}
+
+/** Opaque DOCX package state carried by a document snapshot outside the editable model. */
+interface DocxPreservedPackage {
+  /** Media, note, and note-relationship entries re-emitted unchanged. */
+  readonly parts: readonly PreservedPart[]
+  /** Relationship elements that address the preserved entries. */
+  readonly relationships: PreservedRelationships
+  /** Content-type declaration elements retained from `[Content_Types].xml`. */
+  readonly contentTypes: readonly string[]
+}
+
+/** A document snapshot that carries the Exchange layer's opaque DOCX package state. */
+interface OfficeExchangeDocumentData extends IDocumentData {
+  /** Source package state the editable model cannot address. */
+  officeExchange?: {
+    /** DOCX state re-emitted on write. */
+    readonly docx?: DocxPreservedPackage
+  }
+}
+
+/** One XML run captured from a source part for lossless re-emission. */
+interface RawRunRecord {
+  /** Exact source XML from `<w:r` through `</w:r>`. */
+  readonly xml: string
+  /** Relationship and note identity values used to match the parsed run. */
+  readonly key: string
+  taken: boolean
+}
+
+/** Source runs that a parsed run may consume once, matched by identity or order. */
+interface RawRunSource {
+  /**
+   * Take the source XML for one parsed run.
+   * @param element - Parsed run that carries a drawing, picture, or note reference.
+   * @returns The exact source run XML, or `undefined` when none remains.
+   */
+  take(element: XmlElement): string | undefined
+}
+
+/** Raw-block positions for one body, marking which positions the writer emitted. */
+interface RawBlockPlan {
+  /** Source XML anchored at each stream offset, in source order. */
+  readonly byIndex: ReadonlyMap<number, readonly string[]>
+  /** Offsets already emitted, so one anchor never duplicates content. */
+  readonly emitted: Set<number>
+}
+
+/** Sequential relationship ids that skip ids retained from the source package. */
+interface RelationshipAllocator {
+  /**
+   * Allocate the next unused relationship id.
+   * @returns An id of the form `rId<n>` absent from the source package.
+   */
+  next(): string
+}
+
 /**
  * Read `.docx` bytes into a Univer document snapshot. Paragraph text, paragraph
  * breaks, run and paragraph formatting, `word/styles.xml` defaults, heading
  * styles, flow tables, section page setup, header/footer text, list numbering,
- * and hyperlinks are mapped; the unsupported features listed in the module note
- * are not.
+ * hyperlinks, and opaque image and note preservation are mapped; the
+ * unsupported features listed in the module note are not.
  * @param bytes - Complete DOCX package bytes.
  * @param config - Bounds applied before parsing; defaults when omitted.
  * @returns Document snapshot with Univer stream tokens, run styles, table and
- * header/footer metadata, and section page setup.
+ * header/footer metadata, section page setup, and opaque preserved runs and
+ * package entries.
  * @throws {OfficeExchangeError} `too-large` when a byte, package-entry,
  * expansion, or table-cell bound is exceeded; `conversion-failed` when the
  * input is not a readable Word document.
@@ -602,7 +721,7 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
     headers: new Set(parts.headers.keys()),
     footers: new Set(parts.footers.keys()),
   }
-  const context = createReadContext(bounds)
+  const context = createReadContext(bounds, readRawRunCatalog(strFromU8(parts.document)))
   for (const child of childElements(body)) {
     if (child.tag === 'p') appendParagraph(context, child, relationships, identifiers, numbering)
     if (child.tag === 'tbl') appendTable(context, child, relationships, numbering)
@@ -618,22 +737,26 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
   ))
   const documentStyle = readDocumentStyle(parts.styles)
   if (readEvenAndOddHeaders(parts.settings)) documentStyle.evenAndOddHeaders = BOOLEAN_TRUE
-  const snapshot: IDocumentData = {
+  const documentBody: IDocumentBody = {
+    dataStream: context.parts.join(''),
+    textRuns: context.textRuns,
+    paragraphs: context.paragraphs,
+    sectionBreaks: context.sectionBreaks,
+    tables: context.tables,
+    customRanges: context.customRanges,
+  }
+  if (context.rawBlocks.length > 0) documentBody.docxRawBlocks = context.rawBlocks
+  const snapshot: OfficeExchangeDocumentData = {
     id: 'office-exchange-document',
     locale: LOCALE_EN_US,
     title: '',
-    body: {
-      dataStream: context.parts.join(''),
-      textRuns: context.textRuns,
-      paragraphs: context.paragraphs,
-      sectionBreaks: context.sectionBreaks,
-      tables: context.tables,
-      customRanges: context.customRanges,
-    },
+    body: documentBody,
     documentStyle,
     tableSource: context.tableSource,
     resources: [],
   }
+  const preserved = collectPreservedPackage(parts)
+  if (preserved !== undefined) snapshot.officeExchange = { docx: preserved }
   if (Object.keys(numbering.lists).length > 0) snapshot.lists = numbering.lists
   if (headers.size > 0) snapshot.headers = Object.fromEntries(headers)
   if (footers.size > 0) snapshot.footers = Object.fromEntries(footers)
@@ -642,14 +765,15 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
 
 /**
  * Write a Univer document snapshot to `.docx` bytes. The inverse of
- * `readDocument` for the supported features; the unsupported features listed in
+ * `readDocument` for the supported features; preserved image and note runs and
+ * their package entries are re-emitted, and the unsupported features listed in
  * the module note are absent from the output.
  * @param data - Document snapshot from `readDocument` or the editor.
  * @param config - Bounds validated before writing; defaults when omitted.
  * @returns A deterministic DOCX package that `readDocument` can reopen.
  * @throws {OfficeExchangeError} `too-large` when the table-cell bound is
- * exceeded; `conversion-failed` when the stream is structurally invalid or
- * serialization fails.
+ * exceeded; `conversion-failed` when the stream is structurally invalid,
+ * preserved package state is malformed, or serialization fails.
  */
 export function writeDocument(data: IDocumentData, config?: OfficeExchangeConfig): Promise<Uint8Array> {
   return Promise.resolve().then(() => writeDocumentBytes(data, config))
@@ -657,17 +781,21 @@ export function writeDocument(data: IDocumentData, config?: OfficeExchangeConfig
 
 function writeDocumentBytes(data: IDocumentData, config?: OfficeExchangeConfig): Uint8Array {
   const bounds = resolveConfig(config ?? {})
+  const preserved = preservedPackageOf(data)
   const stream = data.body?.dataStream ?? ''
   const paragraphs = new Map<number, IParagraph>()
   for (const paragraph of data.body?.paragraphs ?? []) paragraphs.set(paragraph.startIndex, paragraph)
   const numbering = planNumbering(data)
-  let nextRelId = 2
+  const documentRelIds = createRelationshipAllocator(
+    relationshipIdsOf(preserved?.relationships.document ?? []),
+  )
+  const stylesRelId = documentRelIds.next()
   const settings = writeSettingsXml(data.documentStyle)
-  if (settings !== undefined) nextRelId += 1
-  const numberingRelId = numbering.xml === undefined ? undefined : nextRelId++
-  const headers = planStoryParts(data.headers, 'header', nextRelId, bounds, numbering)
-  const footers = planStoryParts(data.footers, 'footer', headers.nextRelId, bounds, numbering)
-  const links = planLinks(data.body?.customRanges, footers.nextRelId)
+  const settingsRelId = settings === undefined ? undefined : documentRelIds.next()
+  const numberingRelId = numbering.xml === undefined ? undefined : documentRelIds.next()
+  const headers = planStoryParts(data.headers, 'header', documentRelIds, bounds, numbering, preserved)
+  const footers = planStoryParts(data.footers, 'footer', documentRelIds, bounds, numbering, preserved)
+  const links = planLinks(data.body?.customRanges, documentRelIds)
   const relIds = new Map([...headers.relIds, ...footers.relIds])
   const sections = planSections(data.body?.sectionBreaks ?? [], relIds)
   const bodyXml = writeBody(stream, paragraphs, data, sections, relIds, links, numbering, bounds)
@@ -677,10 +805,19 @@ function writeDocumentBytes(data: IDocumentData, config?: OfficeExchangeConfig):
       footers.parts,
       settings !== undefined,
       numbering.xml !== undefined,
+      preserved,
     )),
     '_rels/.rels': strToU8(rootRelsXml()),
     'word/_rels/document.xml.rels': strToU8(
-      documentRelsXml(headers.parts, footers.parts, settings !== undefined, numberingRelId, links.rels),
+      documentRelsXml(
+        stylesRelId,
+        settingsRelId,
+        numberingRelId,
+        headers.parts,
+        footers.parts,
+        links.rels,
+        preserved?.relationships.document ?? [],
+      ),
     ),
     [DOCUMENT_XML]: strToU8(documentXml(bodyXml, sections.finalXml)),
     [STYLES_XML]: strToU8(stylesXml(data.documentStyle)),
@@ -692,6 +829,12 @@ function writeDocumentBytes(data: IDocumentData, config?: OfficeExchangeConfig):
     if (part.relsPartName !== undefined && part.relsXml !== undefined) {
       entries[part.relsPartName] = strToU8(part.relsXml)
     }
+  }
+  for (const part of preserved?.parts ?? []) {
+    if (entries[part.name] !== undefined) {
+      throw new OfficeExchangeError('conversion-failed', `Preserved part ${part.name} conflicts with a generated part`)
+    }
+    entries[part.name] = decodeBase64(part.base64)
   }
   const zippable: Zippable = {}
   for (const name of Object.keys(entries).sort()) {
@@ -707,7 +850,96 @@ function writeDocumentBytes(data: IDocumentData, config?: OfficeExchangeConfig):
   }
 }
 
-function createReadContext(bounds: OfficeExchangeConfig): ReadContext {
+/**
+ * Read the snapshot's opaque DOCX package state after validating its JSON shape.
+ * @param data - Document snapshot, possibly produced by a Remote round-trip.
+ * @returns The preserved package, or `undefined` when the snapshot carries none.
+ * @throws {OfficeExchangeError} `conversion-failed` when the state is malformed.
+ */
+function preservedPackageOf(data: IDocumentData): DocxPreservedPackage | undefined {
+  const extension: unknown = (data as OfficeExchangeDocumentData).officeExchange
+  if (extension === undefined) return undefined
+  if (!isPreservedExtension(extension)) {
+    throw new OfficeExchangeError('conversion-failed', 'Document snapshot has malformed preserved package state')
+  }
+  return extension.docx
+}
+
+function isPreservedExtension(value: unknown): value is OfficeExchangeDocumentData['officeExchange'] {
+  if (!isRecord(value)) return false
+  const docx = value['docx']
+  if (docx === undefined) return true
+  return isPreservedPackage(docx)
+}
+
+function isPreservedPackage(value: unknown): value is DocxPreservedPackage {
+  if (!isRecord(value)) return false
+  const parts = value['parts']
+  const relationships = value['relationships']
+  const contentTypes = value['contentTypes']
+  if (!Array.isArray(parts) || !parts.every(isPreservedPart)) return false
+  if (!Array.isArray(contentTypes) || !contentTypes.every(item => typeof item === 'string')) return false
+  return isPreservedRelationships(relationships)
+}
+
+function isPreservedPart(value: unknown): value is PreservedPart {
+  return isRecord(value) && typeof value['name'] === 'string' && typeof value['base64'] === 'string'
+}
+
+function isStringArray(value: unknown): value is readonly string[] {
+  return Array.isArray(value) && value.every(item => typeof item === 'string')
+}
+
+function isPreservedRelationships(value: unknown): value is PreservedRelationships {
+  if (!isRecord(value)) return false
+  const document = value['document']
+  const stories = value['stories']
+  if (document !== undefined && !isStringArray(document)) return false
+  if (stories !== undefined) {
+    if (!isRecord(stories)) return false
+    if (!Object.values(stories).every(isStringArray)) return false
+  }
+  return true
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ * Create sequential relationship ids while skipping ids the source retains.
+ * @param reserved - Relationship ids present in preserved source elements.
+ * @returns An allocator that never returns a reserved id.
+ */
+function createRelationshipAllocator(reserved: ReadonlySet<string>): RelationshipAllocator {
+  let serial = 0
+  return {
+    next() {
+      let id = ''
+      do {
+        serial += 1
+        id = `rId${String(serial)}`
+      } while (reserved.has(id))
+      return id
+    },
+  }
+}
+
+/**
+ * Collect relationship ids from preserved element source strings.
+ * @param elements - Complete `<Relationship .../>` elements.
+ * @returns Ids those elements declare.
+ */
+function relationshipIdsOf(elements: readonly string[]): ReadonlySet<string> {
+  const ids = new Set<string>()
+  for (const element of elements) {
+    const id = tagAttribute(element, 'Id')
+    if (id !== undefined) ids.add(id)
+  }
+  return ids
+}
+
+function createReadContext(bounds: OfficeExchangeConfig, rawRuns?: RawRunSource): ReadContext {
   return {
     parts: [],
     length: 0,
@@ -717,6 +949,8 @@ function createReadContext(bounds: OfficeExchangeConfig): ReadContext {
     tables: [],
     tableSource: {},
     customRanges: [],
+    rawRuns,
+    rawBlocks: [],
     bounds,
     cells: 0,
     tableSerial: 0,
@@ -1098,6 +1332,14 @@ function variantOf(value: string | undefined): StoryVariant {
 }
 
 function appendRun(context: ReadContext, element: XmlElement): void {
+  if (containsPreservedContent(element)) {
+    const xml = context.rawRuns?.take(element)
+    if (xml === undefined) {
+      throw new OfficeExchangeError('conversion-failed', 'Cannot preserve a drawing, picture, or note reference run')
+    }
+    context.rawBlocks.push({ startIndex: context.length, xml })
+    return
+  }
   const properties = findChild(element, 'rPr')
   const style = properties === undefined ? undefined : readTextStyle(properties)
   const start = context.length
@@ -1110,6 +1352,131 @@ function appendRun(context: ReadContext, element: XmlElement): void {
   if (style !== undefined && text.length > 0) {
     context.textRuns.push({ st: start, ed: context.length, ts: style })
   }
+}
+
+/** Run children whose XML the writer re-emits instead of mapping into the stream. */
+const PRESERVED_RUN_TAGS: ReadonlySet<string> = new Set([
+  'drawing',
+  'pict',
+  'footnoteReference',
+  'endnoteReference',
+])
+
+/**
+ * Report whether a run carries content preserved only as raw XML.
+ * @param element - Parsed run.
+ * @returns `true` for a drawing, picture, or footnote/endnote reference anywhere inside the run.
+ */
+function containsPreservedContent(element: XmlElement): boolean {
+  for (const child of childElements(element)) {
+    if (PRESERVED_RUN_TAGS.has(child.tag)) return true
+    if (containsPreservedContent(child)) return true
+  }
+  return false
+}
+
+/**
+ * Scan one part's source XML for runs that carry preserved content.
+ * @param xml - Decoded part XML.
+ * @returns A source whose runs are taken once, matched by identity first and source order second.
+ */
+function readRawRunCatalog(xml: string): RawRunSource {
+  const records: RawRunRecord[] = []
+  const byKey = new Map<string, RawRunRecord[]>()
+  for (const match of xml.matchAll(/<w:r(?=[\s/>])[^>]*>/gu)) {
+    if (match[0].endsWith('/>')) continue
+    const start = match.index
+    const end = runEndOf(xml, start)
+    if (end === undefined) continue
+    const run = xml.slice(start, end)
+    if (!containsPreservedMarkup(run)) continue
+    const key = relationshipKeyOfXml(run)
+    const record: RawRunRecord = { xml: run, key, taken: false }
+    records.push(record)
+    const queue = byKey.get(key)
+    if (queue === undefined) byKey.set(key, [record])
+    else queue.push(record)
+  }
+  let cursor = 0
+  return {
+    take(element) {
+      const key = relationshipKeyOfElement(element)
+      for (const record of byKey.get(key) ?? []) {
+        if (record.taken) continue
+        record.taken = true
+        return record.xml
+      }
+      while (cursor < records.length && records[cursor]?.taken === true) cursor += 1
+      const fallback = records[cursor]
+      if (fallback === undefined) return undefined
+      fallback.taken = true
+      cursor += 1
+      return fallback.xml
+    },
+  }
+}
+
+/**
+ * Find the end of the `w:r` element that starts at `start`.
+ * @param xml - Part XML.
+ * @param start - Offset of the run's opening tag.
+ * @returns Exclusive offset after its closing tag, or `undefined` when it is unterminated.
+ */
+function runEndOf(xml: string, start: number): number | undefined {
+  const pattern = /<w:r(?=[\s/>])[^>]*>|<\/w:r>/gu
+  pattern.lastIndex = start
+  let depth = 0
+  for (let match = pattern.exec(xml); match !== null; match = pattern.exec(xml)) {
+    if (match[0] === '</w:r>') {
+      depth -= 1
+      if (depth === 0) return pattern.lastIndex
+    } else if (!match[0].endsWith('/>')) {
+      depth += 1
+    }
+  }
+  return undefined
+}
+
+/**
+ * Report whether source run XML carries preserved content.
+ * @param xml - One source run.
+ * @returns `true` when it contains a drawing, picture, or note reference.
+ */
+function containsPreservedMarkup(xml: string): boolean {
+  return /<w:(?:drawing|pict|footnoteReference|endnoteReference)(?=[\s/>])/u.test(xml)
+}
+
+/**
+ * Collect relationship and note identity values from source run XML.
+ * @param xml - One source run.
+ * @returns Sorted attribute values joined as one match key.
+ */
+function relationshipKeyOfXml(xml: string): string {
+  const values: string[] = []
+  for (const match of xml.matchAll(/\b(?:embed|link|pict|id|dm|lo|qs|cs)="([^"]*)"/gu)) {
+    const value = match[1]
+    if (value !== undefined) values.push(value)
+  }
+  return values.sort().join('\u0000')
+}
+
+/**
+ * Collect relationship and note identity values from a parsed run.
+ * @param element - Parsed run.
+ * @returns Sorted attribute values joined as one match key.
+ */
+function relationshipKeyOfElement(element: XmlElement): string {
+  const values: string[] = []
+  collectRelationshipValues(element, values)
+  return values.sort().join('\u0000')
+}
+
+function collectRelationshipValues(element: XmlElement, values: string[]): void {
+  for (const name of ['@_embed', '@_link', '@_pict', '@_id', '@_dm', '@_lo', '@_qs', '@_cs']) {
+    const value = attribute(element, name)
+    if (value !== undefined && value.length > 0) values.push(value)
+  }
+  for (const child of childElements(element)) collectRelationshipValues(child, values)
 }
 
 function readTextStyle(properties: XmlElement): ITextStyle | undefined {
@@ -1751,7 +2118,7 @@ function readStoryParts<Entry>(
   const stories = new Map<string, Entry>()
   for (const [id, xml] of parts) {
     const element = parseRootElement(xml, root, `${root === 'hdr' ? 'header' : 'footer'} XML`)
-    const context = createReadContext(bounds)
+    const context = createReadContext(bounds, readRawRunCatalog(strFromU8(xml)))
     const storyRelationships = relationships.get(id)
     for (const child of childElements(element)) {
       if (child.tag === 'p') appendParagraph(context, child, storyRelationships, undefined, numbering)
@@ -1766,6 +2133,7 @@ function readStoryParts<Entry>(
       tables: context.tables,
       customRanges: context.customRanges,
     }
+    if (context.rawBlocks.length > 0) body.docxRawBlocks = context.rawBlocks
     stories.set(id, build(id, body, context.tableSource))
   }
   return stories
@@ -1860,16 +2228,16 @@ function writeNestingLevel(level: INestingLevel, index: number): string {
 /**
  * Assign external hyperlink relationships for one part.
  * @param ranges - Custom ranges from the part's body.
- * @param firstRelId - First relationship number available in the part.
+ * @param allocator - Relationship id allocator for this part.
  * @returns The relationship declarations and a URL lookup.
  */
-function planLinks(ranges: readonly ICustomRange[] | undefined, firstRelId: number): LinkPlan {
+function planLinks(ranges: readonly ICustomRange[] | undefined, allocator: RelationshipAllocator): LinkPlan {
   const relIdByUrl = new Map<string, string>()
   const rels: LinkRel[] = []
   for (const range of ranges ?? []) {
     const url = hyperlinkPropertiesOf(range)?.url
     if (url === undefined || relIdByUrl.has(url)) continue
-    const relId = `rId${String(firstRelId + rels.length)}`
+    const relId = allocator.next()
     relIdByUrl.set(url, relId)
     rels.push({ relId, target: url })
   }
@@ -1932,6 +2300,7 @@ function writeBody(
   bounds: OfficeExchangeConfig,
 ): string {
   const cells = { count: 0 }
+  const rawBlocks = planRawBlocks(story.body)
   let xml = ''
   let cursor = 0
   let index = 0
@@ -1939,13 +2308,23 @@ function writeBody(
     const token = stream[index]
     if (token === TABLE_START) {
       const table = readTableRange(stream, index)
-      xml += writeTable(stream, index, table, paragraphs, story, bounds, cells, links, numbering)
+      xml += writeTable(stream, index, table, paragraphs, story, bounds, cells, links, numbering, rawBlocks)
       index = table.end
       cursor = index
     } else if (token === PARAGRAPH) {
       const section = stream[index + 1] === SECTION_BREAK ? sections.breakAt.get(index + 1) : undefined
       const properties = section === undefined ? '' : writeSectionProperties(section, relIds)
-      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, properties, links, numbering)
+      xml += writeParagraph(
+        stream,
+        cursor,
+        index,
+        paragraphs.get(index),
+        story,
+        properties,
+        links,
+        numbering,
+        rawBlocks,
+      )
       cursor = section === undefined ? index + 1 : index + 2
       index = cursor
     } else {
@@ -1956,7 +2335,51 @@ function writeBody(
   if (remainder.length > 0) {
     throw new OfficeExchangeError('conversion-failed', 'Document stream has text outside a paragraph')
   }
+  assertRawBlocksEmitted(rawBlocks)
   return xml
+}
+
+/**
+ * Index a body's raw XML by the stream offset where the writer must emit it.
+ * @param body - Body whose `docxRawBlocks` are preserved.
+ * @returns Positions in source order and an empty emitted set.
+ */
+function planRawBlocks(body: IDocumentBody | undefined): RawBlockPlan {
+  const byIndex = new Map<number, string[]>()
+  for (const block of body?.docxRawBlocks ?? []) {
+    const existing = byIndex.get(block.startIndex)
+    if (existing === undefined) byIndex.set(block.startIndex, [block.xml])
+    else existing.push(block.xml)
+  }
+  return { byIndex, emitted: new Set() }
+}
+
+/**
+ * Emit raw XML anchored at one offset exactly once.
+ * @param plan - Raw-block positions for the body.
+ * @param index - Stream offset to consume.
+ * @returns Concatenated source XML, or an empty string when nothing is anchored there.
+ */
+function consumeRawBlocks(plan: RawBlockPlan, index: number): string {
+  const blocks = plan.byIndex.get(index)
+  if (blocks === undefined || plan.emitted.has(index)) return ''
+  plan.emitted.add(index)
+  return blocks.join('')
+}
+
+/**
+ * Refuse to write when a preserved raw block has no paragraph or cell anchor.
+ * @param plan - Raw-block positions for the body.
+ * @throws {OfficeExchangeError} `conversion-failed` when any offset was not emitted.
+ */
+function assertRawBlocksEmitted(plan: RawBlockPlan): void {
+  for (const index of plan.byIndex.keys()) {
+    if (plan.emitted.has(index)) continue
+    throw new OfficeExchangeError(
+      'conversion-failed',
+      `Preserved document content at stream offset ${String(index)} is outside a paragraph`,
+    )
+  }
 }
 
 /**
@@ -1991,17 +2414,19 @@ function writeStoryBody(
  * Schedule header or footer parts for the writer.
  * @param entries - Segment bodies keyed by their identity.
  * @param kind - Whether the parts are headers or footers.
- * @param firstRelId - First document relationship number available.
+ * @param allocator - Document relationship id allocator shared with the body.
  * @param bounds - Table-cell bound applied while writing story bodies.
  * @param numbering - Numbering ids shared with the document body.
+ * @param preserved - Source package state re-emitted with the document.
  * @returns The parts, their relationship ids, and the next free relationship number.
  */
 function planStoryParts(
   entries: IHeaders | IFooters | undefined,
   kind: 'header' | 'footer',
-  firstRelId: number,
+  allocator: RelationshipAllocator,
   bounds: OfficeExchangeConfig,
   numbering: NumberingPlan,
+  preserved: DocxPreservedPackage | undefined,
 ): StoryPlan {
   const ids = entries === undefined ? [] : Object.keys(entries).sort()
   const parts: StoryPart[] = []
@@ -2011,24 +2436,28 @@ function planStoryParts(
     /* v8 ignore next -- ids came from this record's own keys, so every lookup resolves. */
     if (entry === undefined) continue
     const partName = `word/${kind}${String(index + 1)}.xml`
-    const relId = `rId${String(firstRelId + index)}`
-    const links = planLinks(entry.body.customRanges, 1)
+    const relId = allocator.next()
+    const preservedRels = preserved?.relationships.stories?.[id] ?? []
+    const storyAllocator = createRelationshipAllocator(relationshipIdsOf(preservedRels))
+    const links = planLinks(entry.body.customRanges, storyAllocator)
+    const relsXml = storyRelsXml(links.rels, preservedRels)
     parts.push({
       id,
       partName,
       relId,
       xml: storyXml(kind, writeStoryBody(entry, bounds, links, numbering)),
-      ...(links.rels.length === 0
+      ...(relsXml === undefined
         ? {}
-        : { relsPartName: `word/_rels/${partName.slice('word/'.length)}.rels`, relsXml: storyRelsXml(links.rels) }),
+        : { relsPartName: `word/_rels/${partName.slice('word/'.length)}.rels`, relsXml }),
     })
     relIds.set(id, relId)
   }
-  return { parts, relIds, nextRelId: firstRelId + parts.length }
+  return { parts, relIds }
 }
 
-function storyRelsXml(rels: readonly LinkRel[]): string {
-  let relationships = ''
+function storyRelsXml(rels: readonly LinkRel[], preserved: readonly string[]): string | undefined {
+  if (rels.length === 0 && preserved.length === 0) return undefined
+  let relationships = preserved.join('')
   for (const rel of rels) {
     relationships += `<Relationship Id="${rel.relId}"`
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
@@ -2042,7 +2471,7 @@ function storyRelsXml(rels: readonly LinkRel[]): string {
 function storyXml(kind: 'header' | 'footer', content: string): string {
   const root = kind === 'header' ? 'hdr' : 'ftr'
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-    + `<w:${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">`
+    + `<w:${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"${PRESERVED_NAMESPACES}>`
     + `${content}</w:${root}>`
 }
 
@@ -2199,6 +2628,7 @@ function writeTable(
   cells: { count: number },
   links: LinkPlan,
   numbering: NumberingPlan,
+  rawBlocks: RawBlockPlan,
 ): string {
   const source = tableSourceAt(story, start)
   const sourceColumns = source?.tableColumns ?? []
@@ -2230,7 +2660,7 @@ function writeTable(
       const span = cellSpan(sourceCell)
       const width = sourceCell?.size?.width.v ?? spanWidth(widths, gridColumn, span)
       xml += `<w:tc>${writeCellProperties(sourceCell, width, span)}`
-        + `${writeCell(stream, cell, paragraphs, story, bounds, cells, links, numbering)}</w:tc>`
+        + `${writeCell(stream, cell, paragraphs, story, bounds, cells, links, numbering, rawBlocks)}</w:tc>`
       gridColumn += span
     }
     xml += '</w:tr>'
@@ -2376,6 +2806,7 @@ function writeCell(
   cells: { count: number },
   links: LinkPlan,
   numbering: NumberingPlan,
+  rawBlocks: RawBlockPlan,
 ): string {
   let xml = ''
   let cursor = cell.start
@@ -2383,12 +2814,12 @@ function writeCell(
   while (index < cell.end) {
     const token = stream[index]
     if (token === PARAGRAPH) {
-      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, '', links, numbering)
+      xml += writeParagraph(stream, cursor, index, paragraphs.get(index), story, '', links, numbering, rawBlocks)
       cursor = index + 1
       index += 1
     } else if (token === TABLE_START) {
       const nested = readTableRange(stream, index)
-      xml += writeTable(stream, index, nested, paragraphs, story, bounds, cells, links, numbering)
+      xml += writeTable(stream, index, nested, paragraphs, story, bounds, cells, links, numbering, rawBlocks)
       index = nested.end
       cursor = index
     } else {
@@ -2400,7 +2831,7 @@ function writeCell(
     throw new OfficeExchangeError('conversion-failed', 'Table cell text must end with a paragraph break')
   }
   return xml.length === 0
-    ? writeParagraph(stream, cell.start, cell.start, undefined, story, '', links, numbering)
+    ? writeParagraph(stream, cell.start, cell.start, undefined, story, '', links, numbering, rawBlocks)
     : xml
 }
 
@@ -2413,9 +2844,10 @@ function writeParagraph(
   sectionProperties: string,
   links: LinkPlan,
   numbering: NumberingPlan,
+  rawBlocks: RawBlockPlan,
 ): string {
   const properties = paragraphProperties(paragraph, sectionProperties, numbering)
-  return `<w:p>${properties}${writeParagraphContent(stream, start, end, story, links)}</w:p>`
+  return `<w:p>${properties}${writeParagraphContent(stream, start, end, story, links, rawBlocks)}</w:p>`
 }
 
 function writeParagraphContent(
@@ -2424,13 +2856,16 @@ function writeParagraphContent(
   end: number,
   story: StoryData,
   links: LinkPlan,
+  rawBlocks: RawBlockPlan,
 ): string {
   const ranges = paragraphLinks(story.body?.customRanges, start, end)
-  if (ranges.length === 0) return writeTextRuns(stream, start, end, story.body?.textRuns ?? [])
   const boundaries = new Set<number>([start, end])
   for (const range of ranges) {
     boundaries.add(range.start)
     boundaries.add(range.end)
+  }
+  for (const index of rawBlocks.byIndex.keys()) {
+    if (index >= start && index <= end) boundaries.add(index)
   }
   const sorted = [...boundaries].sort((left, right) => left - right)
   let xml = ''
@@ -2439,11 +2874,12 @@ function writeParagraphContent(
     const sliceEnd = sorted[index + 1]
     /* v8 ignore next -- Boundaries come in sorted pairs, so both offsets are always present. */
     if (sliceStart === undefined || sliceEnd === undefined) continue
-    const content = writeTextRuns(stream, sliceStart, sliceEnd, story.body?.textRuns ?? [])
+    const content = consumeRawBlocks(rawBlocks, sliceStart)
+      + writeTextRuns(stream, sliceStart, sliceEnd, story.body?.textRuns ?? [])
     const range = ranges.find(candidate => candidate.start <= sliceStart && candidate.end >= sliceEnd)
     xml += range === undefined ? content : writeHyperlink(range.properties, links, content)
   }
-  return xml
+  return `${xml}${consumeRawBlocks(rawBlocks, end)}`
 }
 
 function writeTextRuns(stream: string, start: number, end: number, textRuns: readonly ITextRun[]): string {
@@ -2740,6 +3176,14 @@ interface PackageParts {
   readonly footers: ReadonlyMap<string, Uint8Array>
   /** Header and footer relationship parts keyed by their segment identity. */
   readonly storyRelationships: ReadonlyMap<string, Uint8Array>
+  /** Media entries keyed by their package entry name. */
+  readonly media: ReadonlyMap<string, Uint8Array>
+  /** Footnote and endnote parts keyed by their package entry name. */
+  readonly notes: ReadonlyMap<string, Uint8Array>
+  /** Footnote and endnote relationship parts keyed by their package entry name. */
+  readonly noteRelationships: ReadonlyMap<string, Uint8Array>
+  /** Decoded `[Content_Types].xml`, when present. */
+  readonly contentTypes: Uint8Array | undefined
 }
 
 function readPackage(bytes: Uint8Array): PackageParts {
@@ -2767,6 +3211,10 @@ function readPackage(bytes: Uint8Array): PackageParts {
           || file.name === SETTINGS_XML
           || file.name === NUMBERING_XML
           || file.name === DOCUMENT_RELS
+          || file.name === CONTENT_TYPES_XML
+          || MEDIA_PART.test(path)
+          || NOTE_PART.test(path)
+          || NOTE_RELS_PART.test(path)
           || HEADER_PART.test(path)
           || FOOTER_PART.test(path)
           || STORY_RELS_PART.test(path)
@@ -2779,11 +3227,17 @@ function readPackage(bytes: Uint8Array): PackageParts {
   const headers = new Map<string, Uint8Array>()
   const footers = new Map<string, Uint8Array>()
   const storyRelationships = new Map<string, Uint8Array>()
+  const media = new Map<string, Uint8Array>()
+  const notes = new Map<string, Uint8Array>()
+  const noteRelationships = new Map<string, Uint8Array>()
   for (const [name, content] of Object.entries(entries)) {
     const path = name.toLowerCase()
     if (HEADER_PART.test(path)) headers.set(partIdOf(name), content)
     if (FOOTER_PART.test(path)) footers.set(partIdOf(name), content)
     if (STORY_RELS_PART.test(path)) storyRelationships.set(storyIdOf(name), content)
+    if (MEDIA_PART.test(path)) media.set(name, content)
+    if (NOTE_PART.test(path)) notes.set(name, content)
+    if (NOTE_RELS_PART.test(path)) noteRelationships.set(name, content)
   }
   return {
     document: entries[DOCUMENT_XML],
@@ -2794,6 +3248,10 @@ function readPackage(bytes: Uint8Array): PackageParts {
     headers,
     footers,
     storyRelationships,
+    media,
+    notes,
+    noteRelationships,
+    contentTypes: entries[CONTENT_TYPES_XML],
   }
 }
 
@@ -2801,6 +3259,157 @@ function readPackage(bytes: Uint8Array): PackageParts {
 function storyIdOf(partName: string): string {
   const name = partName.slice(partName.lastIndexOf('/') + 1)
   return name.slice(0, -'.xml.rels'.length)
+}
+
+/**
+ * Collect package state the editable model cannot address but the writer must re-emit.
+ * @param parts - Decoded package entries read for one document.
+ * @returns Preserved parts, relationships, and content types, or `undefined` when none exist.
+ */
+function collectPreservedPackage(parts: PackageParts): DocxPreservedPackage | undefined {
+  const preservedParts: PreservedPart[] = []
+  for (const [name, content] of [...parts.media, ...parts.notes, ...parts.noteRelationships]) {
+    preservedParts.push({ name, base64: encodeBase64(content) })
+  }
+  preservedParts.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0)
+  const documentRelationships = preservedRelationshipElements(parts.relationships, isImageOrNoteRelationship)
+  const stories: Record<string, readonly string[]> = {}
+  for (const [id, xml] of parts.storyRelationships) {
+    const elements = preservedRelationshipElements(xml, isImageRelationship)
+    if (elements.length > 0) stories[id] = elements
+  }
+  const contentTypes = preservedContentTypeElements(parts, preservedParts)
+  if (preservedParts.length === 0 && documentRelationships.length === 0
+    && Object.keys(stories).length === 0 && contentTypes.length === 0) {
+    return undefined
+  }
+  return {
+    parts: preservedParts,
+    relationships: {
+      ...(documentRelationships.length === 0 ? {} : { document: documentRelationships }),
+      ...(Object.keys(stories).length === 0 ? {} : { stories }),
+    },
+    contentTypes,
+  }
+}
+
+function isImageRelationship(element: string): boolean {
+  return (tagAttribute(element, 'Type') ?? '').endsWith('/image')
+}
+
+function isImageOrNoteRelationship(element: string): boolean {
+  const type = tagAttribute(element, 'Type') ?? ''
+  return type.endsWith('/image') || type.endsWith('/footnotes') || type.endsWith('/endnotes')
+}
+
+/**
+ * Extract relationship elements that match a predicate without re-encoding them.
+ * @param xml - Decoded relationship part, when present.
+ * @param keep - Predicate over one complete element.
+ * @returns Matching element source strings in source order.
+ */
+function preservedRelationshipElements(
+  xml: Uint8Array | undefined,
+  keep: (element: string) => boolean,
+): readonly string[] {
+  if (xml === undefined) return []
+  const elements: string[] = []
+  for (const match of strFromU8(xml).matchAll(/<Relationship(?=[\s/>])[^>]*\/?>/gu)) {
+    if (keep(match[0])) elements.push(match[0])
+  }
+  return elements
+}
+
+/**
+ * Keep content-type declarations the generated manifest does not reproduce.
+ * @param parts - Decoded source package.
+ * @param preservedParts - Entries the writer re-emits.
+ * @returns Declaration elements for preserved entries and their extensions.
+ */
+function preservedContentTypeElements(
+  parts: PackageParts,
+  preservedParts: readonly PreservedPart[],
+): readonly string[] {
+  if (parts.contentTypes === undefined) return []
+  const names = new Set(preservedParts.map(part => `/${part.name}`))
+  const extensions = new Set(preservedParts.map(extensionOf).filter(name => name.length > 0))
+  const elements: string[] = []
+  const text = strFromU8(parts.contentTypes)
+  for (const match of text.matchAll(/<(Default|Override)(?=[\s/>])[^>]*\/?>/gu)) {
+    const element = match[0]
+    if (match[1] === 'Default') {
+      const extension = tagAttribute(element, 'Extension')?.toLowerCase()
+      if (extension !== undefined && extension !== 'rels' && extension !== 'xml'
+        && extensions.has(extension)) {
+        elements.push(element)
+      }
+      continue
+    }
+    const partName = tagAttribute(element, 'PartName')
+    if (partName !== undefined && names.has(partName)) elements.push(element)
+  }
+  return elements
+}
+
+function extensionOf(part: PreservedPart): string {
+  const name = part.name
+  const dot = name.lastIndexOf('.')
+  return dot < 0 ? '' : name.slice(dot + 1).toLowerCase()
+}
+
+const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+
+/**
+ * Encode bytes as base64 for a JSON-safe snapshot field.
+ * @param bytes - Source bytes.
+ * @returns Standard padded base64 text.
+ */
+function encodeBase64(bytes: Uint8Array): string {
+  let text = ''
+  for (let index = 0; index < bytes.length; index += 3) {
+    const first = bytes[index] ?? 0
+    const second = bytes[index + 1]
+    const third = bytes[index + 2]
+    text += BASE64_ALPHABET[first >> 2] ?? ''
+    text += BASE64_ALPHABET[((first & 0x03) << 4) | ((second ?? 0) >> 4)] ?? ''
+    text += second === undefined ? '=' : BASE64_ALPHABET[((second & 0x0F) << 2) | ((third ?? 0) >> 6)] ?? ''
+    text += third === undefined ? '=' : BASE64_ALPHABET[third & 0x3F] ?? ''
+  }
+  return text
+}
+
+/**
+ * Decode base64 carried by a snapshot back to bytes.
+ * @param text - Standard padded base64 text.
+ * @returns Decoded bytes.
+ * @throws {OfficeExchangeError} `conversion-failed` when the text is not valid base64.
+ */
+function decodeBase64(text: string): Uint8Array {
+  if (text.length % 4 !== 0) throw new OfficeExchangeError('conversion-failed', 'Preserved part is not valid base64')
+  const bytes: number[] = []
+  for (let index = 0; index < text.length; index += 4) {
+    const values = [0, 0, 0, 0]
+    let padding = 0
+    for (let offset = 0; offset < 4; offset += 1) {
+      const character = text[index + offset]
+      if (character === '=') {
+        padding += 1
+        continue
+      }
+      const value = character === undefined ? -1 : BASE64_ALPHABET.indexOf(character)
+      if (value < 0 || padding > 0) {
+        throw new OfficeExchangeError('conversion-failed', 'Preserved part is not valid base64')
+      }
+      values[offset] = value
+    }
+    bytes.push(((values[0] ?? 0) << 2) | ((values[1] ?? 0) >> 4))
+    if (padding < 2) bytes.push((((values[1] ?? 0) & 0x0F) << 4) | ((values[2] ?? 0) >> 2))
+    if (padding < 1) bytes.push((((values[2] ?? 0) & 0x03) << 6) | (values[3] ?? 0))
+    if (padding > 0 && index + 4 !== text.length) {
+      throw new OfficeExchangeError('conversion-failed', 'Preserved part is not valid base64')
+    }
+  }
+  return Uint8Array.from(bytes)
 }
 
 /**
@@ -2980,7 +3589,7 @@ function positiveNumber(value: string | undefined): number | undefined {
 function documentXml(body: string, section: string): string {
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
-    + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+    + `${PRESERVED_NAMESPACES}>`
     + `<w:body>${body}${section}</w:body>`
     + '</w:document>'
 }
@@ -2990,6 +3599,7 @@ function contentTypesXml(
   footers: readonly StoryPart[],
   settings: boolean,
   numbering: boolean,
+  preserved: DocxPreservedPackage | undefined,
 ): string {
   let overrides = ''
   if (settings) {
@@ -3008,15 +3618,66 @@ function contentTypesXml(
     overrides += `<Override PartName="/${part.partName}"`
       + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>'
   }
+  const preservedDeclarations = preserved?.contentTypes ?? []
+  const noteOverrides = preservedNoteOverrides(preservedDeclarations, preserved)
+  const mediaDefaults = preservedContentTypeDeclarations(preservedDeclarations, preserved)
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
     + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
     + '<Default Extension="xml" ContentType="application/xml"/>'
+    + mediaDefaults
     + '<Override PartName="/word/document.xml"'
     + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
     + '<Override PartName="/word/styles.xml"'
     + ' ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>'
-    + `${overrides}</Types>`
+    + `${overrides}${noteOverrides}</Types>`
+}
+
+function preservedNoteOverrides(
+  declarations: readonly string[],
+  preserved: DocxPreservedPackage | undefined,
+): string {
+  let overrides = ''
+  for (const [name, contentType] of Object.entries(NOTE_CONTENT_TYPES)) {
+    const declared = declarations.some(declaration => tagAttribute(declaration, 'PartName') === `/${name}`)
+    const present = preserved?.parts.some(part => part.name === name) === true
+    if (!present) continue
+    overrides += declared
+      ? declarations.find(declaration => tagAttribute(declaration, 'PartName') === `/${name}`) ?? ''
+      : `<Override PartName="/${name}" ContentType="${contentType}"/>`
+  }
+  return overrides
+}
+
+function preservedContentTypeDeclarations(
+  declarations: readonly string[],
+  preserved: DocxPreservedPackage | undefined,
+): string {
+  const declared = new Set<string>()
+  let defaults = ''
+  for (const declaration of declarations) {
+    const extension = tagAttribute(declaration, 'Extension')
+    if (extension === undefined) {
+      const partName = tagAttribute(declaration, 'PartName')
+      if (partName !== undefined && !notePartNameOf(partName)) defaults += declaration
+      continue
+    }
+    declared.add(extension.toLowerCase())
+    defaults += declaration
+  }
+  const missing = new Set<string>()
+  for (const part of preserved?.parts ?? []) {
+    const extension = extensionOf(part)
+    if (IMAGE_CONTENT_TYPES[extension] !== undefined && !declared.has(extension)) missing.add(extension)
+  }
+  for (const extension of [...missing].sort()) {
+    defaults += `<Default Extension="${extension}" ContentType="${IMAGE_CONTENT_TYPES[extension] ?? 'application/octet-stream'}"/>`
+  }
+  return defaults
+}
+
+function notePartNameOf(partName: string): boolean {
+  return Object.keys(NOTE_CONTENT_TYPES).some(name => `/${name}` === partName)
 }
 
 function rootRelsXml(): string {
@@ -3029,22 +3690,24 @@ function rootRelsXml(): string {
 }
 
 function documentRelsXml(
+  stylesRelId: string,
+  settingsRelId: string | undefined,
+  numberingRelId: string | undefined,
   headers: readonly StoryPart[],
   footers: readonly StoryPart[],
-  settings: boolean,
-  numberingRelId: number | undefined,
   links: readonly LinkRel[],
+  preserved: readonly string[],
 ): string {
-  let relationships = '<Relationship Id="rId1"'
+  let relationships = `<Relationship Id="${stylesRelId}"`
     + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles"'
     + ' Target="styles.xml"/>'
-  if (settings) {
-    relationships += '<Relationship Id="rId2"'
+  if (settingsRelId !== undefined) {
+    relationships += `<Relationship Id="${settingsRelId}"`
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings"'
       + ' Target="settings.xml"/>'
   }
   if (numberingRelId !== undefined) {
-    relationships += `<Relationship Id="rId${String(numberingRelId)}"`
+    relationships += `<Relationship Id="${numberingRelId}"`
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering"'
       + ' Target="numbering.xml"/>'
   }
@@ -3063,6 +3726,7 @@ function documentRelsXml(
       + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
       + ` Target="${escapeXml(rel.target)}" TargetMode="External"/>`
   }
+  relationships += preserved.join('')
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
     + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
     + `${relationships}</Relationships>`
