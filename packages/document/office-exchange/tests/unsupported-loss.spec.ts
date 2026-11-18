@@ -7,6 +7,7 @@
 import ExcelJS from 'exceljs'
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { expect, it } from 'vitest'
+import { DashStyleType } from '@univerjs/core'
 import type { IWorkbookData, IWorksheetData } from '@univerjs/core'
 import { detectUnsupportedFeatures } from '../src/detect.ts'
 import { readDocument, writeDocument } from '../src/provider/docx.ts'
@@ -110,14 +111,25 @@ it('keeps list numbering and the numbering part', async () => {
   expect(written[DOCUMENT_XML]).toContain('<w:numPr>')
 })
 
-it('drops cell borders, and reports them', async () => {
+it('keeps cell borders through a read/write round trip', async () => {
   const bytes = documentPackage(
-    '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="single"/></w:tcBorders></w:tcPr>'
-    + '<w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>',
+    '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders>'
+    + '<w:top w:val="single" w:sz="12" w:color="FF0000"/>'
+    + '<w:left w:val="dashed" w:sz="6" w:color="00FF00"/>'
+    + '</w:tcBorders></w:tcPr><w:p><w:r><w:t>cell</w:t></w:r></w:p></w:tc></w:tr></w:tbl>',
   )
-  expectDetected(bytes, { kind: 'borders', detail: DOCUMENT_XML })
-  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
-  expect(writtenXml).not.toContain('w:tcBorders')
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  const original = await readDocument(bytes)
+  const cell = original.tableSource?.['table-1']?.tableRows[0]?.tableCells[0]
+  expect(cell?.borderTop?.color).toEqual({ rgb: '#FF0000' })
+  expect(cell?.borderTop?.width?.v).toBe(2)
+  expect(cell?.borderLeft?.dashStyle).toBe(DashStyleType.DASH)
+  const written = await writeDocument(original)
+  expect(entriesOf(written)[DOCUMENT_XML]).toContain('w:tcBorders')
+  const reopened = await readDocument(written)
+  const rewritten = reopened.tableSource?.['table-1']?.tableRows[0]?.tableCells[0]
+  expect(rewritten?.borderTop).toEqual(cell?.borderTop)
+  expect(rewritten?.borderLeft).toEqual(cell?.borderLeft)
 })
 
 it('drops footnotes and endnotes with their parts, and reports them', async () => {
@@ -158,28 +170,48 @@ it('drops a linked image and its external target, and reports it', async () => {
   expect(written['word/_rels/document.xml.rels']).not.toContain('TargetMode')
 })
 
-it('drops merged-cell spans, and reports them', async () => {
+it('keeps merged-cell spans through a read/write round trip', async () => {
   const bytes = documentPackage(
     '<w:tbl><w:tblGrid><w:gridCol w:w="1200"/><w:gridCol w:w="1200"/></w:tblGrid>'
     + '<w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/></w:tcPr><w:p><w:r><w:t>wide</w:t></w:r></w:p></w:tc></w:tr>'
     + '<w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>tall</w:t></w:r></w:p></w:tc>'
-    + '<w:tc><w:p><w:r><w:t>next</w:t></w:r></w:p></w:tc></w:tr></w:tbl>',
+    + '<w:tc><w:p><w:r><w:t>next</w:t></w:r></w:p></w:tc></w:tr>'
+    + '<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr><w:p/></w:tc>'
+    + '<w:tc><w:p><w:r><w:t>last</w:t></w:r></w:p></w:tc></w:tr></w:tbl>',
   )
-  expectDetected(bytes, { kind: 'merged-cells', detail: DOCUMENT_XML })
-  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
-  expect(writtenXml).not.toContain('w:gridSpan')
-  expect(writtenXml).not.toContain('w:vMerge')
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  const original = await readDocument(bytes)
+  const table = original.tableSource?.['table-1']
+  expect(table?.tableRows[0]?.tableCells[0]?.columnSpan).toBe(2)
+  expect(table?.tableRows[1]?.tableCells[0]?.rowSpan).toBe(2)
+  expect(table?.tableRows[2]?.tableCells[0]?.rowSpan).toBe(0)
+  const written = await writeDocument(original)
+  const writtenXml = entriesOf(written)[DOCUMENT_XML] ?? ''
+  expect(writtenXml).toContain('w:gridSpan')
+  expect(writtenXml).toContain('w:vMerge')
+  const reopened = await readDocument(written)
+  const rewritten = reopened.tableSource?.['table-1']
+  expect(rewritten?.tableRows[0]?.tableCells[0]?.columnSpan).toBe(2)
+  expect(rewritten?.tableRows[1]?.tableCells[0]?.rowSpan).toBe(2)
+  expect(rewritten?.tableRows[2]?.tableCells[0]?.rowSpan).toBe(0)
 })
 
-it('drops a nested table and its content, and reports it', async () => {
+it('keeps a nested table and its content through a read/write round trip', async () => {
   const bytes = documentPackage(
     '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>outer</w:t></w:r></w:p>'
     + '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>inner</w:t></w:r></w:p></w:tc></w:tr></w:tbl>'
     + '</w:tc></w:tr></w:tbl>',
   )
-  expectDetected(bytes, { kind: 'nested-table', detail: DOCUMENT_XML })
-  const writtenXml = (await documentRoundTrip(bytes))[DOCUMENT_XML] ?? ''
-  expect(writtenXml).not.toContain('inner')
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
+  const original = await readDocument(bytes)
+  expect(original.body?.tables).toHaveLength(2)
+  expect(original.body?.tables?.[1]?.tableId).toBe('table-2')
+  expect(original.body?.dataStream).toContain('inner')
+  const written = await writeDocument(original)
+  expect(entriesOf(written)[DOCUMENT_XML]).toContain('inner')
+  const reopened = await readDocument(written)
+  expect(reopened.body?.tables).toHaveLength(2)
+  expect(reopened.body?.dataStream).toContain('inner')
 })
 
 it('drops conditional formatting, and reports it', async () => {

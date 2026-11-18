@@ -49,10 +49,7 @@ const UNSUPPORTED_KIND_ORDER: readonly UnsupportedFeatureKind[] = [
   'image',
   'external-image',
   'hyperlink',
-  'borders',
   'footnotes',
-  'merged-cells',
-  'nested-table',
   'conditional-formatting',
   'data-validation',
 ]
@@ -144,8 +141,8 @@ export function detectUnsupportedFeatures(
 /**
  * Record document-body constructs that the document writer drops, because it
  * writes back paragraph text, run and paragraph formatting, heading styles,
- * section page setup, header and footer text, flow tables, lists, and
- * hyperlinks.
+ * section page setup, header and footer text, flow tables with merged cells,
+ * cell formatting and nested tables, lists, and hyperlinks.
  * @param xml - Decoded `word/document.xml` or a header/footer part.
  * @param detail - Part name reported with each detected kind.
  * @param record - First-detail-per-kind recorder.
@@ -156,11 +153,8 @@ function detectDocumentFeatures(
   record: (kind: UnsupportedFeatureKind, detail: string) => void,
 ): void {
   if (xml.includes('<w:ins ') || xml.includes('<w:del ')) record('tracked-changes', detail)
-  if (hasCellBorders(xml)) record('borders', detail)
   if (hasNoteReference(xml)) record('footnotes', detail)
   if (/<a:blip(?=[\s/>])[^>]*\br:link=/u.test(xml)) record('external-image', detail)
-  if (hasMergedCellSpan(xml)) record('merged-cells', detail)
-  if (hasNestedTable(xml)) record('nested-table', detail)
 }
 
 /**
@@ -175,17 +169,6 @@ function detectWorksheetFeatures(
   if (/<conditionalFormatting(?=[\s/>])/u.test(part.xml)) record('conditional-formatting', part.name)
   if (/<dataValidation(?=[\s/>])/u.test(part.xml)) record('data-validation', part.name)
   if (/<hyperlink(?=[\s/>])/u.test(part.xml)) record('hyperlink', part.name)
-}
-
-/**
- * Report whether a table cell declares its own borders. Table borders
- * (`w:tblBorders`), paragraph borders (`w:pBdr`), and run borders (`w:bdr`)
- * are written by the provider and are not a loss.
- * @param xml - Decoded `word/document.xml`.
- * @returns `true` when a cell border element is present.
- */
-function hasCellBorders(xml: string): boolean {
-  return /<w:tcBorders(?=[\s/>])/u.test(xml)
 }
 
 /**
@@ -208,44 +191,6 @@ function hasExternalImageRelationship(xml: string): boolean {
   for (const match of xml.matchAll(/<Relationship(?=[\s/>])[^>]*>/gu)) {
     if (!/\bTargetMode="External"/u.test(match[0])) continue
     if (/\bType="[^"]*\/image"/u.test(match[0])) return true
-  }
-  return false
-}
-
-/**
- * Report whether a table cell declares a horizontal or vertical span.
- * A `gridSpan` of one declares no span.
- * @param xml - Decoded `word/document.xml`.
- * @returns `true` when a cell has a multi-column span or a vertical merge.
- */
-function hasMergedCellSpan(xml: string): boolean {
-  if (/<w:vMerge(?=[\s/>])/u.test(xml)) return true
-  for (const match of xml.matchAll(/<w:gridSpan\b[^>]*>/gu)) {
-    const value = /\bw:val="([^"]*)"/u.exec(match[0])?.[1]
-    if (value !== undefined && Number(value) > 1) return true
-  }
-  return false
-}
-
-/**
- * Report whether a table structurally contains another table's start.
- * `word/document.xml` also lists the root table and sibling tables, so the scan
- * counts open `w:tc` elements instead of matching a `w:tbl` tag anywhere.
- * @param xml - Decoded `word/document.xml`.
- * @returns `true` when a `w:tbl` starts inside a table cell.
- */
-function hasNestedTable(xml: string): boolean {
-  let cellDepth = 0
-  for (const match of xml.matchAll(/<(\/?)w:(tc|tbl)(?=[\s/>])[^>]*>/gu)) {
-    const closing = match[1] === '/'
-    const tag = match[2]
-    const selfClosing = match[0].endsWith('/>')
-    if (tag === 'tc') {
-      if (closing) cellDepth = Math.max(0, cellDepth - 1)
-      else if (!selfClosing) cellDepth += 1
-      continue
-    }
-    if (!closing && cellDepth > 0) return true
   }
   return false
 }

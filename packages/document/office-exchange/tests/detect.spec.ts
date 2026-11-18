@@ -312,7 +312,7 @@ it('does not report a paragraph that only names a style', () => {
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('detects cell borders and leaves mapped paragraph and run borders alone', () => {
+it('does not report cell borders the provider maps, and leaves paragraph and run borders alone', () => {
   const mapped = [
     '<w:p><w:pPr><w:pBdr><w:top w:val="single"/></w:pBdr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>',
     '<w:p><w:r><w:rPr><w:bdr w:val="single"/></w:rPr><w:t>x</w:t></w:r></w:p>',
@@ -323,8 +323,7 @@ it('detects cell borders and leaves mapped paragraph and run borders alone', () 
 
   const cell = '<w:tbl><w:tr><w:tc><w:tcPr><w:tcBorders><w:top w:val="single"/>'
     + '</w:tcBorders></w:tcPr><w:p/></w:tc></w:tr></w:tbl>'
-  expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: bodyOf(cell) })))
-    .toEqual([{ kind: 'borders', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(packageOf({ [DOCUMENT_XML]: bodyOf(cell) }))).toEqual([])
 })
 
 it('does not report the table borders the writer emits', () => {
@@ -409,13 +408,13 @@ it('does not report embedded images or external hyperlink relationships as linke
   expect(detectUnsupportedFeatures(hyperlink)).toEqual([])
 })
 
-it('detects merged cell spans', () => {
+it('does not report merged cell spans the provider maps', () => {
   const horizontal = packageOf({
     [DOCUMENT_XML]: bodyOf(
       '<w:tbl><w:tr><w:tc><w:tcPr><w:gridSpan w:val="2"/></w:tcPr><w:p/></w:tc></w:tr></w:tbl>',
     ),
   })
-  expect(detectUnsupportedFeatures(horizontal)).toEqual([{ kind: 'merged-cells', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(horizontal)).toEqual([])
 
   for (const value of ['restart', 'continue']) {
     const vertical = packageOf({
@@ -423,7 +422,7 @@ it('detects merged cell spans', () => {
         `<w:tbl><w:tr><w:tc><w:tcPr><w:vMerge w:val="${value}"/></w:tcPr><w:p/></w:tc></w:tr></w:tbl>`,
       ),
     })
-    expect(detectUnsupportedFeatures(vertical)).toEqual([{ kind: 'merged-cells', detail: DOCUMENT_XML }])
+    expect(detectUnsupportedFeatures(vertical)).toEqual([])
   }
 })
 
@@ -436,7 +435,7 @@ it('does not report a single-column span or an unmerged cell', () => {
   expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
-it('detects a table nested inside a cell', () => {
+it('does not report a table nested inside a cell', () => {
   const bytes = packageOf({
     [DOCUMENT_XML]: bodyOf(
       '<w:tbl><w:tr><w:tc><w:p/>'
@@ -444,7 +443,7 @@ it('detects a table nested inside a cell', () => {
       + '</w:tc></w:tr></w:tbl>',
     ),
   })
-  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'nested-table', detail: DOCUMENT_XML }])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([])
 })
 
 it('does not report sibling tables as nested', () => {

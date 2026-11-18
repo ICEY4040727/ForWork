@@ -9,8 +9,11 @@
  * from `word/styles.xml`; named heading paragraph styles (`Heading1` through
  * `Heading5`); flow tables; section page setup; header/footer text; lists and
  * numbering; and hyperlinks. Table support covers rows, cells, cell text, grid
- * column widths, preferred cell widths, and the paragraph/section-break pair
- * each cell requires. Section support maps `w:sectPr` page size, orientation,
+ * column widths, preferred cell widths, merged cells (`w:gridSpan` and
+ * `w:vMerge`), cell borders, shading, vertical alignment, and margins, row
+ * height and break/header properties, table width/alignment/indent/layout, the
+ * paragraph/section-break pair each cell requires, and tables nested in a cell.
+ * Section support maps `w:sectPr` page size, orientation,
  * margins, header/footer distances, columns, and break type into
  * `ISectionBreak`, and maps header and footer parts into
  * `IDocumentData.headers`/`footers` with their default, first-page, and
@@ -31,11 +34,10 @@
  * UNSUPPORTED: images, charts, drawings, shapes, comments, tracked changes,
  * macros, footnotes and endnotes, page borders and page numbering, theme styles
  * and theme-derived colors, named style definitions other than the heading
- * styles above, cell borders, merged cells with spans, nested tables, floating
- * and inline objects, and property values the Univer model has no field for
- * (for example a run border's line size or a decimal tab stop's alignment). A
- * read/write round-trip does not preserve these. Macro-bearing packages are
- * read without executing or retaining macros.
+ * styles above, floating and inline objects, and property values the Univer
+ * model has no field for (for example a run border's line size or a decimal tab
+ * stop's alignment). A read/write round-trip does not preserve these.
+ * Macro-bearing packages are read without executing or retaining macros.
  */
 import { XMLParser } from 'fast-xml-parser'
 import { SyntaxValidator } from 'fast-xml-validator'
@@ -51,12 +53,15 @@ import {
   DashStyleType,
   HorizontalAlign,
   ListGlyphType,
+  NumberUnitType,
   PageOrientType,
   SectionType,
   SpacingRule,
   TabStopAlignment,
   TabStopLeader,
+  TableLayoutType,
   TextDecoration,
+  VerticalAlignmentType,
 } from '@univerjs/core'
 import type {
   IBorderData,
@@ -74,6 +79,7 @@ import type {
   IListData,
   ILists,
   INestingLevel,
+  INumberUnit,
   IParagraph,
   IParagraphBorder,
   IParagraphStyle,
@@ -81,8 +87,10 @@ import type {
   ISectionColumnProperties,
   ITable,
   ITableCell,
+  ITableCellBorder,
   ITableCellMargin,
   ITableRow,
+  ITableRowSize,
   ITables,
   ITabStop,
   ITextDecoration,
@@ -142,9 +150,16 @@ const TEXT_DECORATION_SINGLE: TextDecoration = 12
 const TEXT_DECORATION_DOUBLE: TextDecoration = 10
 const LOCALE_EN_US = 'enUS' as LocaleType
 const TABLE_ALIGN_START: TableAlignmentType = 0
+const TABLE_ALIGN_CENTER: TableAlignmentType = 1
+const TABLE_ALIGN_END: TableAlignmentType = 2
 const TABLE_WRAP_NONE: TableTextWrapType = 0
+const TABLE_SIZE_UNSPECIFIED: TableSizeType = 0
 const TABLE_SIZE_SPECIFIED: TableSizeType = 1
+const TABLE_LAYOUT_AUTO: TableLayoutType = 0
+const TABLE_LAYOUT_FIXED: TableLayoutType = 1
 const TABLE_ROW_HEIGHT_AUTO: TableRowHeightRule = 0
+const TABLE_ROW_HEIGHT_AT_LEAST: TableRowHeightRule = 1
+const TABLE_ROW_HEIGHT_EXACT: TableRowHeightRule = 2
 const RELATIVE_H_PAGE = 0
 const RELATIVE_V_PAGE = 0
 
@@ -420,6 +435,7 @@ interface ReadContext {
   readonly customRanges: IHyperLinkCustomRange[]
   readonly bounds: OfficeExchangeConfig
   cells: number
+  tableSerial: number
 }
 
 /**
@@ -703,6 +719,7 @@ function createReadContext(bounds: OfficeExchangeConfig): ReadContext {
     customRanges: [],
     bounds,
     cells: 0,
+    tableSerial: 0,
   }
 }
 
@@ -1383,22 +1400,27 @@ function appendTable(
   numbering?: NumberingCatalog,
 ): void {
   if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
-  const tableId = `table-${context.tables.length + 1}`
+  context.tableSerial += 1
+  const tableId = `table-${String(context.tableSerial)}`
   const startIndex = context.length
   append(context, TABLE_START)
   const rows: ITableRow[] = []
+  const gridDescriptors: CellGridDescriptor[][] = []
   const gridWidths = readGridWidths(element)
   let columnCount = 1
   for (const row of childElements(element)) {
     if (row.tag !== 'tr') continue
     append(context, TABLE_ROW_START)
     const cells: ITableCell[] = []
+    const rowDescriptors: CellGridDescriptor[] = []
+    let gridColumn = 0
     for (const cell of childElements(row)) {
       if (cell.tag !== 'tc') continue
       countCell(context)
       append(context, TABLE_CELL_START)
       for (const block of childElements(cell)) {
         if (block.tag === 'p') appendParagraph(context, block, relationships, undefined, numbering)
+        if (block.tag === 'tbl') appendTable(context, block, relationships, numbering)
       }
       if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
       context.sectionBreaks.push({
@@ -1406,16 +1428,23 @@ function appendTable(
         startIndex: context.length,
       })
       append(context, `${SECTION_BREAK}${TABLE_CELL_END}`)
-      const width = readCellWidth(cell)
-      cells.push(width === undefined ? { margin: cellMargin() } : { margin: cellMargin(), size: width })
+      const properties = findChild(cell, 'tcPr')
+      const columnSpan = readColumnSpan(properties)
+      const tableCell = readTableCell(properties)
+      if (columnSpan > 1) tableCell.columnSpan = columnSpan
+      rowDescriptors.push({ gridStart: gridColumn, columnSpan, vMerge: readVerticalMerge(properties) })
+      gridColumn += columnSpan
+      cells.push(tableCell)
     }
     append(context, TABLE_ROW_END)
-    columnCount = Math.max(columnCount, cells.length)
-    rows.push({ tableCells: cells, trHeight: { val: { v: DEFAULT_ROW_HEIGHT }, hRule: TABLE_ROW_HEIGHT_AUTO } })
+    columnCount = Math.max(columnCount, gridColumn)
+    rows.push({ tableCells: cells, ...readRowProperties(row, rows.length === 0) })
+    gridDescriptors.push(rowDescriptors)
   }
   append(context, TABLE_END)
+  applyVerticalMerges(rows, gridDescriptors)
   context.tables.push({ startIndex, endIndex: context.length, tableId })
-  context.tableSource[tableId] = createTable(tableId, rows, columnCount, gridWidths)
+  context.tableSource[tableId] = createTable(tableId, rows, columnCount, gridWidths, readTableProperties(element))
 }
 
 function countCell(context: ReadContext): void {
@@ -1423,6 +1452,217 @@ function countCell(context: ReadContext): void {
   if (context.cells > context.bounds.maxCells) {
     throw new OfficeExchangeError('too-large', `Document has more than ${context.bounds.maxCells} table cells`)
   }
+}
+
+/** One cell's table-grid coverage and vertical-merge role. */
+interface CellGridDescriptor {
+  /** Index of the first grid column the cell occupies. */
+  readonly gridStart: number
+  /** Number of grid columns the cell spans. */
+  readonly columnSpan: number
+  /** Vertical-merge role declared by `w:vMerge`. */
+  readonly vMerge: 'restart' | 'continue' | undefined
+}
+
+/** Table-level layout read from `w:tblPr`. */
+interface TableSetup {
+  /** Preferred table width from `w:tblW`. */
+  size?: IWidthInTableSize
+  /** Table alignment from `w:jc`. */
+  align?: TableAlignmentType
+  /** Table indentation from `w:tblInd`. */
+  indent?: INumberUnit
+  /** Fixed or automatic fit from `w:tblLayout`. */
+  layout?: TableLayoutType
+}
+
+function readColumnSpan(properties: XmlElement | undefined): number {
+  if (properties === undefined) return 1
+  const span = numberAttribute(findChild(properties, 'gridSpan'), '@_val')
+  return span === undefined || span <= 1 ? 1 : Math.floor(span)
+}
+
+function readVerticalMerge(properties: XmlElement | undefined): 'restart' | 'continue' | undefined {
+  if (properties === undefined) return undefined
+  const merge = findChild(properties, 'vMerge')
+  if (merge === undefined) return undefined
+  return attribute(merge, '@_val') === 'restart' ? 'restart' : 'continue'
+}
+
+/**
+ * Resolve `w:vMerge` chains into model spans: the restart cell carries the
+ * row count and each covered continuation cell is marked with `rowSpan` zero.
+ * @param rows - Rows whose cells receive their spans.
+ * @param descriptors - Grid coverage and merge role of every cell, in row order.
+ */
+function applyVerticalMerges(
+  rows: readonly ITableRow[],
+  descriptors: readonly (readonly CellGridDescriptor[])[],
+): void {
+  for (const [rowIndex, rowDescriptors] of descriptors.entries()) {
+    for (const [cellIndex, descriptor] of rowDescriptors.entries()) {
+      if (descriptor.vMerge !== 'restart') continue
+      let span = 1
+      for (let coveredRow = rowIndex + 1; coveredRow < descriptors.length; coveredRow += 1) {
+        const candidates = descriptors[coveredRow] ?? []
+        const coveredIndex = candidates.findIndex(candidate => (
+          candidate.vMerge === 'continue' && candidate.gridStart === descriptor.gridStart
+        ))
+        if (coveredIndex < 0) break
+        const coveredCell = rows[coveredRow]?.tableCells[coveredIndex]
+        if (coveredCell !== undefined) coveredCell.rowSpan = 0
+        span += 1
+      }
+      if (span > 1) {
+        const startCell = rows[rowIndex]?.tableCells[cellIndex]
+        if (startCell !== undefined) startCell.rowSpan = span
+      }
+    }
+  }
+}
+
+function readTableCell(properties: XmlElement | undefined): ITableCell {
+  const cell: ITableCell = { margin: readCellMargin(properties) }
+  const width = readCellWidth(properties)
+  if (width !== undefined) cell.size = width
+  if (properties === undefined) return cell
+  const background = shadingColor(findChild(properties, 'shd'))
+  if (background !== undefined) cell.backgroundColor = { rgb: background }
+  const vertical = readCellVerticalAlign(properties)
+  if (vertical !== undefined) cell.vAlign = vertical
+  const borders = findChild(properties, 'tcBorders')
+  if (borders !== undefined) readCellBorders(borders, cell)
+  return cell
+}
+
+function readCellWidth(properties: XmlElement | undefined): IWidthInTableSize | undefined {
+  if (properties === undefined) return undefined
+  const width = findChild(properties, 'tcW')
+  if (width === undefined) return undefined
+  const twips = positiveNumber(attribute(width, '@_w'))
+  if (twips === undefined) return undefined
+  return { type: TABLE_SIZE_SPECIFIED, width: { v: twips / TWIPS_PER_PIXEL } }
+}
+
+function readCellBorders(element: XmlElement, cell: ITableCell): void {
+  const top = readCellBorder(findChild(element, 'top') ?? findChild(element, 'insideH'))
+  if (top !== undefined) cell.borderTop = top
+  const bottom = readCellBorder(findChild(element, 'bottom') ?? findChild(element, 'insideH'))
+  if (bottom !== undefined) cell.borderBottom = bottom
+  const start = readCellBorder(
+    findChild(element, 'start') ?? findChild(element, 'left') ?? findChild(element, 'insideV'),
+  )
+  if (start !== undefined) cell.borderLeft = start
+  const end = readCellBorder(
+    findChild(element, 'end') ?? findChild(element, 'right') ?? findChild(element, 'insideV'),
+  )
+  if (end !== undefined) cell.borderRight = end
+}
+
+function readCellBorder(element: XmlElement | undefined): ITableCellBorder | undefined {
+  if (element === undefined) return undefined
+  const value = attribute(element, '@_val')
+  if (value === undefined || value === 'none' || value === 'nil') return undefined
+  const size = positiveNumber(attribute(element, '@_sz'))
+  const color = hexColor(attribute(element, '@_color')) ?? DEFAULT_BORDER_COLOR
+  return {
+    color: { rgb: `#${color}` },
+    width: { v: (size ?? DEFAULT_BORDER_SIZE) / BORDER_UNITS_PER_PIXEL },
+    dashStyle: lookup(BORDER_DASH_STYLES, value) ?? DashStyleType.SOLID,
+  }
+}
+
+function readCellMargin(properties: XmlElement | undefined): ITableCellMargin {
+  const defaults = cellMargin()
+  if (properties === undefined) return defaults
+  const margins = findChild(properties, 'tcMar')
+  if (margins === undefined) return defaults
+  return {
+    start: readMarginSide(margins, ['start', 'left']) ?? defaults.start,
+    end: readMarginSide(margins, ['end', 'right']) ?? defaults.end,
+    top: readMarginSide(margins, ['top']) ?? defaults.top,
+    bottom: readMarginSide(margins, ['bottom']) ?? defaults.bottom,
+  }
+}
+
+function readMarginSide(element: XmlElement, tags: readonly string[]): INumberUnit | undefined {
+  for (const tag of tags) {
+    const twips = numberAttribute(findChild(element, tag), '@_w')
+    if (twips !== undefined) return { v: twips / TWIPS_PER_PIXEL }
+  }
+  return undefined
+}
+
+function readCellVerticalAlign(properties: XmlElement): VerticalAlignmentType | undefined {
+  const value = optionalAttribute(findChild(properties, 'vAlign'), '@_val')
+  if (value === 'top') return VerticalAlignmentType.TOP
+  if (value === 'center') return VerticalAlignmentType.CENTER
+  if (value === 'bottom') return VerticalAlignmentType.BOTTOM
+  return undefined
+}
+
+function readRowProperties(
+  element: XmlElement,
+  first: boolean,
+): Pick<ITableRow, 'trHeight' | 'cantSplit' | 'isFirstRow' | 'repeatHeaderRow'> {
+  const properties = findChild(element, 'trPr')
+  const row: Pick<ITableRow, 'trHeight' | 'cantSplit' | 'isFirstRow' | 'repeatHeaderRow'> = {
+    trHeight: readRowHeight(properties),
+  }
+  if (first) row.isFirstRow = BOOLEAN_TRUE
+  if (properties === undefined) return row
+  if (isEnabled(properties, 'cantSplit') === true) row.cantSplit = BOOLEAN_TRUE
+  if (isEnabled(properties, 'tblHeader') === true) row.repeatHeaderRow = BOOLEAN_TRUE
+  return row
+}
+
+function readRowHeight(properties: XmlElement | undefined): ITableRowSize {
+  const height = properties === undefined ? undefined : findChild(properties, 'trHeight')
+  const twips = numberAttribute(height, '@_val')
+  if (twips === undefined) return { val: { v: DEFAULT_ROW_HEIGHT }, hRule: TABLE_ROW_HEIGHT_AUTO }
+  const rule = height === undefined ? undefined : attribute(height, '@_hRule')
+  const hRule = rule === 'exact'
+    ? TABLE_ROW_HEIGHT_EXACT
+    : rule === 'atLeast' ? TABLE_ROW_HEIGHT_AT_LEAST : TABLE_ROW_HEIGHT_AUTO
+  return { val: { v: twips / TWIPS_PER_PIXEL }, hRule }
+}
+
+function readTableProperties(element: XmlElement): TableSetup {
+  const properties = findChild(element, 'tblPr')
+  if (properties === undefined) return {}
+  const setup: TableSetup = {}
+  const size = readTableWidth(properties)
+  if (size !== undefined) setup.size = size
+  const align = readTableAlignment(properties)
+  if (align !== undefined) setup.align = align
+  const indent = numberAttribute(findChild(properties, 'tblInd'), '@_w')
+  if (indent !== undefined) setup.indent = { v: indent / TWIPS_PER_PIXEL }
+  const layout = optionalAttribute(findChild(properties, 'tblLayout'), '@_type')
+  if (layout === 'fixed') setup.layout = TABLE_LAYOUT_FIXED
+  else if (layout === 'autofit') setup.layout = TABLE_LAYOUT_AUTO
+  return setup
+}
+
+function readTableWidth(properties: XmlElement): IWidthInTableSize | undefined {
+  const width = findChild(properties, 'tblW')
+  const value = numberAttribute(width, '@_w')
+  if (value === undefined || value <= 0) return undefined
+  const type = width === undefined ? undefined : attribute(width, '@_type')
+  if (type === 'pct') {
+    return { type: TABLE_SIZE_SPECIFIED, width: { v: value / 50, u: NumberUnitType.PERCENT } }
+  }
+  if (type === 'dxa' || type === undefined) {
+    return { type: TABLE_SIZE_SPECIFIED, width: { v: value / TWIPS_PER_PIXEL } }
+  }
+  return undefined
+}
+
+function readTableAlignment(properties: XmlElement): TableAlignmentType | undefined {
+  const value = optionalAttribute(findChild(properties, 'jc'), '@_val')
+  if (value === 'center') return TABLE_ALIGN_CENTER
+  if (value === 'end' || value === 'right') return TABLE_ALIGN_END
+  if (value === 'start' || value === 'left') return TABLE_ALIGN_START
+  return undefined
 }
 
 function readGridWidths(element: XmlElement): readonly number[] {
@@ -1437,35 +1677,26 @@ function readGridWidths(element: XmlElement): readonly number[] {
   return widths
 }
 
-function readCellWidth(element: XmlElement): IWidthInTableSize | undefined {
-  const properties = findChild(element, 'tcPr')
-  if (properties === undefined) return undefined
-  const width = findChild(properties, 'tcW')
-  if (width === undefined) return undefined
-  const twips = positiveNumber(attribute(width, '@_w'))
-  if (twips === undefined) return undefined
-  return { type: TABLE_SIZE_SPECIFIED, width: { v: twips / TWIPS_PER_PIXEL } }
-}
-
 function createTable(
   tableId: string,
   rows: readonly ITableRow[],
   columnCount: number,
   gridWidths: readonly number[],
+  setup: TableSetup,
 ): ITable {
   const widths: number[] = []
   for (let index = 0; index < columnCount; index += 1) {
     widths.push(gridWidths[index] ?? DEFAULT_COLUMN_WIDTH)
   }
   const totalWidth = widths.reduce((total, width) => total + width, 0)
-  return {
+  const table: ITable = {
     tableRows: [...rows],
     tableColumns: widths.map(width => ({
       size: { type: TABLE_SIZE_SPECIFIED, width: { v: width } },
     })),
     tableId,
-    align: TABLE_ALIGN_START,
-    indent: { v: 0 },
+    align: setup.align ?? TABLE_ALIGN_START,
+    indent: setup.indent ?? { v: 0 },
     textWrap: TABLE_WRAP_NONE,
     position: {
       positionH: { relativeFrom: RELATIVE_H_PAGE, posOffset: 0 },
@@ -1473,8 +1704,10 @@ function createTable(
     },
     dist: { distT: 0, distB: 0, distL: 0, distR: 0 },
     cellMargin: cellMargin(),
-    size: { type: TABLE_SIZE_SPECIFIED, width: { v: totalWidth } },
+    size: setup.size ?? { type: TABLE_SIZE_SPECIFIED, width: { v: totalWidth } },
   }
+  if (setup.layout !== undefined) table.layout = setup.layout
+  return table
 }
 
 function cellMargin(): ITableCellMargin {
@@ -1488,6 +1721,7 @@ function cellMargin(): ITableCellMargin {
 
 function finalizeBody(context: ReadContext, section?: SectionSetup): void {
   if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
+  context.tables.sort((left, right) => left.startIndex - right.startIndex)
   context.sectionBreaks.push({
     sectionId: `section-${context.sectionBreaks.length + 1}`,
     startIndex: context.length,
@@ -1968,39 +2202,164 @@ function writeTable(
 ): string {
   const source = tableSourceAt(story, start)
   const sourceColumns = source?.tableColumns ?? []
+  const sourceRows = source?.tableRows ?? []
   const columnCount = Math.max(
     1,
     ...table.rows.map(row => row.length),
     sourceColumns.length,
+    ...sourceRows.map(row => row.tableCells.reduce((count, cell) => count + cellSpan(cell), 0)),
   )
   const widths: number[] = []
   for (let index = 0; index < columnCount; index += 1) {
     widths.push(sourceColumns[index]?.size.width.v ?? DEFAULT_COLUMN_WIDTH)
   }
-  let xml = '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/>'
-    + TABLE_BORDERS
-    + '</w:tblPr><w:tblGrid>'
+  let xml = `<w:tbl>${writeTableProperties(source)}<w:tblGrid>`
   for (const width of widths) {
     xml += `<w:gridCol w:w="${String(Math.max(1, Math.round(width * TWIPS_PER_PIXEL)))}"/>`
   }
   xml += '</w:tblGrid>'
   for (const [rowIndex, row] of table.rows.entries()) {
-    xml += '<w:tr>'
+    xml += `<w:tr>${writeRowProperties(sourceRows[rowIndex])}`
+    let gridColumn = 0
     for (const [cellIndex, cell] of row.entries()) {
       cells.count += 1
       if (cells.count > bounds.maxCells) {
         throw new OfficeExchangeError('too-large', `Document has more than ${bounds.maxCells} table cells`)
       }
-      const sourceCell = source?.tableRows[rowIndex]?.tableCells[cellIndex]
-      /* v8 ignore next -- columnCount sizes widths to cover every cell index. */
-      const width = sourceCell?.size?.width.v ?? widths[cellIndex] ?? DEFAULT_COLUMN_WIDTH
-      xml += '<w:tc><w:tcPr>'
-        + `<w:tcW w:w="${String(Math.max(1, Math.round(width * TWIPS_PER_PIXEL)))}" w:type="dxa"/>`
-        + `</w:tcPr>${writeCell(stream, cell, paragraphs, story, links, numbering)}</w:tc>`
+      const sourceCell = sourceRows[rowIndex]?.tableCells[cellIndex]
+      const span = cellSpan(sourceCell)
+      const width = sourceCell?.size?.width.v ?? spanWidth(widths, gridColumn, span)
+      xml += `<w:tc>${writeCellProperties(sourceCell, width, span)}`
+        + `${writeCell(stream, cell, paragraphs, story, bounds, cells, links, numbering)}</w:tc>`
+      gridColumn += span
     }
     xml += '</w:tr>'
   }
   return `${xml}</w:tbl>`
+}
+
+/**
+ * Write table-level width, alignment, indentation, and layout.
+ * @param table - Table metadata; absent writes an automatic preferred width.
+ * @returns `w:tblPr` children in schema order.
+ */
+function writeTableProperties(table: ITable | undefined): string {
+  let xml = table === undefined ? '<w:tblW w:w="0" w:type="auto"/>' : writeTableWidth(table.size)
+  if (table?.align === TABLE_ALIGN_CENTER) xml += '<w:jc w:val="center"/>'
+  else if (table?.align === TABLE_ALIGN_END) xml += '<w:jc w:val="end"/>'
+  if (table?.indent !== undefined && table.indent.v !== 0) {
+    xml += `<w:tblInd w:w="${twipsOf(table.indent.v)}" w:type="dxa"/>`
+  }
+  xml += TABLE_BORDERS
+  if (table?.layout === TABLE_LAYOUT_FIXED) xml += '<w:tblLayout w:type="fixed"/>'
+  else if (table?.layout === TABLE_LAYOUT_AUTO) xml += '<w:tblLayout w:type="autofit"/>'
+  return `<w:tblPr>${xml}</w:tblPr>`
+}
+
+function writeTableWidth(size: IWidthInTableSize): string {
+  if (size.type === TABLE_SIZE_UNSPECIFIED) return '<w:tblW w:w="0" w:type="auto"/>'
+  if (size.width.u === NumberUnitType.PERCENT) {
+    return `<w:tblW w:w="${String(Math.max(1, Math.round(size.width.v * 50)))}" w:type="pct"/>`
+  }
+  return `<w:tblW w:w="${twipsOf(size.width.v)}" w:type="dxa"/>`
+}
+
+function cellSpan(cell: ITableCell | undefined): number {
+  const span = cell?.columnSpan ?? 1
+  return Number.isInteger(span) && span > 1 ? span : 1
+}
+
+function spanWidth(widths: readonly number[], start: number, span: number): number {
+  let total = 0
+  for (let index = start; index < start + span; index += 1) {
+    total += widths[index] ?? DEFAULT_COLUMN_WIDTH
+  }
+  return total
+}
+
+/**
+ * Write one row's height, break-prevention, and header-repeat properties.
+ * @param row - Row metadata from the snapshot, when the stream start has one.
+ * @returns A `w:trPr` element, or an empty string for a row without metadata.
+ */
+function writeRowProperties(row: ITableRow | undefined): string {
+  if (row === undefined) return ''
+  let xml = `<w:trHeight w:val="${twipsOf(row.trHeight.val.v)}"`
+    + ` w:hRule="${rowHeightRuleName(row.trHeight.hRule)}"/>`
+  if (row.cantSplit === BOOLEAN_TRUE) xml += '<w:cantSplit/>'
+  if (row.repeatHeaderRow === BOOLEAN_TRUE) xml += '<w:tblHeader/>'
+  return `<w:trPr>${xml}</w:trPr>`
+}
+
+function rowHeightRuleName(rule: TableRowHeightRule): string {
+  if (rule === TABLE_ROW_HEIGHT_EXACT) return 'exact'
+  if (rule === TABLE_ROW_HEIGHT_AT_LEAST) return 'atLeast'
+  return 'auto'
+}
+
+/**
+ * Write one cell's width, spans, borders, shading, margins, and vertical alignment.
+ * @param cell - Cell metadata from the snapshot, when the stream start has one.
+ * @param width - Preferred cell width in pixels.
+ * @param span - Grid columns the cell occupies.
+ * @returns The cell's `w:tcPr` element.
+ */
+function writeCellProperties(cell: ITableCell | undefined, width: number, span: number): string {
+  let xml = '<w:tcPr>'
+    + `<w:tcW w:w="${String(Math.max(1, Math.round(width * TWIPS_PER_PIXEL)))}" w:type="dxa"/>`
+  if (span > 1) xml += `<w:gridSpan w:val="${String(span)}"/>`
+  if (cell?.rowSpan === 0) xml += '<w:vMerge/>'
+  else if (cell?.rowSpan !== undefined && cell.rowSpan > 1) xml += '<w:vMerge w:val="restart"/>'
+  xml += writeCellBorders(cell)
+  const background = cell?.backgroundColor === undefined ? undefined : hexColor(cell.backgroundColor.rgb)
+  if (background !== undefined) xml += `<w:shd w:val="clear" w:color="auto" w:fill="${background}"/>`
+  xml += writeCellMargin(cell?.margin)
+  const vertical = cell?.vAlign === undefined ? undefined : verticalAlignmentName(cell.vAlign)
+  if (vertical !== undefined) xml += `<w:vAlign w:val="${vertical}"/>`
+  return `${xml}</w:tcPr>`
+}
+
+function writeCellBorders(cell: ITableCell | undefined): string {
+  if (cell === undefined) return ''
+  let xml = ''
+  xml += writeCellBorder('top', cell.borderTop)
+  xml += writeCellBorder('left', cell.borderLeft)
+  xml += writeCellBorder('bottom', cell.borderBottom)
+  xml += writeCellBorder('right', cell.borderRight)
+  return xml.length === 0 ? '' : `<w:tcBorders>${xml}</w:tcBorders>`
+}
+
+function writeCellBorder(tag: string, border: ITableCellBorder | undefined): string {
+  if (border === undefined) return ''
+  const color = hexColor(border.color.rgb) ?? DEFAULT_BORDER_COLOR
+  const dash = nameOf(BORDER_DASH_STYLES, border.dashStyle) ?? 'single'
+  const width = border.width === undefined ? DEFAULT_BORDER_SIZE / BORDER_UNITS_PER_PIXEL : border.width.v
+  const size = Math.max(1, Math.round(width * BORDER_UNITS_PER_PIXEL))
+  return `<w:${tag} w:val="${dash}" w:sz="${String(size)}" w:space="0" w:color="${color}"/>`
+}
+
+function writeCellMargin(margin: ITableCellMargin | undefined): string {
+  if (margin === undefined) return ''
+  const defaults = cellMargin()
+  if (
+    margin.start.v === defaults.start.v
+    && margin.end.v === defaults.end.v
+    && margin.top.v === defaults.top.v
+    && margin.bottom.v === defaults.bottom.v
+  ) return ''
+  return '<w:tcMar>'
+    + `<w:top w:w="${twipsOf(margin.top.v)}" w:type="dxa"/>`
+    + `<w:start w:w="${twipsOf(margin.start.v)}" w:type="dxa"/>`
+    + `<w:bottom w:w="${twipsOf(margin.bottom.v)}" w:type="dxa"/>`
+    + `<w:end w:w="${twipsOf(margin.end.v)}" w:type="dxa"/>`
+    + '</w:tcMar>'
+}
+
+function verticalAlignmentName(vertical: VerticalAlignmentType): string | undefined {
+  if (vertical === VerticalAlignmentType.TOP) return 'top'
+  if (vertical === VerticalAlignmentType.CENTER) return 'center'
+  if (vertical === VerticalAlignmentType.BOTTOM) return 'bottom'
+  return undefined
 }
 
 function tableSourceAt(story: StoryData, startIndex: number): ITable | undefined {
@@ -2013,6 +2372,8 @@ function writeCell(
   cell: ParsedCell,
   paragraphs: ReadonlyMap<number, IParagraph>,
   story: StoryData,
+  bounds: OfficeExchangeConfig,
+  cells: { count: number },
   links: LinkPlan,
   numbering: NumberingPlan,
 ): string {
@@ -2027,6 +2388,7 @@ function writeCell(
       index += 1
     } else if (token === TABLE_START) {
       const nested = readTableRange(stream, index)
+      xml += writeTable(stream, index, nested, paragraphs, story, bounds, cells, links, numbering)
       index = nested.end
       cursor = index
     } else {

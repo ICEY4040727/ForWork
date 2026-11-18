@@ -440,7 +440,7 @@ it('reads an empty body as one empty paragraph with a section break', async () =
   expect(data.body?.tables).toEqual([])
 })
 
-it('reads a leading table, empty cells, and nested tables without crashing', async () => {
+it('reads a leading table, empty cells, and nested tables', async () => {
   const nested = '<w:tbl><w:tr><w:tc><w:p><w:r><w:t>nested</w:t></w:r></w:p></w:tc></w:tr></w:tbl>'
   const xml = `${DOCUMENT_NAMESPACE}<w:body><w:tbl>`
     + '<w:tblGrid><w:gridCol w:w="1200"/><w:gridCol w:w="auto"/><w:unknownGrid/></w:tblGrid>'
@@ -455,8 +455,9 @@ it('reads a leading table, empty cells, and nested tables without crashing', asy
     + '</w:tr></w:tbl></w:body></w:document>'
   const data = await readDocument(documentOf(xml))
   const body = data.body
-  expect(body?.dataStream).not.toContain('nested')
-  expect(body?.paragraphs).toHaveLength(6)
+  expect(body?.dataStream).toContain('nested')
+  expect(body?.paragraphs).toHaveLength(8)
+  expect(body?.tables).toHaveLength(2)
   expect(body?.dataStream.startsWith('\r\x1A\x1B\x1C')).toBe(true)
   const table = data.tableSource?.['table-1']
   expect(table?.tableRows[0]?.tableCells[0]?.size?.width.v).toBe(100)
@@ -464,6 +465,7 @@ it('reads a leading table, empty cells, and nested tables without crashing', asy
   expect(table?.tableRows[0]?.tableCells[2]?.size).toBeUndefined()
   expect(table?.tableRows[0]?.tableCells[3]?.size).toBeUndefined()
   expect(table?.tableColumns.map(column => column.size.width.v)).toEqual([80, 160, 160, 160])
+  expect(data.tableSource?.['table-2']?.tableRows[0]?.tableCells).toHaveLength(1)
 })
 
 it('reads a table with no rows or grid columns', async () => {
@@ -550,14 +552,15 @@ it('writes an empty document body', async () => {
   expect(reopened.body?.dataStream).toBe('\r\n')
 })
 
-it('skips nested table tokens inside a cell when writing', async () => {
+it('writes a nested table from stream tokens without table metadata', async () => {
   const stream = '\x1A\x1B\x1Couter\r\n\x1A\x1B\x1Cinner\r\n\x1D\x0E\x0F\x1D\x0E\x0F'
   const data = snapshotOf(stream, {
     tables: [{ startIndex: 0, endIndex: stream.length, tableId: 'table-1' }],
   })
   const reopened = await readDocument(await writeDocument(data))
-  expect(paragraphTexts(reopened)).toEqual(['', 'outer', ''])
-  expect(reopened.body?.dataStream).not.toContain('inner')
+  expect(paragraphTexts(reopened)).toEqual(['', 'outer', 'inner', '', ''])
+  expect(reopened.body?.dataStream).toContain('inner')
+  expect(reopened.body?.tables).toHaveLength(2)
 })
 
 it('writes an empty paragraph for a cell without a paragraph break', async () => {
