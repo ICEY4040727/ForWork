@@ -487,4 +487,39 @@ describe('applySheetOperation', () => {
     expect(cellAt(handle.getSnapshot(), 2, 0)).toEqual({ f: '=A1+A2' })
     handle.dispose()
   })
+
+  it('undoes a row insertion and a range style back to the prior state', async () => {
+    const book = workbookWith()
+    const before = book.snapshot()
+    const adapter = createAdapter(async () => runtimeOf(book))
+    const handle = await adapter.mount(document.createElement('div'), {
+      kind: 'workbook',
+      snapshot: before,
+      onChange: vi.fn(),
+    })
+    expect(handle.apply([
+      { kind: 'row', sheetId: SHEET_ID, row: 1, count: 1, action: 'insert' },
+    ])).toEqual({ status: 'applied' })
+    expect(sheetOf(handle.getSnapshot())['rowCount']).toBe(9)
+    handle.undo()
+    expect(handle.getSnapshot()).toEqual(before)
+
+    expect(handle.apply([
+      {
+        kind: 'style',
+        sheetId: SHEET_ID,
+        startRow: 0,
+        startColumn: 0,
+        endRow: 1,
+        endColumn: 1,
+        style: { bl: 1 },
+      },
+    ])).toEqual({ status: 'applied' })
+    expect(cellAt(handle.getSnapshot(), 0, 0)?.['s']).toEqual({ bl: 1 })
+    handle.undo()
+    expect(handle.getSnapshot()).toEqual(before)
+    handle.redo()
+    expect(cellAt(handle.getSnapshot(), 1, 1)?.['s']).toEqual({ bl: 1 })
+    handle.dispose()
+  })
 })

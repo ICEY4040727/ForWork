@@ -483,6 +483,7 @@ const TOOL_PACKAGES: ToolPackage[] = [
     async mount(ctx) {
       // Schema harvest never executes a tool; the Remote is a stub that is never called.
       ctx.provide('officeDocument', {} as OfficeDocumentRemote)
+      await ctx.plugin(AgentRegistry)
       await ctx.plugin(ToolOffice)
     },
     note:

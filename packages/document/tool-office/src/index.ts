@@ -21,7 +21,7 @@ import type { JsonValue } from '@forwork/util-values'
 import { convertDocument } from './convert.ts'
 import type { ConvertOutput } from './convert.ts'
 import { editCells } from './edit-cells.ts'
-import type { CellEditInput } from './edit-cells.ts'
+import type { SheetEditInput } from './edit-cells.ts'
 import { editParagraphs } from './edit-paragraph.ts'
 import type { ParagraphEditInput } from './edit-paragraph.ts'
 import type { EditOutput } from './edit.ts'
@@ -54,7 +54,7 @@ export const Config: z<Config> = z.object({
 /** Accepted output of any document tool. */
 export type DocumentToolOutput =
   | DocumentReadOutput
-  | EditOutput<CellEditInput>
+  | EditOutput<SheetEditInput>
   | EditOutput<ParagraphEditInput>
   | ConvertOutput
 
@@ -65,7 +65,7 @@ export type DocumentToolInvocation =
     readonly name: 'document_edit_cells'
     readonly documentId: string
     readonly fromVersion: number
-    readonly operations: readonly CellEditInput[]
+    readonly operations: readonly SheetEditInput[]
   }
   | {
     readonly name: 'document_edit_paragraph'
@@ -96,6 +96,62 @@ const CELL_OPERATION_SCHEMA = {
     value: { type: 'json', description: 'New JSON cell value; omit when setting a formula.' },
     formula: { type: 'string', description: 'New formula text; omit when setting a value.' },
   },
+} as const
+
+const ROW_OPERATION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    kind: { type: 'string', required: true, const: 'row', description: 'Step kind.' },
+    sheetId: { type: 'string', required: true, description: 'Sheet id from document_read.' },
+    row: { type: 'integer', required: true, description: 'Zero-based index of the first affected row.' },
+    count: { type: 'integer', required: true, description: 'Positive number of rows to insert or delete.' },
+    action: {
+      type: 'string',
+      required: true,
+      enum: ['insert', 'delete'],
+      description: 'Insert before row, or delete rows starting at row.',
+    },
+  },
+} as const
+
+const COLUMN_OPERATION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    kind: { type: 'string', required: true, const: 'column', description: 'Step kind.' },
+    sheetId: { type: 'string', required: true, description: 'Sheet id from document_read.' },
+    column: { type: 'integer', required: true, description: 'Zero-based index of the first affected column.' },
+    count: { type: 'integer', required: true, description: 'Positive number of columns to insert or delete.' },
+    action: {
+      type: 'string',
+      required: true,
+      enum: ['insert', 'delete'],
+      description: 'Insert before column, or delete columns starting at column.',
+    },
+  },
+} as const
+
+const STYLE_OPERATION_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    kind: { type: 'string', required: true, const: 'style', description: 'Step kind.' },
+    sheetId: { type: 'string', required: true, description: 'Sheet id from document_read.' },
+    startRow: { type: 'integer', required: true, description: 'Zero-based first row of the range, inclusive.' },
+    startColumn: { type: 'integer', required: true, description: 'Zero-based first column of the range, inclusive.' },
+    endRow: { type: 'integer', required: true, description: 'Zero-based last row of the range, inclusive.' },
+    endColumn: { type: 'integer', required: true, description: 'Zero-based last column of the range, inclusive.' },
+    style: {
+      type: 'json',
+      required: true,
+      description: 'JSON style object applied to every cell in the range; null clears the style.',
+    },
+  },
+} as const
+
+const OPERATION_SCHEMA = {
+  oneOf: [CELL_OPERATION_SCHEMA, ROW_OPERATION_SCHEMA, COLUMN_OPERATION_SCHEMA, STYLE_OPERATION_SCHEMA],
 } as const
 
 const PARAGRAPH_OPERATION_SCHEMA = {
@@ -207,15 +263,16 @@ export function registerDocumentTools(
     }),
     defineTool({
       name: 'document_edit_cells',
-      description: 'Replace cell values or formulas in an open spreadsheet, then save the result immediately.',
+      description:
+        'Replace cell values or formulas, insert or delete rows or columns, or style a range in an open spreadsheet, then save the result immediately.',
       parameters: {
         documentId: DOCUMENT_ID_PARAMETER,
         fromVersion: FROM_VERSION_PARAMETER,
         operations: {
           type: 'array',
           required: true,
-          description: 'Cell replacements in order.',
-          items: CELL_OPERATION_SCHEMA,
+          description: 'Sheet edits in order.',
+          items: OPERATION_SCHEMA,
         },
       },
       output: OUTPUT,

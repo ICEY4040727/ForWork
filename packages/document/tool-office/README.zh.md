@@ -40,7 +40,7 @@ await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 模型可见的工具是：
 
 - `document_read({ documentId })` —— 读取实时单元的结构（工作表、单元格、公式、段落、表格），从不保存。
-- `document_edit_cells({ documentId, fromVersion, operations })` —— 替换单元格值或公式，然后保存一次。
+- `document_edit_cells({ documentId, fromVersion, operations })` —— 替换单元格值或公式、插入或删除行或列，或设置区域样式，然后保存一次。
 - `document_edit_paragraph({ documentId, fromVersion, operations })` —— 替换段落，然后保存一次。
 - `document_convert({ path })` —— 把旧版 `.doc` 或 `.xls` 文件转换为工作区内的可编辑副本。
 
@@ -58,7 +58,7 @@ await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 <details>
 <summary>实现内部细节——点击展开</summary>
 
-`src/index.ts` 注册四个工具定义并从 `ctx.officeDocument` 构建 Host 运行时；部署上限来自经验证的插件 `Config`。`src/read.ts` 分发 `{ kind: 'read' }` 命令，并通过 `src/summary.ts` 总结返回的快照。`src/edit.ts` 拥有共享编辑路径：按身份中的工作区相对路径读取文件，使编辑器 tab 与打开事实保持同一个文档 id；从编辑前快照计算逆操作、分发 `{ kind: 'edit', steps }`，然后用命令前观察到的 filesystem 版本与智能体当前的打开 turn 保存返回的快照，并追加一条 `actor: 'agent'` 的 `document/edit` 事实。`src/edit-cells.ts` 与 `src/edit-paragraph.ts` 验证各自的操作列表并构建类型化步骤；`src/convert.ts` 位于 Host 侧。`src/errors.ts` 把 Remote 与 Exchange 失败映射为模型面向的代码。
+`src/index.ts` 注册四个工具定义并从 `ctx.officeDocument` 构建 Host 运行时；部署上限来自经验证的插件 `Config`。`src/read.ts` 分发 `{ kind: 'read' }` 命令，并通过 `src/summary.ts` 总结返回的快照。`src/edit.ts` 拥有共享编辑路径：按身份中的工作区相对路径读取文件，使编辑器 tab 与打开事实保持同一个文档 id；从编辑前快照计算逆操作、分发 `{ kind: 'edit', steps }`，然后用命令前观察到的 filesystem 版本与智能体当前的打开 turn 保存返回的快照，并追加一条 `actor: 'agent'` 的 `document/edit` 事实。`src/edit-cells.ts` 验证单元格、公式、行、列与样式步骤，并在逆操作中恢复被删除的单元格与先前的样式；`src/edit-paragraph.ts` 验证段落替换；`src/convert.ts` 位于 Host 侧。`src/errors.ts` 把 Remote 与 Exchange 失败映射为模型面向的代码。
 
 命令事件不携带快照。被拒绝、未应答或超时的命令不写入任何内容，也不追加编辑事实，因此只有被接受的保存才能改变持久文档内容。
 
@@ -82,7 +82,7 @@ await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 
 #### 模型看到什么
 
-四个工具 schema。`document_read` 返回有界的结构摘要，包含工作表与单元格计数、按行优先的单元格预览、公式、段落与表格尺寸。`document_edit_cells` 与 `document_edit_paragraph` 返回新的 `contentVersion` 与编辑器应用的操作。`document_convert` 返回转换后的路径与可编辑格式。拒绝返回 `status: "error"`、稳定的 `code` 以及可操作的说明。
+四个工具 schema。`document_read` 返回有界的结构摘要，包含工作表与单元格计数、按行优先的单元格预览、公式、段落与表格尺寸。`document_edit_cells` 接受单元格值、公式、行／列插入或删除步骤以及区域样式，并返回新的 `contentVersion` 与编辑器应用的操作。`document_edit_paragraph` 返回新的 `contentVersion` 与它替换的段落。`document_convert` 返回转换后的路径与可编辑格式。拒绝返回 `status: "error"`、稳定的 `code` 以及可操作的说明。
 
 #### Token 影响
 
@@ -97,7 +97,7 @@ await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 <a id="known-limitations-and-deferred-work"></a>
 
 - 稳定文档 id 目前等于 `<sessionId>:<path>`。`document` projection（US3）拥有稳定 id 映射与模型面向的打开文档集合；在它落地之前，模型必须从编辑器或先前的读取中获得该 id。
-- 这些工具只暴露单元格与段落编辑。`document/edit` 步骤联合还包含行、列、公式与样式步骤：`document_edit_cells` 会发出公式步骤，但还没有工具表面发出行／列插入或删除或样式操作。
+- 这些工具暴露单元格、公式、行、列与区域样式电子表格编辑以及段落编辑。行或列删除会在记录的逆操作中恢复被删除的单元格，但不会恢复步骤联合无法表达的结构数据，例如合并区域或行高；运行时撤销仍通过编辑器的原生历史恢复实时单元。
 - `document_convert` 返回工作区下的转换副本；没有任何机制自动清理 `.dsh/office-tmp/` 转换目录。
 - 编辑需要实时编辑器实例。无头 Session 以 `document-not-open` 拒绝，而不是编辑并保存脱离的文件。
 

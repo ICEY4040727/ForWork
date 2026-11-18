@@ -75,7 +75,109 @@ function cellValue(snapshot: OfficeDocumentSnapshot, sheetId: string, row: numbe
   const sheet = objectOf(sheetsOf(snapshot)[sheetId])
   const cells = objectOf(sheet['cellData'])
   const rowCells = cells[String(row)] === undefined ? {} : objectOf(cells[String(row)])
-  return objectOf(rowCells[String(column)])['v'] ?? null
+  const cell = rowCells[String(column)]
+  return cell === undefined ? null : objectOf(cell)['v'] ?? null
+}
+
+/** Read one workbook cell style. */
+function cellStyle(snapshot: OfficeDocumentSnapshot, sheetId: string, row: number, column: number): JsonValue {
+  const sheet = objectOf(sheetsOf(snapshot)[sheetId])
+  const cells = objectOf(sheet['cellData'])
+  const rowCells = cells[String(row)] === undefined ? {} : objectOf(cells[String(row)])
+  const cell = rowCells[String(column)]
+  return cell === undefined ? null : objectOf(cell)['s'] ?? null
+}
+
+/** One sheet's row and column capacity. */
+function sheetSize(
+  snapshot: OfficeDocumentSnapshot,
+  sheetId: string,
+): { readonly rows: number; readonly columns: number } {
+  const sheet = objectOf(sheetsOf(snapshot)[sheetId])
+  const rows = sheet['rowCount']
+  const columns = sheet['columnCount']
+  if (typeof rows !== 'number' || typeof columns !== 'number') throw new Error('expected sheet dimensions')
+  return { rows, columns }
+}
+
+/** Copy a snapshot and shift its cells for one row insertion or deletion. */
+function withRows(
+  snapshot: OfficeDocumentSnapshot,
+  sheetId: string,
+  row: number,
+  count: number,
+  action: 'insert' | 'delete',
+): OfficeDocumentSnapshot {
+  const copy = structuredClone(snapshot)
+  const size = sheetSize(copy, sheetId)
+  const sheet = objectOf(sheetsOf(copy)[sheetId])
+  const cells = objectOf(sheet['cellData'])
+  const moved: Record<string, JsonValue> = {}
+  for (const [rowKey, rowValue] of Object.entries(cells)) {
+    const index = Number(rowKey)
+    if (action === 'delete' && index >= row && index < row + count) continue
+    const target = action === 'insert'
+      ? index >= row ? index + count : index
+      : index >= row + count ? index - count : index
+    moved[String(target)] = rowValue
+  }
+  sheet['cellData'] = moved
+  sheet['rowCount'] = action === 'insert' ? size.rows + count : size.rows - count
+  return copy
+}
+
+/** Copy a snapshot and shift its cells for one column insertion or deletion. */
+function withColumns(
+  snapshot: OfficeDocumentSnapshot,
+  sheetId: string,
+  column: number,
+  count: number,
+  action: 'insert' | 'delete',
+): OfficeDocumentSnapshot {
+  const copy = structuredClone(snapshot)
+  const size = sheetSize(copy, sheetId)
+  const sheet = objectOf(sheetsOf(copy)[sheetId])
+  const cells = objectOf(sheet['cellData'])
+  const moved: Record<string, JsonValue> = {}
+  for (const [rowKey, rowValue] of Object.entries(cells)) {
+    const rowCells = objectOf(rowValue)
+    if (rowCells === undefined) continue
+    const targetCells: Record<string, JsonValue> = {}
+    for (const [columnKey, cellValue_] of Object.entries(rowCells)) {
+      const index = Number(columnKey)
+      if (action === 'delete' && index >= column && index < column + count) continue
+      const target = action === 'insert'
+        ? index >= column ? index + count : index
+        : index >= column + count ? index - count : index
+      targetCells[String(target)] = cellValue_
+    }
+    moved[rowKey] = targetCells
+  }
+  sheet['cellData'] = moved
+  sheet['columnCount'] = action === 'insert' ? size.columns + count : size.columns - count
+  return copy
+}
+
+/** Copy a snapshot and assign one style to every cell in a range. */
+function withStyle(
+  snapshot: OfficeDocumentSnapshot,
+  sheetId: string,
+  range: { readonly startRow: number; readonly startColumn: number; readonly endRow: number; readonly endColumn: number },
+  style: JsonValue,
+): OfficeDocumentSnapshot {
+  const copy = structuredClone(snapshot)
+  const sheet = objectOf(sheetsOf(copy)[sheetId])
+  const cells = objectOf(sheet['cellData'])
+  for (let row = range.startRow; row <= range.endRow; row += 1) {
+    const rowCells = cells[String(row)] === undefined ? {} : objectOf(cells[String(row)])
+    for (let column = range.startColumn; column <= range.endColumn; column += 1) {
+      const cell = rowCells[String(column)] === undefined ? {} : objectOf(rowCells[String(column)])
+      cell['s'] = structuredClone(style)
+      rowCells[String(column)] = cell
+    }
+    cells[String(row)] = rowCells
+  }
+  return copy
 }
 
 /** The first sheet id of a workbook. */
@@ -107,7 +209,7 @@ function firstEdit(): Extract<import('@forwork/session').SessionEvent, { type: '
 /** Execute a tool call that returns a structured value. */
 async function call(name: string, arguments_: Record<string, unknown>, signal: AbortSignal = SIGNAL): Promise<JsonValue> {
   const result = await h.execute(name, arguments_, signal)
-  expect(result.isError).toBe(false)
+  expect(result.isError, result.isError ? result.error.message : undefined).toBe(false)
   return result.value ?? null
 }
 
@@ -264,6 +366,218 @@ describe('document_edit_cells', () => {
 
     const reread = await readWorkbook(path)
     expect(cellValue(reread.snapshot, sheetId, 1, 0)).toBe('Sprocket')
+  })
+
+  it('inserts worksheet rows and records a structural inverse', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const read = await readWorkbook(path)
+    const sheetId = firstSheet(read.snapshot)
+    const dispatch = vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
+      const current = await readWorkbook(path)
+      expect(request.operation).toEqual({
+        kind: 'edit',
+        steps: [{ kind: 'row', sheetId, row: 1, count: 1, action: 'insert' }],
+      })
+      return {
+        status: 'applied',
+        snapshot: withRows(current.snapshot, sheetId, 1, 1, 'insert'),
+        contentVersion: request.fromVersion + 1,
+      }
+    })
+    const save = vi.spyOn(h.server, 'save')
+
+    const result = objectOf(await call('document_edit_cells', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [{ kind: 'row', sheetId, row: 1, count: 1, action: 'insert' }],
+    }))
+
+    expect(result['status']).toBe('ok')
+    expect(save).toHaveBeenCalledOnce()
+    expect(dispatch).toHaveBeenCalledOnce()
+    const edit = firstEdit()
+    expect(edit.data.operation).toEqual([{ kind: 'row', sheetId, row: 1, count: 1, action: 'insert' }])
+    expect(edit.data.inverse).toEqual([{ kind: 'row', sheetId, row: 1, count: 1, action: 'delete' }])
+    const reread = await readWorkbook(path)
+    expect(sheetSize(reread.snapshot, sheetId).rows).toBe(8)
+    expect(cellValue(reread.snapshot, sheetId, 2, 0)).toBe('Widget')
+    expect(cellValue(reread.snapshot, sheetId, 4, 0)).toBe('Cog')
+  })
+
+  it('deletes worksheet rows and restores their cells in the inverse', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const read = await readWorkbook(path)
+    const sheetId = firstSheet(read.snapshot)
+    vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
+      const current = await readWorkbook(path)
+      expect(request.operation).toEqual({
+        kind: 'edit',
+        steps: [{ kind: 'row', sheetId, row: 1, count: 1, action: 'delete' }],
+      })
+      return {
+        status: 'applied',
+        snapshot: withRows(current.snapshot, sheetId, 1, 1, 'delete'),
+        contentVersion: request.fromVersion + 1,
+      }
+    })
+
+    const result = objectOf(await call('document_edit_cells', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [{ kind: 'row', sheetId, row: 1, count: 1, action: 'delete' }],
+    }))
+
+    expect(result['status']).toBe('ok')
+    const edit = firstEdit()
+    expect(edit.data.operation).toEqual([{ kind: 'row', sheetId, row: 1, count: 1, action: 'delete' }])
+    expect(edit.data.inverse[0]).toEqual({ kind: 'row', sheetId, row: 1, count: 1, action: 'insert' })
+    expect(edit.data.inverse).toContainEqual({ kind: 'cell', sheetId, row: 1, column: 0, value: 'Widget' })
+    const reread = await readWorkbook(path)
+    expect(cellValue(reread.snapshot, sheetId, 1, 0)).toBe('Gadget')
+    expect(cellValue(reread.snapshot, sheetId, 2, 0)).toBe('Cog')
+  })
+
+  it('inserts worksheet columns and records a structural inverse', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const read = await readWorkbook(path)
+    const sheetId = firstSheet(read.snapshot)
+    vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
+      const current = await readWorkbook(path)
+      expect(request.operation).toEqual({
+        kind: 'edit',
+        steps: [{ kind: 'column', sheetId, column: 1, count: 1, action: 'insert' }],
+      })
+      return {
+        status: 'applied',
+        snapshot: withColumns(current.snapshot, sheetId, 1, 1, 'insert'),
+        contentVersion: request.fromVersion + 1,
+      }
+    })
+
+    const result = objectOf(await call('document_edit_cells', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [{ kind: 'column', sheetId, column: 1, count: 1, action: 'insert' }],
+    }))
+
+    expect(result['status']).toBe('ok')
+    const edit = firstEdit()
+    expect(edit.data.operation).toEqual([{ kind: 'column', sheetId, column: 1, count: 1, action: 'insert' }])
+    expect(edit.data.inverse).toEqual([{ kind: 'column', sheetId, column: 1, count: 1, action: 'delete' }])
+    const reread = await readWorkbook(path)
+    expect(sheetSize(reread.snapshot, sheetId).columns).toBe(4)
+    expect(cellValue(reread.snapshot, sheetId, 0, 2)).toBe('Units')
+    expect(cellValue(reread.snapshot, sheetId, 0, 3)).toBe('Revenue')
+  })
+
+  it('deletes worksheet columns and restores their cells in the inverse', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const read = await readWorkbook(path)
+    const sheetId = firstSheet(read.snapshot)
+    vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
+      const current = await readWorkbook(path)
+      expect(request.operation).toEqual({
+        kind: 'edit',
+        steps: [{ kind: 'column', sheetId, column: 1, count: 1, action: 'delete' }],
+      })
+      return {
+        status: 'applied',
+        snapshot: withColumns(current.snapshot, sheetId, 1, 1, 'delete'),
+        contentVersion: request.fromVersion + 1,
+      }
+    })
+
+    const result = objectOf(await call('document_edit_cells', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [{ kind: 'column', sheetId, column: 1, count: 1, action: 'delete' }],
+    }))
+
+    expect(result['status']).toBe('ok')
+    const edit = firstEdit()
+    expect(edit.data.operation).toEqual([{ kind: 'column', sheetId, column: 1, count: 1, action: 'delete' }])
+    expect(edit.data.inverse[0]).toEqual({ kind: 'column', sheetId, column: 1, count: 1, action: 'insert' })
+    expect(edit.data.inverse).toContainEqual({ kind: 'cell', sheetId, row: 1, column: 1, value: 4 })
+    const reread = await readWorkbook(path)
+    expect(cellValue(reread.snapshot, sheetId, 0, 1)).toBe('Revenue')
+    expect(cellValue(reread.snapshot, sheetId, 0, 2)).toBe(null)
+  })
+
+  it('styles a worksheet range and restores prior styles in the inverse', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const read = await readWorkbook(path)
+    const sheetId = firstSheet(read.snapshot)
+    const range = { startRow: 0, startColumn: 0, endRow: 1, endColumn: 1 }
+    vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
+      const current = await readWorkbook(path)
+      expect(request.operation).toEqual({
+        kind: 'edit',
+        steps: [{ kind: 'style', sheetId, ...range, style: { it: 1 } }],
+      })
+      return {
+        status: 'applied',
+        snapshot: withStyle(current.snapshot, sheetId, range, { it: 1 }),
+        contentVersion: request.fromVersion + 1,
+      }
+    })
+
+    const result = objectOf(await call('document_edit_cells', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [{ kind: 'style', sheetId, ...range, style: { it: 1 } }],
+    }))
+
+    expect(result['status']).toBe('ok')
+    const edit = firstEdit()
+    expect(edit.data.operation).toEqual([{ kind: 'style', sheetId, ...range, style: { it: 1 } }])
+    expect(edit.data.inverse[0]).toEqual({ kind: 'style', sheetId, ...range, style: null })
+    expect(edit.data.inverse.length).toBeGreaterThan(1)
+    const reread = await readWorkbook(path)
+    const style = objectOf(cellStyle(reread.snapshot, sheetId, 0, 0))
+    expect(style?.['it']).toBe(1)
+  })
+
+  it('applies a mixed batch through one command', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const read = await readWorkbook(path)
+    const sheetId = firstSheet(read.snapshot)
+    const steps = [
+      { sheetId, row: 5, column: 0, value: 'Batch' },
+      { kind: 'row', sheetId, row: 6, count: 1, action: 'insert' },
+      { kind: 'column', sheetId, column: 2, count: 1, action: 'insert' },
+      { kind: 'style', sheetId, startRow: 5, startColumn: 0, endRow: 5, endColumn: 0, style: { it: 1 } },
+    ] as const
+    const dispatch = vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
+      const current = await readWorkbook(path)
+      expect(request.operation).toEqual({
+        kind: 'edit',
+        steps: [{ kind: 'cell', sheetId, row: 5, column: 0, value: 'Batch' }, steps[1], steps[2], steps[3]],
+      })
+      let snapshot = withCell(current.snapshot, sheetId, 5, 0, 'Batch')
+      snapshot = withRows(snapshot, sheetId, 6, 1, 'insert')
+      snapshot = withColumns(snapshot, sheetId, 2, 1, 'insert')
+      snapshot = withStyle(snapshot, sheetId, {
+        startRow: 5,
+        startColumn: 0,
+        endRow: 5,
+        endColumn: 0,
+      }, { it: 1 })
+      return { status: 'applied', snapshot, contentVersion: request.fromVersion + 1 }
+    })
+
+    const result = objectOf(await call('document_edit_cells', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [steps[0], steps[1], steps[2], steps[3]],
+    }))
+
+    expect(result['status']).toBe('ok')
+    expect(dispatch).toHaveBeenCalledOnce()
+    const reread = await readWorkbook(path)
+    expect(sheetSize(reread.snapshot, sheetId)).toEqual({ rows: 8, columns: 4 })
+    expect(cellValue(reread.snapshot, sheetId, 5, 0)).toBe('Batch')
+    expect(cellValue(reread.snapshot, sheetId, 0, 3)).toBe('Revenue')
+    expect(objectOf(cellStyle(reread.snapshot, sheetId, 5, 0))?.['it']).toBe(1)
   })
 
   it('attributes its guarded save to the agent and the open turn without opening twice', async () => {
@@ -499,6 +813,12 @@ describe('document_edit_cells', () => {
       { sheetId: 's', row: 0, column: 0 },
       { sheetId: 's', row: 0, column: 0, value: 1, formula: '=A1' },
       { sheetId: 's', row: 0, column: 0, formula: '' },
+      { kind: 'row', sheetId: 's', row: -1, count: 1, action: 'insert' },
+      { kind: 'row', sheetId: 's', row: 0, count: 0, action: 'delete' },
+      { kind: 'column', sheetId: '', column: 0, count: 1, action: 'insert' },
+      { kind: 'column', sheetId: 's', column: 0, count: -1, action: 'delete' },
+      { kind: 'style', sheetId: 's', startRow: 1, startColumn: 0, endRow: 0, endColumn: 0, style: {} },
+      { kind: 'style', sheetId: 's', startRow: 0, startColumn: 0, endRow: 0, endColumn: 0, style: 5 },
     ]
     for (const operation of cases) {
       const result = objectOf(await call('document_edit_cells', {
@@ -507,6 +827,27 @@ describe('document_edit_cells', () => {
         operations: [operation],
       }))
       expect(result['code']).toBe('invalid-request')
+    }
+    expect(dispatch).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unsupported operation shape before dispatch', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const documentId = documentIdFor(h, path)
+    const dispatch = vi.spyOn(h.server, 'dispatchCommand')
+    const cases: readonly Record<string, unknown>[] = [
+      { kind: 'row', sheetId: 'Sales', row: 0, count: 1 },
+      { kind: 'merge', sheetId: 'Sales', startRow: 0, startColumn: 0, endRow: 1, endColumn: 1 },
+      { kind: 'style', sheetId: 'Sales', row: 0, column: 0, value: 1 },
+    ]
+    for (const operation of cases) {
+      const result = await h.execute('document_edit_cells', {
+        documentId,
+        fromVersion: 0,
+        operations: [operation],
+      }, SIGNAL)
+      expect(result.isError).toBe(true)
+      if (result.isError) expect(result.error.message).toContain('invalid arguments')
     }
     expect(dispatch).not.toHaveBeenCalled()
   })
@@ -727,6 +1068,7 @@ describe('execution context', () => {
     ])
     expect(registered[0]?.parameters).toHaveProperty('properties.documentId')
     expect(registered[1]?.parameters).toHaveProperty('properties.operations')
+    expect(registered[1]?.parameters).toHaveProperty('properties.operations.items.oneOf')
   })
 
   it('reports a classified failure when the Remote is mounted without the command broker', async () => {

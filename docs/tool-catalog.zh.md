@@ -1530,7 +1530,7 @@ create、edit、pause 和 resume 要求直接来自人类的根权限；complete
 
 ### `document_edit_cells`
 
-替换打开的电子表格中的单元格值或公式，然后立即保存结果。
+替换打开的电子表格中的单元格值或公式、插入或删除行或列，或设置区域样式，然后立即保存结果。
 
 ```json
 {
@@ -1546,35 +1546,158 @@ create、edit、pause 和 resume 要求直接来自人类的根权限；complete
     },
     "operations": {
       "type": "array",
-      "description": "Cell replacements in order.",
+      "description": "Sheet edits in order.",
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "sheetId": {
-            "type": "string",
-            "description": "Sheet id from document_read."
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "sheetId": {
+                "type": "string",
+                "description": "Sheet id from document_read."
+              },
+              "row": {
+                "type": "integer",
+                "description": "Zero-based row index."
+              },
+              "column": {
+                "type": "integer",
+                "description": "Zero-based column index."
+              },
+              "value": {
+                "description": "New JSON cell value; omit when setting a formula."
+              },
+              "formula": {
+                "type": "string",
+                "description": "New formula text; omit when setting a value."
+              }
+            },
+            "required": [
+              "sheetId",
+              "row",
+              "column"
+            ]
           },
-          "row": {
-            "type": "integer",
-            "description": "Zero-based row index."
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "Step kind.",
+                "const": "row"
+              },
+              "sheetId": {
+                "type": "string",
+                "description": "Sheet id from document_read."
+              },
+              "row": {
+                "type": "integer",
+                "description": "Zero-based index of the first affected row."
+              },
+              "count": {
+                "type": "integer",
+                "description": "Positive number of rows to insert or delete."
+              },
+              "action": {
+                "type": "string",
+                "description": "Insert before row, or delete rows starting at row.",
+                "enum": [
+                  "insert",
+                  "delete"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "sheetId",
+              "row",
+              "count",
+              "action"
+            ]
           },
-          "column": {
-            "type": "integer",
-            "description": "Zero-based column index."
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "Step kind.",
+                "const": "column"
+              },
+              "sheetId": {
+                "type": "string",
+                "description": "Sheet id from document_read."
+              },
+              "column": {
+                "type": "integer",
+                "description": "Zero-based index of the first affected column."
+              },
+              "count": {
+                "type": "integer",
+                "description": "Positive number of columns to insert or delete."
+              },
+              "action": {
+                "type": "string",
+                "description": "Insert before column, or delete columns starting at column.",
+                "enum": [
+                  "insert",
+                  "delete"
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "sheetId",
+              "column",
+              "count",
+              "action"
+            ]
           },
-          "value": {
-            "description": "New JSON cell value; omit when setting a formula."
-          },
-          "formula": {
-            "type": "string",
-            "description": "New formula text; omit when setting a value."
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "Step kind.",
+                "const": "style"
+              },
+              "sheetId": {
+                "type": "string",
+                "description": "Sheet id from document_read."
+              },
+              "startRow": {
+                "type": "integer",
+                "description": "Zero-based first row of the range, inclusive."
+              },
+              "startColumn": {
+                "type": "integer",
+                "description": "Zero-based first column of the range, inclusive."
+              },
+              "endRow": {
+                "type": "integer",
+                "description": "Zero-based last row of the range, inclusive."
+              },
+              "endColumn": {
+                "type": "integer",
+                "description": "Zero-based last column of the range, inclusive."
+              },
+              "style": {
+                "description": "JSON style object applied to every cell in the range; null clears the style."
+              }
+            },
+            "required": [
+              "kind",
+              "sheetId",
+              "startRow",
+              "startColumn",
+              "endRow",
+              "endColumn",
+              "style"
+            ]
           }
-        },
-        "required": [
-          "sheetId",
-          "row",
-          "column"
         ]
       }
     }

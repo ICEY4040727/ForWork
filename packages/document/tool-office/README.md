@@ -40,7 +40,7 @@ await ctx.plugin(ToolOffice, { summaryCells: 200, maxEditSteps: 2_000 })
 The model-visible tools are:
 
 - `document_read({ documentId })` — reads the live unit's structure (sheets, cells, formulas, paragraphs, tables) and never saves.
-- `document_edit_cells({ documentId, fromVersion, operations })` — replaces cell values or formulas, then saves once.
+- `document_edit_cells({ documentId, fromVersion, operations })` — replaces cell values or formulas, inserts or deletes rows or columns, or styles a range, then saves once.
 - `document_edit_paragraph({ documentId, fromVersion, operations })` — replaces paragraphs, then saves once.
 - `document_convert({ path })` — converts a legacy `.doc` or `.xls` file to an editable copy inside the workspace.
 
@@ -58,7 +58,7 @@ Every refusal is a structured result with a stable `code`: `conflict`, `unsuppor
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-`src/index.ts` registers the four tool definitions and builds the Host runtime from `ctx.officeDocument`; the deployment caps come from the validated plugin `Config`. `src/read.ts` dispatches a `{ kind: 'read' }` command and summarizes the returned snapshot through `src/summary.ts`. `src/edit.ts` owns the shared edit path: read the file at the identity's workspace-relative path so the editor tab and the open fact keep one document id, compute the inverse from the pre-edit snapshot, dispatch `{ kind: 'edit', steps }`, then save the returned snapshot with the filesystem version observed before the command and the agent's open turn, and append one `document/edit` fact with `actor: 'agent'`. `src/edit-cells.ts` and `src/edit-paragraph.ts` validate their operation lists and build typed steps; `src/convert.ts` is Host-side. `src/errors.ts` maps Remote and Exchange failures onto the model-facing codes.
+`src/index.ts` registers the four tool definitions and builds the Host runtime from `ctx.officeDocument`; the deployment caps come from the validated plugin `Config`. `src/read.ts` dispatches a `{ kind: 'read' }` command and summarizes the returned snapshot through `src/summary.ts`. `src/edit.ts` owns the shared edit path: read the file at the identity's workspace-relative path so the editor tab and the open fact keep one document id, compute the inverse from the pre-edit snapshot, dispatch `{ kind: 'edit', steps }`, then save the returned snapshot with the filesystem version observed before the command and the agent's open turn, and append one `document/edit` fact with `actor: 'agent'`. `src/edit-cells.ts` validates cell, formula, row, column, and style steps and restores deleted cells and prior styles in the inverse; `src/edit-paragraph.ts` validates paragraph replacements; `src/convert.ts` is Host-side. `src/errors.ts` maps Remote and Exchange failures onto the model-facing codes.
 
 The command event carries no snapshot. A refused, unanswered, or timed-out command writes nothing and appends no edit fact, so only an accepted save can change durable document content.
 
@@ -82,7 +82,7 @@ The command event carries no snapshot. A refused, unanswered, or timed-out comma
 
 #### What the model sees
 
-Four tool schemas. `document_read` returns a bounded structure summary with sheet and cell counts, a row-major cell preview, formulas, paragraphs, and table dimensions. `document_edit_cells` and `document_edit_paragraph` return the new `contentVersion` and the operations the editor applied. `document_convert` returns the converted path and editable format. Refusals return `status: "error"`, a stable `code`, and an actionable message.
+Four tool schemas. `document_read` returns a bounded structure summary with sheet and cell counts, a row-major cell preview, formulas, paragraphs, and table dimensions. `document_edit_cells` accepts cell values, formulas, row and column insert or delete steps, and range styles, and returns the new `contentVersion` and the operations the editor applied. `document_edit_paragraph` returns the new `contentVersion` and the paragraphs it replaced. `document_convert` returns the converted path and editable format. Refusals return `status: "error"`, a stable `code`, and an actionable message.
 
 #### Token effect
 
@@ -97,7 +97,7 @@ None; the package neither assembles nor sends a provider request.
 <a id="known-limitations-and-deferred-work"></a>
 
 - The stable document id currently equals `<sessionId>:<path>`. The `document` projection (US3) owns the stable-id mapping and the model-facing open-document set; until it lands, a model must obtain the id from the editor or a prior read.
-- The tools expose cell and paragraph edits. The `document/edit` step union also carries row, column, formula, and style steps: `document_edit_cells` emits formula steps, while no tool surface emits row/column insert or delete or style operations yet.
+- The tools expose cell, formula, row, column, and range-style spreadsheet edits plus paragraph edits. A row or column deletion restores the deleted cells in its recorded inverse, but not structural data the step union cannot express, such as merged ranges or row heights; runtime undo still restores the live unit through the editor's native history.
 - `document_convert` returns a converted copy under the workspace; nothing prunes `.dsh/office-tmp/` conversion directories automatically.
 - Editing requires a live editor instance. Headless sessions refuse with `document-not-open` rather than editing and saving a detached file.
 
