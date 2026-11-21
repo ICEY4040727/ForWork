@@ -7,6 +7,31 @@ const OFFICE_REL_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/rel
 const CONTENT_NS = 'http://schemas.openxmlformats.org/package/2006/content-types'
 const TEXT = 'Office preview 中文文档'
 
+/** DOCX part the Web office save scenario compares byte-for-byte after a save. */
+export const PRESERVED_OOXML_PART = 'word/media/image1.png'
+
+/**
+ * Create a DOCX carrying one opaque media part, so an in-place save must copy
+ * the entry unchanged.
+ * @returns Compressed DOCX bytes accepted by the production reader.
+ */
+export function preservedDocxBytes(): Uint8Array {
+  const main = 'word/document.xml'
+  const media = new Uint8Array(Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+    'base64',
+  ))
+  const files: Record<string, Uint8Array> = {
+    [main]: strToU8(`<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>${TEXT}</w:t></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>`),
+    'word/_rels/document.xml.rels': strToU8(`<Relationships xmlns="${REL_NS}"><Relationship Id="rId1" Type="${OFFICE_REL_NS}/image" Target="media/image1.png"/></Relationships>`),
+    [PRESERVED_OOXML_PART]: media,
+    'docProps/core.xml': strToU8('<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Preview</dc:title></cp:coreProperties>'),
+    '_rels/.rels': strToU8(`<Relationships xmlns="${REL_NS}"><Relationship Id="rId1" Type="${OFFICE_REL_NS}/officeDocument" Target="${main}"/><Relationship Id="rId2" Type="${REL_NS}/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`),
+    '[Content_Types].xml': strToU8(`<Types xmlns="${CONTENT_NS}"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/${main}" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`),
+  }
+  return zipSync(files)
+}
+
 /**
  * Create a valid Office document containing Latin and Chinese text; generated Word and PowerPoint documents have two pages.
  * @param extension - Office application and format to exercise.

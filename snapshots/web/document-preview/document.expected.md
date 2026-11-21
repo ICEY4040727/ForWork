@@ -92,6 +92,7 @@
 
 - Editable office tabs: DOCX | XLSX | LEGACY.DOC | LEGACY.XLS | PPT -> PPTX
 - DOCX: document text rendered; no legacy notice; save available
+- DOCX save: completed without error; 1 preserved media part unchanged
 - XLSX: workbook canvas mounted; save available
 - Legacy DOC and XLS: converted copy opens in the office tab with a legacy-source notice
 - Legacy PPT: converted copy is a .pptx and opens the read-only preview with no office edit surface

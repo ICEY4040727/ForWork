@@ -92,14 +92,14 @@ it.each(['remote', 'render', 'files'] as const)('keeps Word and PowerPoint regis
   const h = await harness(undefined, missing)
   try {
     expect(h.locale.register).toHaveBeenCalledWith('sidebarOffice', { zh, en, ja, es, fr, de, ru, pt })
-    for (const path of ['a.DOC', 'b.DOCX', 'c.PPT', 'd.pptx']) {
-      expect(h.registry.candidates(path)[0]!.binaryExtensions).toEqual(['doc', 'docx', 'ppt', 'pptx'])
+    for (const path of ['a.DOC', 'b.DOCX', 'c.DOCM', 'c.PPT', 'd.pptx']) {
+      expect(h.registry.candidates(path)[0]!.binaryExtensions).toEqual(['doc', 'docx', 'docm', 'ppt', 'pptx'])
       expect(h.registry.candidates(path)[0]!.title()).toBe(en.title)
       expect(h.registry.candidates(path)[0]!.loading).toBe('renderer')
       expect(h.registry.candidates(path)[0]).not.toHaveProperty('read')
       await expect(h.read(undefined, path)).rejects.toThrow(en.unavailable)
     }
-    for (const path of ['sheet.XLS', 'sheet.xlsx']) expect(h.registry.candidates(path)).toEqual([])
+    for (const path of ['sheet.XLS', 'sheet.xlsx', 'sheet.xlsm']) expect(h.registry.candidates(path)).toEqual([])
     expect(h.render).not.toHaveBeenCalled()
   } finally { await h.close() }
   expect(h.registry.getSnapshot()).toEqual([])

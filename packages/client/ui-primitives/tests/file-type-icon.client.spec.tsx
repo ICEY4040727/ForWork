@@ -44,6 +44,7 @@ describe('classifyFileType', () => {
     ['deck.pptx', 'ppt'],
     ['clip.webm', 'video'],
     ['letter.docx', 'word'],
+    ['letter.docm', 'word'],
     ['budget.xlsx', 'excel'],
     ['Makefile', 'makefile'],
     ['README', 'markdown'],

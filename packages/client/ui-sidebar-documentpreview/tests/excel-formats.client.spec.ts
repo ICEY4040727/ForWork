@@ -11,13 +11,13 @@ import { legacyWorkbook, xlsFixture } from './xls-fixture.ts'
 const limits = Config({}).excel
 const encode = (text: string) => new TextEncoder().encode(text)
 
-it.each(['xlsx', 'xls', 'csv', 'tsv'] as const)('resolves mixed-case %s paths and enforces byte limits', async (format) => {
+it.each(['xlsx', 'xlsm', 'xls', 'csv', 'tsv'] as const)('resolves mixed-case %s paths and enforces byte limits', async (format) => {
   expect(excelFormat(`/dir.name/sheet.${format.toUpperCase()}`)).toBe(format)
   await expect(convertExcel(new Uint8Array(2), format, { ...limits, maxBytes: 1 })).rejects.toMatchObject({ code: 'tooLarge' })
 })
 
 it('rejects unsupported filename suffixes', () => {
-  expect(() => excelFormat('file.xlsm')).toThrow('invalid')
+  expect(() => excelFormat('file.xlsb')).toThrow('invalid')
 })
 
 it.each([false, true])('reads BIFF values, formulas, merges, layout, and dates with 1904 epoch %s', async (date1904) => {

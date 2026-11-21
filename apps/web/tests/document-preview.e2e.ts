@@ -1,14 +1,15 @@
 /** Keyless document-preview smoke through a real Session, Files tab, shipped renderers, and the default-application controls. */
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { nativeFileManager } from '@forwork/native-command'
 import { delimiter, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { unzipSync } from 'fflate'
 import type { Browser, Locator, Page } from 'playwright'
 import { chromium } from 'playwright'
 import { afterAll, beforeAll, describe, expect, it, onTestFailed, vi } from 'vitest'
 import { createLaunchEnvironmentSnapshot } from '@forwork/launch-environment'
-import { realOfficeBytes } from './office-fixture.ts'
+import { PRESERVED_OOXML_PART, preservedDocxBytes, realOfficeBytes } from './office-fixture.ts'
 import { excelFixture, excelFreezeFixture, meetingMinutesFixture } from '../../../packages/client/ui-sidebar-documentpreview/tests/excel-fixture.ts'
 import { xlsFixture } from '../../../packages/client/ui-sidebar-documentpreview/tests/xls-fixture.ts'
 import { pdfFixture, selectionPdfFixture } from '../../../packages/client/ui-sidebar-documentpreview/tests/pdf-fixture.ts'
@@ -142,7 +143,10 @@ async function openOfficeFile(column: Locator, filesTab: Locator, name: string, 
   await filesTab.click()
   await column.locator('[data-files-entry="file"]').getByRole('button', { name, exact: true }).click()
   const panel = column.locator('[data-office-editor-panel]:visible')
-  await expect.poll(() => panel.locator('[data-office-file-name]').innerText(), { timeout: 60_000 }).toBe(expectedName)
+  await expect.poll(
+    () => column.locator('[data-office-pane-tab-active] [data-office-pane-tab-title]').innerText(),
+    { timeout: 60_000 },
+  ).toBe(expectedName)
   return panel
 }
 
@@ -292,7 +296,7 @@ it.skipIf(MODE === 'record').each(['en-US', 'zh-CN'])('fills the spreadsheet pan
     await expect.poll(() => zoom.innerText()).toBe('150%')
     await zoom.click()
     await excel.locator('.fortune-zoom-ratio-item').getByText('100%', { exact: true }).click()
-    const filesTab = column.locator('[data-dockkit-tab]').filter({ has: page.getByText(locale === 'zh-CN' ? '文件' : 'Files', { exact: true }) })
+    const filesTab = column.locator('[data-dockkit-tab], [data-office-pane-tab]').filter({ has: page.getByText(locale === 'zh-CN' ? '文件' : 'Files', { exact: true }) })
     const preview = column.locator('[data-textpreview-url]')
     await openPreviewFile(column, filesTab, preview, 'meeting.xlsx')
     const tabScroller = excel.locator('.fortune-sheettab-container-c')
@@ -724,7 +728,7 @@ else process.exit(1);
       writeFile(join(cwd, 'user-unit.pdf'), pdfFixture(2)),
       ...[90, 180, 270].map(rotation => writeFile(join(cwd, `rotated-${rotation}.pdf`), pdfFixture(4, rotation))),
       writeFile(join(cwd, 'selection.pdf'), selectionPdfFixture()),
-      writeFile(join(cwd, 'editor.docx'), realOfficeBytes('docx')),
+      writeFile(join(cwd, 'editor.docx'), preservedDocxBytes()),
       writeFile(join(cwd, 'editor.xlsx'), realOfficeBytes('xlsx')),
       ...(['doc', 'xls', 'ppt'] as const).map(extension => writeFile(join(cwd, `legacy.${extension}`), realOfficeBytes(extension))),
       writeFile(join(cwd, 'presentation.pptx'), realOfficeBytes('pptx')),
@@ -738,7 +742,7 @@ else process.exit(1);
     await column.locator('[data-sidebar-right-guide-entry="files"]').click()
     await column.locator('[data-files-state="tree"]').waitFor({ state: 'visible' })
     await column.locator('[data-files-reload]').click()
-    const filesTab = column.locator('[data-dockkit-tab]').filter({ has: page.getByText('Files', { exact: true }) })
+    const filesTab = column.locator('[data-dockkit-tab], [data-office-pane-tab]').filter({ has: page.getByText('Files', { exact: true }) })
     const addTab = column.locator('[data-dockkit-add-tab]')
     expect(await column.locator('[data-dockkit-tab]').count()).toBe(1)
     const defaultTitle = await filesTab.locator('[data-dockkit-tab-title]').innerText()
@@ -1330,7 +1334,7 @@ else process.exit(1);
     await copyCode.hover()
     await page.getByRole('tooltip', { name: 'Copy', exact: true }).waitFor()
     await copyCode.click()
-    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(codeLines.join('\n'))
+    await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n')).toBe(codeLines.join('\n'))
     sections.push([
       '## Code paging', '',
       `- Viewer: ${await viewer.innerText()}`,
@@ -1366,6 +1370,31 @@ else process.exit(1);
     await expect.poll(() => docx.locator('[data-office-mount] canvas').count(), { timeout: 60_000 }).toBeGreaterThan(0)
     expect(await docx.locator('[data-office-legacy-notice]').count()).toBe(0)
     expect(await docx.locator('[data-office-save]').isEnabled()).toBe(true)
+    const savedOfficePath = join(cwd, 'editor.docx')
+    const seededOffice = unzipSync(await readFile(savedOfficePath))
+    const seededMedia = seededOffice[PRESERVED_OOXML_PART]
+    if (seededMedia === undefined) throw new Error('seeded DOCX has no preserved media part')
+    expect(Object.keys(seededOffice).filter(name => name.startsWith('word/media/'))).toEqual([PRESERVED_OOXML_PART])
+    const savedOfficeButton = docx.locator('[data-office-save]')
+    const seededOfficeMtime = (await stat(savedOfficePath)).mtimeMs
+    await savedOfficeButton.click()
+    await expect.poll(async () => (await stat(savedOfficePath)).mtimeMs).toBeGreaterThan(seededOfficeMtime)
+    await expect.poll(() => savedOfficeButton.innerText()).toBe('Save')
+    expect(await savedOfficeButton.isEnabled()).toBe(true)
+    expect(await docx.locator('[data-office-save-error]').count()).toBe(0)
+    const savedOfficeBytes = await readFile(savedOfficePath)
+    expect(savedOfficeBytes.subarray(0, 4).toString('latin1')).toBe('PK\u0003\u0004')
+    expect(savedOfficeBytes.lastIndexOf(Buffer.from('PK\u0005\u0006'))).toBeGreaterThanOrEqual(0)
+    const savedOffice = unzipSync(savedOfficeBytes)
+    const savedMedia = savedOffice[PRESERVED_OOXML_PART]
+    if (savedMedia === undefined) throw new Error('saved DOCX lost the preserved media part')
+    expect(savedMedia.byteLength).toBe(seededMedia.byteLength)
+    expect(Buffer.from(savedMedia).equals(Buffer.from(seededMedia))).toBe(true)
+    const reopenedOffice = await scaffold.ctx.officeDocument.read(
+      { sessionId, workspaceRoot: cwd }, savedOfficePath, new AbortController().signal,
+    )
+    expect(reopenedOffice.format).toBe('docx')
+    expect(reopenedOffice.snapshot.kind).toBe('document')
     officeTabs.push('DOCX')
     const xlsx = await openOfficeFile(column, filesTab, 'editor.xlsx')
     await expectOfficeRendered(xlsx)
@@ -1392,6 +1421,7 @@ else process.exit(1);
       '## Office tabs', '',
       `- Editable office tabs: ${officeTabs.join(' | ')}`,
       '- DOCX: document text rendered; no legacy notice; save available',
+      '- DOCX save: completed without error; 1 preserved media part unchanged',
       '- XLSX: workbook canvas mounted; save available',
       '- Legacy DOC and XLS: converted copy opens in the office tab with a legacy-source notice',
       '- Legacy PPT: converted copy is a .pptx and opens the read-only preview with no office edit surface',
@@ -1405,11 +1435,11 @@ else process.exit(1);
       await excel.locator('.fortune-sheet-overlay').click({ position: { x: 70, y: 30 } })
       await expect.poll(() => excel.locator('.fortune-fx-input').innerText()).toBe('00123')
       await page.keyboard.press('ControlOrMeta+C')
-      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('00123\n')
+      await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n')).toBe('00123\n')
       await page.keyboard.press('ArrowRight')
       await page.keyboard.press('ArrowRight')
       await page.keyboard.press('ControlOrMeta+C')
-      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('=SUM(1,2)\n')
+      await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n')).toBe('=SUM(1,2)\n')
       await viewer.click()
       await page.getByRole('menuitem', { name: 'Plain text', exact: true }).click()
       await expect.poll(() => preview.locator('[data-textpreview-line]').count()).toBe(2)
@@ -1422,7 +1452,7 @@ else process.exit(1);
       await expect.poll(() => excel.locator('.fortune-fx-input').innerText()).toBe('00999')
       await excel.locator('.fortune-sheet-overlay').click({ position: { x: 70, y: 30 } })
       await page.keyboard.press('ControlOrMeta+C')
-      await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe('00999\n')
+      await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replaceAll('\r\n', '\n')).toBe('00999\n')
       await successShot(page, `excel-${extension}`)
     }
     sections.push(['## Delimited spreadsheets', '',

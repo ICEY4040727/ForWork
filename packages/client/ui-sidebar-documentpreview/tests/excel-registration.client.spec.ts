@@ -22,11 +22,11 @@ it('registers complete binary reads and removes the slot and locale on disposal'
   const fiber = ctx.plugin({ apply: (scope) => { apply(scope, limits) } })
   try {
     await fiber.await()
-    for (const path of ['budget.XLSX', 'legacy.xls', 'table.CSV', 'table.tsv']) {
+    for (const path of ['budget.XLSX', 'macro.xlsm', 'legacy.xls', 'table.CSV', 'table.tsv']) {
       const candidate = registry.candidates(path)[0]!
-      expect(candidate).toMatchObject({ loading: 'bytes-complete', wrap: false, binaryExtensions: ['xlsx', 'xls'] })
+      expect(candidate).toMatchObject({ loading: 'bytes-complete', wrap: false, binaryExtensions: ['xlsx', 'xlsm', 'xls'] })
       expect(candidate.title()).toBe('Spreadsheet')
-      expect(binaryDocumentPath(registry.getSnapshot(), path)).toBe(/\.(xlsx|xls)$/iu.test(path))
+      expect(binaryDocumentPath(registry.getSnapshot(), path)).toBe(/\.(xlsx|xlsm|xls)$/iu.test(path))
     }
     expect(registerLocale).toHaveBeenCalledWith('sidebarExcel', { zh, en, ja, es, fr, de, ru, pt })
     expect(register).toHaveBeenCalledOnce()

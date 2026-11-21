@@ -15,7 +15,7 @@ export function apply(ctx: Context, limits: Config['excel']): void {
   ctx.effect(() => ctx.locale.register('sidebarExcel', { zh, en, ja, es, fr, de, ru, pt }))
   const t = ctx.locale.bind('sidebarExcel')
   ctx.effect(() => ctx.documentPreviews.register({
-    id, extensions: ['xlsx', 'xls', 'csv', 'tsv'], binaryExtensions: ['xlsx', 'xls'], priority: 'builtin',
+    id, extensions: ['xlsx', 'xlsm', 'xls', 'csv', 'tsv'], binaryExtensions: ['xlsx', 'xlsm', 'xls'], priority: 'builtin',
     title: () => t('title'), loading: 'bytes-complete', wrap: false,
   }))
   ctx.effect(() => ctx.slots.inject('sidebar.right.tab.document', () => ctx.slots.register({

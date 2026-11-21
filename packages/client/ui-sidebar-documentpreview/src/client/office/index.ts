@@ -30,7 +30,7 @@ declare module '@forwork/client-ui-slots' {
  */
 export function apply(ctx: Context, config: Config['office']): void {
   const id = '@forwork/client-ui-sidebar-documentpreview/office'
-  const extensions = ['doc', 'docx', 'ppt', 'pptx']
+  const extensions = ['doc', 'docx', 'docm', 'ppt', 'pptx']
   ctx.effect(() => ctx.locale.register('sidebarOffice', { zh, en, ja, es, fr, de, ru, pt }))
   const t = ctx.locale.bind('sidebarOffice')
   const unavailable: ReadOfficeDocument = (_file, signal) => {

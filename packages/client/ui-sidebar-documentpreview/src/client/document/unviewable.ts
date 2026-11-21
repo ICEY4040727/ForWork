@@ -16,7 +16,7 @@ const UNVIEWABLE_BINARY_EXTENSIONS: readonly string[] = [
   'zip', 'gz', 'tgz', 'bz2', 'xz', 'zst', '7z', 'rar', 'tar', 'jar',
   // office documents — `key` stays out: it collides with key/credential files
   // that are readable text, and the uncertain suffix keeps the plain-text fallback
-  'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'pages', 'numbers',
+  'doc', 'docx', 'docm', 'xls', 'xlsx', 'xlsm', 'ppt', 'pptx', 'odt', 'ods', 'odp', 'pages', 'numbers',
   // executables and compiled objects
   'exe', 'dll', 'so', 'dylib', 'bin', 'o', 'class', 'pyc', 'wasm',
   // fonts

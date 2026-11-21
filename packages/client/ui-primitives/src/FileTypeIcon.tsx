@@ -87,6 +87,7 @@ const EXTENSION_TYPES: Readonly<Record<string, ClassifiedFileType>> = {
   mpeg: 'video',
   doc: 'word',
   docx: 'word',
+  docm: 'word',
   rtf: 'word',
   odt: 'word',
   pages: 'word',

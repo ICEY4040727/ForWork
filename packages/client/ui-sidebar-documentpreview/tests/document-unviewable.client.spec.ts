@@ -5,7 +5,7 @@ import { unviewableBinaryPath } from '../src/client/document/unviewable.ts'
 describe('unviewableBinaryPath', () => {
   it('matches one sample from every listed category', () => {
     for (const path of [
-      'clip.mp4', 'song.mp3', 'bundle.zip', 'report.docx', 'tool.exe',
+      'clip.mp4', 'song.mp3', 'bundle.zip', 'report.docx', 'macro.docm', 'sheet.xlsm', 'tool.exe',
       'face.woff2', 'image.dmg', 'design.psd',
     ]) expect(unviewableBinaryPath(path), path).toBe(true)
   })
