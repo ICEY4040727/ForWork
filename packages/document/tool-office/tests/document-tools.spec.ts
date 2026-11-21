@@ -1,11 +1,13 @@
 /** Office document tools: bridge success paths, refusals, save counts, and edit facts. */
-import { writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { readFile, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Context } from '@forwork/cordis'
 import { mountAgentLoopTestDependencies, mountAgentLoopTestHarness } from '@forwork/agent-loop-testkit'
 import { LocalFileSystem } from '@forwork/fs-local'
 import { ToolCallId } from '@forwork/llm'
 import { OfficeDocumentRemote } from '@forwork/office-exchange'
+import { open } from '@forwork/office-exchange/src/package/ooxml-package.ts'
 import type {
   OfficeCommandResult,
   OfficeDocumentSnapshot,
@@ -48,6 +50,13 @@ function objectOf(value: JsonValue | undefined): Record<string, JsonValue> {
 function sheetsOf(snapshot: OfficeDocumentSnapshot): Record<string, JsonValue> {
   if (snapshot.kind !== 'workbook') throw new Error('expected a workbook')
   return objectOf(objectOf(snapshot.data)['sheets'])
+}
+
+/** One document body's data stream. */
+function streamOf(body: Record<string, JsonValue>): string {
+  const stream = body['dataStream']
+  if (typeof stream !== 'string') throw new Error('expected a document data stream')
+  return stream
 }
 
 /** Copy a read snapshot and set one cell value. */
@@ -194,9 +203,36 @@ async function readWorkbook(path: string): Promise<OfficeDocumentReadResult> {
   return await h.server.read(h.scope, path, SIGNAL)
 }
 
+/**
+ * Copy a workbook fixture into the workspace without any merged range.
+ *
+ * The round-trip fixture merges `A7:C7`, and a structural row or column shift
+ * refuses to move a merged range. Removing the merge keeps the plain-sheet
+ * fixtures exercising insertion and deletion on their own.
+ * @param fixture - workbook fixture file name copied from the shared fixtures.
+ * @returns the workspace-relative path of the merge-free workbook.
+ */
+async function copyMergeFreeWorkbook(fixture: string): Promise<string> {
+  const path = await h.copy(fixture)
+  const absolute = join(h.root, path)
+  const packageFile = open(new Uint8Array(await readFile(absolute)), { maxEntries: 10_000 })
+  const part = 'xl/worksheets/sheet1.xml'
+  const source = new TextDecoder().decode(packageFile.readPart(part))
+  const stripped = source.replace(/<mergeCells\b[^>]*>[\s\S]*?<\/mergeCells>/u, '')
+  if (stripped === source) throw new Error(`${fixture} has no merged range to remove`)
+  packageFile.replacePart(part, new TextEncoder().encode(stripped))
+  await writeFile(absolute, packageFile.save())
+  return path
+}
+
 /** Count the `document/edit` facts in the calling Session. */
 function editFacts(): number {
   return h.events.filter(event => event.type === 'document/edit').length
+}
+
+/** SHA-256 hex digest of one workspace file. */
+async function hashOfFile(path: string): Promise<string> {
+  return createHash('sha256').update(await readFile(path)).digest('hex')
 }
 
 /** The first `document/edit` fact in the calling Session. */
@@ -405,7 +441,7 @@ describe('document_edit_cells', () => {
   })
 
   it('deletes worksheet rows and restores their cells in the inverse', async () => {
-    const path = await h.copy('roundtrip.xlsx')
+    const path = await copyMergeFreeWorkbook('roundtrip.xlsx')
     const read = await readWorkbook(path)
     const sheetId = firstSheet(read.snapshot)
     vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
@@ -438,7 +474,7 @@ describe('document_edit_cells', () => {
   })
 
   it('inserts worksheet columns and records a structural inverse', async () => {
-    const path = await h.copy('roundtrip.xlsx')
+    const path = await copyMergeFreeWorkbook('roundtrip.xlsx')
     const read = await readWorkbook(path)
     const sheetId = firstSheet(read.snapshot)
     vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
@@ -471,7 +507,7 @@ describe('document_edit_cells', () => {
   })
 
   it('deletes worksheet columns and restores their cells in the inverse', async () => {
-    const path = await h.copy('roundtrip.xlsx')
+    const path = await copyMergeFreeWorkbook('roundtrip.xlsx')
     const read = await readWorkbook(path)
     const sheetId = firstSheet(read.snapshot)
     vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
@@ -501,6 +537,34 @@ describe('document_edit_cells', () => {
     const reread = await readWorkbook(path)
     expect(cellValue(reread.snapshot, sheetId, 0, 1)).toBe('Revenue')
     expect(cellValue(reread.snapshot, sheetId, 0, 2)).toBe(null)
+  })
+
+  it('refuses a structural shift that would leave a merged range behind', async () => {
+    const path = await h.copy('roundtrip.xlsx')
+    const read = await readWorkbook(path)
+    const sheetId = firstSheet(read.snapshot)
+    vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async (request) => {
+      const current = await readWorkbook(path)
+      return {
+        status: 'applied',
+        snapshot: withRows(current.snapshot, sheetId, 1, 1, 'delete'),
+        contentVersion: request.fromVersion + 1,
+      }
+    })
+    const before = await hashOfFile(join(h.root, path))
+
+    const result = objectOf(await call('document_edit_cells', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [{ kind: 'row', sheetId, row: 1, count: 1, action: 'delete' }],
+    }))
+
+    expect(result['status']).toBe('error')
+    expect(result['code']).toBe('unsupported-feature')
+    expect(result['message']).toContain('merged range A7:C7')
+    expect(await hashOfFile(join(h.root, path))).toBe(before)
+    expect(editFacts()).toBe(0)
+    expect(h.events.filter(event => event.type === 'document/save')).toHaveLength(0)
   })
 
   it('styles a worksheet range and restores prior styles in the inverse', async () => {
@@ -538,7 +602,7 @@ describe('document_edit_cells', () => {
   })
 
   it('applies a mixed batch through one command', async () => {
-    const path = await h.copy('roundtrip.xlsx')
+    const path = await copyMergeFreeWorkbook('roundtrip.xlsx')
     const read = await readWorkbook(path)
     const sheetId = firstSheet(read.snapshot)
     const steps = [
@@ -606,6 +670,13 @@ describe('document_edit_cells', () => {
       actor: 'agent',
       contentVersion: 1,
       turn: 3,
+      disposition: {
+        schemaVersion: 1,
+        verbatimCount: 10,
+        spliced: { count: 1, names: ['xl/worksheets/sheet1.xml'] },
+        added: { count: 0, names: [] },
+        removed: { count: 0, names: [] },
+      },
     })
   })
 
@@ -770,22 +841,57 @@ describe('document_edit_cells', () => {
     expect(editFacts()).toBe(0)
   })
 
-  it('refuses a document carrying unsupported features before dispatch', async () => {
-    const path = await h.copy('roundtrip.xlsx')
-    vi.spyOn(h.server, 'read').mockResolvedValue({
-      format: 'xlsx',
-      snapshot: { kind: 'workbook', data: {} },
-      unsupported: [{ kind: 'macro' }],
-      version: 'v1',
-    })
-    const dispatch = vi.spyOn(h.server, 'dispatchCommand')
-    const result = objectOf(await call('document_edit_cells', {
+  it('saves a non-intersecting edit and preserves the construct a read reported (FR-021)', async () => {
+    const path = await h.copy('unsupported-tracked.docx')
+    const base = await h.server.read(h.scope, path, SIGNAL)
+    expect(base.unsupported.map(feature => feature.kind)).toContain('tracked-changes')
+    const snapshot = structuredClone(base.snapshot)
+    const body = objectOf(objectOf(snapshot.data)['body'])
+    body['dataStream'] = streamOf(body).replace('Quarterly', 'Financial')
+    vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async request => ({
+      status: 'applied',
+      snapshot,
+      contentVersion: request.fromVersion + 1,
+    }))
+
+    const result = objectOf(await call('document_edit_paragraph', {
       documentId: documentIdFor(h, path),
       fromVersion: 0,
-      operations: [{ sheetId: 'sheet', row: 0, column: 0, value: 1 }],
+      operations: [{ index: 0, text: 'Financial Report' }],
     }))
+
+    expect(result['status']).toBe('ok')
+    const reread = await h.server.read(h.scope, path, SIGNAL)
+    expect(objectOf(objectOf(reread.snapshot.data)['body'])['dataStream']).toContain('Financial Report')
+    expect(reread.unsupported.map(feature => feature.kind)).toContain('tracked-changes')
+    expect(h.events.filter(event => event.type === 'document/save')).toHaveLength(1)
+    expect(editFacts()).toBe(1)
+  })
+
+  it('refuses a coupled edit through the same agent save path', async () => {
+    const path = await h.copy('preserve-comment.docx')
+    const base = await h.server.read(h.scope, path, SIGNAL)
+    const snapshot = structuredClone(base.snapshot)
+    const body = objectOf(objectOf(snapshot.data)['body'])
+    body['dataStream'] = streamOf(body).replace('Commented', 'Reviewed!')
+    vi.spyOn(h.server, 'dispatchCommand').mockImplementation(async request => ({
+      status: 'applied',
+      snapshot,
+      contentVersion: request.fromVersion + 1,
+    }))
+    const before = await hashOfFile(join(h.root, path))
+
+    const result = objectOf(await call('document_edit_paragraph', {
+      documentId: documentIdFor(h, path),
+      fromVersion: 0,
+      operations: [{ index: 0, text: 'Reviewed text' }],
+    }))
+
     expect(result['code']).toBe('unsupported-feature')
-    expect(dispatch).not.toHaveBeenCalled()
+    expect(result['message']).toContain('commentRangeStart')
+    expect(await hashOfFile(join(h.root, path))).toBe(before)
+    expect(editFacts()).toBe(0)
+    expect(h.events.filter(event => event.type === 'document/save')).toHaveLength(0)
   })
 
   it('honours the configured operation bound', async () => {

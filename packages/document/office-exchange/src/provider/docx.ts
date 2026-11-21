@@ -31,23 +31,41 @@
  * A table range in `body.tables` ends immediately after the table end token and
  * its structural rows live in `tableSource[tableId]`.
  *
- * PRESERVED OPAQUELY: each run that carries a `w:drawing` or `w:pict` and each
- * run that carries a `w:footnoteReference` or `w:endnoteReference` is captured
- * byte-for-byte in `body.docxRawBlocks`, together with the source media parts,
- * note parts, relationships, and content-type declarations. The writer
- * re-emits them unchanged, so images and note bodies survive an edit-and-save
+ * PRESERVED OPAQUELY: each run that carries a `w:drawing`, `w:pict`,
+ * `w:object`, field marker, `w:footnoteReference`, or `w:endnoteReference` is
+ * captured byte-for-byte in `body.docxRawBlocks`, as are paragraph-level
+ * `w:pict`, `w:sdt`, `w:fldSimple`, and bookmark markers. Source media parts,
+ * note parts, relationships, and content-type declarations are carried the same
+ * way. The writer re-emits them unchanged, so pictures, shapes, embedded
+ * objects, field markup, bookmarks, and note bodies survive an edit-and-save
  * without becoming editable or rendered content. A raw block anchors at the
  * stream offset before the run and adds no stream character, so paragraph and
  * run offsets are unchanged.
  *
- * UNSUPPORTED: charts, drawing parts, shapes, comments, tracked changes,
- * macros, page borders and page numbering, theme styles and theme-derived
- * colors, named style definitions other than the heading styles above,
- * floating objects with their own drawing parts, and property values the
+ * A body-level `w:sdt` maps to no editable text: the reader inserts an empty
+ * paragraph that occupies the unit slot, and the sidecar anchors that unit to
+ * the whole `w:sdt` element with kind `contentControl`, so a sibling edit never
+ * rewrites it and an edit of the unit itself is refused.
+ *
+ * IN-PLACE SAVE: `readDocumentWithSource` attaches
+ * `data.officeExchange.source`, a per-unit anchor index over `word/document.xml`
+ * and each header and footer part. `writeDocumentFromSource` recomputes every
+ * unit's digest, replaces only changed anchor spans, merges independent source
+ * properties the serializer does not emit, and appends required styles,
+ * numbering definitions, and relationships without regenerating an auxiliary
+ * part. A coupled construct, unit reordering, table geometry change, or missing
+ * span refuses with a typed error and produces no bytes.
+ *
+ * UNSUPPORTED AS EDITABLE CONTENT: charts, drawing parts, shapes, comments,
+ * tracked changes, macros, page borders and page numbering, theme styles and
+ * theme-derived colors, named style definitions other than the heading styles
+ * above, floating objects with their own drawing parts, and property values the
  * Univer model has no field for (for example a run border's line size or a
- * decimal tab stop's alignment). A read/write round-trip does not preserve
- * these. Macro-bearing packages are read without executing or retaining
- * macros.
+ * decimal tab stop's alignment). The editable model exposes none of these; a
+ * regeneration round-trip drops them, while an in-place save carries them
+ * verbatim outside the edited unit. Macro-bearing packages are read without
+ * executing macros, and an in-place save keeps the VBA project and the
+ * macro-enabled main content type unchanged.
  */
 import { XMLParser } from 'fast-xml-parser'
 import { SyntaxValidator } from 'fast-xml-validator'
@@ -117,6 +135,32 @@ import type {
 } from '@univerjs/core'
 import { type OfficeExchangeConfig, resolveConfig } from '../config.ts'
 import { OfficeExchangeError } from '../errors.ts'
+import { assertOpcGraph, open } from '../package/ooxml-package.ts'
+import type { OfficePackage } from '../package/ooxml-package.ts'
+import type { SourcePackage } from '../package/types.ts'
+import { applySplices } from '../source/apply-splices.ts'
+import type { ApplySpliceOperation } from '../source/apply-splices.ts'
+import { buildSaveDisposition } from '../source/save-disposition.ts'
+import { parseSourceState, SourceStateError } from '../source/source-state.ts'
+import type { OfficeSourceFormat, OfficeSourceState, UnitAnchor } from '../source/source-state.ts'
+import { buildSplicePlan, classifyIndependentProperties } from '../source/splice.ts'
+import type {
+  ConstructIntersection,
+  CoupledConstructCandidate,
+  CurrentUnit,
+  IndependentProperty,
+  IndependentPropertyClassification,
+  SpliceAppend,
+  SpliceOperation,
+  SplicePlan,
+} from '../source/splice.ts'
+import { digestParagraph, digestTableCell } from '../source/unit-digest.ts'
+import type { ParagraphUnit, TableCellUnit, TableRowUnit, TableUnit } from '../source/unit-digest.ts'
+import { declarationEndInText, isXmlTextWhitespace, tagEndInText } from '../source/xml-text.ts'
+import { scanSpans } from '../source/xml-spans.ts'
+import type { ElementSpan, SpanKind } from '../source/xml-spans.ts'
+import type { OfficeWriteResult } from '../snapshots.ts'
+import type { UnsupportedFeatureKind } from '../types.ts'
 
 const DOCUMENT_XML = 'word/document.xml'
 const STYLES_XML = 'word/styles.xml'
@@ -147,6 +191,15 @@ const TAB = '\t'
 
 const ENTITY_COUNT_LIMIT = 10_000
 const EXPANSION_BYTE_LIMIT = 200 * 1024 * 1024
+const MAX_SOURCE_ENTRIES = 10_000
+const SOURCE_ANCHOR_KINDS: readonly SpanKind[] = [
+  'paragraph',
+  'table',
+  'tableRow',
+  'tableCell',
+  'contentControl',
+  'preserved',
+]
 const TWIPS_PER_PIXEL = 15
 const PIXELS_PER_POINT = 4 / 3
 const POINTS_PER_PIXEL = 0.75
@@ -481,11 +534,31 @@ interface ReadContext {
   readonly tableSource: ITables
   readonly customRanges: IHyperLinkCustomRange[]
   readonly rawRuns: RawRunSource | undefined
+  readonly rawElements: RawElementSource | undefined
   readonly rawBlocks: IDocxRawBlock[]
   readonly bounds: OfficeExchangeConfig
+  readonly anchored: boolean
+  readonly syntheticParagraphs: Set<number>
   cells: number
   tableSerial: number
 }
+
+/** One part whose source anchors a read may record. */
+interface StoryAnchorSource {
+  /** Decoded package entry name. */
+  readonly part: string
+  /** Uncompressed part bytes. */
+  readonly bytes: Uint8Array
+  /** Editable body read from the part. */
+  readonly body: IDocumentBody
+  /** Table metadata addressing the body. */
+  readonly tableSource: ITables
+  /** Stream offsets of paragraphs the reader synthesized without source XML. */
+  readonly syntheticParagraphs: ReadonlySet<number>
+}
+
+/** Collects one header or footer part's editable units while its body is read. */
+type StoryAnchorCollector = (source: StoryAnchorSource) => void
 
 /**
  * Numbering definitions read from `word/numbering.xml`, keyed by the list type
@@ -644,27 +717,48 @@ interface OfficeExchangeDocumentData extends IDocumentData {
   officeExchange?: {
     /** DOCX state re-emitted on write. */
     readonly docx?: DocxPreservedPackage
+    /** In-place save anchors read from the source package. */
+    readonly source?: OfficeSourceState
   }
 }
 
-/** One XML run captured from a source part for lossless re-emission. */
-interface RawRunRecord {
-  /** Exact source XML from `<w:r` through `</w:r>`. */
+/** One source element captured verbatim for lossless re-emission. */
+interface RawXmlRecord {
+  /** Exact source XML from the opening tag through the closing tag. */
   readonly xml: string
-  /** Relationship and note identity values used to match the parsed run. */
+  /** Relationship and note identity values used to match the parsed element. */
   readonly key: string
   taken: boolean
 }
 
-/** Source runs that a parsed run may consume once, matched by identity or order. */
-interface RawRunSource {
+/** Source elements that a parsed element may consume once, matched by identity or order. */
+interface RawXmlSource {
   /**
-   * Take the source XML for one parsed run.
-   * @param element - Parsed run that carries a drawing, picture, or note reference.
-   * @returns The exact source run XML, or `undefined` when none remains.
+   * Take the source XML for one parsed element.
+   * @param element - Parsed element the reader carries verbatim.
+   * @returns The exact source element XML, or `undefined` when none remains.
    */
   take(element: XmlElement): string | undefined
 }
+
+/** Source runs that a parsed run may consume once, matched by identity or order. */
+type RawRunSource = RawXmlSource
+
+/** Paragraph-level elements the reader preserves instead of interpreting. */
+const RAW_ELEMENT_TAGS: readonly string[] = [
+  'pict',
+  'sdt',
+  'fldSimple',
+  'bookmarkStart',
+  'bookmarkEnd',
+]
+const RAW_ELEMENT_PATTERN = new RegExp(
+  `<w:(${RAW_ELEMENT_TAGS.join('|')})(?=[\\s/>])[^>]*>`,
+  'gu',
+)
+
+/** Raw paragraph-level elements that a parsed child may consume once, matched by identity or order. */
+type RawElementSource = RawXmlSource
 
 /** Raw-block positions for one body, marking which positions the writer emitted. */
 interface RawBlockPlan {
@@ -687,8 +781,9 @@ interface RelationshipAllocator {
  * Read `.docx` bytes into a Univer document snapshot. Paragraph text, paragraph
  * breaks, run and paragraph formatting, `word/styles.xml` defaults, heading
  * styles, flow tables, section page setup, header/footer text, list numbering,
- * hyperlinks, and opaque image and note preservation are mapped; the
- * unsupported features listed in the module note are not.
+ * and hyperlinks are mapped; the opaque constructs the module note lists are
+ * captured as raw blocks, and the classes it marks unsupported as editable are
+ * not.
  * @param bytes - Complete DOCX package bytes.
  * @param config - Bounds applied before parsing; defaults when omitted.
  * @returns Document snapshot with Univer stream tokens, run styles, table and
@@ -699,10 +794,53 @@ interface RelationshipAllocator {
  * input is not a readable Word document.
  */
 export function readDocument(bytes: Uint8Array, config?: OfficeExchangeConfig): Promise<IDocumentData> {
-  return Promise.resolve().then(() => readDocumentData(bytes, config))
+  return Promise.resolve().then(() => readDocumentData(bytes, config, false).data)
 }
 
-function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDocumentData {
+/**
+ * Read `.docx` or `.docm` bytes into a snapshot that also carries the
+ * `data.officeExchange.source` sidecar when every editable unit resolves.
+ *
+ * Paragraph anchors are keyed by `(part, paragraphId)` and table-cell anchors by
+ * `(part, tableId, row/cell path)`. A part the span scanner refuses, a unit the
+ * model and source disagree on, or an anchor payload beyond the configured
+ * budget leaves the sidecar absent, so the caller falls back to regeneration.
+ * @param bytes - Complete DOCX package bytes.
+ * @param format - Source format recorded in the sidecar.
+ * @param config - Bounds applied before parsing and when validating anchors.
+ * @returns Document snapshot with `para_*` paragraph ids and source anchors.
+ * @throws {OfficeExchangeError} `too-large` when a bound is exceeded,
+ * `conversion-failed` when the input is not a readable Word document.
+ */
+export function readDocumentWithSource(
+  bytes: Uint8Array,
+  format: 'docx' | 'docm',
+  config?: OfficeExchangeConfig,
+): Promise<IDocumentData> {
+  return Promise.resolve().then(() => {
+    const bounds = resolveConfig(config ?? {})
+    const read = readDocumentData(bytes, bounds, true)
+    const source = buildDocumentSourceState(bytes, read, format, bounds)
+    if (source !== undefined) {
+      read.data.officeExchange = { source }
+    }
+    return read.data
+  })
+}
+
+/** One parsed document plus the parts an anchored read may anchor. */
+interface DocumentRead {
+  /** Editable snapshot. */
+  readonly data: OfficeExchangeDocumentData
+  /** Document and header/footer parts whose bodies were read. */
+  readonly storySources: readonly StoryAnchorSource[]
+}
+
+function readDocumentData(
+  bytes: Uint8Array,
+  config: OfficeExchangeConfig | undefined,
+  collectAnchors: boolean,
+): DocumentRead {
   const bounds = resolveConfig(config ?? {})
   if (bytes.byteLength > bounds.maxFileBytes) {
     throw new OfficeExchangeError(
@@ -721,20 +859,28 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
     headers: new Set(parts.headers.keys()),
     footers: new Set(parts.footers.keys()),
   }
-  const context = createReadContext(bounds, readRawRunCatalog(strFromU8(parts.document)))
+  const context = createReadContext(
+    bounds,
+    readRawRunCatalog(strFromU8(parts.document)),
+    readRawElementCatalog(strFromU8(parts.document)),
+    collectAnchors,
+  )
   for (const child of childElements(body)) {
     if (child.tag === 'p') appendParagraph(context, child, relationships, identifiers, numbering)
     if (child.tag === 'tbl') appendTable(context, child, relationships, numbering)
+    if (child.tag === 'sdt') appendContentControl(context)
   }
   const finalSection = findChild(body, 'sectPr')
   finalizeBody(context, finalSection === undefined ? undefined : readSectionSetup(finalSection, relationships, identifiers))
+  const storySources: StoryAnchorSource[] = []
+  const collect: StoryAnchorCollector | undefined = collectAnchors ? source => storySources.push(source) : undefined
   const storyRelationships = readStoryRelationships(parts.storyRelationships)
-  const headers = readStoryParts(parts.headers, 'hdr', bounds, numbering, storyRelationships, (id, body, tableSource) => (
-    { headerId: id, body, tableSource }
-  ))
-  const footers = readStoryParts(parts.footers, 'ftr', bounds, numbering, storyRelationships, (id, body, tableSource) => (
-    { footerId: id, body, tableSource }
-  ))
+  const headers = readStoryParts(parts.headers, 'hdr', bounds, numbering, storyRelationships, (id, sectionBody, tableSource) => (
+    { headerId: id, body: sectionBody, tableSource }
+  ), collect)
+  const footers = readStoryParts(parts.footers, 'ftr', bounds, numbering, storyRelationships, (id, sectionBody, tableSource) => (
+    { footerId: id, body: sectionBody, tableSource }
+  ), collect)
   const documentStyle = readDocumentStyle(parts.styles)
   if (readEvenAndOddHeaders(parts.settings)) documentStyle.evenAndOddHeaders = BOOLEAN_TRUE
   const documentBody: IDocumentBody = {
@@ -760,7 +906,16 @@ function readDocumentData(bytes: Uint8Array, config?: OfficeExchangeConfig): IDo
   if (Object.keys(numbering.lists).length > 0) snapshot.lists = numbering.lists
   if (headers.size > 0) snapshot.headers = Object.fromEntries(headers)
   if (footers.size > 0) snapshot.footers = Object.fromEntries(footers)
-  return snapshot
+  if (collectAnchors) {
+    storySources.unshift({
+      part: DOCUMENT_XML,
+      bytes: parts.document,
+      body: documentBody,
+      tableSource: context.tableSource,
+      syntheticParagraphs: context.syntheticParagraphs,
+    })
+  }
+  return { data: snapshot, storySources }
 }
 
 /**
@@ -847,6 +1002,1857 @@ function writeDocumentBytes(data: IDocumentData, config?: OfficeExchangeConfig):
     return zipSync(zippable, { level: 6 })
   } catch (error) {
     throw new OfficeExchangeError('conversion-failed', `Cannot write document: ${messageOf(error)}`)
+  }
+}
+
+/**
+ * Write a document snapshot back into the package it was read from by splicing
+ * only the units the edit changed.
+ *
+ * Units whose digest still matches the sidecar are copied from the source
+ * bytes, changed units replace their anchor span, new units insert at a
+ * neighbouring anchor boundary, and removed units delete their span. Independent
+ * unmapped properties inside a replaced unit are merged into the rendered unit;
+ * a coupled construct, unit reordering, table geometry change, or unlocatable
+ * span raises a typed refusal and produces no bytes.
+ *
+ * Auxiliary parts are append-only. A required style, numbering definition, or
+ * relationship is appended before the part's closing tag, and orphaned elements
+ * are left for the regeneration writer; `word/settings.xml` is never written.
+ * @param snapshot - Editable document snapshot carrying `officeExchange.source`.
+ * @param source - Complete source package bytes read at the caller's expected version.
+ * @param config - Bounds validated before splicing; omitted fields keep their defaults.
+ * @param signal - Optional cancellation checked before, during, and after splicing.
+ * @returns Complete output bytes and the per-entry save disposition.
+ * @throws {OfficeExchangeError} `too-large` when the source or output exceeds a
+ * byte bound; `unsupported-feature` when a coupled construct overlaps an edited
+ * span; `conversion-failed` when the snapshot has no usable source state, the
+ * source bytes do not match it, a span cannot be located, or a spliced part is
+ * not well-formed.
+ */
+export function writeDocumentFromSource(
+  snapshot: IDocumentData,
+  source: Uint8Array,
+  config?: OfficeExchangeConfig,
+  signal?: AbortSignal,
+): Promise<OfficeWriteResult> {
+  return Promise.resolve().then(() => writeDocumentSourceBytes(snapshot, source, resolveConfig(config ?? {}), signal))
+}
+
+function writeDocumentSourceBytes(
+  snapshot: IDocumentData,
+  source: Uint8Array,
+  bounds: OfficeExchangeConfig,
+  signal: AbortSignal | undefined,
+): OfficeWriteResult {
+  signal?.throwIfAborted()
+  if (source.byteLength > bounds.maxFileBytes) {
+    throw new OfficeExchangeError(
+      'too-large',
+      `Source document is ${String(source.byteLength)} bytes; the limit is ${String(bounds.maxFileBytes)}`,
+    )
+  }
+  const packageFile = openSplicePackage(source)
+  const state = createSpliceState(snapshot, packageFile, bounds)
+  const rendered = new Map<string, Uint8Array>()
+  const changedParts = new Set<string>()
+  for (const part of state.parts) {
+    const changed = part.units.filter(unit => !spliceUnitIsCarried(part, unit))
+    if (changed.length > 0) changedParts.add(part.part)
+    if (part.units.length !== part.anchors.length) changedParts.add(part.part)
+    if (changed.length === 0) continue
+    ensureSplicePartStyles(state, part)
+    ensureSplicePartNumbering(state, part)
+    for (const unit of changed) {
+      rendered.set(spliceUnitIdentity(part.part, unit.kind, unit.key), renderSpliceUnit(state, part, unit))
+    }
+  }
+  signal?.throwIfAborted()
+
+  const appends = planSpliceAppends(state, changedParts)
+  const classifications = new Map<string, IndependentPropertyClassification>()
+  const coupledRefusal = { refused: false }
+  const plan = buildSplicePlan({
+    source: state.source,
+    sourceState: state.sourceState,
+    units: state.parts.flatMap(part => part.units),
+    spans: state.parts.flatMap(part => part.spans),
+    renderUnit: (unit) => {
+      const bytes = rendered.get(spliceUnitIdentity(unit.part, unit.kind, unit.key))
+      /* v8 ignore next 5 -- The render loop stores every unit buildSplicePlan can ask for. */
+      if (bytes === undefined) {
+        throw new OfficeExchangeError(
+          'conversion-failed',
+          `Unit ${unit.key} in ${unit.part} was not rendered before splicing`,
+        )
+      }
+      return bytes
+    },
+    classifyCoupled: (edit) => {
+      if (edit.kind !== 'replace') return undefined
+      const part = state.partsByName.get(edit.part)
+      const bytes = rendered.get(spliceUnitIdentity(edit.part, edit.unitKind, edit.key))
+      /* v8 ignore next -- Replace edits come from parts and units already rendered above. */
+      if (part === undefined || bytes === undefined) return undefined
+      const classification = classifyIndependentProperties(part.bytes.subarray(edit.start, edit.end), bytes)
+      classifications.set(
+        spliceSpanKey(edit.part, edit.start, edit.end),
+        classification,
+      )
+      const candidate = classification.coupled[0]
+      if (candidate === undefined) return undefined
+      coupledRefusal.refused = true
+      return {
+        kind: spliceCoupledKind(candidate),
+        detail: `${candidate.name} in ${edit.part} at ${String(edit.start)}-${String(edit.end)}: ${candidate.detail}`,
+        part: edit.part,
+        start: edit.start,
+      } satisfies ConstructIntersection
+    },
+    appends,
+  })
+  if (plan.refusal !== undefined) {
+    throw new OfficeExchangeError(
+      coupledRefusal.refused ? 'unsupported-feature' : 'conversion-failed',
+      plan.refusal.detail,
+    )
+  }
+
+  const merged = mergeSpliceOperations(state, plan, classifications)
+  const operations = adjustSpliceInsertBoundaries(state, merged)
+  const written = applySpliceOperations(state, operations, signal)
+  return {
+    bytes: written,
+    disposition: buildSaveDisposition(plan.entries),
+  }
+}
+
+/** One source part whose anchored units an in-place save can splice. */
+interface SplicePart {
+  /** Decoded part name. */
+  readonly part: string
+  /** Uncompressed source bytes of the part. */
+  readonly bytes: Uint8Array
+  /** Editable body mapped from the part. */
+  readonly body: IDocumentBody
+  /** Table metadata addressing the body's stream. */
+  readonly tableSource: ITables
+  /** Document data stream of the body. */
+  readonly stream: string
+  /** Paragraph records keyed by their stream break offset. */
+  readonly paragraphs: ReadonlyMap<number, IParagraph>
+  /** Paragraph records keyed by model identity. */
+  readonly paragraphsByKey: ReadonlyMap<string, IParagraph>
+  /** Every run in the body, in stream order. */
+  readonly runs: readonly ITextRun[]
+  /** Every table in the body with its cell content ranges. */
+  readonly records: readonly TableRecord[]
+  /** Table records keyed by model table id. */
+  readonly tableRecords: ReadonlyMap<string, TableRecord>
+  /** Source anchors recorded for the part. */
+  readonly anchors: readonly UnitAnchor[]
+  /** Anchor kind keyed by anchor identity. */
+  readonly anchorKinds: ReadonlyMap<string, UnitAnchor['kind']>
+  /** Read-time digest keyed by anchor identity. */
+  readonly anchorDigests: ReadonlyMap<string, string>
+  /** Current model units in source order. */
+  readonly units: readonly CurrentUnit[]
+  /** Spans the scanner located in the part. */
+  readonly spans: readonly ElementSpan[]
+  /** Hyperlink relationship state for the part. */
+  readonly links: SpliceLinkState
+}
+
+/** Mutable state for the styles part the save may append to. */
+interface SpliceStyleState {
+  /** Source `word/styles.xml` bytes, when the package carries the part. */
+  readonly bytes: Uint8Array | undefined
+  /** Style ids the part already declares. */
+  readonly present: Set<string>
+  /** Complete `w:style` elements to append, in allocation order. */
+  readonly appended: string[]
+}
+
+/** Mutable state for the numbering part the save may append to. */
+interface SpliceNumberingState {
+  /** Source `word/numbering.xml` bytes, when the package carries the part. */
+  readonly bytes: Uint8Array | undefined
+  /** List type mapped to the existing `w:numId` its paragraphs reference. */
+  readonly numIdByListType: Map<string, number>
+  /** Complete `w:abstractNum` elements to insert before the first instance. */
+  readonly appendedAbstracts: string[]
+  /** Complete `w:num` elements to append at the part's closing tag. */
+  readonly appendedNums: string[]
+  /** Per-list-type level starts the model declares. */
+  readonly starts: ReadonlyMap<string, ReadonlyMap<number, number>>
+  /** Next unused `w:numId`. */
+  nextNumId: number
+  /** Next unused `w:abstractNumId`. */
+  nextAbstractId: number
+}
+
+/** Mutable hyperlink relationship state for one part. */
+interface SpliceLinkState {
+  /** Decoded part whose paragraphs may declare links. */
+  readonly part: string
+  /** Relationship part that declares the part's hyperlinks. */
+  readonly relsPart: string
+  /** Source relationship bytes, when the package carries the part. */
+  readonly relsBytes: Uint8Array | undefined
+  /** Target URL mapped to its declared relationship id. */
+  readonly relIdByUrl: Map<string, string>
+  /** Complete relationship elements to append. */
+  readonly appended: string[]
+  /** Link plan the paragraph serializer resolves URLs through. */
+  readonly plan: LinkPlan
+  /** Allocator that skips every id the source already declares. */
+  readonly allocator: RelationshipAllocator
+}
+
+/** Everything one in-place document save needs across its parts. */
+interface SpliceState {
+  /** Opened source package. */
+  readonly packageFile: OfficePackage
+  /** Indexed source package as opened. */
+  readonly source: SourcePackage
+  /** Editable snapshot being written. */
+  readonly data: IDocumentData
+  /** Validated per-unit sidecar. */
+  readonly sourceState: Extract<OfficeSourceState, { readonly anchorMode: 'per-unit' }>
+  /** Validated bounds. */
+  readonly bounds: OfficeExchangeConfig
+  /** Editable parts in deterministic order. */
+  readonly parts: readonly SplicePart[]
+  /** Editable parts keyed by decoded part name. */
+  readonly partsByName: ReadonlyMap<string, SplicePart>
+  /** Styles state shared by every part. */
+  readonly styles: SpliceStyleState
+  /** Numbering state shared by every part. */
+  readonly numbering: SpliceNumberingState
+  /** Raw XML anchored at model stream offsets. */
+  readonly rawBlocks: RawBlockPlan
+  /** Table-cell count rendered so far, bounded by `maxCells`. */
+  readonly cells: { count: number }
+}
+
+function openSplicePackage(source: Uint8Array): OfficePackage {
+  try {
+    return open(source, { maxEntries: MAX_SOURCE_ENTRIES })
+  } catch (error) {
+    throw new OfficeExchangeError('conversion-failed', `Cannot open the source package: ${messageOf(error)}`)
+  }
+}
+
+function createSpliceState(
+  data: IDocumentData,
+  packageFile: OfficePackage,
+  bounds: OfficeExchangeConfig,
+): SpliceState {
+  const value = documentSourceStateValue(data)
+  if (value === undefined) {
+    throw new OfficeExchangeError(
+      'conversion-failed',
+      'Document snapshot carries no source anchors; use the regeneration writer',
+    )
+  }
+  let sourceState = parseDocumentSourceState(value, packageFile.source, bounds)
+  if (sourceState.format !== 'docx' && sourceState.format !== 'docm') {
+    throw new OfficeExchangeError(
+      'unsupported-format',
+      `Source state names a ${sourceState.format} package, not a document`,
+    )
+  }
+  if (sourceState.anchorMode !== 'per-unit') {
+    throw new OfficeExchangeError('conversion-failed', 'A document source state must carry per-unit anchors')
+  }
+  if (
+    sourceState.packageDigest !== packageFile.source.digest
+    || sourceState.byteLength !== packageFile.source.bytes.byteLength
+  ) {
+    sourceState = rebuildDocumentSourceState(packageFile.source.bytes, sourceState, data, bounds)
+  }
+  return createSpliceParts(data, packageFile, sourceState, bounds)
+}
+
+/**
+ * Validate a document sidecar against the source package holding it.
+ *
+ * A sidecar written for different bytes can carry spans beyond the current
+ * parts; those spans are replaced by a re-anchor after this structural check,
+ * so only the part-name, identity, digest, and budget rules apply. A sidecar
+ * that names the current package keeps its full span bounds.
+ * @param value - Untrusted `data.officeExchange.source` value.
+ * @param source - Source package read for this save.
+ * @param bounds - Validated anchor count and byte budgets.
+ * @returns The validated sidecar.
+ * @throws {OfficeExchangeError} `conversion-failed` when the sidecar is malformed.
+ */
+function parseDocumentSourceState(
+  value: unknown,
+  source: SourcePackage,
+  bounds: OfficeExchangeConfig,
+): OfficeSourceState {
+  const partByteLengths = new Map<string, number>()
+  for (const entry of source.entries) {
+    /* v8 ignore next -- source.entries never contains directory records. */
+    if (!entry.name.endsWith('/')) partByteLengths.set(entry.name, entry.uncompressedSize)
+  }
+  const stale = !sidecarDescribesSource(value, source)
+  const contextLengths = stale
+    ? new Map([...partByteLengths.keys()].map(name => [name, Number.MAX_SAFE_INTEGER]))
+    : partByteLengths
+  try {
+    return parseSourceState(value, {
+      partByteLengths: contextLengths,
+      maxSourceAnchors: bounds.maxSourceAnchors,
+      maxSourceAnchorBytes: bounds.maxSourceAnchorBytes,
+    })
+  } catch (error) {
+    /* v8 ignore start -- parseSourceState throws SourceStateError; a caller-supplied budget fails before this parse. */
+    if (error instanceof SourceStateError) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `Document snapshot source state is malformed: ${error.message}`,
+      )
+    }
+    throw error
+    /* v8 ignore stop */
+  }
+}
+
+function sidecarDescribesSource(value: unknown, source: SourcePackage): boolean {
+  if (!isRecord(value)) return true
+  const digest = value['packageDigest']
+  const byteLength = value['byteLength']
+  if (typeof digest === 'string' && digest !== source.digest) return false
+  if (typeof byteLength === 'number' && byteLength !== source.bytes.byteLength) return false
+  return true
+}
+
+/**
+ * Re-anchor a source that changed since the snapshot was read.
+ *
+ * A successful save rewrites the file, so the snapshot's read-time offsets and
+ * digests no longer describe it. Reading the current source again yields
+ * anchors for its units; those units are aligned to the snapshot's model keys
+ * so a second save diffs the model against the same identities. A source whose
+ * units cannot be aligned unambiguously refuses the save; the caller's version
+ * guard already proved the file is the one it expects.
+ * @param source - Current source package bytes.
+ * @param previous - Sidecar recorded for the bytes the snapshot was read from.
+ * @param data - Snapshot whose model keys the anchors must use.
+ * @param bounds - Validated anchor count and payload limits.
+ * @returns Per-unit anchors for the current source.
+ * @throws {OfficeExchangeError} `conversion-failed` when the source cannot be read, anchored, or aligned.
+ */
+function rebuildDocumentSourceState(
+  source: Uint8Array,
+  previous: Extract<OfficeSourceState, { readonly anchorMode: 'per-unit' }>,
+  data: IDocumentData,
+  bounds: OfficeExchangeConfig,
+): Extract<OfficeSourceState, { readonly anchorMode: 'per-unit' }> {
+  const read = readDocumentData(source, bounds, true)
+  const rebuilt = buildDocumentSourceState(source, read, previous.format, bounds)
+  if (rebuilt === undefined || rebuilt.anchorMode !== 'per-unit') {
+    throw new OfficeExchangeError(
+      'conversion-failed',
+      'The current source cannot be re-anchored for an in-place save',
+    )
+  }
+  const modelUnits = documentModelUnits(data, previous, rebuilt.sourceParts)
+  const anchors = alignSourceAnchors(rebuilt.anchors, rebuilt.sourceParts, modelUnits)
+  if (anchors === undefined) {
+    throw new OfficeExchangeError(
+      'conversion-failed',
+      'The current source units cannot be aligned with the snapshot units',
+    )
+  }
+  return { ...rebuilt, anchors }
+}
+
+/**
+ * Project the snapshot's unit sequences for alignment with a rebuilt source.
+ * @param data - Snapshot whose units are being aligned.
+ * @param previous - Sidecar naming the unit kinds recorded at read.
+ * @param parts - Story parts the rebuilt source anchors.
+ * @returns Current units keyed by part, in stream order.
+ * @throws {OfficeExchangeError} `conversion-failed` when the snapshot no longer carries a part.
+ */
+function documentModelUnits(
+  data: IDocumentData,
+  previous: Extract<OfficeSourceState, { readonly anchorMode: 'per-unit' }>,
+  parts: readonly string[],
+): ReadonlyMap<string, readonly CurrentUnit[]> {
+  const unitsByPart = new Map<string, readonly CurrentUnit[]>()
+  for (const part of parts) {
+    const story = spliceStoryOf(data, part)
+    if (story === undefined) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `The snapshot no longer carries the header or footer anchored to ${part}`,
+      )
+    }
+    const anchorKinds = new Map<string, UnitAnchor['kind']>()
+    for (const anchor of previous.anchors) {
+      if (anchor.part === part) anchorKinds.set(spliceUnitIdentity(part, anchor.kind, anchor.key), anchor.kind)
+    }
+    const records = spliceTableRecords(part, story.body, story.tableSource)
+    unitsByPart.set(
+      part,
+      spliceUnitsOf(part, story.body.dataStream, story.body, records, story.tableSource, anchorKinds),
+    )
+  }
+  return unitsByPart
+}
+
+/**
+ * Align rebuilt source anchors with the snapshot's model keys.
+ * @param anchors - Fresh anchors built from the current source.
+ * @param parts - Story parts the rebuilt source anchors.
+ * @param modelUnits - Snapshot units keyed by part.
+ * @returns Anchors carrying model keys, or `undefined` when alignment is ambiguous.
+ */
+function alignSourceAnchors(
+  anchors: readonly UnitAnchor[],
+  parts: readonly string[],
+  modelUnits: ReadonlyMap<string, readonly CurrentUnit[]>,
+): readonly UnitAnchor[] | undefined {
+  const anchorsByPart = new Map<string, UnitAnchor[]>()
+  for (const anchor of anchors) {
+    const list = anchorsByPart.get(anchor.part)
+    if (list === undefined) anchorsByPart.set(anchor.part, [anchor])
+    else list.push(anchor)
+  }
+  for (const part of anchorsByPart.keys()) {
+    /* v8 ignore next -- Rebuilt anchors and rebuilt sourceParts come from one read. */
+    if (!parts.includes(part)) return undefined
+  }
+  const aligned: UnitAnchor[] = []
+  for (const part of [...parts].sort(compareSpliceNames)) {
+    /* v8 ignore next 3 -- Rebuilt parts map both sequences; equal starts leave the comparator's second operand unused. */
+    const partAnchors = [...(anchorsByPart.get(part) ?? [])].sort((left, right) =>
+      left.start - right.start || left.end - right.end)
+    /* v8 ignore next -- documentModelUnits records every rebuilt part. */
+    const partUnits = modelUnits.get(part) ?? []
+    const result = alignPartAnchors(part, partAnchors, partUnits)
+    if (result === undefined) return undefined
+    aligned.push(...result)
+  }
+  return aligned
+}
+
+function alignPartAnchors(
+  part: string,
+  anchors: readonly UnitAnchor[],
+  units: readonly CurrentUnit[],
+): readonly UnitAnchor[] | undefined {
+  const matches = digestMatches(anchors, units)
+  const matchedAnchors = new Set(matches.map(match => match.anchor))
+  const matchedUnits = new Set(matches.map(match => match.unit))
+  const unmatchedAnchorDigests = new Set<string>()
+  for (const [index, anchor] of anchors.entries()) {
+    if (!matchedAnchors.has(index)) unmatchedAnchorDigests.add(anchor.digest)
+  }
+  for (const [index, unit] of units.entries()) {
+    if (!matchedUnits.has(index) && unmatchedAnchorDigests.has(unit.digest)) return undefined
+  }
+
+  const reserved = new Set(units.map(unit => spliceUnitIdentity(part, unit.kind, unit.key)))
+  const aligned: UnitAnchor[] = []
+  let anchorCursor = 0
+  let unitCursor = 0
+  for (const match of [...matches, undefined]) {
+    const anchorEnd = match?.anchor ?? anchors.length
+    const unitEnd = match?.unit ?? units.length
+    const gap = alignAnchorGap(part, anchors, units, anchorCursor, anchorEnd, unitCursor, unitEnd, reserved)
+    if (gap === undefined) return undefined
+    aligned.push(...gap)
+    if (match === undefined) continue
+    const anchor = anchors[match.anchor]
+    const unit = units[match.unit]
+    /* v8 ignore next -- Digest matches always name existing entries. */
+    if (anchor === undefined || unit === undefined) return undefined
+    aligned.push({ ...anchor, key: unit.key })
+    reserved.add(spliceUnitIdentity(part, unit.kind, unit.key))
+    anchorCursor = match.anchor + 1
+    unitCursor = match.unit + 1
+  }
+  return aligned
+}
+
+interface AnchorDigestMatch {
+  readonly anchor: number
+  readonly unit: number
+}
+
+function digestMatches(
+  anchors: readonly UnitAnchor[],
+  units: readonly CurrentUnit[],
+): readonly AnchorDigestMatch[] {
+  const positions = new Map<string, number[]>()
+  for (const [index, unit] of units.entries()) {
+    const list = positions.get(unit.digest)
+    if (list === undefined) positions.set(unit.digest, [index])
+    else list.push(index)
+  }
+  const cursors = new Map<string, number>()
+  const matches: AnchorDigestMatch[] = []
+  let lastUnit = -1
+  for (const [index, anchor] of anchors.entries()) {
+    const list = positions.get(anchor.digest)
+    if (list === undefined) continue
+    let cursor = cursors.get(anchor.digest) ?? 0
+    let candidate = list[cursor]
+    while (candidate !== undefined && candidate <= lastUnit) {
+      cursor += 1
+      candidate = list[cursor]
+    }
+    const unit = list[cursor]
+    if (unit === undefined) {
+      cursors.set(anchor.digest, cursor)
+      continue
+    }
+    matches.push({ anchor: index, unit })
+    lastUnit = unit
+    cursors.set(anchor.digest, cursor + 1)
+  }
+  return matches
+}
+
+function alignAnchorGap(
+  part: string,
+  anchors: readonly UnitAnchor[],
+  units: readonly CurrentUnit[],
+  anchorStart: number,
+  anchorEnd: number,
+  unitStart: number,
+  unitEnd: number,
+  reserved: Set<string>,
+): readonly UnitAnchor[] | undefined {
+  const anchorCount = anchorEnd - anchorStart
+  const unitCount = unitEnd - unitStart
+  if (anchorCount === 0) return []
+  if (unitCount === 0) {
+    const carried: UnitAnchor[] = []
+    for (let offset = 0; offset < anchorCount; offset += 1) {
+      const anchor = anchors[anchorStart + offset]
+      /* v8 ignore next -- The loop index stays inside the anchor array. */
+      if (anchor === undefined) return undefined
+      carried.push(withUniqueKey(part, anchor, reserved))
+    }
+    return carried
+  }
+  if (anchorCount !== unitCount) return undefined
+  const aligned: UnitAnchor[] = []
+  for (let offset = 0; offset < anchorCount; offset += 1) {
+    const anchor = anchors[anchorStart + offset]
+    const unit = units[unitStart + offset]
+    /* v8 ignore next 2 -- Equal gap lengths name existing entries. */
+    if (anchor === undefined || unit === undefined) return undefined
+    aligned.push({ ...anchor, key: unit.key })
+    reserved.add(spliceUnitIdentity(part, unit.kind, unit.key))
+  }
+  return aligned
+}
+
+function withUniqueKey(part: string, anchor: UnitAnchor, reserved: Set<string>): UnitAnchor {
+  let key = anchor.key
+  let serial = 1
+  while (reserved.has(spliceUnitIdentity(part, anchor.kind, key))) {
+    key = `${anchor.key}~${String(serial)}`
+    serial += 1
+  }
+  reserved.add(spliceUnitIdentity(part, anchor.kind, key))
+  return { ...anchor, key }
+}
+
+function createSpliceParts(
+  data: IDocumentData,
+  packageFile: OfficePackage,
+  sourceState: Extract<OfficeSourceState, { readonly anchorMode: 'per-unit' }>,
+  bounds: OfficeExchangeConfig,
+): SpliceState {
+  const anchorsByPart = new Map<string, UnitAnchor[]>()
+  for (const anchor of sourceState.anchors) {
+    if (anchor.kind === 'sheetCell') {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `Document anchor ${anchor.key} names a sheet cell in ${anchor.part}`,
+      )
+    }
+    const list = anchorsByPart.get(anchor.part)
+    if (list === undefined) anchorsByPart.set(anchor.part, [anchor])
+    else list.push(anchor)
+  }
+  const declaredParts = new Set(sourceState.sourceParts)
+  for (const anchor of sourceState.anchors) {
+    if (!declaredParts.has(anchor.part)) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `Anchor ${anchor.key} names ${anchor.part}, which sourceParts does not list`,
+      )
+    }
+  }
+  const parts: SplicePart[] = []
+  for (const partName of [...sourceState.sourceParts].sort(compareSpliceNames)) {
+    const story = spliceStoryOf(data, partName)
+    if (story === undefined) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `The snapshot no longer carries the header or footer anchored to ${partName}`,
+      )
+    }
+    const bytes = packageFile.readPart(partName)
+    const scan = scanSpans(bytes, partName, SOURCE_ANCHOR_KINDS)
+    if (scan.failure !== undefined) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `ambiguous-span: ${scan.failure.detail} in ${scan.failure.part} at byte ${String(scan.failure.offset)}`,
+      )
+    }
+    const records = spliceTableRecords(partName, story.body, story.tableSource)
+    const anchors = anchorsByPart.get(partName) ?? []
+    const anchorKinds = new Map<string, UnitAnchor['kind']>()
+    const anchorDigests = new Map<string, string>()
+    for (const anchor of anchors) {
+      const identity = spliceUnitIdentity(anchor.part, anchor.kind, anchor.key)
+      anchorKinds.set(identity, anchor.kind)
+      anchorDigests.set(identity, anchor.digest)
+    }
+    const stream = story.body.dataStream
+    const paragraphs = new Map<number, IParagraph>()
+    for (const paragraph of story.body.paragraphs ?? []) paragraphs.set(paragraph.startIndex, paragraph)
+    parts.push({
+      part: partName,
+      bytes,
+      body: story.body,
+      tableSource: story.tableSource,
+      stream,
+      paragraphs,
+      paragraphsByKey: new Map((story.body.paragraphs ?? []).map(paragraph => [paragraph.paragraphId, paragraph])),
+      runs: story.body.textRuns ?? [],
+      records,
+      tableRecords: new Map(records.map(record => [record.table.tableId, record])),
+      anchors,
+      anchorKinds,
+      anchorDigests,
+      units: spliceUnitsOf(partName, stream, story.body, records, story.tableSource, anchorKinds),
+      spans: scan.spans,
+      links: createSpliceLinks(packageFile, partName),
+    })
+  }
+  for (const headerId of Object.keys(data.headers ?? {})) {
+    if (!declaredParts.has(`word/${headerId}.xml`)) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `The snapshot declares header ${headerId}, which an in-place save cannot add to the package`,
+      )
+    }
+  }
+  for (const footerId of Object.keys(data.footers ?? {})) {
+    if (!declaredParts.has(`word/${footerId}.xml`)) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `The snapshot declares footer ${footerId}, which an in-place save cannot add to the package`,
+      )
+    }
+  }
+  return {
+    packageFile,
+    source: packageFile.source,
+    data,
+    sourceState,
+    bounds,
+    parts,
+    partsByName: new Map(parts.map(part => [part.part, part])),
+    styles: createSpliceStyles(packageFile),
+    numbering: createSpliceNumbering(data, packageFile),
+    rawBlocks: planRawBlocks(data.body),
+    cells: { count: 0 },
+  }
+}
+
+function documentSourceStateValue(data: IDocumentData): unknown {
+  const extension: unknown = (data as OfficeExchangeDocumentData).officeExchange
+  if (extension === undefined) return undefined
+  if (!isRecord(extension)) {
+    throw new OfficeExchangeError('conversion-failed', 'Document snapshot officeExchange state is malformed')
+  }
+  return extension['source']
+}
+
+/** One editable story body with the table metadata addressing it. */
+interface SpliceStory {
+  /** Editable body read from the part. */
+  readonly body: IDocumentBody
+  /** Table metadata addressing the body. */
+  readonly tableSource: ITables
+}
+
+function spliceStoryOf(data: IDocumentData, part: string): SpliceStory | undefined {
+  if (part === DOCUMENT_XML) {
+    const body = data.body
+    return body === undefined ? undefined : { body, tableSource: data.tableSource ?? {} }
+  }
+  const path = part.toLowerCase()
+  const id = partIdOf(part)
+  const header = HEADER_PART.test(path) ? data.headers?.[id] : undefined
+  if (header !== undefined) return { body: header.body, tableSource: header.tableSource ?? {} }
+  const footer = FOOTER_PART.test(path) ? data.footers?.[id] : undefined
+  if (footer !== undefined) return { body: footer.body, tableSource: footer.tableSource ?? {} }
+  return undefined
+}
+
+function spliceTableRecords(
+  part: string,
+  body: IDocumentBody,
+  tableSource: ITables,
+): readonly TableRecord[] {
+  const tables = [...(body.tables ?? [])].sort((left, right) => left.startIndex - right.startIndex)
+  const records: TableRecord[] = []
+  for (const table of tables) {
+    const model = tableSource[table.tableId]
+    if (model === undefined) {
+      throw new OfficeExchangeError('conversion-failed', `Table ${table.tableId} in ${part} has no model metadata`)
+    }
+    const ranges = readTableCellRanges(body.dataStream, table, model)
+    if (ranges === undefined) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `Table ${table.tableId} in ${part} does not line up with its stream tokens`,
+      )
+    }
+    records.push({ table, ranges })
+  }
+  return records
+}
+
+function spliceUnitsOf(
+  part: string,
+  stream: string,
+  body: IDocumentBody,
+  records: readonly TableRecord[],
+  tableSource: ITables,
+  anchorKinds: ReadonlyMap<string, UnitAnchor['kind']>,
+): readonly CurrentUnit[] {
+  const paragraphs = body.paragraphs ?? []
+  const orderedParagraphs = sortedParagraphs(paragraphs)
+  const runs = body.textRuns ?? []
+  const paragraphByStart = new Map<number, IParagraph>()
+  for (const paragraph of orderedParagraphs) paragraphByStart.set(paragraph.startIndex, paragraph)
+  const recordByStart = new Map<number, TableRecord>()
+  for (const record of records) recordByStart.set(record.table.startIndex, record)
+  const units: CurrentUnit[] = []
+  let index = 0
+  while (index < stream.length) {
+    const token = stream[index]
+    if (token === TABLE_START) {
+      const record = recordByStart.get(index)
+      if (record === undefined) {
+        throw new OfficeExchangeError(
+          'conversion-failed',
+          `Table token at stream offset ${String(index)} in ${part} has no model table`,
+        )
+      }
+      for (const [row, cells] of record.ranges.entries()) {
+        for (let cell = 0; cell < cells.length; cell += 1) {
+          const unit = cellUnitOf(stream, orderedParagraphs, runs, records, tableSource, record.table.tableId, row, cell)
+          /* v8 ignore next 5 -- cellUnitOf reads the same record and model row this loop walks. */
+          if (unit === undefined) {
+            throw new OfficeExchangeError(
+              'conversion-failed',
+              `Cell ${String(row)}/${String(cell)} of table ${record.table.tableId} in ${part} has no model content`,
+            )
+          }
+          units.push({
+            kind: 'tableCell',
+            part,
+            key: `${record.table.tableId}/${String(row)}/${String(cell)}`,
+            digest: digestTableCell(unit),
+          })
+        }
+      }
+      index = record.table.endIndex
+      continue
+    }
+    if (token === PARAGRAPH) {
+      const paragraph = paragraphByStart.get(index)
+      if (paragraph === undefined) {
+        throw new OfficeExchangeError(
+          'conversion-failed',
+          `Paragraph break at stream offset ${String(index)} in ${part} has no model paragraph`,
+        )
+      }
+      const key = paragraph.paragraphId
+      const anchorKind = anchorKinds.get(spliceUnitIdentity(part, 'paragraph', key))
+        ?? anchorKinds.get(spliceUnitIdentity(part, 'contentControl', key))
+      if (anchorKind !== undefined || !isReaderSyntheticParagraph(stream, index)) {
+        units.push({
+          kind: anchorKind ?? 'paragraph',
+          part,
+          key,
+          digest: digestParagraph(paragraphUnitOf(stream, paragraph, runs)),
+        })
+      }
+      index += 1
+      if (stream[index] === SECTION_BREAK) index += 1
+      continue
+    }
+    index += 1
+  }
+  return units
+}
+
+/**
+ * Report whether a paragraph is the empty spacer the reader inserted around a
+ * table without a source `w:p` of its own. Such a paragraph has no anchor and
+ * is not part of the editable unit sequence.
+ * @param stream - Document data stream.
+ * @param startIndex - Offset of the paragraph's break token.
+ * @returns `true` for the reader's pre-table and trailing body spacers.
+ */
+function isReaderSyntheticParagraph(stream: string, startIndex: number): boolean {
+  if (paragraphContentStart(stream, startIndex) !== startIndex) return false
+  const previous = stream[startIndex - 1]
+  const next = stream[startIndex + 1]
+  if (next === TABLE_START) return true
+  if (next === SECTION_BREAK) return startIndex === 0 || previous === TABLE_END
+  return false
+}
+
+function spliceUnitIsCarried(part: SplicePart, unit: CurrentUnit): boolean {
+  return part.anchorDigests.get(spliceUnitIdentity(part.part, unit.kind, unit.key)) === unit.digest
+}
+
+function spliceUnitIdentity(part: string, kind: string, key: string): string {
+  return `${part}\u0000${kind}\u0000${key}`
+}
+
+function spliceSpanKey(part: string, start: number, end: number): string {
+  return `${part}\u0000${String(start)}\u0000${String(end)}`
+}
+
+function createSpliceStyles(packageFile: OfficePackage): SpliceStyleState {
+  const bytes = sourcePartBytes(packageFile, STYLES_XML)
+  const present = new Set<string>()
+  if (bytes !== undefined) {
+    for (const match of strFromU8(bytes).matchAll(/<(?:[A-Za-z_][\w.-]*:)?style(?=[\s/>])[^>]*>/gu)) {
+      const styleId = tagAttribute(match[0], 'w:styleId') ?? tagAttribute(match[0], 'styleId')
+      if (styleId !== undefined) present.add(styleId)
+    }
+  }
+  return { bytes, present, appended: [] }
+}
+
+function createSpliceNumbering(data: IDocumentData, packageFile: OfficePackage): SpliceNumberingState {
+  const bytes = sourcePartBytes(packageFile, NUMBERING_XML)
+  const numIdByListType = new Map<string, number>()
+  let nextNumId = 1
+  let nextAbstractId = 0
+  if (bytes !== undefined) {
+    const text = strFromU8(bytes)
+    const catalog = readNumbering(bytes)
+    for (const [numId, listType] of catalog.listTypeByNumId) {
+      const numeric = Number(numId)
+      if (!Number.isSafeInteger(numeric) || numeric < 0) continue
+      numIdByListType.set(listType, numeric)
+      nextNumId = Math.max(nextNumId, numeric + 1)
+    }
+    for (const match of text.matchAll(/<(?:[A-Za-z_][\w.-]*:)?abstractNum(?=[\s/>])[^>]*>/gu)) {
+      nextAbstractId = Math.max(nextAbstractId, spliceElementId(match[0], 'abstractNumId') + 1)
+    }
+    for (const match of text.matchAll(/<(?:[A-Za-z_][\w.-]*:)?num(?=[\s/>])[^>]*>/gu)) {
+      nextNumId = Math.max(nextNumId, spliceElementId(match[0], 'numId') + 1)
+    }
+  }
+  return {
+    bytes,
+    numIdByListType,
+    appendedAbstracts: [],
+    appendedNums: [],
+    starts: listStarts(data),
+    nextNumId,
+    nextAbstractId,
+  }
+}
+
+function spliceElementId(element: string, name: string): number {
+  const value = Number(tagAttribute(element, `w:${name}`) ?? tagAttribute(element, name))
+  return Number.isSafeInteger(value) && value >= 0 ? value : -1
+}
+
+function createSpliceLinks(packageFile: OfficePackage, part: string): SpliceLinkState {
+  const relsPart = part === DOCUMENT_XML ? DOCUMENT_RELS : `word/_rels/${part.slice('word/'.length)}.rels`
+  const relsBytes = sourcePartBytes(packageFile, relsPart)
+  const relationships = readRelationships(relsBytes)
+  const relIdByUrl = new Map<string, string>()
+  for (const [relId, relationship] of relationships) {
+    if (relationship.type.endsWith('/hyperlink')) relIdByUrl.set(relationship.target, relId)
+  }
+  const allocator = createRelationshipAllocator(new Set(relationships.keys()))
+  const appended: string[] = []
+  const plan: LinkPlan = {
+    rels: [],
+    relIdOf: (url) => {
+      const existing = relIdByUrl.get(url)
+      if (existing !== undefined) return existing
+      if (relsBytes === undefined) {
+        throw new OfficeExchangeError(
+          'conversion-failed',
+          `The source package has no ${relsPart}, so a hyperlink in ${part} cannot be declared`,
+        )
+      }
+      const relId = allocator.next()
+      relIdByUrl.set(url, relId)
+      appended.push(
+        `<Relationship Id="${relId}"`
+        + ' Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"'
+        + ` Target="${escapeXml(url)}" TargetMode="External"/>`,
+      )
+      return relId
+    },
+  }
+  return { part, relsPart, relsBytes, relIdByUrl, appended, allocator, plan }
+}
+
+function sourcePartBytes(packageFile: OfficePackage, name: string): Uint8Array | undefined {
+  if (!packageFile.source.entries.some(entry => entry.name === name)) return undefined
+  return packageFile.readPart(name)
+}
+
+function compareSpliceNames(left: string, right: string): number {
+  return left < right ? -1 : 1
+}
+
+/** Styles part content type the reader maps. */
+const SPLICE_STYLE_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml'
+/** Numbering part content type the reader maps. */
+const SPLICE_NUMBERING_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml'
+/** Document main content type for a macro-free package. */
+const SPLICE_DOCUMENT_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'
+/** Document main content type for a macro-enabled package. */
+const SPLICE_DOCUMENT_MACRO_CONTENT_TYPE = 'application/vnd.ms-word.document.macroEnabled.main+xml'
+/** Header part content type the reader maps. */
+const SPLICE_HEADER_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml'
+/** Footer part content type the reader maps. */
+const SPLICE_FOOTER_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml'
+/** Footnote part content type the reader maps. */
+const SPLICE_FOOTNOTES_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml'
+/** Endnote part content type the reader maps. */
+const SPLICE_ENDNOTES_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml'
+/** Settings part content type the reader maps. */
+const SPLICE_SETTINGS_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml'
+/** OPC relationship part content type. */
+const SPLICE_RELS_CONTENT_TYPE = 'application/vnd.openxmlformats-package.relationships+xml'
+
+/**
+ * Render one current unit as the replacement bytes its anchor span receives.
+ * @param state - Splice state carrying raw blocks, numbering, and bounds.
+ * @param part - Part the unit belongs to.
+ * @param unit - Current model unit.
+ * @returns Serialized `<w:p>` or `<w:tc>` bytes.
+ */
+function renderSpliceUnit(state: SpliceState, part: SplicePart, unit: CurrentUnit): Uint8Array {
+  const story: StoryData = { body: part.body, tableSource: part.tableSource }
+  if (unit.kind === 'paragraph' || unit.kind === 'contentControl') {
+    const paragraph = part.paragraphsByKey.get(unit.key)
+    /* v8 ignore next -- Units are built from this part's paragraph map. */
+    if (paragraph === undefined) {
+      throw new OfficeExchangeError('conversion-failed', `Paragraph ${unit.key} in ${part.part} has no model record`)
+    }
+    const start = paragraphContentStart(part.stream, paragraph.startIndex)
+    return strToU8(writeParagraph(
+      part.stream,
+      start,
+      paragraph.startIndex,
+      paragraph,
+      story,
+      '',
+      part.links.plan,
+      numberingPlanOf(state),
+      state.rawBlocks,
+    ))
+  }
+  const [tableId, rowText, columnText] = unit.key.split('/')
+  const row = Number(rowText)
+  const column = Number(columnText)
+  if (tableId === undefined || !Number.isSafeInteger(row) || !Number.isSafeInteger(column)) {
+    throw new OfficeExchangeError('conversion-failed', `Cell unit ${unit.key} in ${part.part} is not addressable`)
+  }
+  const record = part.tableRecords.get(tableId)
+  const model = part.tableSource[tableId]
+  const range = record?.ranges[row]?.[column]
+  const sourceCell = model?.tableRows[row]?.tableCells[column]
+  /* v8 ignore next -- The unit key comes from this table's own record and model. */
+  if (record === undefined || model === undefined || range === undefined || sourceCell === undefined) {
+    throw new OfficeExchangeError('conversion-failed', `Cell unit ${unit.key} in ${part.part} has no model record`)
+  }
+  const widths = spliceColumnWidths(model, record)
+  const span = cellSpan(sourceCell)
+  let gridColumn = 0
+  for (let index = 0; index < column; index += 1) {
+    gridColumn += cellSpan(model.tableRows[row]?.tableCells[index])
+  }
+  const width = sourceCell.size?.width.v ?? spanWidth(widths, gridColumn, span)
+  const content = writeCell(
+    part.stream,
+    { start: range.start, end: range.end },
+    part.paragraphs,
+    story,
+    state.bounds,
+    state.cells,
+    part.links.plan,
+    numberingPlanOf(state),
+    state.rawBlocks,
+  )
+  return strToU8(`<w:tc>${writeCellProperties(sourceCell, width, span)}${content}</w:tc>`)
+}
+
+function spliceColumnWidths(model: ITable, record: TableRecord): readonly number[] {
+  const sourceColumns = model.tableColumns
+  const rowWidths = record.ranges.map(row => row.length)
+  const spanWidths = model.tableRows.map(row => (
+    row.tableCells.reduce((count, cell) => count + cellSpan(cell), 0)
+  ))
+  const columnCount = Math.max(1, ...rowWidths, ...spanWidths, sourceColumns.length)
+  const widths: number[] = []
+  for (let index = 0; index < columnCount; index += 1) {
+    /* v8 ignore next -- columnCount includes every span position a row can occupy. */
+    widths.push(sourceColumns[index]?.size.width.v ?? DEFAULT_COLUMN_WIDTH)
+  }
+  return widths
+}
+
+function numberingPlanOf(state: SpliceState): NumberingPlan {
+  return { xml: undefined, numIdByListType: state.numbering.numIdByListType }
+}
+
+function ensureSplicePartStyles(state: SpliceState, part: SplicePart): void {
+  for (const paragraph of part.body.paragraphs ?? []) {
+    const styleId = paragraph.styleId ?? styleIdForNamedStyle(paragraph.paragraphStyle?.namedStyleType)
+    if (styleId !== undefined) ensureSpliceStyle(state, styleId)
+  }
+}
+
+function ensureSpliceStyle(state: SpliceState, styleId: string): void {
+  if (state.styles.present.has(styleId)) return
+  if (state.styles.bytes === undefined) {
+    throw new OfficeExchangeError(
+      'conversion-failed',
+      `The edit requires style ${styleId}, but the source package has no word/styles.xml to declare it`,
+    )
+  }
+  state.styles.appended.push(spliceStyleXml(styleId))
+  state.styles.present.add(styleId)
+}
+
+function spliceStyleXml(styleId: string): string {
+  const headingIndex = HEADING_STYLE_IDS.indexOf(styleId)
+  if (headingIndex >= 0) {
+    return `<w:style w:type="paragraph" w:styleId="${escapeXml(styleId)}">`
+      + `<w:name w:val="heading ${String(headingIndex + 1)}"/>`
+      + '<w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/>'
+      + `<w:pPr><w:outlineLvl w:val="${String(headingIndex)}"/></w:pPr>`
+      + '<w:rPr><w:b/><w:sz w:val="32"/></w:rPr></w:style>'
+  }
+  return `<w:style w:type="paragraph" w:styleId="${escapeXml(styleId)}">`
+    + `<w:name w:val="${escapeXml(styleId)}"/></w:style>`
+}
+
+function ensureSplicePartNumbering(state: SpliceState, part: SplicePart): void {
+  for (const paragraph of part.body.paragraphs ?? []) {
+    const listType = paragraph.bullet?.listType
+    if (listType !== undefined) ensureSpliceNumbering(state, listType)
+  }
+}
+
+function ensureSpliceNumbering(state: SpliceState, listType: string): void {
+  const numbering = state.numbering
+  if (numbering.numIdByListType.has(listType)) return
+  if (numbering.bytes === undefined) {
+    throw new OfficeExchangeError(
+      'conversion-failed',
+      `The edit requires list ${listType}, but the source package has no word/numbering.xml to declare it`,
+    )
+  }
+  const numId = numbering.nextNumId
+  const abstractId = numbering.nextAbstractId
+  numbering.nextNumId += 1
+  numbering.nextAbstractId += 1
+  const levels = state.data.lists?.[listType]?.nestingLevel ?? [defaultNestingLevel(0)]
+  let abstractXml = `<w:abstractNum w:abstractNumId="${String(abstractId)}">`
+    + '<w:multiLevelType w:val="hybridMultilevel"/>'
+  for (const [index, level] of levels.entries()) abstractXml += writeNestingLevel(level, index)
+  abstractXml += '</w:abstractNum>'
+  let numXml = `<w:num w:numId="${String(numId)}">`
+    + `<w:abstractNumId w:val="${String(abstractId)}"/>`
+  const starts = numbering.starts.get(listType)
+  if (starts !== undefined) {
+    for (const [level, start] of [...starts.entries()].sort(([left], [right]) => left - right)) {
+      numXml += `<w:lvlOverride w:ilvl="${String(level)}">`
+        + `<w:startOverride w:val="${String(start)}"/></w:lvlOverride>`
+    }
+  }
+  numXml += '</w:num>'
+  numbering.appendedAbstracts.push(abstractXml)
+  numbering.appendedNums.push(numXml)
+  numbering.numIdByListType.set(listType, numId)
+}
+
+/**
+ * Plan the auxiliary elements an edit adds to existing parts.
+ * @param state - Splice state accumulated while rendering.
+ * @param changedParts - Parts whose units differ from their anchors.
+ * @returns Appends sorted by part, each before its part's closing tag.
+ */
+function planSpliceAppends(state: SpliceState, changedParts: ReadonlySet<string>): readonly SpliceAppend[] {
+  const appends: SpliceAppend[] = []
+  if (state.numbering.appendedAbstracts.length > 0 || state.numbering.appendedNums.length > 0) {
+    const bytes = state.numbering.bytes
+    /* v8 ignore next -- ensureSpliceNumbering records the source bytes with every append it plans. */
+    if (bytes === undefined) throw new OfficeExchangeError('conversion-failed', 'Numbering append has no source part')
+    const closing = findClosingTagOffset(bytes, 'numbering')
+    const firstNum = findFirstStartTagOffset(bytes, 'num')
+    const abstracts = state.numbering.appendedAbstracts.join('')
+    const nums = state.numbering.appendedNums.join('')
+    if (firstNum !== undefined && abstracts.length > 0) {
+      appends.push({ part: NUMBERING_XML, at: firstNum, bytes: strToU8(abstracts) })
+      appends.push({ part: NUMBERING_XML, at: closing, bytes: strToU8(nums) })
+    } else {
+      appends.push({ part: NUMBERING_XML, at: closing, bytes: strToU8(`${abstracts}${nums}`) })
+    }
+  }
+  if (state.styles.appended.length > 0) {
+    const bytes = state.styles.bytes
+    /* v8 ignore next -- ensureSpliceStyle records the source bytes with every append it plans. */
+    if (bytes === undefined) throw new OfficeExchangeError('conversion-failed', 'Styles append has no source part')
+    appends.push({
+      part: STYLES_XML,
+      at: findClosingTagOffset(bytes, 'styles'),
+      bytes: strToU8(state.styles.appended.join('')),
+    })
+  }
+  const candidates = new Set(changedParts)
+  if (state.numbering.appendedAbstracts.length > 0 || state.numbering.appendedNums.length > 0) {
+    candidates.add(NUMBERING_XML)
+  }
+  if (state.styles.appended.length > 0) candidates.add(STYLES_XML)
+  for (const part of [...state.parts].sort((left, right) => compareSpliceNames(left.part, right.part))) {
+    if (part.links.appended.length === 0) continue
+    const bytes = part.links.relsBytes
+    /* v8 ignore next 4 -- createSpliceLinks records the relationship part bytes with every append it plans. */
+    if (bytes === undefined) {
+      throw new OfficeExchangeError('conversion-failed', `Relationship append for ${part.part} has no source part`)
+    }
+    candidates.add(part.links.relsPart)
+    appends.push({
+      part: part.links.relsPart,
+      at: findClosingTagOffset(bytes, 'Relationships'),
+      bytes: strToU8(part.links.appended.join('')),
+    })
+  }
+  const contentTypes = planSpliceContentTypes(state, candidates)
+  if (contentTypes !== undefined) appends.push(contentTypes)
+  return appends
+}
+
+/**
+ * Declare any touched part the source content-types manifest does not cover.
+ * A well-formed source needs no append; a source missing a declaration for one
+ * of its own parts still saves with an OPC-valid output.
+ * @param state - Splice state with the source package and format.
+ * @param touched - Parts the plan changes.
+ * @returns One append for `[Content_Types].xml`, or `undefined` when every
+ * touched part is already declared.
+ */
+function planSpliceContentTypes(
+  state: SpliceState,
+  touched: ReadonlySet<string>,
+): SpliceAppend | undefined {
+  const bytes = sourcePartBytes(state.packageFile, CONTENT_TYPES_XML)
+  if (bytes === undefined) {
+    throw new OfficeExchangeError('conversion-failed', 'The source package has no [Content_Types].xml part')
+  }
+  const text = strFromU8(bytes)
+  const defaults = new Set<string>()
+  const overrides = new Set<string>()
+  for (const match of text.matchAll(/<(?:[A-Za-z_][\w.-]*:)?(Default|Override)(?=[\s/>])[^>]*>/gu)) {
+    if (match[1] === 'Default') {
+      const extension = tagAttribute(match[0], 'Extension')
+      if (extension !== undefined) defaults.add(extension.toLowerCase())
+      continue
+    }
+    const partName = tagAttribute(match[0], 'PartName')
+    if (partName !== undefined) overrides.add(partName.replace(/^\/+/u, ''))
+  }
+  const elements: string[] = []
+  for (const part of [...touched].sort(compareSpliceNames)) {
+    if (part === CONTENT_TYPES_XML || overrides.has(part)) continue
+    const extension = part.slice(part.lastIndexOf('.') + 1).toLowerCase()
+    if (defaults.has(extension)) continue
+    if (part.endsWith('.rels')) {
+      elements.push(`<Default Extension="rels" ContentType="${SPLICE_RELS_CONTENT_TYPE}"/>`)
+      defaults.add('rels')
+      continue
+    }
+    const contentType = spliceContentTypeOf(state, part)
+    /* v8 ignore next 4 -- Only known story, style, numbering, and relationship parts reach this plan. */
+    if (contentType === undefined) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `The source package declares no content type for ${part}`,
+      )
+    }
+    elements.push(`<Override PartName="/${part}" ContentType="${contentType}"/>`)
+    overrides.add(part)
+  }
+  if (elements.length === 0) return undefined
+  return {
+    part: CONTENT_TYPES_XML,
+    at: findClosingTagOffset(bytes, 'Types'),
+    bytes: strToU8(elements.join('')),
+  }
+}
+
+function spliceContentTypeOf(state: SpliceState, part: string): string | undefined {
+  if (part === DOCUMENT_XML) {
+    return state.sourceState.format === 'docm' ? SPLICE_DOCUMENT_MACRO_CONTENT_TYPE : SPLICE_DOCUMENT_CONTENT_TYPE
+  }
+  if (part === STYLES_XML) return SPLICE_STYLE_CONTENT_TYPE
+  if (part === NUMBERING_XML) return SPLICE_NUMBERING_CONTENT_TYPE
+  /* v8 ignore start -- Saved entries are only document, header, footer, style, numbering, and relationship parts. */
+  if (part === SETTINGS_XML) return SPLICE_SETTINGS_CONTENT_TYPE
+  if (part === 'word/footnotes.xml') return SPLICE_FOOTNOTES_CONTENT_TYPE
+  if (part === 'word/endnotes.xml') return SPLICE_ENDNOTES_CONTENT_TYPE
+  if (HEADER_PART.test(part.toLowerCase())) return SPLICE_HEADER_CONTENT_TYPE
+  if (FOOTER_PART.test(part.toLowerCase())) return SPLICE_FOOTER_CONTENT_TYPE
+  return undefined
+  /* v8 ignore stop */
+}
+
+/**
+ * Locate the byte offset of a part's first start tag with the given local name.
+ * @param bytes - Encoded part XML.
+ * @param localName - Element local name.
+ * @returns Byte offset of its opening `<`, or `undefined` when the part has none.
+ */
+function findFirstStartTagOffset(bytes: Uint8Array, localName: string): number | undefined {
+  const text = strFromU8(bytes)
+  const pattern = new RegExp(`<(?:[A-Za-z_][\\w.-]*:)?${localName}(?=[\\s/>])`, 'u')
+  const match = pattern.exec(text)
+  if (match === null) return undefined
+  return strToU8(text.slice(0, match.index)).byteLength
+}
+
+/**
+ * Locate the byte offset of a part's root closing tag.
+ * @param bytes - Encoded part XML.
+ * @param localName - Root element local name.
+ * @returns Byte offset of the final `</…localName>` start.
+ */
+function findClosingTagOffset(bytes: Uint8Array, localName: string): number {
+  const text = strFromU8(bytes)
+  const pattern = new RegExp(`</(?:[A-Za-z_][\\w.-]*:)?${localName}\\s*>`, 'gu')
+  let character = -1
+  let match = pattern.exec(text)
+  while (match !== null) {
+    character = match.index
+    match = pattern.exec(text)
+  }
+  if (character < 0) {
+    throw new OfficeExchangeError('conversion-failed', `Part has no closing ${localName} tag`)
+  }
+  return strToU8(text.slice(0, character)).byteLength
+}
+
+/** Property names the Word serializer reproduces from the model. */
+const SPLICE_MAPPED_PROPERTIES: Readonly<
+  Record<'pPr' | 'rPr' | 'tcPr' | 'trPr', ReadonlySet<string>>
+> = {
+  pPr: new Set(['pStyle', 'numPr', 'jc', 'spacing', 'ind', 'tabs', 'pBdr', 'shd', 'outlineLvl']),
+  rPr: new Set([
+    'rFonts', 'b', 'i', 'caps', 'smallCaps', 'dstrike', 'strike', 'color',
+    'sz', 'szCs', 'shd', 'highlight', 'u', 'vertAlign', 'bdr',
+  ]),
+  tcPr: new Set(['tcW', 'gridSpan', 'vMerge', 'tcBorders', 'shd', 'tcMar', 'vAlign']),
+  trPr: new Set(['trHeight', 'cantSplit', 'tblHeader']),
+}
+
+/** ECMA-376 child order for the Word property containers this writer merges. */
+const SPLICE_PROPERTY_ORDER: Readonly<
+  Record<'pPr' | 'rPr' | 'tcPr' | 'trPr', readonly string[]>
+> = {
+  pPr: [
+    'pStyle', 'keepNext', 'keepLines', 'pageBreakBefore', 'framePr', 'widowControl', 'numPr',
+    'suppressLineNumbers', 'pBdr', 'shd', 'tabs', 'suppressAutoHyphens', 'kinsoku', 'wordWrap',
+    'overflowPunct', 'topLinePunct', 'autoSpaceDE', 'autoSpaceDN', 'bidi', 'adjustRightInd',
+    'snapToGrid', 'spacing', 'ind', 'contextualSpacing', 'mirrorIndents', 'suppressOverlap', 'jc',
+    'textDirection', 'textAlignment', 'textboxTightWrap', 'outlineLvl', 'divId', 'cnfStyle',
+    'rPr', 'sectPr', 'pPrChange',
+  ],
+  rPr: [
+    'rStyle', 'rFonts', 'b', 'bCs', 'i', 'iCs', 'caps', 'smallCaps', 'strike', 'dstrike', 'outline',
+    'shadow', 'emboss', 'imprint', 'noProof', 'snapToGrid', 'vanish', 'webHidden', 'color',
+    'spacing', 'w', 'kern', 'position', 'sz', 'szCs', 'highlight', 'u', 'effect', 'bdr', 'shd',
+    'fitText', 'vertAlign', 'rtl', 'cs', 'em', 'lang', 'eastAsianLayout', 'specVanish', 'oMath',
+    'rPrChange',
+  ],
+  tcPr: [
+    'cnfStyle', 'tcW', 'gridSpan', 'hMerge', 'vMerge', 'tcBorders', 'shd', 'noWrap', 'tcMar',
+    'textDirection', 'tcFitText', 'vAlign', 'hideMark', 'headers', 'cellIns', 'cellDel',
+    'cellMerge', 'tcPrChange',
+  ],
+  trPr: [
+    'cnfStyle', 'divId', 'gridBefore', 'gridAfter', 'wBefore', 'wAfter', 'cantSplit', 'trHeight',
+    'tblHeader', 'tblCellSpacing', 'jc', 'hidden', 'ins', 'del', 'trPrChange',
+  ],
+}
+
+/**
+ * Keep only source properties the renderer cannot express.
+ * @param properties - Merge candidates reported by the classifier.
+ * @returns Properties whose element name the serializer never emits.
+ * @throws {OfficeExchangeError} When a spreadsheet-root property appears in a Word unit.
+ */
+function spliceMergeProperties(
+  properties: readonly IndependentProperty[],
+): readonly IndependentProperty[] {
+  const mergeable: IndependentProperty[] = []
+  for (const property of properties) {
+    /* v8 ignore next 5 -- The doct classifier never tags a Word property with the spreadsheet or root container. */
+    if (property.container === 'c' || property.container === 'root') {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `A Word unit carries spreadsheet property ${property.name}`,
+      )
+    }
+    if (!SPLICE_MAPPED_PROPERTIES[property.container].has(spliceLocalName(property.name))) {
+      mergeable.push(property)
+    }
+  }
+  return mergeable
+}
+
+function spliceCoupledKind(candidate: CoupledConstructCandidate): UnsupportedFeatureKind {
+  if (candidate.detail.includes('tracked change') || candidate.detail.includes('revision-change')) {
+    return 'tracked-changes'
+  }
+  if (candidate.detail.includes('comment range')) return 'comment'
+  return 'other'
+}
+
+/**
+ * Merge independent source properties into each replaced unit's rendered bytes.
+ * @param state - Splice state carrying the source part bytes.
+ * @param plan - Plan whose replace operations receive the merged bytes.
+ * @param classifications - Merge candidates keyed by span.
+ * @returns Operations with merged replacement bytes.
+ */
+function mergeSpliceOperations(
+  state: SpliceState,
+  plan: SplicePlan,
+  classifications: ReadonlyMap<string, IndependentPropertyClassification>,
+): readonly SpliceOperation[] {
+  return plan.operations.map((operation) => {
+    if (operation.kind !== 'replace') return operation
+    const classification = classifications.get(spliceSpanKey(operation.part, operation.start, operation.end))
+    /* v8 ignore next -- The classifier records a result for every replace edit it is shown. */
+    if (classification === undefined) return operation
+    const properties = spliceMergeProperties(classification.merge)
+    if (properties.length === 0 && classification.rootAttributes.length === 0) return operation
+    const part = state.partsByName.get(operation.part)
+    /* v8 ignore next 2 -- Replace operations originate from a part in state.partsByName. */
+    if (part === undefined) {
+      throw new OfficeExchangeError('conversion-failed', `Replace operation names unknown part ${operation.part}`)
+    }
+    const sourceSpan = part.bytes.subarray(operation.start, operation.end)
+    return {
+      ...operation,
+      bytes: mergeSpliceProperties(
+        sourceSpan,
+        operation.bytes,
+        properties,
+        classification.rootAttributes,
+        operation.part,
+      ),
+    }
+  })
+}
+
+/**
+ * Re-emit unmapped source properties inside a regenerated unit.
+ *
+ * Each property is placed in the rendered container at the same structural
+ * path it occupied in the source, ordered by the ECMA-376 property sequence. A
+ * container the renderer omitted is created at its schema position; a path the
+ * rendered unit no longer contains is a typed refusal because the property's
+ * owner changed. Root metadata attributes are appended to the rendered root
+ * start tag, whose carried source text is already XML-escaped.
+ * @param sourceSpan - Source bytes of the replaced unit.
+ * @param rendered - Renderer bytes for the same unit.
+ * @param properties - Independent properties the renderer does not emit.
+ * @param rootAttributes - Root metadata attributes the renderer does not emit.
+ * @param part - Part name used in refusal details.
+ * @returns The rendered unit with the source properties merged.
+ */
+function mergeSpliceProperties(
+  sourceSpan: Uint8Array,
+  rendered: Uint8Array,
+  properties: readonly IndependentProperty[],
+  rootAttributes: readonly IndependentProperty[],
+  part: string,
+): Uint8Array {
+  const sourceRoot = parseSpliceXml(strFromU8(sourceSpan))
+  const renderedText = strFromU8(rendered)
+  const renderedRoot = parseSpliceXml(renderedText)
+  /* v8 ignore next 3 -- Classification merges only spans whose source and rendered unit both parse. */
+  if (sourceRoot === undefined || renderedRoot === undefined) {
+    throw new OfficeExchangeError('conversion-failed', `Cannot inspect the replaced unit in ${part}`)
+  }
+  interface MergeGroup {
+    readonly kind: 'pPr' | 'rPr' | 'tcPr' | 'trPr'
+    readonly path: readonly SpliceXmlNode[]
+    readonly properties: IndependentProperty[]
+  }
+  const groups = new Map<string, MergeGroup>()
+  for (const property of properties) {
+    /* v8 ignore next 2 -- The doct classifier never tags a Word property with the spreadsheet container. */
+    if (property.container === 'c' || property.container === 'root') {
+      throw new OfficeExchangeError('conversion-failed', `A Word unit in ${part} carries a spreadsheet property`)
+    }
+    const container = findSpliceContainer(
+      sourceRoot,
+      strFromU8(sourceSpan.subarray(0, property.start)).length,
+      property.container,
+    )
+    /* v8 ignore next 4 -- Classifier offsets point inside the source container they name. */
+    if (container === undefined) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `Property ${property.name} in ${part} has no ${property.container} container`,
+      )
+    }
+    const parent = container.parent
+    if (parent === undefined || !spliceContainerParentAllowed(property.container, parent.localName)) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `Property ${property.name} in ${part} is not inside a ${property.container} element`,
+      )
+    }
+    const path = spliceNodePath(container)
+    const key = `${property.container}/${path.map(node => String(node.siblingIndex)).join('.')}`
+    const group = groups.get(key)
+    if (group === undefined) groups.set(key, { kind: property.container, path, properties: [property] })
+    else group.properties.push(property)
+  }
+  interface TextEdit {
+    readonly start: number
+    readonly end: number
+    readonly text: string
+    readonly order: number
+    readonly sequence: number
+  }
+  const edits: TextEdit[] = []
+  let sequence = 0
+  for (const group of groups.values()) {
+    const sorted = [...group.properties].sort((left, right) => (
+      splicePropertyRank(group.kind, left.name) - splicePropertyRank(group.kind, right.name)
+      || left.start - right.start
+    ))
+    const renderedContainer = resolveSplicePath(renderedRoot, group.path)
+    if (renderedContainer === undefined) {
+      const parentNode = group.path[group.path.length - 2]
+      const renderedParent = resolveSplicePath(renderedRoot, group.path.slice(0, -1))
+      if (parentNode === undefined || renderedParent === undefined || renderedParent.localName !== parentNode.localName) {
+        throw new OfficeExchangeError(
+          'conversion-failed',
+          `Rendered unit in ${part} no longer carries the element that owns a merged property`,
+        )
+      }
+      const children = sorted.map(property => property.xml).join('')
+      edits.push({
+        start: spliceContainerInsertOffset(renderedParent),
+        end: spliceContainerInsertOffset(renderedParent),
+        text: `<w:${group.kind}>${children}</w:${group.kind}>`,
+        order: 0,
+        sequence: sequence++,
+      })
+      continue
+    }
+    /* v8 ignore start -- Writer-emitted property containers always carry their matching close tag. */
+    if (renderedContainer.closeStart < 0) {
+      const children = sorted.map(property => property.xml).join('')
+      edits.push({
+        start: renderedContainer.start,
+        end: renderedContainer.end,
+        text: `<${renderedContainer.qname}>${children}</${renderedContainer.qname}>`,
+        order: 0,
+        sequence: sequence++,
+      })
+      continue
+    }
+    /* v8 ignore stop */
+    for (const property of sorted) {
+      const rank = splicePropertyRank(group.kind, property.name)
+      const offset = spliceChildInsertOffset(renderedContainer, group.kind, rank)
+      edits.push({ start: offset, end: offset, text: property.xml, order: rank, sequence: sequence++ })
+    }
+  }
+  const opening = renderedText.slice(renderedRoot.start, renderedRoot.openEnd)
+  for (const attribute of rootAttributes) {
+    const existing = new RegExp(`(?:^|\\s)${escapeRegExpInText(attribute.name)}\\s*=`, 'u')
+    /* v8 ignore next -- Classification reports only attributes the rendered root does not reproduce. */
+    if (existing.test(opening)) continue
+    /* v8 ignore next -- Rendered paragraph, cell, and control roots are never self-closing. */
+    const offset = renderedText[renderedRoot.openEnd - 2] === '/' ? renderedRoot.openEnd - 2 : renderedRoot.openEnd - 1
+    edits.push({ start: offset, end: offset, text: ` ${attribute.xml}`, order: 0, sequence: sequence++ })
+  }
+  /* v8 ignore next -- Every merge group or root attribute contributes at least one edit. */
+  if (edits.length === 0) return rendered
+  edits.sort((left, right) => (
+    left.start - right.start || left.order - right.order || left.sequence - right.sequence
+  ))
+  let merged = renderedText
+  for (let index = edits.length - 1; index >= 0; index -= 1) {
+    const edit = edits[index]
+    /* v8 ignore next -- The loop index stays inside the edit array. */
+    if (edit === undefined) continue
+    merged = merged.slice(0, edit.start) + edit.text + merged.slice(edit.end)
+  }
+  return strToU8(merged)
+}
+
+/** One element span in a fragment being merged, with its parent chain. */
+interface SpliceXmlNode {
+  /** Qualified name as written. */
+  readonly qname: string
+  /** Local name after the namespace prefix. */
+  readonly localName: string
+  /** Inclusive offset of the opening `<`. */
+  readonly start: number
+  /** Exclusive offset immediately after the opening tag. */
+  readonly openEnd: number
+  /** Offset of the closing `</`, or `-1` for a self-closing element. */
+  closeStart: number
+  /** Exclusive offset after the element's last `>`, or `-1` while unclosed. */
+  end: number
+  /** Enclosing element, absent on the fragment root. */
+  readonly parent: SpliceXmlNode | undefined
+  /** Index among the parent's element children. */
+  readonly siblingIndex: number
+  /** Direct element children in source order. */
+  readonly children: SpliceXmlNode[]
+}
+
+/**
+ * Parse a balanced XML fragment into element spans.
+ * @param text - Fragment text.
+ * @returns The root element, or `undefined` when the fragment is unbalanced.
+ */
+function parseSpliceXml(text: string): SpliceXmlNode | undefined {
+  const stack: SpliceXmlNode[] = []
+  let root: SpliceXmlNode | undefined
+  let index = 0
+  while (index < text.length) {
+    const open = text.indexOf('<', index)
+    /* v8 ignore next 2 -- An anchored unit span ends with the root closing tag. */
+    if (open < 0) break
+    if (text.startsWith('<!--', open)) {
+      const close = text.indexOf('-->', open + 4)
+      /* v8 ignore next -- scanSpans rejects an unterminated comment before this parser runs. */
+      if (close < 0) return undefined
+      index = close + 3
+      continue
+    }
+    if (text.startsWith('<![CDATA[', open)) {
+      const close = text.indexOf(']]>', open + 9)
+      /* v8 ignore next -- scanSpans rejects an unterminated CDATA section before this parser runs. */
+      if (close < 0) return undefined
+      index = close + 3
+      continue
+    }
+    if (text[open + 1] === '?') {
+      const close = text.indexOf('?>', open + 2)
+      /* v8 ignore next -- scanSpans rejects an unterminated processing instruction before this parser runs. */
+      if (close < 0) return undefined
+      index = close + 2
+      continue
+    }
+    /* v8 ignore next 6 -- XML declarations inside an anchored element are not valid WordprocessingML. */
+    if (text[open + 1] === '!') {
+      const close = declarationEndInText(text, open + 2)
+      if (close < 0) return undefined
+      index = close
+      continue
+    }
+    const close = tagEndInText(text, open + 1)
+    /* v8 ignore next -- scanSpans rejects an unterminated tag before this parser runs. */
+    if (close < 0) return undefined
+    if (text[open + 1] === '/') {
+      const name = spliceTagName(text, open + 2, close)
+      const node = stack.pop()
+      /* v8 ignore next -- scanSpans rejects mismatched closing tags before this parser runs. */
+      if (node === undefined || name === undefined || node.qname !== name) return undefined
+      node.closeStart = open
+      node.end = close + 1
+      index = close + 1
+      continue
+    }
+    const selfClosing = text[close - 1] === '/'
+    const name = spliceTagName(text, open + 1, selfClosing ? close - 1 : close)
+    /* v8 ignore next -- A tag scanned by scanSpans always carries a name. */
+    if (name === undefined) return undefined
+    const parent = stack.at(-1)
+    /* v8 ignore next -- An anchored unit span holds exactly one root element. */
+    if (parent === undefined && root !== undefined) return undefined
+    const node: SpliceXmlNode = {
+      qname: name,
+      localName: spliceLocalName(name),
+      start: open,
+      openEnd: close + 1,
+      closeStart: selfClosing ? close + 1 : -1,
+      end: selfClosing ? close + 1 : -1,
+      parent,
+      siblingIndex: parent === undefined ? 0 : parent.children.length,
+      children: [],
+    }
+    parent?.children.push(node)
+    if (parent === undefined) root = node
+    if (!selfClosing) stack.push(node)
+    index = close + 1
+  }
+  /* v8 ignore next -- An anchored unit span is a balanced element. */
+  if (stack.length > 0 || root === undefined) return undefined
+  return root
+}
+
+/**
+ * Escape a qualified name for a regular expression.
+ * @param name - XML qualified name.
+ * @returns The name with regular-expression metacharacters escaped.
+ */
+function escapeRegExpInText(name: string): string {
+  return name.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')
+}
+
+function spliceTagName(text: string, from: number, limit: number): string | undefined {
+  let end = from
+  while (end < limit) {
+    const character = text[end]
+    if (character === undefined || character === '>' || character === '/' || isXmlTextWhitespace(character)) break
+    end += 1
+  }
+  /* v8 ignore next -- scanSpans rejects an empty tag name before this parser runs. */
+  return end > from ? text.slice(from, end) : undefined
+}
+
+function spliceLocalName(name: string): string {
+  const colon = name.indexOf(':')
+  return colon < 0 ? name : name.slice(colon + 1)
+}
+
+function findSpliceContainer(
+  node: SpliceXmlNode,
+  offset: number,
+  kind: 'pPr' | 'rPr' | 'tcPr' | 'trPr',
+): SpliceXmlNode | undefined {
+  for (const child of node.children) {
+    const match = findSpliceContainer(child, offset, kind)
+    if (match !== undefined) return match
+  }
+  /* v8 ignore next -- Resolved containers come from a fully parsed element. */
+  const end = node.end >= 0 ? node.end : node.openEnd
+  return node.localName === kind && node.start < offset && offset < end ? node : undefined
+}
+
+function spliceNodePath(node: SpliceXmlNode): readonly SpliceXmlNode[] {
+  const path: SpliceXmlNode[] = []
+  let current: SpliceXmlNode | undefined = node
+  while (current !== undefined) {
+    path.unshift(current)
+    current = current.parent
+  }
+  return path
+}
+
+function resolveSplicePath(
+  root: SpliceXmlNode,
+  path: readonly SpliceXmlNode[],
+): SpliceXmlNode | undefined {
+  /* v8 ignore next -- Every merge group path starts at the unit root. */
+  if (path.length === 0) return undefined
+  let current = root
+  for (const [index, expected] of path.entries()) {
+    if (current.localName !== expected.localName) return undefined
+    if (index === path.length - 1) return current
+    const next = current.children[expected.siblingIndex]
+    if (next === undefined) return undefined
+    current = next
+  }
+  /* v8 ignore next -- The loop returns on its final path entry. */
+  return current
+}
+
+function spliceContainerParentAllowed(
+  kind: 'pPr' | 'rPr' | 'tcPr' | 'trPr',
+  parentLocalName: string,
+): boolean {
+  if (kind === 'pPr') return parentLocalName === 'p'
+  if (kind === 'rPr') return parentLocalName === 'r'
+  if (kind === 'tcPr') return parentLocalName === 'tc'
+  return parentLocalName === 'tr'
+}
+
+function splicePropertyRank(kind: 'pPr' | 'rPr' | 'tcPr' | 'trPr', name: string): number {
+  const order = SPLICE_PROPERTY_ORDER[kind]
+  const rank = order.indexOf(spliceLocalName(name))
+  return rank < 0 ? order.length : rank
+}
+
+function spliceChildInsertOffset(
+  container: SpliceXmlNode,
+  kind: 'pPr' | 'rPr' | 'tcPr' | 'trPr',
+  rank: number,
+): number {
+  for (const child of container.children) {
+    if (splicePropertyRank(kind, child.localName) > rank) return child.start
+  }
+  return container.closeStart
+}
+
+function spliceContainerInsertOffset(parent: SpliceXmlNode): number {
+  return parent.openEnd
+}
+
+/**
+ * Move an insertion that lands between table cells to the containing table's
+ * start or end, where a block-level paragraph or table is legal.
+ * @param state - Splice state with the part anchors.
+ * @param operations - Plan operations before application.
+ * @returns Operations with block-level insertion offsets and a per-part sort.
+ */
+function adjustSpliceInsertBoundaries(
+  state: SpliceState,
+  operations: readonly SpliceOperation[],
+): readonly SpliceOperation[] {
+  const adjusted = operations.map((operation) => {
+    if (operation.kind !== 'insert') return operation
+    const part = state.partsByName.get(operation.part)
+    /* v8 ignore next -- Insert operations originate from a part in state.partsByName. */
+    if (part === undefined) return operation
+    const at = spliceBlockInsertOffset(part, operation.at)
+    return at === operation.at ? operation : { ...operation, at }
+  })
+  return [...adjusted].sort(compareSpliceOperations)
+}
+
+function spliceBlockInsertOffset(part: SplicePart, at: number): number {
+  const containers = part.spans.filter(span => span.kind === 'table' && span.start < at && at < span.end)
+  if (containers.length === 0) return at
+  /* v8 ignore start -- Units skip table interiors, so an insertion never lands strictly inside a table span. */
+  const table = containers.reduce((outer, span) => (span.start < outer.start ? span : outer))
+  if (part.anchors.some(anchor => anchor.end === at)) return table.end
+  if (part.anchors.some(anchor => anchor.start === at)) return table.start
+  return at
+  /* v8 ignore stop */
+}
+
+function compareSpliceOperations(left: SpliceOperation, right: SpliceOperation): number {
+  if (left.part !== right.part) return compareSpliceNames(left.part, right.part)
+  return spliceOperationStart(left) - spliceOperationStart(right)
+    || spliceOperationRank(left) - spliceOperationRank(right)
+}
+
+function spliceOperationStart(operation: SpliceOperation): number {
+  if (operation.kind === 'insert' || operation.kind === 'append') return operation.at
+  /* v8 ignore next -- A carry operation is never sorted against another operation in the same part. */
+  if (operation.kind === 'carry') return 0
+  return operation.start
+}
+
+const SPLICE_OPERATION_RANKS: Readonly<Record<SpliceOperation['kind'], number>> = {
+  insert: 0,
+  append: 1,
+  replace: 2,
+  delete: 3,
+  carry: 4,
+}
+
+function spliceOperationRank(operation: SpliceOperation): number {
+  return SPLICE_OPERATION_RANKS[operation.kind]
+}
+
+/**
+ * Apply the plan's byte operations and save the source package.
+ * @param state - Splice state with the source package.
+ * @param operations - Sorted plan operations.
+ * @param signal - Optional cancellation between parts.
+ * @returns Complete output package bytes.
+ */
+function applySpliceOperations(
+  state: SpliceState,
+  operations: readonly SpliceOperation[],
+  signal: AbortSignal | undefined,
+): Uint8Array {
+  const byPart = new Map<string, ApplySpliceOperation[]>()
+  for (const operation of operations) {
+    if (operation.kind === 'carry') continue
+    const list = byPart.get(operation.part) ?? []
+    switch (operation.kind) {
+      case 'replace':
+        list.push({ kind: 'replace', start: operation.start, end: operation.end, bytes: operation.bytes })
+        break
+      case 'insert':
+        list.push({ kind: 'insert', at: operation.at, bytes: operation.bytes })
+        break
+      case 'append':
+        list.push({ kind: 'append', at: operation.at, bytes: operation.bytes })
+        break
+      case 'delete':
+        list.push({ kind: 'delete', start: operation.start, end: operation.end })
+        break
+    }
+    byPart.set(operation.part, list)
+  }
+  for (const [part, partOperations] of byPart) {
+    const sourceBytes = state.partsByName.get(part)?.bytes ?? sourcePartBytes(state.packageFile, part)
+    /* v8 ignore next 3 -- Every operation part is a source part appended to the package. */
+    if (sourceBytes === undefined) {
+      throw new OfficeExchangeError('conversion-failed', `Splice operation names unknown part ${part}`)
+    }
+    const next = applySplices(sourceBytes, partOperations)
+    try {
+      SyntaxValidator.validate(strFromU8(next))
+    } catch (error) {
+      throw new OfficeExchangeError(
+        'conversion-failed',
+        `Spliced ${part} is not well-formed XML: ${messageOf(error)}`,
+      )
+    }
+    state.packageFile.replacePart(part, next)
+    signal?.throwIfAborted()
+  }
+  assertSplicePackageGraph(state.packageFile)
+  const bytes = state.packageFile.save()
+  if (bytes.byteLength > state.bounds.maxFileBytes) {
+    throw new OfficeExchangeError(
+      'too-large',
+      `Saved document is ${String(bytes.byteLength)} bytes; the limit is ${String(state.bounds.maxFileBytes)}`,
+    )
+  }
+  return bytes
+}
+
+/**
+ * Require the prospectively written package to be a closed OPC graph.
+ * @param packageFile - Package holding the spliced parts.
+ * @throws {OfficeExchangeError} `conversion-failed` when the output graph is incomplete.
+ */
+function assertSplicePackageGraph(packageFile: OfficePackage): void {
+  try {
+    assertOpcGraph(packageFile)
+  } catch (error) {
+    throw new OfficeExchangeError('conversion-failed', `The saved document package is not a valid OPC graph: ${messageOf(error)}`)
   }
 }
 
@@ -939,7 +2945,12 @@ function relationshipIdsOf(elements: readonly string[]): ReadonlySet<string> {
   return ids
 }
 
-function createReadContext(bounds: OfficeExchangeConfig, rawRuns?: RawRunSource): ReadContext {
+function createReadContext(
+  bounds: OfficeExchangeConfig,
+  rawRuns?: RawRunSource,
+  rawElements?: RawElementSource,
+  anchored = false,
+): ReadContext {
   return {
     parts: [],
     length: 0,
@@ -950,8 +2961,11 @@ function createReadContext(bounds: OfficeExchangeConfig, rawRuns?: RawRunSource)
     tableSource: {},
     customRanges: [],
     rawRuns,
+    rawElements,
     rawBlocks: [],
     bounds,
+    anchored,
+    syntheticParagraphs: new Set(),
     cells: 0,
     tableSerial: 0,
   }
@@ -1089,12 +3103,16 @@ function appendParagraphBreak(
   styleId?: string,
   formatting?: IParagraphStyle,
   bullet?: IBullet,
+  synthetic = false,
 ): void {
   append(context, PARAGRAPH)
   const paragraph: IParagraph = {
     startIndex: context.length - 1,
-    paragraphId: `paragraph-${context.paragraphs.length + 1}`,
+    paragraphId: context.anchored
+      ? `para_${String(context.paragraphs.length + 1)}`
+      : `paragraph-${String(context.paragraphs.length + 1)}`,
   }
+  if (synthetic) context.syntheticParagraphs.add(paragraph.startIndex)
   if (styleId !== undefined) paragraph.styleId = styleId
   const namedStyle = styleId === undefined ? undefined : NAMED_STYLE_BY_ID[styleId]
   if (namedStyle !== undefined) paragraph.paragraphStyle = { ...formatting, namedStyleType: namedStyle }
@@ -1120,6 +3138,7 @@ function appendParagraph(
   for (const child of childElements(element)) {
     if (child.tag === 'r') appendRun(context, child)
     if (child.tag === 'hyperlink') appendHyperlink(context, child, relationships)
+    if (RAW_ELEMENT_TAGS.includes(child.tag)) appendRawElement(context, child)
   }
   appendParagraphBreak(context, styleId, formatting, bullet)
   if (properties === undefined || relationships === undefined || identifiers === undefined) return
@@ -1134,12 +3153,39 @@ function appendParagraph(
 }
 
 /**
+ * Carry one paragraph-level preserved element verbatim.
+ * @param context - Document stream being assembled.
+ * @param element - Parsed `pict`, `sdt`, `fldSimple`, or bookmark marker.
+ * @throws {OfficeExchangeError} `conversion-failed` when no source XML remains for the element.
+ */
+function appendRawElement(context: ReadContext, element: XmlElement): void {
+  const xml = context.rawElements?.take(element)
+  if (xml === undefined) {
+    throw new OfficeExchangeError('conversion-failed', `Cannot preserve a ${element.tag} element`)
+  }
+  context.rawBlocks.push({ startIndex: context.length, xml })
+}
+
+/**
+ * Append the unit placeholder for a body-level content control.
+ *
+ * A structured document tag's meaning depends on the content it wraps, so the
+ * reader keeps it out of the editable model: the empty paragraph holds the
+ * unit slot a neighbouring splice can address, and any edit of that unit is
+ * refused as a coupled construct because the rendered paragraph cannot
+ * reproduce the `w:sdt` root.
+ * @param context - Document stream being assembled.
+ */
+function appendContentControl(context: ReadContext): void {
+  appendParagraphBreak(context)
+}
+
+/**
  * Map `w:numPr` into the paragraph's list bullet.
  * @param properties - Paragraph properties containing `w:numPr`.
  * @param numbering - Numbering definitions from the package.
  * @returns The paragraph bullet, or `undefined` for an unnumbered paragraph.
- */
-function readBullet(properties: XmlElement, numbering: NumberingCatalog): IBullet | undefined {
+ */function readBullet(properties: XmlElement, numbering: NumberingCatalog): IBullet | undefined {
   const numberingProperties = findChild(properties, 'numPr')
   if (numberingProperties === undefined) return undefined
   const numId = optionalAttribute(findChild(numberingProperties, 'numId'), '@_val')
@@ -1358,14 +3404,23 @@ function appendRun(context: ReadContext, element: XmlElement): void {
 const PRESERVED_RUN_TAGS: ReadonlySet<string> = new Set([
   'drawing',
   'pict',
+  'object',
+  'fldChar',
+  'instrText',
   'footnoteReference',
   'endnoteReference',
 ])
 
+/** Source-run scan derived from {@link PRESERVED_RUN_TAGS}. */
+const PRESERVED_RUN_PATTERN = new RegExp(
+  `<w:(?:${[...PRESERVED_RUN_TAGS].join('|')})(?=[\\s/>])`,
+  'u',
+)
+
 /**
  * Report whether a run carries content preserved only as raw XML.
  * @param element - Parsed run.
- * @returns `true` for a drawing, picture, or footnote/endnote reference anywhere inside the run.
+ * @returns `true` for an embedded drawing, picture, field marker, or note reference anywhere inside the run.
  */
 function containsPreservedContent(element: XmlElement): boolean {
   for (const child of childElements(element)) {
@@ -1381,26 +3436,66 @@ function containsPreservedContent(element: XmlElement): boolean {
  * @returns A source whose runs are taken once, matched by identity first and source order second.
  */
 function readRawRunCatalog(xml: string): RawRunSource {
-  const records: RawRunRecord[] = []
-  const byKey = new Map<string, RawRunRecord[]>()
+  const records: RawXmlRecord[] = []
   for (const match of xml.matchAll(/<w:r(?=[\s/>])[^>]*>/gu)) {
     if (match[0].endsWith('/>')) continue
     const start = match.index
     const end = runEndOf(xml, start)
+    /* v8 ignore next 2 -- A validated part ends every run it opens. */
     if (end === undefined) continue
     const run = xml.slice(start, end)
     if (!containsPreservedMarkup(run)) continue
-    const key = relationshipKeyOfXml(run)
-    const record: RawRunRecord = { xml: run, key, taken: false }
-    records.push(record)
-    const queue = byKey.get(key)
-    if (queue === undefined) byKey.set(key, [record])
+    records.push({ xml: run, key: relationshipKeyOfXml(run), taken: false })
+  }
+  return rawXmlSourceOf(records, relationshipKeyOfElement)
+}
+
+/**
+ * Scan one part's source XML for paragraph-level elements the writer re-emits.
+ *
+ * The catalog holds the outermost occurrence of each preserved element, so an
+ * element nested inside another is carried with its container rather than
+ * twice. Parsed children consume records by relationship identity first and
+ * source order second.
+ * @param xml - Decoded part XML.
+ * @returns A source whose preserved elements are taken once.
+ */
+function readRawElementCatalog(xml: string): RawElementSource {
+  const records: RawXmlRecord[] = []
+  let coveredTo = -1
+  for (const match of xml.matchAll(RAW_ELEMENT_PATTERN)) {
+    const start = match.index
+    if (start < coveredTo) continue
+    const name = match[1]
+    /* v8 ignore next -- The raw-element pattern always captures a name. */
+    if (name === undefined) continue
+    const end = match[0].endsWith('/>') ? start + match[0].length : elementEndOf(xml, start, name)
+    /* v8 ignore next 2 -- A validated part ends every preserved element it opens. */
+    if (end === undefined) continue
+    coveredTo = end
+    const element = xml.slice(start, end)
+    records.push({ xml: element, key: relationshipKeyOfXml(element), taken: false })
+  }
+  return rawXmlSourceOf(records, relationshipKeyOfElement)
+}
+
+/**
+ * Build a source that yields each captured element at most once.
+ * @param records - Captured elements in source order.
+ * @param keyOf - Identity used to match a parsed element before falling back to source order.
+ * @returns A source whose `take` consumes the matching record or the next unconsumed one.
+ */
+function rawXmlSourceOf(records: readonly RawXmlRecord[], keyOf: (element: XmlElement) => string): RawXmlSource {
+  const byKey = new Map<string, RawXmlRecord[]>()
+  for (const record of records) {
+    const queue = byKey.get(record.key)
+    if (queue === undefined) byKey.set(record.key, [record])
     else queue.push(record)
   }
   let cursor = 0
   return {
     take(element) {
-      const key = relationshipKeyOfElement(element)
+      const key = keyOf(element)
       for (const record of byKey.get(key) ?? []) {
         if (record.taken) continue
         record.taken = true
@@ -1414,6 +3509,29 @@ function readRawRunCatalog(xml: string): RawRunSource {
       return fallback.xml
     },
   }
+}
+
+/**
+ * Find the end of the `w:` element named `name` that starts at `start`.
+ * @param xml - Part XML.
+ * @param start - Offset of the element's opening tag.
+ * @param name - Local element name without its prefix.
+ * @returns Exclusive offset after its closing tag, or `undefined` when it is unterminated.
+ */
+function elementEndOf(xml: string, start: number, name: string): number | undefined {
+  const pattern = new RegExp(`<w:${name}(?=[\\s/>])[^>]*>|</w:${name}>`, 'gu')
+  pattern.lastIndex = start
+  let depth = 0
+  for (let match = pattern.exec(xml); match !== null; match = pattern.exec(xml)) {
+    if (match[0] === `</w:${name}>`) {
+      depth -= 1
+      if (depth === 0) return pattern.lastIndex
+    } else if (!match[0].endsWith('/>')) {
+      depth += 1
+    }
+  }
+  /* v8 ignore next -- A validated part ends every element it opens. */
+  return undefined
 }
 
 /**
@@ -1434,16 +3552,17 @@ function runEndOf(xml: string, start: number): number | undefined {
       depth += 1
     }
   }
+  /* v8 ignore next -- A validated part ends every element it opens. */
   return undefined
 }
 
 /**
  * Report whether source run XML carries preserved content.
  * @param xml - One source run.
- * @returns `true` when it contains a drawing, picture, or note reference.
+ * @returns `true` when it contains a drawing, picture, object, field marker, or note reference.
  */
 function containsPreservedMarkup(xml: string): boolean {
-  return /<w:(?:drawing|pict|footnoteReference|endnoteReference)(?=[\s/>])/u.test(xml)
+  return PRESERVED_RUN_PATTERN.test(xml)
 }
 
 /**
@@ -1455,6 +3574,7 @@ function relationshipKeyOfXml(xml: string): string {
   const values: string[] = []
   for (const match of xml.matchAll(/\b(?:embed|link|pict|id|dm|lo|qs|cs)="([^"]*)"/gu)) {
     const value = match[1]
+    /* v8 ignore next -- The capture group is present whenever the pattern matches. */
     if (value !== undefined) values.push(value)
   }
   return values.sort().join('\u0000')
@@ -1766,7 +3886,7 @@ function appendTable(
   relationships?: DocumentRelationships,
   numbering?: NumberingCatalog,
 ): void {
-  if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
+  if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context, undefined, undefined, undefined, true)
   context.tableSerial += 1
   const tableId = `table-${String(context.tableSerial)}`
   const startIndex = context.length
@@ -1789,7 +3909,7 @@ function appendTable(
         if (block.tag === 'p') appendParagraph(context, block, relationships, undefined, numbering)
         if (block.tag === 'tbl') appendTable(context, block, relationships, numbering)
       }
-      if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
+      if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context, undefined, undefined, undefined, true)
       context.sectionBreaks.push({
         sectionId: `section-${context.sectionBreaks.length + 1}`,
         startIndex: context.length,
@@ -1871,6 +3991,7 @@ function applyVerticalMerges(
       if (descriptor.vMerge !== 'restart') continue
       let span = 1
       for (let coveredRow = rowIndex + 1; coveredRow < descriptors.length; coveredRow += 1) {
+        /* v8 ignore next -- descriptors and rows are built together for the same table. */
         const candidates = descriptors[coveredRow] ?? []
         const coveredIndex = candidates.findIndex(candidate => (
           candidate.vMerge === 'continue' && candidate.gridStart === descriptor.gridStart
@@ -1882,6 +4003,7 @@ function applyVerticalMerges(
       }
       if (span > 1) {
         const startCell = rows[rowIndex]?.tableCells[cellIndex]
+        /* v8 ignore next -- Every vertical-merge chain starts at a descriptor row. */
         if (startCell !== undefined) startCell.rowSpan = span
       }
     }
@@ -1987,6 +4109,7 @@ function readRowHeight(properties: XmlElement | undefined): ITableRowSize {
   const height = properties === undefined ? undefined : findChild(properties, 'trHeight')
   const twips = numberAttribute(height, '@_val')
   if (twips === undefined) return { val: { v: DEFAULT_ROW_HEIGHT }, hRule: TABLE_ROW_HEIGHT_AUTO }
+  /* v8 ignore next -- twips is read from height, so a defined twips implies a defined height. */
   const rule = height === undefined ? undefined : attribute(height, '@_hRule')
   const hRule = rule === 'exact'
     ? TABLE_ROW_HEIGHT_EXACT
@@ -2014,6 +4137,7 @@ function readTableWidth(properties: XmlElement): IWidthInTableSize | undefined {
   const width = findChild(properties, 'tblW')
   const value = numberAttribute(width, '@_w')
   if (value === undefined || value <= 0) return undefined
+  /* v8 ignore next -- value is read from width, so a defined value implies a defined width. */
   const type = width === undefined ? undefined : attribute(width, '@_type')
   if (type === 'pct') {
     return { type: TABLE_SIZE_SPECIFIED, width: { v: value / 50, u: NumberUnitType.PERCENT } }
@@ -2087,7 +4211,7 @@ function cellMargin(): ITableCellMargin {
 }
 
 function finalizeBody(context: ReadContext, section?: SectionSetup): void {
-  if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context)
+  if (lastCharacter(context) !== PARAGRAPH) appendParagraphBreak(context, undefined, undefined, undefined, true)
   context.tables.sort((left, right) => left.startIndex - right.startIndex)
   context.sectionBreaks.push({
     sectionId: `section-${context.sectionBreaks.length + 1}`,
@@ -2105,6 +4229,7 @@ function finalizeBody(context: ReadContext, section?: SectionSetup): void {
  * @param numbering - Numbering definitions shared with the document body.
  * @param relationships - Relationship maps for each header and footer part.
  * @param build - Builds one segment entry from its identity, body, and table metadata.
+ * @param collect - Receives each part's bytes and body so a read can anchor them.
  * @returns Segment identity mapped to its entry.
  */
 function readStoryParts<Entry>(
@@ -2114,15 +4239,22 @@ function readStoryParts<Entry>(
   numbering: NumberingCatalog,
   relationships: ReadonlyMap<string, DocumentRelationships>,
   build: (id: string, body: IDocumentBody, tableSource: ITables) => Entry,
+  collect?: StoryAnchorCollector,
 ): Map<string, Entry> {
   const stories = new Map<string, Entry>()
   for (const [id, xml] of parts) {
     const element = parseRootElement(xml, root, `${root === 'hdr' ? 'header' : 'footer'} XML`)
-    const context = createReadContext(bounds, readRawRunCatalog(strFromU8(xml)))
+    const context = createReadContext(
+      bounds,
+      readRawRunCatalog(strFromU8(xml)),
+      readRawElementCatalog(strFromU8(xml)),
+      collect !== undefined,
+    )
     const storyRelationships = relationships.get(id)
     for (const child of childElements(element)) {
       if (child.tag === 'p') appendParagraph(context, child, storyRelationships, undefined, numbering)
       if (child.tag === 'tbl') appendTable(context, child, storyRelationships, numbering)
+      if (child.tag === 'sdt') appendContentControl(context)
     }
     finalizeBody(context)
     const body: IDocumentBody = {
@@ -2134,9 +4266,412 @@ function readStoryParts<Entry>(
       customRanges: context.customRanges,
     }
     if (context.rawBlocks.length > 0) body.docxRawBlocks = context.rawBlocks
+    collect?.({
+      part: `word/${id}.xml`,
+      bytes: xml,
+      body,
+      tableSource: context.tableSource,
+      syntheticParagraphs: context.syntheticParagraphs,
+    })
     stories.set(id, build(id, body, context.tableSource))
   }
   return stories
+}
+
+/** One table's model metadata with its cell content ranges resolved in the stream. */
+interface TableRecord {
+  /** Custom table record naming the stream range and model table id. */
+  readonly table: ICustomTable
+  /** Cell content ranges in row-major order. */
+  readonly ranges: ReadonlyArray<ReadonlyArray<ParsedCell>>
+}
+
+/**
+ * Build the sidecar for a document read when every editable unit resolves to a
+ * unique, non-overlapping source span.
+ * @param bytes - Complete source package bytes.
+ * @param read - Parsed document with its story parts.
+ * @param format - Source format recorded in the sidecar.
+ * @param bounds - Validated anchor count and payload limits.
+ * @returns The validated sidecar, or `undefined` when any part cannot be
+ * anchored unambiguously or the payload exceeds a budget.
+ */
+function buildDocumentSourceState(
+  bytes: Uint8Array,
+  read: DocumentRead,
+  format: OfficeSourceFormat,
+  bounds: OfficeExchangeConfig,
+): OfficeSourceState | undefined {
+  let packageFile: OfficePackage
+  try {
+    packageFile = open(bytes, { maxEntries: MAX_SOURCE_ENTRIES })
+  } catch {
+    return undefined
+  }
+  const anchors: UnitAnchor[] = []
+  const sourceParts: string[] = []
+  for (const story of read.storySources) {
+    const partAnchors = buildStoryAnchors(story)
+    if (partAnchors === undefined) return undefined
+    sourceParts.push(story.part)
+    anchors.push(...partAnchors)
+  }
+  const partByteLengths = new Map<string, number>()
+  for (const entry of packageFile.source.entries) {
+    /* v8 ignore next -- source.entries never contains directory records. */
+    if (!entry.name.endsWith('/')) partByteLengths.set(entry.name, entry.uncompressedSize)
+  }
+  try {
+    return parseSourceState({
+      schemaVersion: 1,
+      format,
+      packageDigest: packageFile.source.digest,
+      byteLength: bytes.byteLength,
+      anchorMode: 'per-unit',
+      anchors,
+      sourceParts,
+    }, {
+      partByteLengths,
+      maxSourceAnchors: bounds.maxSourceAnchors,
+      maxSourceAnchorBytes: bounds.maxSourceAnchorBytes,
+    })
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Anchor every editable unit in one part.
+ *
+ * Top-level paragraphs and top-level table cells are paired with scanned spans
+ * by source order. A body-level content control takes the unit slot of the
+ * placeholder paragraph the reader inserted, and its span is the whole `w:sdt`
+ * element so sibling edits never rewrite it. Spans nested inside a preserved
+ * container are excluded because their XML is carried with that container. A
+ * count mismatch, a malformed stream, or a scanner refusal returns `undefined`
+ * so the caller omits the sidecar rather than splicing from a partial map.
+ * @param source - Part bytes plus the body and table metadata read from them.
+ * @returns Anchors in model order, or `undefined` when the part cannot be
+ * anchored unambiguously.
+ */
+function buildStoryAnchors(source: StoryAnchorSource): readonly UnitAnchor[] | undefined {
+  const scan = scanSpans(source.bytes, source.part, SOURCE_ANCHOR_KINDS)
+  if (scan.failure !== undefined) return undefined
+  const stream = source.body.dataStream
+  /* v8 ignore next -- A reader-produced body always carries its paragraph array. */
+  const paragraphs = source.body.paragraphs ?? []
+  const orderedParagraphs = sortedParagraphs(paragraphs)
+  /* v8 ignore next -- A reader-produced body always carries its text-run array. */
+  const runs = source.body.textRuns ?? []
+  /* v8 ignore next -- A reader-produced body always carries its table array. */
+  const tables = [...(source.body.tables ?? [])].sort((left, right) => left.startIndex - right.startIndex)
+  const records: TableRecord[] = []
+  for (const table of tables) {
+    const model = source.tableSource[table.tableId]
+    /* v8 ignore next -- Reader table records always carry model metadata. */
+    if (model === undefined) return undefined
+    const ranges = readTableCellRanges(stream, table, model)
+    /* v8 ignore next -- Reader table streams align with their model. */
+    if (ranges === undefined) return undefined
+    records.push({ table, ranges })
+  }
+  const preservedSpans = scan.spans.filter(span => span.kind === 'preserved')
+  const controlSpans = scan.spans.filter(span => (
+    span.kind === 'contentControl' && !containedByAny(span, preservedSpans)
+  ))
+  const tableSpans = scan.spans.filter(span => (
+    span.kind === 'table'
+    && !containedByAny(span, preservedSpans)
+    && !containedByAny(span, controlSpans)
+  ))
+  const bodyParagraphs = orderedParagraphs
+    .filter(paragraph => !paragraphInsideAnyCell(records, paragraph.startIndex))
+    .filter(paragraph => !source.syntheticParagraphs.has(paragraph.startIndex))
+  const paragraphSpans = scan.spans.filter(span => (
+    span.kind === 'paragraph'
+    && !containedByAny(span, preservedSpans)
+    && !containedByAny(span, controlSpans)
+    && !containedByAny(span, tableSpans)
+  ))
+  const blockSpans = [...paragraphSpans, ...controlSpans].sort((left, right) => left.start - right.start)
+  if (blockSpans.length !== bodyParagraphs.length) return undefined
+  const anchors: UnitAnchor[] = []
+  for (const [index, paragraph] of bodyParagraphs.entries()) {
+    const span = blockSpans[index]
+    /* v8 ignore next -- Reader paragraph spans and records are produced in lockstep. */
+    if (span === undefined) return undefined
+    anchors.push({
+      kind: span.kind === 'contentControl' ? 'contentControl' : 'paragraph',
+      part: source.part,
+      key: paragraph.paragraphId,
+      start: span.start,
+      end: span.end,
+      digest: digestParagraph(paragraphUnitOf(stream, paragraph, runs)),
+    })
+  }
+  const topRecords = topLevelTables(records)
+  const topTableSpans = tableSpans.filter(span => (
+    !tableSpans.some(other => other !== span && span.start >= other.start && span.end <= other.end)
+  ))
+  /* v8 ignore next -- Reader table spans and records are produced in lockstep. */
+  if (topTableSpans.length !== topRecords.length) return undefined
+  for (const [tableIndex, record] of topRecords.entries()) {
+    const tableSpan = topTableSpans[tableIndex]
+    /* v8 ignore next -- Every reader table record has a scanned span. */
+    if (tableSpan === undefined) return undefined
+    const nestedSpans = tableSpans.filter(span => (
+      span.start > tableSpan.start && span.end < tableSpan.end
+    ))
+    const cellSpans = scan.spans.filter(span => (
+      span.kind === 'tableCell'
+      && span.start > tableSpan.start
+      && span.end < tableSpan.end
+      && !nestedSpans.some(nested => span.start >= nested.start && span.end <= nested.end)
+    ))
+    const flatRanges = record.ranges.flat()
+    /* v8 ignore next -- Reader table cells and scanned cell spans are produced in lockstep. */
+    if (cellSpans.length !== flatRanges.length) return undefined
+    let cellIndex = 0
+    for (const [rowIndex, row] of record.ranges.entries()) {
+      for (let column = 0; column < row.length; column += 1) {
+        const span = cellSpans[cellIndex]
+        cellIndex += 1
+        /* v8 ignore next -- The loop index stays inside the scanned cell spans. */
+        if (span === undefined) return undefined
+        const unit = cellUnitOf(
+          stream,
+          orderedParagraphs,
+          runs,
+          records,
+          source.tableSource,
+          record.table.tableId,
+          rowIndex,
+          column,
+        )
+        /* v8 ignore next -- Reader table cells always resolve to a unit. */
+        if (unit === undefined) return undefined
+        anchors.push({
+          kind: 'tableCell',
+          part: source.part,
+          key: `${record.table.tableId}/${String(rowIndex)}/${String(column)}`,
+          start: span.start,
+          end: span.end,
+          digest: digestTableCell(unit),
+        })
+      }
+    }
+  }
+  return anchors
+}
+
+/**
+ * Resolve one table's cell content ranges in the stream.
+ * @param stream - Document data stream.
+ * @param table - Custom table record with its stream range.
+ * @param model - Table metadata naming the row and cell counts.
+ * @returns Cell ranges in row-major order, or `undefined` when the tokens and
+ * metadata disagree.
+ */
+function readTableCellRanges(
+  stream: string,
+  table: ICustomTable,
+  model: ITable,
+): ReadonlyArray<ReadonlyArray<ParsedCell>> | undefined {
+  if (stream[table.startIndex] !== TABLE_START) return undefined
+  const rows: ParsedCell[][] = []
+  let index = table.startIndex + 1
+  for (const row of model.tableRows) {
+    if (stream[index] !== TABLE_ROW_START) return undefined
+    index += 1
+    const cells: ParsedCell[] = []
+    for (let cell = 0; cell < row.tableCells.length; cell += 1) {
+      if (stream[index] !== TABLE_CELL_START) return undefined
+      index += 1
+      const start = index
+      const end = findCellEnd(stream, start)
+      if (end === undefined) return undefined
+      cells.push({ start, end })
+      index = end + 1
+    }
+    if (stream[index] !== TABLE_ROW_END) return undefined
+    index += 1
+    rows.push(cells)
+  }
+  if (stream[index] !== TABLE_END) return undefined
+  if (index + 1 !== table.endIndex) return undefined
+  return rows
+}
+
+function paragraphInsideAnyCell(records: readonly TableRecord[], startIndex: number): boolean {
+  return records.some(record => record.ranges.some(row => (
+    row.some(cell => startIndex >= cell.start && startIndex < cell.end)
+  )))
+}
+
+function containedByAny(
+  span: { readonly start: number; readonly end: number },
+  containers: readonly ElementSpan[],
+): boolean {
+  return containers.some(container => span.start >= container.start && span.end <= container.end)
+}
+
+function topLevelTables(records: readonly TableRecord[]): readonly TableRecord[] {
+  return records.filter(record => !records.some(other => (
+    other !== record && other.table.startIndex < record.table.startIndex && record.table.endIndex <= other.table.endIndex
+  )))
+}
+
+function directNestedTables(records: readonly TableRecord[], parent: TableRecord): readonly TableRecord[] {
+  const contained = records.filter(record => (
+    record !== parent
+    && record.table.startIndex > parent.table.startIndex
+    && record.table.endIndex <= parent.table.endIndex
+  ))
+  return contained.filter(record => !contained.some(other => (
+    other !== record && other.table.startIndex < record.table.startIndex && record.table.endIndex <= other.table.endIndex
+  )))
+}
+
+/**
+ * Project one paragraph for change detection.
+ * @param stream - Document data stream.
+ * @param paragraph - Paragraph record from the body.
+ * @param runs - Every run in the body.
+ * @returns The paragraph's stream slice, runs, and properties.
+ */
+function paragraphUnitOf(
+  stream: string,
+  paragraph: IParagraph,
+  runs: readonly ITextRun[],
+): ParagraphUnit {
+  const start = paragraphContentStart(stream, paragraph.startIndex)
+  const end = paragraph.startIndex + 1
+  return {
+    dataStream: stream.slice(start, end),
+    textRuns: runs.filter(run => run.st >= start && run.ed <= end),
+    paragraph,
+  }
+}
+
+/**
+ * Locate the first stream character of the paragraph that ends at `startIndex`.
+ * @param stream - Document data stream.
+ * @param startIndex - Offset of the paragraph's break token.
+ * @returns The offset after the preceding paragraph break, section break, table
+ * end, or cell start.
+ */
+function paragraphContentStart(stream: string, startIndex: number): number {
+  let index = startIndex
+  while (index > 0) {
+    const previous = stream[index - 1]
+    if (
+      previous === PARAGRAPH
+      || previous === SECTION_BREAK
+      || previous === TABLE_END
+      || previous === TABLE_CELL_START
+    ) return index
+    index -= 1
+  }
+  return index
+}
+
+function tableUnitOf(
+  stream: string,
+  paragraphs: readonly IParagraph[],
+  runs: readonly ITextRun[],
+  records: readonly TableRecord[],
+  tableSource: ITables,
+  tableId: string,
+): TableUnit | undefined {
+  const record = records.find(candidate => candidate.table.tableId === tableId)
+  const model = tableSource[tableId]
+  /* v8 ignore next -- Callers pass a table id from the same record set and model. */
+  if (record === undefined || model === undefined) return undefined
+  const rows: TableRowUnit[] = []
+  for (const [rowIndex, row] of model.tableRows.entries()) {
+    const cells: TableCellUnit[] = []
+    for (let column = 0; column < row.tableCells.length; column += 1) {
+      const unit = cellUnitOf(stream, paragraphs, runs, records, tableSource, tableId, rowIndex, column)
+      /* v8 ignore next -- Nested rows mirror their model row cells. */
+      if (unit === undefined) return undefined
+      cells.push(unit)
+    }
+    rows.push({ row, cells })
+  }
+  return { table: model, rows }
+}
+
+function cellUnitOf(
+  stream: string,
+  paragraphs: readonly IParagraph[],
+  runs: readonly ITextRun[],
+  records: readonly TableRecord[],
+  tableSource: ITables,
+  tableId: string,
+  rowIndex: number,
+  column: number,
+): TableCellUnit | undefined {
+  const record = records.find(candidate => candidate.table.tableId === tableId)
+  const model = tableSource[tableId]
+  const range = record?.ranges[rowIndex]?.[column]
+  const cell = model?.tableRows[rowIndex]?.tableCells[column]
+  /* v8 ignore next -- Callers pass a row and column from the same record and model. */
+  if (record === undefined || range === undefined || cell === undefined) return undefined
+  const nested = directNestedTables(records, record)
+    .filter(candidate => candidate.table.startIndex >= range.start && candidate.table.startIndex < range.end)
+  const cellParagraphs = paragraphsStartingBetween(paragraphs, range.start, range.end)
+    .filter(paragraph => !nested.some(candidate => (
+      paragraph.startIndex >= candidate.table.startIndex
+      && paragraph.startIndex < candidate.table.endIndex
+    )))
+  const paragraphUnits: ParagraphUnit[] = []
+  for (const paragraph of cellParagraphs) paragraphUnits.push(paragraphUnitOf(stream, paragraph, runs))
+  const tableUnits: TableUnit[] = []
+  for (const candidate of nested) {
+    const unit = tableUnitOf(stream, paragraphs, runs, records, tableSource, candidate.table.tableId)
+    /* v8 ignore next -- Nested table records have model metadata in the same source. */
+    if (unit === undefined) return undefined
+    tableUnits.push(unit)
+  }
+  return { cell, paragraphs: paragraphUnits, tables: tableUnits }
+}
+
+/**
+ * Sort paragraph records by their stream break offset.
+ * @param paragraphs - Paragraph records in any order.
+ * @returns A new array in ascending stream order.
+ */
+function sortedParagraphs(paragraphs: readonly IParagraph[]): readonly IParagraph[] {
+  return [...paragraphs].sort((left, right) => left.startIndex - right.startIndex)
+}
+
+/**
+ * Collect paragraph records whose break falls in a stream range.
+ * @param paragraphs - Records sorted by `startIndex`.
+ * @param start - Inclusive lower bound.
+ * @param end - Exclusive upper bound.
+ * @returns The records in stream order.
+ */
+function paragraphsStartingBetween(
+  paragraphs: readonly IParagraph[],
+  start: number,
+  end: number,
+): readonly IParagraph[] {
+  let low = 0
+  let high = paragraphs.length
+  while (low < high) {
+    const middle = (low + high) >>> 1
+    const paragraph = paragraphs[middle]
+    if (paragraph !== undefined && paragraph.startIndex < start) low = middle + 1
+    else high = middle
+  }
+  const selected: IParagraph[] = []
+  for (let index = low; index < paragraphs.length; index += 1) {
+    const paragraph = paragraphs[index]
+    if (paragraph === undefined || paragraph.startIndex >= end) break
+    selected.push(paragraph)
+  }
+  return selected
 }
 
 /**
@@ -2641,6 +5176,7 @@ function writeTable(
   )
   const widths: number[] = []
   for (let index = 0; index < columnCount; index += 1) {
+    /* v8 ignore next -- columnCount includes every span position a row can occupy. */
     widths.push(sourceColumns[index]?.size.width.v ?? DEFAULT_COLUMN_WIDTH)
   }
   let xml = `<w:tbl>${writeTableProperties(source)}<w:tblGrid>`
@@ -2702,6 +5238,7 @@ function cellSpan(cell: ITableCell | undefined): number {
 function spanWidth(widths: readonly number[], start: number, span: number): number {
   let total = 0
   for (let index = start; index < start + span; index += 1) {
+    /* v8 ignore next -- columnCount covers every column a cell span can reach. */
     total += widths[index] ?? DEFAULT_COLUMN_WIDTH
   }
   return total
@@ -3105,7 +5642,7 @@ function writeRunProperties(style: ITextStyle | undefined): string {
   if (vertical !== undefined) properties += `<w:vertAlign w:val="${vertical}"/>`
   const border = style.bd?.t ?? style.bd?.r ?? style.bd?.b ?? style.bd?.l
   if (border !== null && border !== undefined) {
-    const color = hexColor(border.cl?.rgb) ?? DEFAULT_BORDER_COLOR
+    const color = hexColor(border.cl.rgb) ?? DEFAULT_BORDER_COLOR
     properties += `<w:bdr w:val="${nameOf(BORDER_WEIGHTS, border.s) ?? 'single'}"`
       + ` w:sz="${String(RUN_BORDER_SIZE)}" w:space="1" w:color="${color}"/>`
   }
@@ -3116,11 +5653,10 @@ function underlineName(decoration: TextDecoration | undefined): string {
   return decoration === undefined ? 'single' : nameOf(UNDERLINE_VALUES, decoration) ?? 'single'
 }
 
-function verticalAlignName(vertical: BaselineOffset): string | undefined {
+function verticalAlignName(vertical: BaselineOffset): string {
   if (vertical === BaselineOffset.SUPERSCRIPT) return 'superscript'
   if (vertical === BaselineOffset.SUBSCRIPT) return 'subscript'
-  if (vertical === BaselineOffset.NORMAL) return 'baseline'
-  return undefined
+  return 'baseline'
 }
 
 function highlightName(color: string): string | undefined {
@@ -3271,7 +5807,7 @@ function collectPreservedPackage(parts: PackageParts): DocxPreservedPackage | un
   for (const [name, content] of [...parts.media, ...parts.notes, ...parts.noteRelationships]) {
     preservedParts.push({ name, base64: encodeBase64(content) })
   }
-  preservedParts.sort((left, right) => left.name < right.name ? -1 : left.name > right.name ? 1 : 0)
+  preservedParts.sort((left, right) => left.name < right.name ? -1 : 1)
   const documentRelationships = preservedRelationshipElements(parts.relationships, isImageOrNoteRelationship)
   const stories: Record<string, readonly string[]> = {}
   for (const [id, xml] of parts.storyRelationships) {
@@ -3365,17 +5901,7 @@ const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz012
  * @returns Standard padded base64 text.
  */
 function encodeBase64(bytes: Uint8Array): string {
-  let text = ''
-  for (let index = 0; index < bytes.length; index += 3) {
-    const first = bytes[index] ?? 0
-    const second = bytes[index + 1]
-    const third = bytes[index + 2]
-    text += BASE64_ALPHABET[first >> 2] ?? ''
-    text += BASE64_ALPHABET[((first & 0x03) << 4) | ((second ?? 0) >> 4)] ?? ''
-    text += second === undefined ? '=' : BASE64_ALPHABET[((second & 0x0F) << 2) | ((third ?? 0) >> 6)] ?? ''
-    text += third === undefined ? '=' : BASE64_ALPHABET[third & 0x3F] ?? ''
-  }
-  return text
+  return Buffer.from(bytes).toString('base64')
 }
 
 /**
@@ -3388,23 +5914,23 @@ function decodeBase64(text: string): Uint8Array {
   if (text.length % 4 !== 0) throw new OfficeExchangeError('conversion-failed', 'Preserved part is not valid base64')
   const bytes: number[] = []
   for (let index = 0; index < text.length; index += 4) {
-    const values = [0, 0, 0, 0]
+    const values: [number, number, number, number] = [0, 0, 0, 0]
     let padding = 0
     for (let offset = 0; offset < 4; offset += 1) {
-      const character = text[index + offset]
+      const character = text.charAt(index + offset)
       if (character === '=') {
         padding += 1
         continue
       }
-      const value = character === undefined ? -1 : BASE64_ALPHABET.indexOf(character)
+      const value = BASE64_ALPHABET.indexOf(character)
       if (value < 0 || padding > 0) {
         throw new OfficeExchangeError('conversion-failed', 'Preserved part is not valid base64')
       }
       values[offset] = value
     }
-    bytes.push(((values[0] ?? 0) << 2) | ((values[1] ?? 0) >> 4))
-    if (padding < 2) bytes.push((((values[1] ?? 0) & 0x0F) << 4) | ((values[2] ?? 0) >> 2))
-    if (padding < 1) bytes.push((((values[2] ?? 0) & 0x03) << 6) | (values[3] ?? 0))
+    bytes.push((values[0] << 2) | (values[1] >> 4))
+    if (padding < 2) bytes.push(((values[1] & 0x0F) << 4) | (values[2] >> 2))
+    if (padding < 1) bytes.push(((values[2] & 0x03) << 6) | values[3])
     if (padding > 0 && index + 4 !== text.length) {
       throw new OfficeExchangeError('conversion-failed', 'Preserved part is not valid base64')
     }
@@ -3639,12 +6165,10 @@ function preservedNoteOverrides(
 ): string {
   let overrides = ''
   for (const [name, contentType] of Object.entries(NOTE_CONTENT_TYPES)) {
-    const declared = declarations.some(declaration => tagAttribute(declaration, 'PartName') === `/${name}`)
     const present = preserved?.parts.some(part => part.name === name) === true
     if (!present) continue
-    overrides += declared
-      ? declarations.find(declaration => tagAttribute(declaration, 'PartName') === `/${name}`) ?? ''
-      : `<Override PartName="/${name}" ContentType="${contentType}"/>`
+    const declaration = declarations.find(candidate => tagAttribute(candidate, 'PartName') === `/${name}`)
+    overrides += declaration ?? `<Override PartName="/${name}" ContentType="${contentType}"/>`
   }
   return overrides
 }
@@ -3665,13 +6189,14 @@ function preservedContentTypeDeclarations(
     declared.add(extension.toLowerCase())
     defaults += declaration
   }
-  const missing = new Set<string>()
+  const missing = new Map<string, string>()
   for (const part of preserved?.parts ?? []) {
     const extension = extensionOf(part)
-    if (IMAGE_CONTENT_TYPES[extension] !== undefined && !declared.has(extension)) missing.add(extension)
+    const contentType = IMAGE_CONTENT_TYPES[extension]
+    if (contentType !== undefined && !declared.has(extension)) missing.set(extension, contentType)
   }
-  for (const extension of [...missing].sort()) {
-    defaults += `<Default Extension="${extension}" ContentType="${IMAGE_CONTENT_TYPES[extension] ?? 'application/octet-stream'}"/>`
+  for (const [extension, contentType] of [...missing].sort()) {
+    defaults += `<Default Extension="${extension}" ContentType="${contentType}"/>`
   }
   return defaults
 }

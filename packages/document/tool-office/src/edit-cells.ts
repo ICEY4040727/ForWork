@@ -178,19 +178,10 @@ function inverseRow(
     action: operation.action === 'insert' ? 'delete' : 'insert',
   }
   if (operation.action === 'insert') return [structural]
-  const restored: DocumentEditStep[] = []
-  for (const [rowKey, rowValue] of Object.entries(cells)) {
-    const row = Number(rowKey)
-    if (!Number.isSafeInteger(row) || row < operation.row || row >= operation.row + operation.count) continue
-    const rowCells = objectOf(rowValue)
-    if (rowCells === undefined) continue
-    for (const [columnKey, cellValue] of Object.entries(rowCells)) {
-      const column = Number(columnKey)
-      if (!Number.isSafeInteger(column)) continue
-      restored.push(...restoreCell(operation.sheetId, row, column, objectOf(cellValue)))
-    }
-  }
-  return [structural, ...restored]
+  return [structural, ...restoreDeletedCells(cells, operation.sheetId, 'row', {
+    start: operation.row,
+    count: operation.count,
+  })]
 }
 
 /**
@@ -209,6 +200,27 @@ function inverseColumn(
     action: operation.action === 'insert' ? 'delete' : 'insert',
   }
   if (operation.action === 'insert') return [structural]
+  return [structural, ...restoreDeletedCells(cells, operation.sheetId, 'column', {
+    start: operation.column,
+    count: operation.count,
+  })]
+}
+
+/**
+ * Restore the cells that a deleted row or column span removed, reading the
+ * pre-edit snapshot.
+ * @param cells - recorded sheet cells before the deletion.
+ * @param sheetId - sheet identity inside the workbook snapshot.
+ * @param axis - whether the deletion removed rows or columns.
+ * @param span - first deleted row or column and the number removed.
+ * @returns steps that restore the value, formula, and style of every recorded cell inside the span.
+ */
+function restoreDeletedCells(
+  cells: Record<string, JsonValue>,
+  sheetId: string,
+  axis: 'row' | 'column',
+  span: { readonly start: number; readonly count: number },
+): DocumentEditStep[] {
   const restored: DocumentEditStep[] = []
   for (const [rowKey, rowValue] of Object.entries(cells)) {
     const row = Number(rowKey)
@@ -218,11 +230,12 @@ function inverseColumn(
     for (const [columnKey, cellValue] of Object.entries(rowCells)) {
       const column = Number(columnKey)
       if (!Number.isSafeInteger(column)) continue
-      if (column < operation.column || column >= operation.column + operation.count) continue
-      restored.push(...restoreCell(operation.sheetId, row, column, objectOf(cellValue)))
+      const position = axis === 'row' ? row : column
+      if (position < span.start || position >= span.start + span.count) continue
+      restored.push(...restoreCell(sheetId, row, column, objectOf(cellValue)))
     }
   }
-  return [structural, ...restored]
+  return restored
 }
 
 /**

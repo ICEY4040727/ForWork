@@ -241,6 +241,84 @@ describe('foldDocumentProjection', () => {
     }
   })
 
+  it('folds a save disposition without exposing it in the entry', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    try {
+      const session = ctx.sessions.create(SessionId('projection-disposition'))
+      const open = recordDocumentOpen(session, {
+        documentId: FIRST,
+        path: 'first.xlsx',
+        format: 'xlsx',
+        contentVersion: 0,
+      })
+      const disposition = {
+        schemaVersion: 1,
+        verbatimCount: 2,
+        spliced: { count: 1, names: ['xl/worksheets/sheet1.xml'] },
+        added: { count: 0, names: [] },
+        removed: { count: 0, names: [] },
+      } as const
+      const plainSave = recordDocumentSave(session, { documentId: FIRST, actor: 'user', contentVersion: 1 })
+      const repeatedSave = recordDocumentSave(session, {
+        documentId: FIRST,
+        actor: 'user',
+        contentVersion: 1,
+        disposition,
+      })
+      const dispositionSave = recordDocumentSave(session, {
+        documentId: FIRST,
+        actor: 'user',
+        contentVersion: 2,
+        disposition,
+      })
+
+      const plainState = fold([open, plainSave])
+      expect(foldDocumentProjection(plainState, repeatedSave)).toBe(plainState)
+      const state = fold([open, plainSave, dispositionSave])
+
+      expect(state.documents[FIRST]).toEqual({
+        documentId: FIRST,
+        path: 'first.xlsx',
+        format: 'xlsx',
+        contentVersion: 2,
+        status: 'open',
+        unsupported: [],
+      })
+      expect(documentProjectionDefinition.stateSchema.parse(JSON.parse(JSON.stringify(state)))).toEqual(state)
+      expect(documentProjectionDefinition.stateVersion).toBe(2)
+    } finally {
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('round-trips macro-enabled formats through the projection schema', () => {
+    const docm = DocumentId('projection:macro.docm')
+    const xlsm = DocumentId('projection:macro.xlsm')
+    const state = fold([
+      {
+        type: 'document/open',
+        seq: SessionSeq(0),
+        time: 0,
+        data: { documentId: docm, path: 'macro.docm', format: 'docm', contentVersion: 0 },
+      },
+      {
+        type: 'document/open',
+        seq: SessionSeq(1),
+        time: 1,
+        data: { documentId: xlsm, path: 'macro.xlsm', format: 'xlsm', contentVersion: 0 },
+      },
+    ])
+
+    expect(state.documents[docm]?.format).toBe('docm')
+    expect(state.documents[xlsm]?.format).toBe('xlsm')
+    expect(documentProjectionDefinition.stateSchema.parse(JSON.parse(JSON.stringify(state)))).toEqual(state)
+  })
+
+  it('declares the state version that matches its format union', () => {
+    expect(documentProjectionDefinition.stateVersion).toBe(2)
+  })
+
   it('rejects a state whose order and entries disagree', () => {
     const entry = {
       documentId: FIRST,

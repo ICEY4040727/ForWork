@@ -1,5 +1,5 @@
 ---
-description: "Office Exchange 能力 seam：OOXML 与单元快照的映射、不支持特性检测，以及由 Office 编辑器与 agent 文档工具共享的旧版转换。"
+description: "Office Exchange 能力 seam：OOXML 与单元快照的映射、原地写入源包、保留与耦合构造拒绝，以及由 Office 编辑器与 agent 文档工具共享的旧版转换。"
 kind: "package-reference"
 ---
 
@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 概述
 
-定义 Office 文件进出可编辑单元模型的契约。该 seam 命名转换与丢失检测；提供方负责 ExcelJS、SheetJS、docx 与 LibreOffice 的具体机制。编辑器与 agent 工具消费 `ctx.officeExchange`，不直接导入转换库。
+定义把 Office 文件移入可编辑单元模型并写回其来源包的契约。该 seam 命名转换、保留、拒绝与保存处置；提供方负责 ExcelJS、docx 与 LibreOffice 的具体机制。编辑器与 agent 工具消费 `ctx.officeExchange`，不直接导入转换库。
 
 ## 目录
 
@@ -39,26 +39,50 @@ await ctx.plugin(LocalOfficeExchange, {
   maxCells: 2_000_000,
   maxConversionMs: 60_000,
   commandTimeoutMs: 5_000,
+  maxSourceAnchors: 100_000,
+  maxSourceAnchorBytes: 8 * 1024 * 1024,
 })
 
 const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, signal)
 ```
 
-`read(path)` 返回检测到的格式、可编辑的单元快照，以及所有无法经受编辑并保存的特性。`write(snapshot, format)` 把快照编码回文件字节但不写入。`detectUnsupported(path)` 报告可能丢失的特性，不把内容读入编辑器。`convertLegacy(path, signal?, outputDir?)` 把 `.doc/.xls/.ppt` 文件转换为可编辑的等价文件；省略 `outputDir` 时写入任意工作区之外的新临时目录。
+`read(path)` 返回检测到的格式、可编辑的单元快照，以及整包重新生成会丢失的每个特性。`write(snapshot, format, source?, signal?)` 把快照编码回文件字节但不写入，并返回 `{ bytes, disposition }`；`source` 是调用方按期望版本读取的源包，它与快照 sidecar 同时存在时选择原地写入器。`detectUnsupported(path)` 报告易丢失特性，不把内容读入编辑器。`detectPreserved(bytes)` 为调用方已持有的字节分类出原样保留类别与耦合构造标记。`convertLegacy(path, signal?, outputDir?)` 把 `.doc/.xls/.ppt` 文件转换为可编辑的等价文件；省略 `outputDir` 时写入任意工作区之外的新临时目录。
 
 支持的格式：
 
-- `.xlsx` 与 `.docx` 可编辑：`read` 与 `write` 将它们映射为 Univer 工作簿与文档快照。
+- `.docx`、`.docm`、`.xlsx` 与 `.xlsm` 可编辑：`read` 把它们映射为 Univer 文档与工作簿快照，`write` 把被编辑单元拼接回源包。原地保存会保留宏启用文件的 VBA 项目与宏启用的主内容类型。
 - `.doc`、`.xls` 与 `.ppt` 必须先经 `convertLegacy` 转换再 `read`；直接读取会报 `unsupported-format`。
 - `.pptx` 仅供预览：`detectUnsupported` 检查它，而 `read` 与 `write` 报 `unsupported-format`。
 
 每个失败都是带稳定 `code` 的 `OfficeExchangeError`；边界在挂载时解析一次，无效值会显式报错。
 
-`formatOf(path)` 按扩展名分类路径；`isEditableFormat` 区分可直接编辑的 `.docx/.xlsx` 与需要转换的格式；`isLegacyFormat` 指出旧版格式集合。
+`formatOf(path)` 按扩展名分类路径；`isEditableFormat` 区分可直接编辑的 `.docx/.docm/.xlsx/.xlsm` 与需要转换的格式；`isLegacyFormat` 指出旧版格式集合。
+
+### 原地保存
+
+当快照携带 `data.officeExchange.source` 且调用方提供源字节时，`write` 从源包组装输出。编辑未改变的每个条目都从其源 ZIP 本地记录复制，因此压缩数据、CRC、时间戳、扩展字段、压缩方法、条目顺序与数据描述符保持逐字节一致。未改变任何单元的保存会原样返回源字节。
+
+在部件内部只有被编辑单元的 XML 区间会改变：一个段落、一个表格单元格或一个工作表 `<c>` 元素。正文级内容控件锚定其整个 `w:sdt` 元素，因此编辑该单元会被拒绝，而相邻编辑不会触碰它。编辑区间之外的每个字节都从源文件复制。工作表行或列的插入与删除表示为行或单元格区间操作，而不是整表重写；当工作表携带合并区域、条件格式区域、数据验证区域、autoFilter 区域或 Excel 表格地址区域时，该移动会被拒绝并指出该构造，因为这些区域的坐标不会随被移动的行或列一起变化；声明的表格部件若其关系、目标部件或 `ref` 无法解析为区域，该移动也会被拒绝，而不是留下过期的表格引用。必需的样式、编号定义、关系或内容类型声明会追加到所属部件的结束标签之前，被编辑的单元格样式只追加其所需的样式组件；不会重新生成任何辅助部件，`word/settings.xml` 从不写入，工作表字符串改动写成内联字符串，使 `xl/sharedStrings.xml` 保持不动。
+
+源 sidecar 记录 `schemaVersion: 1`、打开时的 `format`、源 `packageDigest` 与 `byteLength`、`anchorMode`、`sourceParts`，以及逐单元 `anchors` 或逐工作表 `sheets` 之一。每个锚点给出单元 kind、所属部件、模型 key、未压缩部件中的字节区间，以及规范单元的摘要。它经过编辑器的快照序列化、JSON 线缆与恢复草稿后仍然存在。`maxSourceAnchors`（默认 100,000）与 `maxSourceAnchorBytes`（默认 8 MiB）约束 payload；超过逐单元格数量的工作簿存储工作表摘要并在保存时重建单元格锚点，无法锚定的源文件会在没有 sidecar 的情况下读取。
+
+当后续保存提供的源与 sidecar 的摘要或长度不一致时，写入器会在规划前重新锚定该源，因此无需重新读取也能连续保存两次。无法重新锚定的源会被拒绝。没有 sidecar 的快照，或未提供源的调用方，使用旧版重新生成写入器；该写入器从模型重建整包，并报告不声称任何逐字条目的处置。`.docm` 或 `.xlsm` 目标会拒绝该路径，因为重新生成会写出不含 VBA 项目的无宏包。
+
+### 保留与拒绝
+
+`read` 在 `preserved` 中报告原样保留的构造类别，在 `unsupported` 中报告整包重新生成会丢失的内容；两份列表都不会阻止保存。原地写入器在被编辑单元之外原样携带这些类别：宏、图表、数据透视表、Excel 表格、定义名称、计算链、批注、嵌入对象、绘图、形状、主题、字体表、Web 设置、自定义 XML、外部链接、域、书签、内容控件与文档属性。
+
+当编辑与含义或锚点依赖被改内容的构造相交时，保存会被拒绝：覆盖该单元的修订或批注区间、包裹被编辑文字的内容控件、拥有该文字的域、富文本共享字符串、共享或数组公式、改动的工作表超链接，或含义不明的 `mc:AlternateContent` 分支。写入器无法定位或表达的区间，以及它无法表示的样式组件，也会被拒绝。拒绝会指出原因及其位置，不写入任何内容，也不记录保存事实。与改动无关的未映射属性会重新输出在被拼接的单元内，而不是触发拒绝，包括单元格样式索引、表格单元格与行属性、未映射的段落与文字属性、单元格宽度与适应文字。
+
+只有当工作表携带上述地址区域时，结构性的行或列移动才会被拒绝；没有锚定源的宏启用目标会拒绝保存，而不是退回重新生成写入器。文件中其他位置的原样保留构造绝不会拒绝编辑。
+
+### 保存处置
+
+`write` 返回 `SaveDisposition`：`schemaVersion: 1`、精确的 `verbatimCount`，以及 `spliced`、`added` 与 `removed` 条目各一个 `{ count, names }` 组。计数是精确的；每个 `names` 列表都是排序后的 ASCII，最多 256 个。Remote 把同一个值作为可选属性记录到 `document/save`，因此较早的保存或旧版重新生成会读作缺席而不是无效。
 
 ### 不支持特性的检测
 
-`read` 与 `detectUnsupported` 报告每一项在编辑并保存后会丢失的内容；列表非空时拒绝保存，而不是写入有损文件。
+`read` 与 `detectUnsupported` 报告整包重新生成会丢失的每个构造。对原地保存而言该列表是信息性的：携带该构造本身不会导致拒绝，只有与编辑相交的耦合构造，或写入器无法保留的区间，才会拒绝。
 
 - 文档：宏、修订记录、批注、图表、绘图、形状与嵌入对象。
 - 工作簿：图表、批注部件与非图片绘图部件、宏与嵌入对象。
@@ -69,7 +93,7 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 
 文档图片与脚注/尾注会被保留而不是映射：每个绘图、图片或注释引用所在的 run 都与其媒体部件、关系、注释部件和内容类型声明一起逐字节捕获，并在写入时原样写回。它们不会在编辑器中渲染，也不会成为可编辑内容；周围文字仍然可编辑。
 
-仅当检测未报告任何不支持特性时，文件才以可编辑状态打开。常见的文字与段落格式会映射进文档模型并在保存时写出，因此编辑会保留它们而不会被拒绝；只有编辑器模型没有对应字段的内容才会被拒绝，而不会被静默丢弃。
+文件以“携带所有原样保留构造、而非拒绝”的方式打开。常见的文字与段落格式会映射进文档模型并在保存时写出，因此编辑会保留它们而不会被拒绝；与含义或锚点依赖被改内容的构造相交的编辑会被拒绝并指出该构造。
 
 ### Remote 表面
 
@@ -77,8 +101,8 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 
 该 Remote 从请求头派生的作用域解析实时 Session，并在其中记录 `document/*` 事实；`session-document` 插件把它们折叠为打开集合。
 
-- `read(workspaceFileScope, path)` 从 Session 的工作区根解析路径，用 `assertWithinRoots` 限制范围，在提供方的 `maxFileBytes` 边界内通过 filesystem seam 读取，并返回 `{ format, snapshot, unsupported, version }`。本进程中某文档的第一次读取会追加一次 `document/open`；之后的读取不更新任何事实。打开事实记录工作区相对定位符，因此同一文件的绝对与相对拼写共享同一个文档身份。
-- `save(workspaceFileScope, path, snapshot, format, expectedVersion, attribution)` 在写入前通过 Exchange 重新检测当前源文件，若编辑并保存会丢失某个特性，则以 `office-document/unsupported-feature` 拒绝并指出第一个特性。否则通过提供方序列化快照，并以 filesystem `replaceIfVersion` 守卫发布。自读取以来发生变化的文件会以 `office-document/conflict` 拒绝；写入从不退化为无条件保存。被接受的保存追加带 `attribution.actor`（编辑器保存为 `user`，文档工具为 `agent`）与下一内容版本的 `document/save`；智能体在 turn 内保存时还会记录 `attribution.turn`。内存中的改动留在编辑器内，因此不记录操作步骤或逆操作。
+- `read(workspaceFileScope, path)` 从 Session 的工作区根解析路径，用 `assertWithinRoots` 限制范围，在提供方的 `maxFileBytes` 边界内通过 filesystem seam 读取，并返回 `{ format, snapshot, preserved, unsupported, version }`。本进程中某文档的第一次读取会追加一次 `document/open`；之后的读取不更新任何事实。打开事实记录工作区相对定位符，因此同一文件的绝对与相对拼写共享同一个文档身份。
+- `save(workspaceFileScope, path, snapshot, format, expectedVersion, attribution)` 要求文件仍持有 `expectedVersion`，在字节边界内读取其字节，再次校验版本，并从这些字节通过提供方写入。与耦合构造相交的写入以 `office-document/unsupported-feature` 拒绝并指出该构造，不追加任何事实；自读取以来发生变化的文件会以 `office-document/conflict` 拒绝，写入从不退化为无条件保存。输出通过文件系统的 `replaceIfVersion` 守卫发布。被接受的保存追加带 `attribution.actor`（编辑器保存为 `user`，文档工具为 `agent`）、下一内容版本与写入器处置的 `document/save`；智能体在 turn 内保存时还会记录 `attribution.turn`。内存中的改动留在编辑器内，因此不记录操作步骤或逆操作。
 - `closeDocument(workspaceFileScope, documentId, reason)` 追加 `document/close`，并丢弃进程本地的打开条目。Host 重启后关闭的 tab 仍会留下持久事实。
 - `rebindDocument(workspaceFileScope, documentId, toPath)` 追加 `document/rebind` 并保留身份；旧路径与新路径都必须解析到工作区根内。
 - `markDocumentMissing(workspaceFileScope, documentId)` 追加一次 `document/missing` 并保持文档打开；之后的保存、编辑或重绑会把它重新标记为可用。
@@ -97,7 +121,7 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 
 ### 失败策略
 
-失败是带稳定 `code` 的 `OfficeExchangeError` 值。无法打开文件的读取报告带路径的 `conversion-failed`，而不是泄漏 Node 错误。读取时非空的 `unsupported` 列表意味着写入路径必须拒绝，而不是保存有损文件；产品会指出违规特性并提供替代方案。旧格式转换超过 `maxConversionMs` 时会中止引擎并报告 `too-large`，源文件保持不变。
+失败是带稳定 `code` 的 `OfficeExchangeError` 值。无法打开文件的读取报告带路径的 `conversion-failed`，而不是泄漏 Node 错误。读取时非空的 `unsupported` 列表意味着整包重新生成会丢失内容；原地保存会携带它，只有与编辑相交的耦合构造才会拒绝。ZIP64、加密、分卷或其他不受支持的 OOXML 容器报告 `conversion-failed` 且不写入任何内容。旧格式转换超过 `maxConversionMs` 时会中止引擎并报告 `too-large`，源文件保持不变。
 
 -----
 
@@ -107,7 +131,7 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 <details>
 <summary>实现内部细节——点击展开</summary>
 
-`src/service.ts` 声明抽象的 `OfficeExchange` 服务、context 增强，以及由包入口重新导出的 seam 词汇。`src/types.ts` 保存 JSON 安全的线缆与 seam 词汇；`src/snapshots.ts` 保存 Univer 快照类型，使 Remote Client 永不加载编辑器核心。`src/remote.ts` 实现 `officeDocument` Remote 表面：Session 作用域解析、工作区限制、版本传递、JSON 投影、工作区作用域的转换目录、恢复草稿存储、命令分发与结算，以及其余的保存保证。`src/commands.ts` 拥有 `officeCommandBroker` 服务及其待处理请求注册表。该 Remote 还要求 `sessions` 服务：它只向活跃 Session 追加文档事实。`src/provider/index.ts` 在纯模块 `provider/xlsx.ts`、`provider/docx.ts`、`provider/detect.ts` 与 `provider/legacy.ts` 之上实现 `LocalOfficeExchange`：它拥有文件读取、格式分发、类型化读取失败、调用方指定的旧版转换目录，以及经验证的 `Config` schema。Office 编辑器与 agent 工具仍是消费方；此包不注册任何工具，Remote 唯一的 Session 写入就是上述 `document/*` 事实。
+`src/service.ts` 声明抽象的 `OfficeExchange` 服务、context 增强，以及由包入口重新导出的 seam 词汇。`src/types.ts` 保存 JSON 安全的线缆与 seam 词汇；`src/snapshots.ts` 保存 Univer 快照类型，使 Remote Client 永不加载编辑器核心。`src/remote.ts` 实现 `officeDocument` Remote 表面：Session 作用域解析、工作区限制、版本传递、JSON 投影、工作区作用域的转换目录、恢复草稿存储、命令分发与结算，以及其余的保存保证。`src/commands.ts` 拥有 `officeCommandBroker` 服务及其待处理请求注册表。该 Remote 还要求 `sessions` 服务：它只向活跃 Session 追加文档事实。`src/detect.ts` 分类原样保留构造与耦合标记。`src/package/` 承载 Host-only 的 ZIP/OPC 层：读取器索引本地与中央记录，写入器复制未改动记录并重建中央目录，`ooxml-package.ts` 暴露部件映射、dirty 集合与无操作快速路径。`src/source/` 承载源区间层：命名空间感知的字节扫描器、单元摘要、sidecar 校验与拼接计划。`src/provider/index.ts` 在纯模块 `provider/xlsx.ts`、`provider/docx.ts`、`src/detect.ts` 与 `provider/legacy.ts` 之上实现 `LocalOfficeExchange`：它拥有文件读取、格式分发、写入器选择、类型化失败、调用方指定的旧版转换目录，以及经验证的 `Config` schema。Office 编辑器与 agent 工具仍是消费方；此包不注册任何工具，Remote 唯一的 Session 写入就是上述 `document/*` 事实。
 
 </details>
 
@@ -145,13 +169,19 @@ const { format, snapshot, unsupported } = await ctx.officeExchange.read(path, si
 - `LocalOfficeExchange` 只读写本地路径；工作区限制属于提供路径的工具层与 Session 层。
 - 旧版转换需要 LibreOffice kit；引擎不可用时转换失败，不会回退。
 - PowerPoint 编辑在加入幻灯片单元及其转换之前为只读。
-- 节的页面边框、页码、文档网格、行号以及竖排文字方向不会被映射。页眉和页脚中的绘图与域也不会被映射；页眉和页脚图片与正文图片一样以不透明方式保留而不渲染，其中的列表与超链接采用与正文相同的映射。脚注和尾注正文作为完整部件以不透明方式保留，因此其文字不可编辑。`word/numbering.xml` 中没有任何 `w:num` 引用的抽象编号定义没有可挂接的列表实例，因此会被丢弃。书签标记不会被映射，因此保存后的内部 `w:anchor` 链接保留锚点 id，但不会重建它指向的书签；超链接关系目标始终按外部目标写出。
-- 表格单元格的适应文字、隐藏标记与文字方向属性、`w:tblCellSpacing`、行的 `w:gridBefore`/`w:gridAfter` 偏移、浮动表格位置以及表格样式的条件格式不会被映射，会被丢弃。单元格的 `w:insideH`/`w:insideV` 边框仅在缺少对应外边时作为回退使用，并会按显式单元格边写出；单元格边框的线型变体会归入模型的实线、点线或虚线集合；自动表格宽度会按其解析后的网格宽度写出。
-- 主题部件与由主题派生的样式不会被检查：没有直接取值的主题字体与颜色引用会丢失，`word/styles.xml` 中除 Normal 与标题样式之外的样式不会被重建。引用这类样式的段落会保留其 `pStyle` id，其直接的文字与段落格式仍会保留。
-- 工作簿的行与列大纲级别在 Univer 模型中没有对应字段，会被丢弃；工作表滚动位置与打印设置同样如此。Excel 没有独立的“裁剪”换行标志，因此模型中使用裁剪策略的单元格会按不换行写出；Excel 的 `fill` 以及垂直 `distributed`/`justify` 对齐会映射到最接近的 Univer 对齐。
-- 唯一值、重复值与平均值条件格式在 ExcelJS 中没有写入器，因此保存时会写成等价的 `COUNTIF` 或 `AVERAGE` 表达式。Excel 内置集合之外的图标集不会渲染图标。ExcelJS 不保留规则的文本属性、命中即停（stop-if-true）以及数据条的渐变、边框、方向与轴选项，因此这些选项不会保留。
-- ExcelJS 读取时不保留超链接的屏幕提示，因此只有 URL 与显示文字能往返。列表、整数、小数、日期、时间、文本长度、自定义与任意以外的数据验证类型（复选框与多选列表）在保存时会被拒绝，而不是被丢弃。
-- 单元格图片以 base64 表格绘图保存，并按单元格锚点写回；工作表背景使用相同存储。绝对锚点图片与非图片绘图元素仍会通过 `drawing` 检测被拒绝。png、jpeg、gif 之外的媒体会随扩展名保留，但 ExcelJS 会把内容类型写成 `image/<extension>`，部分应用可能无法识别。
+- 原地保存需要源包。没有 `data.officeExchange.source` 的快照，或未提供源字节的调用方，使用旧版重新生成写入器；该路径从模型重建整包，不声称任何逐字条目。`.docm` 或 `.xlsm` 目标会拒绝该路径，因为重新生成会丢弃 VBA 项目并写出无宏包。
+- ZIP64 归档、加密条目、分卷归档，以及存储或 deflate 之外的压缩方法以 `conversion-failed` 拒绝，而不是重写。文件大小、单元格数量、条目数量与锚点 payload 边界失败时不写入。
+- 辅助部件仅追加：必需的 `w:style` 追加到 `word/styles.xml`，必需的列表定义追加到 `word/numbering.xml`，必需的关系或内容类型声明追加到其结束标签之前。`word/settings.xml` 从不写入。被编辑的单元格样式会复用匹配的 `<xf>`，或只向 `xl/styles.xml` 追加所需的 `<numFmt>`、`<font>`、`<fill>`、`<border>` 与 `<xf>` 条目，并更新该集合的 `count`；现有组件字节保持不变。写入器无法表达的模型样式组件、源 `<xf>` 扩展、主题颜色引用、对角线边框、空的自闭合样式表，或没有 `xl/styles.xml` 的包会拒绝并指出该组件。改动单元格超链接会被拒绝，因为工作表关系不会被重新生成。
+- Word 表格行或列尺寸变化、Word 单元重排，或无法定位或含义不明的源区间会被拒绝并指出构造。被编辑单元内独立的未映射属性会被携带：单元格样式索引、表格单元格与行属性、未映射的段落与文字属性、单元格宽度与适应文字。
+- 工作表行或列移动在工作表携带合并区域、条件格式区域、数据验证区域、autoFilter 区域或 Excel 表格地址区域时会被拒绝并指出该构造；声明的表格部件若其关系、目标部件或 `ref` 无法解析，也会因同样的原因拒绝移动，而不会留下过期引用；普通工作表按行或单元格区间操作移动。
+- 保存的文件从源本地记录组装，并作为一个完整文件通过守卫替换发布；不会在磁盘上原地修补。
+- 节的页面边框、页码、文档网格、行号以及竖排文字方向不会被映射。页眉和页脚中的绘图与域也不会被映射；页眉和页脚图片与正文图片一样以不透明方式保留而不渲染，其中的列表与超链接采用与正文相同的映射。脚注和尾注正文作为完整部件以不透明方式保留，因此其文字不可编辑。原地保存会保留源文件携带的每个 `word/numbering.xml` 定义，包括没有任何 `w:num` 引用的定义；重新生成写入器会丢弃未被引用的抽象编号定义，因为它没有可挂接的列表实例。超链接关系目标始终按外部目标写出。
+- 表格单元格的适应文字、隐藏标记与文字方向属性、`w:tblCellSpacing`、行的 `w:gridBefore`/`w:gridAfter` 偏移、浮动表格位置以及表格样式的条件格式不会被映射进编辑器模型。原地保存会在未编辑内容中保留它们，并在被编辑单元中重新输出与改动无关的部分。单元格的 `w:insideH`/`w:insideV` 边框仅在缺少对应外边时作为回退使用，并会按显式单元格边写出；单元格边框的线型变体会归入模型的实线、点线或虚线集合；自动表格宽度会按其解析后的网格宽度写出。
+- 主题部件与由主题派生的样式不会被映射：没有直接取值的主题字体或颜色引用不会成为可编辑格式。原地保存原样复制主题部件与现有样式定义，只追加它需要的样式定义；重新生成写入器只重建 Normal 与标题样式。引用某样式的段落会保留其 `pStyle` id，其直接的文字与段落格式仍会保留。
+- 工作簿的行与列大纲级别在 Univer 模型中没有对应字段，不可编辑；重新生成写入器会丢弃它们，原地保存则在被编辑单元格区间之外复制工作表。工作表滚动位置与打印设置同理。Excel 没有独立的“裁剪”换行标志，因此模型中使用裁剪策略的单元格会按不换行写出；Excel 的 `fill` 以及垂直 `distributed`/`justify` 对齐会映射到最接近的 Univer 对齐。
+- 唯一值、重复值与平均值条件格式在 ExcelJS 中没有写入器，因此重新生成写入器会写出等价的 `COUNTIF` 或 `AVERAGE` 表达式。Excel 内置集合之外的图标集不会渲染图标。ExcelJS 不保留规则的文本属性、命中即停（stop-if-true）以及数据条的渐变、边框、方向与轴选项，因此这些选项不可编辑。
+- ExcelJS 读取时不保留超链接的屏幕提示，因此被编辑的链接只有 URL 与显示文字能往返；对另一单元格的原地保存会复制未触碰的链接。列表、整数、小数、日期、时间、文本长度、自定义与任意以外的数据验证类型（复选框与多选列表）在保存时会被拒绝，而不是被丢弃。
+- 单元格图片以 base64 表格绘图保存，并按单元格锚点写回；工作表背景使用相同存储。绝对锚点图片与非图片绘图元素作为 `drawing` 内容原样保留，保持不可编辑。png、jpeg、gif 之外的媒体会随扩展名保留，但重新生成写入器会把内容类型写成 `image/<extension>`，部分应用可能无法识别。
 - `convertLegacy` 把转换后的可编辑文件保留在 `<workspaceRoot>/.dsh/office-tmp/` 下，`officeDocument` Remote 可以在同一根检查下读取。失败的转换会删除它刚创建的目录；成功的转换会保留到用户或 Session 删除为止，目前没有任何机制自动清理。
 - 恢复草稿会累积在 `<workspaceRoot>/.dsh/office-tmp/drafts/` 下，直到 `clearDraft` 删除；目前还没有任何机制为不再打开的文档清理草稿。
 - Client 通过 `markDocumentMissing` 报告文件缺失，但目前没有 Client 触发器检测移动：`rebindDocument` 暴露在 Remote 表面上却没有自动调用方。打开集合是进程本地的，用于去重，因此 Host 重启后下一次读取会再次追加 `document/open`；projection 保留文档的位置与版本。

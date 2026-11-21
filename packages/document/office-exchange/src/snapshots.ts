@@ -6,7 +6,7 @@
  */
 
 import type { IDocumentData, IWorkbookData } from '@univerjs/core'
-import type { OfficeFormat, UnsupportedFeature } from './types.ts'
+import type { OfficeFormat, PreservedConstructKind, SaveDisposition, UnsupportedFeature } from './types.ts'
 
 /**
  * A serializable unit snapshot. The discriminant selects the editor core's
@@ -40,4 +40,17 @@ export interface ExchangeReadResult {
    * write path refuse by default rather than silently dropping content.
    */
   readonly unsupported: readonly UnsupportedFeature[]
+  /**
+   * Construct classes the source carries verbatim, sorted and deduplicated.
+   * Omitted by a provider that does not classify them.
+   */
+  readonly preserved?: readonly PreservedConstructKind[]
+}
+
+/** Result of writing a unit snapshot back to an Office file. */
+export interface OfficeWriteResult {
+  /** Complete output file bytes. */
+  readonly bytes: Uint8Array
+  /** What the save carried, spliced, added, and removed. */
+  readonly disposition: SaveDisposition
 }

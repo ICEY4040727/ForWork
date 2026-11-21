@@ -4,7 +4,9 @@ import { formatOf, isEditableFormat, isLegacyFormat } from '../src/format.ts'
 
 it('classifies supported extensions case-insensitively', () => {
   expect(formatOf('report.DOCX')).toBe('docx')
+  expect(formatOf('report.docm')).toBe('docm')
   expect(formatOf('budget.xlsx')).toBe('xlsx')
+  expect(formatOf('budget.MACRO.XLSM')).toBe('xlsm')
   expect(formatOf('deck.pptx')).toBe('pptx')
   expect(formatOf('old.doc')).toBe('doc')
   expect(formatOf('old.XLS')).toBe('xls')
@@ -20,11 +22,15 @@ it('rejects unknown, missing, and extensionless paths', () => {
 
 it('separates directly editable formats from legacy formats', () => {
   expect(isEditableFormat('docx')).toBe(true)
+  expect(isEditableFormat('docm')).toBe(true)
   expect(isEditableFormat('xlsx')).toBe(true)
+  expect(isEditableFormat('xlsm')).toBe(true)
   expect(isEditableFormat('pptx')).toBe(false)
   expect(isEditableFormat('doc')).toBe(false)
   expect(isLegacyFormat('doc')).toBe(true)
   expect(isLegacyFormat('xls')).toBe(true)
   expect(isLegacyFormat('ppt')).toBe(true)
   expect(isLegacyFormat('docx')).toBe(false)
+  expect(isLegacyFormat('docm')).toBe(false)
+  expect(isLegacyFormat('xlsm')).toBe(false)
 })

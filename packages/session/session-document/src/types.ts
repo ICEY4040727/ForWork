@@ -38,7 +38,7 @@ export interface DocumentProjectionEntry {
   /** Current locator; the path may have been rebound. */
   readonly path: string
   /** Editable format detected at open. */
-  readonly format: 'docx' | 'xlsx' | 'pptx'
+  readonly format: 'docx' | 'docm' | 'xlsx' | 'xlsm' | 'pptx'
   /** Latest content version established by open, save, or edit. */
   readonly contentVersion: number
   /** Whether the file still resolves. */

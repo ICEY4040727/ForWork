@@ -58,7 +58,7 @@ export async function readDocument(
       case 'conflict':
         return failure('conflict', `"${documentId}" changed; read it again.`, { currentVersion: outcome.currentVersion })
       case 'unsupported-feature':
-        return failure('unsupported-feature', `"${documentId}" contains features the editor cannot preserve.`, {
+        return failure('unsupported-feature', `"${documentId}" touches content the editor cannot change.`, {
           features: outcome.features,
         })
       case 'applied':

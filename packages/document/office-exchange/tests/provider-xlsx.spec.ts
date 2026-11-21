@@ -426,6 +426,8 @@ it('rejects a workbook with more sheets than the configured cell limit', async (
     maxCells: 1,
     maxConversionMs: 1_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })).rejects.toMatchObject({ code: 'too-large' })
 })
 
@@ -436,6 +438,8 @@ it('rejects a snapshot with more sheets than the configured cell limit', async (
     maxCells: 1,
     maxConversionMs: 1_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })).rejects.toMatchObject({ code: 'too-large' })
 })
 
@@ -484,6 +488,8 @@ it('rejects bytes above the configured file bound', async () => {
     maxCells: 100,
     maxConversionMs: 1_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })).rejects.toMatchObject({ code: 'too-large' })
 })
 
@@ -494,6 +500,8 @@ it('rejects a workbook above the configured cell bound', async () => {
     maxCells: 6,
     maxConversionMs: 1_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })).rejects.toMatchObject({ code: 'too-large' })
 })
 
@@ -504,6 +512,8 @@ it('rejects a snapshot above the configured cell bound before writing', async ()
     maxCells: 6,
     maxConversionMs: 1_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })).rejects.toMatchObject({ code: 'too-large' })
 })
 

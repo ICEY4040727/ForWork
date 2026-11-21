@@ -2184,15 +2184,15 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         signature: '@Remote async read( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<OfficeDocumentReadResult>',
         description: 'Read an editable Office file into a JSON snapshot bound to its version.',
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root. The recorded document identity uses the same workspace-relative locator the editor tab uses, so two spellings of one file never open two documents.' }, { name: 'signal', description: 'caller cancellation.' }],
-        returns: 'the detected format, snapshot, unsupported features, and observed version.',
+        returns: 'the detected format, snapshot, preserved construct classes, unsupported features, and observed version.',
         throws: ['RemoteError when the path is out of scope, the format is not editable, or the read fails.'],
       },
       {
         signature: '@Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, attribution: DocumentSaveAttribution, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>',
-        description: 'Serialize a snapshot and replace the file only at the caller\'s version.',
+        description: 'Serialize a snapshot and replace the file only at the caller\'s version.\n\nThe file is read and stat-verified at `expectedVersion` before the writer runs, so the bytes the writer receives are the bytes the caller read. A preserved construct never refuses the save by itself: the writer returns a typed refusal only when the edit intersects a construct whose meaning or anchors depend on the changed content. A refusal writes nothing and records no fact; the final `replaceIfVersion` write refuses a change that happened during serialization.',
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'snapshot', description: 'snapshot returned by {@link read}, optionally modified.' }, { name: 'format', description: 'target editable format; it must match the snapshot kind.' }, { name: 'expectedVersion', description: 'version returned by {@link read}; a changed file is refused.' }, { name: 'attribution', description: 'who caused the save and the agent turn, when one caused it.' }, { name: 'signal', description: 'caller cancellation.' }],
-        returns: 'the version the guarded write published.',
-        throws: ['RemoteError with `office-document/unsupported-feature` when the source still at `expectedVersion` contains a feature an edit-and-save would drop.', 'RemoteError with `office-document/conflict` when the file changed after the read.'],
+        returns: 'the version the guarded write published and the writer\'s disposition.',
+        throws: ['RemoteError with `office-document/unsupported-feature` when the edit intersects a coupled construct, naming that construct in the message.', 'RemoteError with `office-document/conflict` when the file changed after the read.'],
       },
       {
         signature: '@Remote closeDocument( workspaceFileScope: WorkspaceFileScope, documentId: string, reason: string, signal: AbortSignal, ): Promise<void>',
@@ -2214,9 +2214,9 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
       },
       {
         signature: '@Remote async detectUnsupported( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<readonly UnsupportedFeature[]>',
-        description: 'Report the features an edit-and-save would drop without returning content.',
+        description: 'Report the features a whole-file regeneration would drop without returning content.',
         parameters: [{ name: 'workspaceFileScope', description: 'header-derived workspace root for the Session identity on the wire.' }, { name: 'path', description: 'absolute or workspace-relative path; it must resolve inside the workspace root.' }, { name: 'signal', description: 'caller cancellation.' }],
-        returns: 'every detected unsupported feature, empty when the file round-trips cleanly.',
+        returns: 'every detected unsupported feature; empty when regeneration loses no mapped content.',
         throws: ['RemoteError when the path is out of scope or its format cannot be inspected.'],
       },
       {
@@ -2285,16 +2285,16 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'The detected format, snapshot, and unsupported features.',
       },
       {
-        signature: 'abstract write(snapshot: UnitSnapshot, format: OfficeFormat, signal?: AbortSignal): Promise<Uint8Array>',
-        description: 'Serialize a unit snapshot back to Office file bytes.',
-        parameters: [{ name: 'snapshot', description: 'Editable content to serialize.' }, { name: 'format', description: 'Target Office format.' }, { name: 'signal', description: 'Optional cancellation.' }],
-        returns: 'The encoded file bytes.',
+        signature: 'abstract write( snapshot: UnitSnapshot, format: OfficeFormat, source?: SourcePackage, signal?: AbortSignal, ): Promise<OfficeWriteResult>',
+        description: 'Serialize a unit snapshot back to Office file bytes.\n\n`source` carries the bytes the caller read at its expected version so an in-place writer can splice them. A snapshot without the source sidecar, or a caller that supplies no source, uses the regeneration writer.',
+        parameters: [{ name: 'snapshot', description: 'Editable content to serialize.' }, { name: 'format', description: 'Target Office format.' }, { name: 'source', description: 'Source package bytes read at the caller\'s expected version; omitted for a snapshot that has no source file.' }, { name: 'signal', description: 'Optional cancellation.' }],
+        returns: 'The encoded file bytes and what the save carried or changed.',
       },
       {
         signature: 'abstract detectUnsupported(path: string, signal?: AbortSignal): Promise<readonly UnsupportedFeature[]>',
-        description: 'Report features that would be lost by an edit-and-save.',
+        description: 'Report features a whole-file regeneration would drop.',
         parameters: [{ name: 'path', description: 'File path to inspect.' }, { name: 'signal', description: 'Optional cancellation.' }],
-        returns: 'Detected unsupported features; empty when the file round-trips cleanly.',
+        returns: 'Detected unsupported features; empty when regeneration loses no mapped content.',
       },
       {
         signature: 'abstract convertLegacy(path: string, signal?: AbortSignal, outputDir?: string): Promise<string>',
@@ -6607,7 +6607,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'ExchangeReadResult',
-    declaration: 'export interface ExchangeReadResult {\n    readonly format: OfficeFormat;\n    readonly snapshot: UnitSnapshot;\n    readonly unsupported: readonly UnsupportedFeature[];\n}',
+    declaration: 'export interface ExchangeReadResult {\n    readonly format: OfficeFormat;\n    readonly snapshot: UnitSnapshot;\n    readonly unsupported: readonly UnsupportedFeature[];\n    readonly preserved?: readonly PreservedConstructKind[];\n}',
   },
   {
     name: 'FeedbackCategory',
@@ -7659,11 +7659,11 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'OfficeDocumentReadResult',
-    declaration: 'export interface OfficeDocumentReadResult {\n    readonly format: OfficeFormat;\n    readonly snapshot: OfficeDocumentSnapshot;\n    readonly unsupported: readonly UnsupportedFeature[];\n    readonly version: string;\n}',
+    declaration: 'export interface OfficeDocumentReadResult {\n    readonly format: OfficeFormat;\n    readonly snapshot: OfficeDocumentSnapshot;\n    readonly preserved?: readonly PreservedConstructKind[];\n    readonly unsupported: readonly UnsupportedFeature[];\n    readonly version: string;\n}',
   },
   {
     name: 'OfficeDocumentSaveResult',
-    declaration: 'export interface OfficeDocumentSaveResult {\n    readonly version: string;\n}',
+    declaration: 'export interface OfficeDocumentSaveResult {\n    readonly version: string;\n    readonly disposition?: SaveDisposition;\n}',
   },
   {
     name: 'OfficeDocumentSnapshot',
@@ -7671,11 +7671,11 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'OfficeExtension',
-    declaration: 'export type OfficeExtension = \'doc\' | \'docx\' | \'xls\' | \'xlsx\' | \'ppt\' | \'pptx\';',
+    declaration: 'export type OfficeExtension = \'doc\' | \'docx\' | \'docm\' | \'xls\' | \'xlsx\' | \'xlsm\' | \'ppt\' | \'pptx\';',
   },
   {
     name: 'OfficeFormat',
-    declaration: 'export type OfficeFormat = \'docx\' | \'xlsx\' | \'pptx\' | \'doc\' | \'xls\' | \'ppt\';',
+    declaration: 'export type OfficeFormat = \'docx\' | \'docm\' | \'xlsx\' | \'xlsm\' | \'pptx\' | \'doc\' | \'xls\' | \'ppt\';',
   },
   {
     name: 'OfficeSourceKey',
@@ -7700,6 +7700,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'OfficeToPdfResult',
     declaration: 'export interface OfficeToPdfResult {\n    readonly pdf: Uint8Array;\n    readonly missingFonts: string[];\n    readonly cacheKey: OfficeToPdfKey;\n    readonly generation: OfficeToPdfGeneration;\n}',
+  },
+  {
+    name: 'OfficeWriteResult',
+    declaration: 'export interface OfficeWriteResult {\n    readonly bytes: Uint8Array;\n    readonly disposition: SaveDisposition;\n}',
   },
   {
     name: 'OnboardingPage',
@@ -7932,6 +7936,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PrepareSessionOptions',
     declaration: 'export type PrepareSessionOptions = (CreateSessionOptions & {\n    readonly eventState?: undefined;\n}) | RestoredSessionOptions;',
+  },
+  {
+    name: 'PreservedConstructKind',
+    declaration: 'export type PreservedConstructKind = \'macro\' | \'chart\' | \'pivot-table\' | \'excel-table\' | \'defined-names\' | \'calc-chain\' | \'comment\' | \'embedded-object\' | \'drawing\' | \'shape\' | \'theme\' | \'font-table\' | \'web-settings\' | \'custom-xml\' | \'external-link\' | \'field\' | \'bookmark\' | \'content-control\' | \'document-properties\';',
   },
   {
     name: 'PresetDefinition',
@@ -8368,6 +8376,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SandboxPolicyRequest',
     declaration: 'export interface SandboxPolicyRequest {\n    session?: Session;\n    mode?: SandboxMode;\n}',
+  },
+  {
+    name: 'SaveDisposition',
+    declaration: 'export interface SaveDisposition {\n    readonly schemaVersion: 1;\n    readonly verbatimCount: number;\n    readonly spliced: SaveDispositionGroup;\n    readonly added: SaveDispositionGroup;\n    readonly removed: SaveDispositionGroup;\n    readonly nameLimit: number;\n}',
+  },
+  {
+    name: 'SaveDispositionGroup',
+    declaration: 'export interface SaveDispositionGroup {\n    readonly count: number;\n    readonly names: readonly string[];\n}',
   },
   {
     name: 'SaveFileAttachment',
@@ -9368,6 +9384,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SkillViewOptions',
     declaration: 'export interface SkillViewOptions extends SkillLookupOptions {\n    readonly scope?: ScopeKey | undefined;\n}',
+  },
+  {
+    name: 'SourcePackage',
+    declaration: 'export interface SourcePackage extends ZipArchive {\n    readonly digest: string;\n}',
   },
   {
     name: 'SpeechCatalog',
@@ -10584,6 +10604,18 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'WorkspaceView',
     declaration: 'export interface WorkspaceView {\n    readonly workspaceId: WorkspaceId;\n    readonly path: string;\n    readonly title: string;\n    readonly sessionIds: readonly SessionId[];\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'ZipArchive',
+    declaration: 'export interface ZipArchive {\n    readonly bytes: Uint8Array;\n    readonly entries: readonly ZipEntryRecord[];\n    readonly localOrder: readonly ZipEntryRecord[];\n    readonly centralOrder: readonly ZipEntryRecord[];\n    readonly comment: Uint8Array;\n}',
+  },
+  {
+    name: 'ZipEntryRecord',
+    declaration: 'export interface ZipEntryRecord {\n    readonly name: string;\n    readonly nameBytes: Uint8Array;\n    readonly method: ZipMethod;\n    readonly flags: number;\n    readonly crc32: number;\n    readonly compressedSize: number;\n    readonly uncompressedSize: number;\n    readonly localOffset: number;\n    readonly localHeaderLength: number;\n    readonly dataOffset: number;\n    readonly descriptorLength: number;\n    readonly localRecord: Uint8Array;\n    readonly centralRecord: Uint8Array;\n}',
+  },
+  {
+    name: 'ZipMethod',
+    declaration: 'export type ZipMethod = 0 | 8;',
   },
 ]
 

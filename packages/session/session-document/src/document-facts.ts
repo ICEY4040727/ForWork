@@ -17,6 +17,7 @@ import type {
   DocumentMissingEventData,
   DocumentOpenEventData,
   DocumentRebindEventData,
+  DocumentSaveDisposition,
   DocumentSaveEventData,
   Session,
   SessionEvent,
@@ -44,6 +45,8 @@ export interface DocumentSaveFact {
   readonly contentVersion: number
   /** Turn that caused the save, when a turn caused it. */
   readonly turn?: number
+  /** Preservation summary produced by the writer; forwarded unchanged. */
+  readonly disposition?: DocumentSaveDisposition
 }
 
 /** One document that left the open set. */
@@ -90,7 +93,7 @@ export function recordDocumentOpen(session: Session, fact: DocumentOpenFact): Se
 /**
  * Append `document/save` for an accepted save with no exposed operation steps.
  * @param session - Session that owns the document.
- * @param fact - identity, author, published content version, and causing turn.
+ * @param fact - identity, author, published content version, causing turn, and optional preservation summary.
  * @returns the committed `document/save` event.
  */
 export function recordDocumentSave(session: Session, fact: DocumentSaveFact): SessionEvent<'document/save'> {
@@ -99,6 +102,7 @@ export function recordDocumentSave(session: Session, fact: DocumentSaveFact): Se
     actor: fact.actor,
     contentVersion: fact.contentVersion,
     ...fact.turn === undefined ? {} : { turn: fact.turn },
+    ...fact.disposition === undefined ? {} : { disposition: fact.disposition },
   } satisfies DocumentSaveEventData)
 }
 

@@ -8509,6 +8509,12 @@ importers:
       '@forwork/fs-local':
         specifier: workspace:*
         version: link:../../fs/fs-local
+      '@forwork/sandbox':
+        specifier: workspace:*
+        version: link:../../sandbox/sandbox
+      '@forwork/sandbox-policy':
+        specifier: workspace:*
+        version: link:../../sandbox/sandbox-policy
       '@forwork/session':
         specifier: workspace:*
         version: link:../../core/session

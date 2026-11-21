@@ -44,7 +44,7 @@ beforeEach(async () => {
 })
 afterEach(async () => { await ctx.fiber.dispose() })
 
-it.each(['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'])('converts authorized %s bytes and returns the PDF under source identity', async (extension) => {
+it.each(['doc', 'docx', 'docm', 'xls', 'xlsx', 'xlsm', 'ppt', 'pptx'])('converts authorized %s bytes and returns the PDF under source identity', async (extension) => {
   const path = `report.${extension.toUpperCase()}`
   const result = await ctx.officeToPdf.render(scope, path, 'foreground', new AbortController().signal)
   expect(read).toHaveBeenCalledExactlyOnceWith(target, expect.any(AbortSignal), 4)

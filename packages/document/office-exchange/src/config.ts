@@ -14,6 +14,10 @@ export interface OfficeExchangeConfig {
   maxConversionMs: number
   /** Longest wait for a live editor to answer one document command, in milliseconds. */
   commandTimeoutMs: number
+  /** Largest number of source unit anchors recorded for one opened file. */
+  maxSourceAnchors: number
+  /** Largest byte length of the encoded source-anchor payload for one opened file. */
+  maxSourceAnchorBytes: number
 }
 
 /** Default bounds shared by providers that do not configure their own. */
@@ -22,6 +26,8 @@ export const DEFAULT_OFFICE_EXCHANGE_CONFIG: OfficeExchangeConfig = {
   maxCells: 2_000_000,
   maxConversionMs: 60_000,
   commandTimeoutMs: 5_000,
+  maxSourceAnchors: 100_000,
+  maxSourceAnchorBytes: 8 * 1024 * 1024,
 }
 
 /**
@@ -36,11 +42,15 @@ export function resolveConfig(overrides: Partial<OfficeExchangeConfig>): OfficeE
     maxCells: overrides.maxCells ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.maxCells,
     maxConversionMs: overrides.maxConversionMs ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.maxConversionMs,
     commandTimeoutMs: overrides.commandTimeoutMs ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.commandTimeoutMs,
+    maxSourceAnchors: overrides.maxSourceAnchors ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.maxSourceAnchors,
+    maxSourceAnchorBytes: overrides.maxSourceAnchorBytes ?? DEFAULT_OFFICE_EXCHANGE_CONFIG.maxSourceAnchorBytes,
   }
   assertPositiveInteger('maxFileBytes', config.maxFileBytes)
   assertPositiveInteger('maxCells', config.maxCells)
   assertPositiveInteger('maxConversionMs', config.maxConversionMs)
   assertPositiveInteger('commandTimeoutMs', config.commandTimeoutMs)
+  assertPositiveInteger('maxSourceAnchors', config.maxSourceAnchors)
+  assertPositiveInteger('maxSourceAnchorBytes', config.maxSourceAnchorBytes)
   return config
 }
 

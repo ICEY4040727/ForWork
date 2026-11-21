@@ -1,7 +1,7 @@
 /** Pure format classification for the Exchange seam. */
 import type { EditableOfficeFormat, LegacyOfficeFormat, OfficeFormat } from './types.ts'
 
-const EDITABLE: ReadonlySet<OfficeFormat> = new Set<EditableOfficeFormat>(['docx', 'xlsx'])
+const EDITABLE: ReadonlySet<OfficeFormat> = new Set<EditableOfficeFormat>(['docx', 'docm', 'xlsx', 'xlsm'])
 
 const LEGACY: ReadonlySet<OfficeFormat> = new Set<LegacyOfficeFormat>(['doc', 'xls', 'ppt'])
 
@@ -16,7 +16,9 @@ export function formatOf(path: string): OfficeFormat | undefined {
   const suffix = path.slice(dot + 1).toLowerCase()
   switch (suffix) {
     case 'docx':
+    case 'docm':
     case 'xlsx':
+    case 'xlsm':
     case 'pptx':
     case 'doc':
     case 'xls':
@@ -30,7 +32,7 @@ export function formatOf(path: string): OfficeFormat | undefined {
 /**
  * Whether a format is directly editable without conversion.
  * @param format - Format to classify.
- * @returns `true` for `docx` and `xlsx`, narrowing the format.
+ * @returns `true` for `docx`, `docm`, `xlsx`, and `xlsm`, narrowing the format.
  */
 export function isEditableFormat(format: OfficeFormat): format is EditableOfficeFormat {
   return EDITABLE.has(format)

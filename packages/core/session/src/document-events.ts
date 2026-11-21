@@ -38,8 +38,11 @@ export type DocumentEventActor = 'user' | 'agent' | 'system'
 /** Who caused an accepted content save. A save always has a human or agent author. */
 export type DocumentSaveActor = 'user' | 'agent'
 
-/** Format of an open document. Legacy `.doc`/`.xls`/`.ppt` files are converted before opening. */
-export type DocumentFormat = 'docx' | 'xlsx' | 'pptx'
+/**
+ * Format of an open document. Macro-enabled containers keep their VBA project;
+ * legacy `.doc`/`.xls`/`.ppt` files are converted before opening.
+ */
+export type DocumentFormat = 'docx' | 'docm' | 'xlsx' | 'xlsm' | 'pptx'
 
 /**
  * One spreadsheet cell value after an edit. `value` is the JSON form of the
@@ -210,6 +213,25 @@ export interface DocumentOpenEventData {
 }
 
 /**
+ * Package-entry disposition recorded with an accepted save.
+ *
+ * Counts are exact; each `names` list is sorted ASCII and capped so the fact
+ * stays bounded. The payload is additive and may be absent on older saves.
+ */
+export interface DocumentSaveDisposition {
+  /** Payload version; readers ignore an unknown version's contents. */
+  readonly schemaVersion: 1
+  /** Number of package entries carried unchanged. */
+  readonly verbatimCount: number
+  /** Entries whose spans changed. */
+  readonly spliced: { readonly count: number; readonly names: readonly string[] }
+  /** Entries the save added. */
+  readonly added: { readonly count: number; readonly names: readonly string[] }
+  /** Entries the save removed. */
+  readonly removed: { readonly count: number; readonly names: readonly string[] }
+}
+
+/**
  * Payload of `document/save`: one accepted save that carried no structured
  * operation.
  *
@@ -229,6 +251,8 @@ export interface DocumentSaveEventData {
   readonly contentVersion: number
   /** Turn that caused the save, when a turn caused it. */
   readonly turn?: number
+  /** Optional preservation summary; absent for saves that carry no span plan. */
+  readonly disposition?: DocumentSaveDisposition
 }
 
 /**

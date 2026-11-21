@@ -180,9 +180,9 @@ export class OfficeToPdf extends TypertRemoteService {
     try {
       signal.throwIfAborted()
       const extension = extname(path).slice(1).toLowerCase()
-      if (extension !== 'doc' && extension !== 'docx' && extension !== 'xls'
-        && extension !== 'xlsx' && extension !== 'ppt' && extension !== 'pptx') {
-        throw new OfficeToPdfError('unsupported-format', 'The path must end in doc, docx, xls, xlsx, ppt, or pptx.')
+      if (extension !== 'doc' && extension !== 'docx' && extension !== 'docm' && extension !== 'xls'
+        && extension !== 'xlsx' && extension !== 'xlsm' && extension !== 'ppt' && extension !== 'pptx') {
+        throw new OfficeToPdfError('unsupported-format', 'The path must end in doc, docx, docm, xls, xlsx, xlsm, ppt, or pptx.')
       }
       const files = this.ctx.get('workspaceFiles')
       const fs = this.ctx.get('fs')

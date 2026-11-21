@@ -7,7 +7,8 @@
  */
 
 import { Context, Service } from '@forwork/cordis'
-import type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
+import type { SourcePackage } from './package/types.ts'
+import type { ExchangeReadResult, OfficeWriteResult, UnitSnapshot } from './snapshots.ts'
 import type { OfficeFormat, UnsupportedFeature } from './types.ts'
 
 declare module '@forwork/cordis' {
@@ -38,18 +39,29 @@ export abstract class OfficeExchange extends Service {
 
   /**
    * Serialize a unit snapshot back to Office file bytes.
+   *
+   * `source` carries the bytes the caller read at its expected version so an
+   * in-place writer can splice them. A snapshot without the source sidecar, or
+   * a caller that supplies no source, uses the regeneration writer.
    * @param snapshot - Editable content to serialize.
    * @param format - Target Office format.
+   * @param source - Source package bytes read at the caller's expected version;
+   * omitted for a snapshot that has no source file.
    * @param signal - Optional cancellation.
-   * @returns The encoded file bytes.
+   * @returns The encoded file bytes and what the save carried or changed.
    */
-  abstract write(snapshot: UnitSnapshot, format: OfficeFormat, signal?: AbortSignal): Promise<Uint8Array>
+  abstract write(
+    snapshot: UnitSnapshot,
+    format: OfficeFormat,
+    source?: SourcePackage,
+    signal?: AbortSignal,
+  ): Promise<OfficeWriteResult>
 
   /**
-   * Report features that would be lost by an edit-and-save.
+   * Report features a whole-file regeneration would drop.
    * @param path - File path to inspect.
    * @param signal - Optional cancellation.
-   * @returns Detected unsupported features; empty when the file round-trips cleanly.
+   * @returns Detected unsupported features; empty when regeneration loses no mapped content.
    */
   abstract detectUnsupported(path: string, signal?: AbortSignal): Promise<readonly UnsupportedFeature[]>
 

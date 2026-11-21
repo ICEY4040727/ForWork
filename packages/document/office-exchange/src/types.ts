@@ -12,10 +12,10 @@ import type { JsonValue } from '@forwork/util-values'
 import type {} from '@forwork/typert-protocol'
 
 /** Office document formats handled by the Exchange layer. */
-export type OfficeFormat = 'docx' | 'xlsx' | 'pptx' | 'doc' | 'xls' | 'ppt'
+export type OfficeFormat = 'docx' | 'docm' | 'xlsx' | 'xlsm' | 'pptx' | 'doc' | 'xls' | 'ppt'
 
 /** Formats the editable surface accepts and the agent can operate on. */
-export type EditableOfficeFormat = 'docx' | 'xlsx'
+export type EditableOfficeFormat = 'docx' | 'docm' | 'xlsx' | 'xlsm'
 
 /** Legacy binary formats converted to an editable format before opening. */
 export type LegacyOfficeFormat = 'doc' | 'xls' | 'ppt'
@@ -48,6 +48,97 @@ export type UnsupportedFeatureKind =
   | 'other'
 
 /**
+ * Unmodeled construct classes an in-place save carries verbatim. Detection
+ * reports the classes present in a source package; presence alone never
+ * refuses a save.
+ */
+export type PreservedConstructKind =
+  | 'macro'
+  | 'chart'
+  | 'pivot-table'
+  | 'excel-table'
+  | 'defined-names'
+  | 'calc-chain'
+  | 'comment'
+  | 'embedded-object'
+  | 'drawing'
+  | 'shape'
+  | 'theme'
+  | 'font-table'
+  | 'web-settings'
+  | 'custom-xml'
+  | 'external-link'
+  | 'field'
+  | 'bookmark'
+  | 'content-control'
+  | 'document-properties'
+
+/**
+ * Construct classes whose meaning or anchors depend on the content an edit
+ * would change. An edited unit intersecting one of these is a refusal.
+ */
+export type CoupledConstructKind =
+  | 'tracked-change'
+  | 'comment-range'
+  | 'content-control-wrap'
+  | 'field-owned-text'
+  | 'rich-text-shared-string'
+  | 'shared-formula'
+  | 'array-formula'
+  | 'ambiguous-alternate-content'
+
+/** One coupled-construct occurrence located in a source part. */
+export interface CoupledConstructMarker {
+  /** Construct class whose anchor or meaning the edit would disturb. */
+  readonly kind: CoupledConstructKind
+  /** OPC part name, exactly as stored in the package. */
+  readonly part: string
+  /** Byte offset of the construct's start tag in the uncompressed part. */
+  readonly offset: number
+}
+
+/**
+ * Byte-based classification of a source package for an in-place save. It never
+ * refuses on its own: the caller intersects {@link CoupledConstructMarker}
+ * offsets with the edited unit spans.
+ */
+export interface PreservedConstructs {
+  /** Construct classes carried verbatim; never a whole-file refusal list. */
+  readonly preserved: ReadonlySet<PreservedConstructKind>
+  /** Coupled-construct occurrences, sorted by part name then offset. */
+  readonly coupled: readonly CoupledConstructMarker[]
+}
+
+/** Entry names affected one way by a save, with the exact count before truncation. */
+export interface SaveDispositionGroup {
+  /** Entries in this group, counted exactly even when `names` is truncated. */
+  readonly count: number
+  /** Sorted ASCII entry names, truncated to the disposition's `nameLimit`. */
+  readonly names: readonly string[]
+}
+
+/**
+ * What an in-place save carried, spliced, added, and removed. The counts are
+ * exact; each group's `names` holds a sorted ASCII prefix of the affected
+ * entries. A legacy regeneration cannot account for individual entries and
+ * reports no group members.
+ */
+export interface SaveDisposition {
+  /** Payload version. */
+  readonly schemaVersion: 1
+  /** Entries copied unchanged from the source package. */
+  readonly verbatimCount: number
+  /** Entries that received at least one span operation. */
+  readonly spliced: SaveDispositionGroup
+  /** New entries the save created. */
+  readonly added: SaveDispositionGroup
+  /** Source entries the save dropped. */
+  readonly removed: SaveDispositionGroup
+  /** Cap applied to each group's `names` array. */
+  readonly nameLimit: number
+}
+
+/**
  * A document snapshot on the Remote wire. Univer's native snapshot interfaces
  * admit unconstrained custom fields, which a JSON boundary cannot carry, so the
  * Remote projects and restores the payload as lossless JSON around the kind
@@ -73,16 +164,27 @@ export interface OfficeDocumentReadResult {
   readonly format: OfficeFormat
   /** Editable content at {@link version}. */
   readonly snapshot: OfficeDocumentSnapshot
-  /** Features the editable model cannot preserve on save. */
+  /**
+   * Construct classes the source carries verbatim, sorted and deduplicated.
+   * Absent from a Host that does not classify them; presence never blocks a save.
+   */
+  readonly preserved?: readonly PreservedConstructKind[]
+  /**
+   * Features a whole-file regeneration would drop. Presence alone never blocks
+   * a save: the in-place writer refuses only an edit that intersects a coupled
+   * construct.
+   */
   readonly unsupported: readonly UnsupportedFeature[]
   /** Opaque content version the returned snapshot was read from. */
   readonly version: string
 }
 
-/** The version a successful save published. */
+/** The version a successful save published and, when the Host reports it, what it changed. */
 export interface OfficeDocumentSaveResult {
   /** Opaque content version of the written file. */
   readonly version: string
+  /** Writer-computed account of the entries the save carried or changed. */
+  readonly disposition?: SaveDisposition
 }
 
 /**

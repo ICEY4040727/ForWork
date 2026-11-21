@@ -3,32 +3,41 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/document/office-exchange/README.md
 /:
-  en: 7fa971b6b165fcef
-  zh: 9825bd83051febfa
+  en: c14351525c3862b7
+  zh: 5787c924db9decdb
 /forwork-office-exchange:
   en: 9c86766aa68ad0a0
   zh: b69ae6496baf1fc9
 /forwork-office-exchange/summary:
-  en: 5b6daa507e3ce34b
-  zh: 8b322ccf7926bc09
+  en: 5c461ec0a6cec0ac
+  zh: 5ecacdc2113af7e7
 /forwork-office-exchange/table-of-contents:
   en: d152484eb41ac6b4
   zh: 5ea16c73684ce99f
 /forwork-office-exchange/use-this-package:
-  en: ddefc248050dfd08
-  zh: a680525bb0a04837
+  en: 29297d4a32b1eed4
+  zh: cbb23032dd6aee91
+/forwork-office-exchange/use-this-package/in-place-save:
+  en: 398d448a5cb93c3a
+  zh: 950ff0c1658a51f4
+/forwork-office-exchange/use-this-package/preservation-and-refusal:
+  en: 02d41d13c3c39176
+  zh: d0ea28eceef75a19
+/forwork-office-exchange/use-this-package/save-disposition:
+  en: 513d6428777fa30d
+  zh: d741263f2a035143
 /forwork-office-exchange/use-this-package/unsupported-feature-detection:
-  en: 84eeeb706b9276c3
-  zh: 4133e81f548b7f4f
+  en: 6558c8bf3ac51219
+  zh: e27518bc3de2fa9e
 /forwork-office-exchange/use-this-package/remote-surface:
-  en: 9f9d24ca0f482966
-  zh: effb082632212d18
+  en: fcfbf7aa9eb7584a
+  zh: b9eac7bec5e7b153
 /forwork-office-exchange/use-this-package/failure-policy:
-  en: 7ad3002ef134f80f
-  zh: 8d7e3f44c0f9f790
+  en: 3b2e66572669ce9e
+  zh: 643989fbba0d6c4c
 /forwork-office-exchange/understand-the-implementation:
-  en: 47541bd0f5e9fff0
-  zh: 76afdcd0f974cf05
+  en: 6eac360ef8123de4
+  zh: bfa6a8553db15f3b
 /forwork-office-exchange/further-exploration:
   en: 7de3c1c580530be2
   zh: 5db8b3bca9d7bedb
@@ -48,8 +57,8 @@
   en: 42588da50a87c0fb
   zh: d43c66f963848b06
 /forwork-office-exchange/known-limitations-and-deferred-work:
-  en: e9fe4d4c4babb8de
-  zh: 00607943eac5c1eb
+  en: e2d29840c998961f
+  zh: 83bdc64f75fda92d
 /forwork-office-exchange/known-limitations-and-deferred-work/dev-note:
-  en: 5defd360a85771f1
+  en: 2da74d3600e9ba4b
   zh: 2677454fb444860e

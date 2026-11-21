@@ -365,6 +365,8 @@ export const LINK_MAP: Readonly<Record<string, string>> = {
   OfficeToPdfPriority: 'office-to-pdf.md',
   OfficeToPdfGeneration: 'office-to-pdf.md',
   ExchangeReadResult: 'office-exchange.md',
+  OfficeWriteResult: 'office-exchange.md',
+  SourcePackage: 'office-exchange.md',
   UnitSnapshot: 'office-exchange.md',
   OfficeFormat: 'office-exchange.md',
   UnsupportedFeature: 'office-exchange.md',

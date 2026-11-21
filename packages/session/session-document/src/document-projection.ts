@@ -32,7 +32,13 @@ export type {
 const documentEntrySchema: ZodType<DocumentProjectionEntry> = zod.object({
   documentId: zod.string().min(1).transform(value => DocumentId(value)),
   path: zod.string().min(1),
-  format: zod.union([zod.literal('docx'), zod.literal('xlsx'), zod.literal('pptx')]),
+  format: zod.union([
+    zod.literal('docx'),
+    zod.literal('docm'),
+    zod.literal('xlsx'),
+    zod.literal('xlsm'),
+    zod.literal('pptx'),
+  ]),
   contentVersion: zod.number().int().nonnegative(),
   status: zod.union([zod.literal('open'), zod.literal('missing')]),
   unsupported: zod.array(zod.object({
@@ -194,5 +200,5 @@ export const documentProjectionDefinition = {
     viewSchema: documentProjectionStateSchema,
     view: (state: DocumentProjectionState): DocumentProjectionView => state,
   },
-  stateVersion: 1,
+  stateVersion: 2,
 } satisfies ProjectionDefinition<'document', DocumentProjectionState>

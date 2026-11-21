@@ -145,11 +145,6 @@ export async function runEdit<T>(
     // The id path is the locator the editor tab and the open fact already use;
     // reading the absolute target instead would mint a second document id.
     const read = await call.runtime.documents.read(call.scope, target.path, call.signal)
-    if (read.unsupported.length > 0) {
-      return failure('unsupported-feature', `"${documentId}" contains features the editor cannot preserve.`, {
-        features: read.unsupported,
-      })
-    }
     const inverse = plan.inverse(read.snapshot)
     const outcome = await call.runtime.commands.execute({
       session: call.session,
@@ -210,7 +205,7 @@ async function settleEdit<T>(
     case 'pending-edits':
       return failure('pending-edits', `"${target.documentId}" has unsaved user edits; save them first.`)
     case 'unsupported-feature':
-      return failure('unsupported-feature', `"${target.documentId}" contains features the editor cannot preserve.`, {
+      return failure('unsupported-feature', `"${target.documentId}" touches content the editor cannot change, so nothing was saved.`, {
         features: outcome.features,
       })
     case 'document-not-open':

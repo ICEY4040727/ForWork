@@ -4,11 +4,12 @@ import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate'
 import { PageOrientType } from '@univerjs/core'
 import { expect, it } from 'vitest'
 import { DEFAULT_OFFICE_EXCHANGE_CONFIG } from '../src/config.ts'
-import { detectUnsupportedFeatures } from '../src/detect.ts'
+import { detectPreserved, detectUnsupportedFeatures } from '../src/detect.ts'
 import type { OfficeExchangeErrorCode } from '../src/errors.ts'
 import { OfficeExchangeError } from '../src/errors.ts'
 import { readDocument, writeDocument } from '../src/provider/docx.ts'
 import { readWorkbook, writeWorkbook } from '../src/provider/xlsx.ts'
+import type { CoupledConstructMarker, PreservedConstructKind } from '../src/types.ts'
 
 const DOCUMENT_XML = 'word/document.xml'
 const PLAIN_DOCUMENT = '<w:document><w:body><w:p/></w:body></w:document>'
@@ -16,6 +17,16 @@ const WORKSHEET_XML = 'xl/worksheets/sheet1.xml'
 const PLAIN_WORKSHEET = '<worksheet><sheetData><row r="1"><c r="A1"><v>1</v></c></row></sheetData></worksheet>'
 const DOCX_FIXTURE = new URL('./fixtures/roundtrip.docx', import.meta.url)
 const XLSX_FIXTURE = new URL('./fixtures/roundtrip.xlsx', import.meta.url)
+const MACRO_FIXTURE = new URL('./fixtures/unsupported-macro.docx', import.meta.url)
+const TRACKED_FIXTURE = new URL('./fixtures/unsupported-tracked.docx', import.meta.url)
+
+function preservedKindsOf(bytes: Uint8Array): readonly PreservedConstructKind[] {
+  return [...detectPreserved(bytes).preserved]
+}
+
+function markersOf(bytes: Uint8Array): readonly CoupledConstructMarker[] {
+  return detectPreserved(bytes).coupled
+}
 
 function bodyOf(inner: string): string {
   return `<w:document><w:body>${inner}</w:body></w:document>`
@@ -565,4 +576,245 @@ it('keeps the supported round-trip fixtures free of detected losses', async () =
   const reopened = await readWorkbook(rewrittenWorkbook)
   expect(reopened.sheetOrder.map(id => reopened.sheets[id]?.name))
     .toEqual(originalWorkbook.sheetOrder.map(id => originalWorkbook.sheets[id]?.name))
+})
+
+it('reports no preserved or coupled constructs for a clean package', () => {
+  const bytes = packageOf({
+    '[Content_Types].xml': '<Types/>',
+    [DOCUMENT_XML]: PLAIN_DOCUMENT,
+  })
+  expect(detectPreserved(bytes)).toEqual({ preserved: new Set(), coupled: [] })
+})
+
+it('reports every preserved construct class carried by package entries', () => {
+  const cases = [
+    ['word/vbaProject.bin', 'macro'],
+    ['xl/charts/chart1.xml', 'chart'],
+    ['xl/pivotTables/pivotTable1.xml', 'pivot-table'],
+    ['xl/pivotCache/pivotCacheDefinition1.xml', 'pivot-table'],
+    ['xl/tables/table1.xml', 'excel-table'],
+    ['xl/calcChain.xml', 'calc-chain'],
+    ['word/comments.xml', 'comment'],
+    ['word/commentsExtended.xml', 'comment'],
+    ['xl/threadedComments/threadedComment1.xml', 'comment'],
+    ['word/embeddings/oleObject1.bin', 'embedded-object'],
+    ['word/drawings/drawing1.xml', 'drawing'],
+    ['word/vmlDrawing1.vml', 'shape'],
+    ['word/theme/theme1.xml', 'theme'],
+    ['xl/theme/theme1.xml', 'theme'],
+    ['word/fontTable.xml', 'font-table'],
+    ['word/webSettings.xml', 'web-settings'],
+    ['customXml/item1.xml', 'custom-xml'],
+    ['xl/externalLinks/externalLink1.xml', 'external-link'],
+    ['docProps/core.xml', 'document-properties'],
+    ['docProps/app.xml', 'document-properties'],
+  ] as const
+  for (const [path, kind] of cases) {
+    const bytes = packageOf({ [DOCUMENT_XML]: PLAIN_DOCUMENT, [path]: '<part/>' })
+    expect(preservedKindsOf(bytes), path).toEqual([kind])
+  }
+})
+
+it('reports defined names from the workbook part', () => {
+  const named = packageOf({
+    'xl/workbook.xml': '<workbook><definedNames>'
+      + '<definedName name="Total">Sheet1!$A$1</definedName></definedNames></workbook>',
+  })
+  expect(preservedKindsOf(named)).toEqual(['defined-names'])
+
+  const plain = packageOf({ 'xl/workbook.xml': '<workbook><sheets><sheet name="S"/></sheets></workbook>' })
+  expect(preservedKindsOf(plain)).toEqual([])
+})
+
+it('reports the macro fixture as preserved rather than as a refusal list', async () => {
+  const bytes = new Uint8Array(await readFile(MACRO_FIXTURE))
+  const preserved = detectPreserved(bytes)
+  expect([...preserved.preserved]).toEqual(['macro'])
+  expect(preserved.coupled).toEqual([])
+  expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'macro', detail: 'word/vbaProject.bin' }])
+})
+
+it('reports the macro class for macro-enabled docm and xlsm fixtures', async () => {
+  const cases = [['macro.docm', 'word/vbaProject.bin'], ['macro.xlsm', 'xl/vbaProject.bin']] as const
+  for (const [name, part] of cases) {
+    const bytes = new Uint8Array(await readFile(new URL(`./fixtures/${name}`, import.meta.url)))
+    expect(detectUnsupportedFeatures(bytes)).toEqual([{ kind: 'macro', detail: part }])
+    expect(preservedKindsOf(bytes)).toContain('macro')
+  }
+})
+
+it('reports tracked changes as coupled markers without refusing the file', async () => {
+  const bytes = new Uint8Array(await readFile(TRACKED_FIXTURE))
+  const result = detectPreserved(bytes)
+  expect([...result.preserved]).toEqual([])
+  expect(result.coupled).toHaveLength(2)
+  expect(result.coupled.map(marker => ({ kind: marker.kind, part: marker.part }))).toEqual([
+    { kind: 'tracked-change', part: DOCUMENT_XML },
+    { kind: 'tracked-change', part: DOCUMENT_XML },
+  ])
+  expect(result.coupled[0]?.offset).toBeGreaterThan(0)
+  expect(result.coupled[1]?.offset).toBeGreaterThan(result.coupled[0]?.offset ?? 0)
+})
+
+it('marks each revision element as a tracked-change marker', () => {
+  const xml = bodyOf(
+    '<w:p><w:ins w:id="1"><w:r><w:t>a</w:t></w:r></w:ins>'
+    + '<w:del w:id="2"><w:r><w:delText>b</w:delText></w:r></w:del></w:p>',
+  )
+  const result = detectPreserved(packageOf({ [DOCUMENT_XML]: xml }))
+  expect([...result.preserved]).toEqual([])
+  expect(result.coupled).toEqual([
+    { kind: 'tracked-change', part: DOCUMENT_XML, offset: xml.indexOf('<w:ins ') },
+    { kind: 'tracked-change', part: DOCUMENT_XML, offset: xml.indexOf('<w:del ') },
+  ])
+})
+
+it('marks comment ranges and comment references as coupled and preserves the comment part', () => {
+  const xml = bodyOf(
+    '<w:p><w:commentRangeStart w:id="0"/><w:r><w:t>note</w:t></w:r>'
+    + '<w:commentRangeEnd w:id="0"/><w:r><w:commentReference w:id="0"/></w:r></w:p>',
+  )
+  const result = detectPreserved(packageOf({
+    [DOCUMENT_XML]: xml,
+    'word/comments.xml': '<w:comments><w:comment w:id="0"/></w:comments>',
+  }))
+  expect([...result.preserved]).toEqual(['comment'])
+  expect(result.coupled).toEqual([
+    { kind: 'comment-range', part: DOCUMENT_XML, offset: xml.indexOf('<w:commentRangeStart') },
+    { kind: 'comment-range', part: DOCUMENT_XML, offset: xml.indexOf('<w:commentRangeEnd') },
+    { kind: 'comment-range', part: DOCUMENT_XML, offset: xml.indexOf('<w:commentReference') },
+  ])
+})
+
+it('reports a field as preserved and marks its owned text as coupled', () => {
+  const xml = bodyOf(
+    '<w:p><w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p>',
+  )
+  const result = detectPreserved(packageOf({ [DOCUMENT_XML]: xml }))
+  expect([...result.preserved]).toEqual(['field'])
+  expect(result.coupled).toEqual([
+    { kind: 'field-owned-text', part: DOCUMENT_XML, offset: xml.indexOf('<w:fldSimple') },
+  ])
+})
+
+it('marks complex field characters as coupled', () => {
+  const xml = bodyOf(
+    '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r>'
+    + '<w:r><w:t>1</w:t></w:r>'
+    + '<w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>',
+  )
+  const result = detectPreserved(packageOf({ [DOCUMENT_XML]: xml }))
+  expect([...result.preserved]).toEqual(['field'])
+  expect(result.coupled.map(marker => marker.offset)).toEqual([
+    xml.indexOf('<w:fldChar w:fldCharType="begin"'),
+    xml.indexOf('<w:fldChar w:fldCharType="end"'),
+  ])
+})
+
+it('reports bookmark anchors as preserved', () => {
+  const xml = bodyOf(
+    '<w:p><w:bookmarkStart w:id="0" w:name="mark"/><w:r><w:t>x</w:t></w:r>'
+    + '<w:bookmarkEnd w:id="0"/></w:p>',
+  )
+  const result = detectPreserved(packageOf({ [DOCUMENT_XML]: xml }))
+  expect([...result.preserved]).toEqual(['bookmark'])
+  expect(result.coupled).toEqual([])
+})
+
+it('reports a content control as preserved and its wrap as coupled', () => {
+  const xml = bodyOf(
+    '<w:sdt><w:sdtPr><w:alias w:val="Name"/></w:sdtPr>'
+    + '<w:sdtContent><w:p><w:r><w:t>Alice</w:t></w:r></w:p></w:sdtContent></w:sdt>',
+  )
+  const result = detectPreserved(packageOf({ [DOCUMENT_XML]: xml }))
+  expect([...result.preserved]).toEqual(['content-control'])
+  expect(result.coupled).toEqual([
+    { kind: 'content-control-wrap', part: DOCUMENT_XML, offset: xml.indexOf('<w:sdt>') },
+  ])
+})
+
+it('marks alternate content as ambiguous and coupled', () => {
+  const xml = bodyOf(
+    '<w:p><mc:AlternateContent><mc:Choice Requires="wps">'
+    + '<w:r><w:t>choice</w:t></w:r></mc:Choice>'
+    + '<mc:Fallback><w:r><w:t>fallback</w:t></w:r></mc:Fallback>'
+    + '</mc:AlternateContent></w:p>',
+  )
+  const result = detectPreserved(packageOf({ [DOCUMENT_XML]: xml }))
+  expect(result.coupled).toEqual([
+    { kind: 'ambiguous-alternate-content', part: DOCUMENT_XML, offset: xml.indexOf('<mc:AlternateContent>') },
+  ])
+})
+
+it('marks rich-text shared strings as coupled but not plain ones', () => {
+  const shared = '<sst><si><t>plain</t></si><si><r><rPr><b/></rPr><t>rich</t></r></si></sst>'
+  const bytes = packageOf({ [WORKSHEET_XML]: PLAIN_WORKSHEET, 'xl/sharedStrings.xml': shared })
+  expect(markersOf(bytes)).toEqual([
+    {
+      kind: 'rich-text-shared-string',
+      part: 'xl/sharedStrings.xml',
+      offset: shared.indexOf('<si><r>'),
+    },
+  ])
+})
+
+it('marks shared and array formulas as coupled', () => {
+  const xml = '<worksheet><sheetData><row r="1">'
+    + '<c r="B1"><f t="shared" ref="B1:B2" si="0">A1*2</f><v>2</v></c>'
+    + '<c r="C1"><f t="array" ref="C1:C2">A1:A2*2</f><v>4</v></c>'
+    + '<c r="D1"><f>A1+1</f><v>3</v></c>'
+    + '</row></sheetData></worksheet>'
+  expect(markersOf(packageOf({ [WORKSHEET_XML]: xml }))).toEqual([
+    { kind: 'shared-formula', part: WORKSHEET_XML, offset: xml.indexOf('<f t="shared"') },
+    { kind: 'array-formula', part: WORKSHEET_XML, offset: xml.indexOf('<f t="array"') },
+  ])
+})
+
+it('keeps preserved classes separate from coupled markers in one package', () => {
+  const xml = bodyOf('<w:p><w:ins w:id="1"><w:r><w:t>x</w:t></w:r></w:ins></w:p>')
+  const result = detectPreserved(packageOf({
+    [DOCUMENT_XML]: xml,
+    'word/vbaProject.bin': new Uint8Array([0]),
+    'word/theme/theme1.xml': '<theme/>',
+  }))
+  expect([...result.preserved]).toEqual(['macro', 'theme'])
+  expect(result.coupled).toEqual([
+    { kind: 'tracked-change', part: DOCUMENT_XML, offset: xml.indexOf('<w:ins ') },
+  ])
+})
+
+it('sorts coupled markers by part name then offset', () => {
+  const documentXml = bodyOf('<w:p><w:ins w:id="1"><w:r><w:t>x</w:t></w:r></w:ins></w:p>')
+  const sheetXml = '<worksheet><sheetData><row r="1">'
+    + '<c r="A1"><f t="array" ref="A1" si="0">1</f></c>'
+    + '</row></sheetData></worksheet>'
+  const result = detectPreserved(packageOf({
+    [DOCUMENT_XML]: documentXml,
+    [WORKSHEET_XML]: sheetXml,
+  }))
+  expect(result.coupled.map(marker => marker.part))
+    .toEqual([DOCUMENT_XML, WORKSHEET_XML])
+})
+
+it('scans header and footer story parts for coupled constructs', () => {
+  const header = '<w:hdr><w:p><w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p></w:hdr>'
+  const result = detectPreserved(packageOf({
+    [DOCUMENT_XML]: PLAIN_DOCUMENT,
+    'word/header1.xml': header,
+  }))
+  expect([...result.preserved]).toEqual(['field'])
+  expect(result.coupled).toEqual([
+    { kind: 'field-owned-text', part: 'word/header1.xml', offset: header.indexOf('<w:fldSimple') },
+  ])
+})
+
+it('rejects classification input over maxFileBytes before parsing', () => {
+  expect(codeOfThrown(() => detectPreserved(new Uint8Array(32), {
+    ...DEFAULT_OFFICE_EXCHANGE_CONFIG,
+    maxFileBytes: 8,
+  }))).toBe('too-large')
+})
+
+it('classifies non-zip classification input as conversion-failed', () => {
+  expect(codeOfThrown(() => detectPreserved(strToU8('not a zip archive')))).toBe('conversion-failed')
 })

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Context } from '@forwork/cordis'
 import { DocumentId, SessionId } from '@forwork/session'
-import type { Session, SessionEvent } from '@forwork/session'
+import type { DocumentSaveDisposition, Session, SessionEvent } from '@forwork/session'
 import SessionStore from '@forwork/session'
 import {
   documentIdFor,
@@ -96,6 +96,58 @@ describe('document facts', () => {
       expect(events[0]?.data).toEqual({ documentId: DOCUMENT, actor: 'agent', contentVersion: 1, turn: 2 })
       expect(events[1]?.data).toEqual({ documentId: DOCUMENT, actor: 'user', contentVersion: 2 })
       expect(events[1]?.data).not.toHaveProperty('turn')
+    } finally {
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('forwards a save disposition only when the writer supplied one', async () => {
+    const { ctx, session, events } = await mount()
+    try {
+      const disposition: DocumentSaveDisposition = {
+        schemaVersion: 1,
+        verbatimCount: 3,
+        spliced: { count: 1, names: ['word/document.xml'] },
+        added: { count: 0, names: [] },
+        removed: { count: 0, names: [] },
+      }
+      recordDocumentSave(session, { documentId: DOCUMENT, actor: 'user', contentVersion: 1, disposition })
+      recordDocumentSave(session, { documentId: DOCUMENT, actor: 'user', contentVersion: 2 })
+
+      expect(events[0]?.data).toEqual({
+        documentId: DOCUMENT,
+        actor: 'user',
+        contentVersion: 1,
+        disposition,
+      })
+      expect(events[1]?.data).not.toHaveProperty('disposition')
+    } finally {
+      await ctx.fiber.dispose()
+    }
+  })
+
+  it('forwards exact counts and each name list unchanged', async () => {
+    const { ctx, session, events } = await mount()
+    try {
+      const names = Array.from(
+        { length: 256 },
+        (_, index) => `xl/entry-${String(index).padStart(3, '0')}.xml`,
+      )
+      const disposition: DocumentSaveDisposition = {
+        schemaVersion: 1,
+        verbatimCount: 42,
+        spliced: { count: 300, names },
+        added: { count: 2, names: ['xl/b.xml', 'xl/a.xml'] },
+        removed: { count: 1, names: ['xl/z.xml'] },
+      }
+      recordDocumentSave(session, { documentId: DOCUMENT, actor: 'user', contentVersion: 1, disposition })
+
+      expect(events[0]?.data).toEqual({
+        documentId: DOCUMENT,
+        actor: 'user',
+        contentVersion: 1,
+        disposition,
+      })
     } finally {
       await ctx.fiber.dispose()
     }

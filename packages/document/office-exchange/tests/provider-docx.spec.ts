@@ -586,6 +586,8 @@ it('rejects bytes above the configured file bound', async () => {
     maxCells: 100,
     maxConversionMs: 1_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })).rejects.toMatchObject({ code: 'too-large' })
 })
 
@@ -596,6 +598,8 @@ it('rejects a document above the configured table-cell bound', async () => {
     maxCells: 1,
     maxConversionMs: 1_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })).rejects.toMatchObject({ code: 'too-large' })
 })
 
@@ -655,6 +659,8 @@ it('rejects a snapshot above the configured table-cell bound before writing', as
     maxCells: 1,
     maxConversionMs: 1_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })).rejects.toMatchObject({ code: 'too-large' })
 })
 

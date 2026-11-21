@@ -5,7 +5,7 @@ import type { OfficeSourceKey, OfficeToPdfGeneration, OfficeToPdfKey } from './i
 export type { OfficeSourceKey, OfficeToPdfGeneration, OfficeToPdfKey } from './identity.ts'
 
 /** Binary Office and Office Open XML formats supported by Office-to-PDF conversion. */
-export type OfficeExtension = 'doc' | 'docx' | 'xls' | 'xlsx' | 'ppt' | 'pptx'
+export type OfficeExtension = 'doc' | 'docx' | 'docm' | 'xls' | 'xlsx' | 'xlsm' | 'ppt' | 'pptx'
 
 /** Foreground previews and explicit QA precede speculative background conversion. */
 export type OfficeToPdfPriority = 'foreground' | 'background'

@@ -6,7 +6,7 @@
  */
 import childProcess from 'node:child_process'
 import dns from 'node:dns'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import http from 'node:http'
 import https from 'node:https'
 import net from 'node:net'
@@ -21,7 +21,9 @@ import LocalOfficeExchange, {
   Config,
   type ExchangeReadResult,
   type OfficeExchange,
+  type SourcePackage,
 } from '../src/index.ts'
+import { open } from '../src/package/ooxml-package.ts'
 
 const FIXTURES = fileURLToPath(new URL('./fixtures/', import.meta.url))
 const XLSX_FIXTURE = join(FIXTURES, 'roundtrip.xlsx')
@@ -61,6 +63,13 @@ function sheetOf(workbook: IWorkbookData, name: string): Partial<IWorksheetData>
 
 function cellAt(sheet: Partial<IWorksheetData>, row: number, column: number): ICellData | undefined {
   return sheet.cellData?.[row]?.[column]
+}
+
+/** Compare editable content without the source sidecar, whose digest tracks the file. */
+function withoutSidecar<T extends IDocumentData | IWorkbookData>(data: T): T {
+  const clone = structuredClone(data)
+  delete (clone as { officeExchange?: unknown }).officeExchange
+  return clone
 }
 
 interface OfflineGuard {
@@ -131,12 +140,23 @@ async function saveAndReopen(
   return await exchange.read(path)
 }
 
+/**
+ * Index one fixture as the source package a save splices into.
+ * @param path - Fixture path.
+ * @returns The indexed package carrying the original bytes.
+ */
+async function sourcePackageOf(path: string): Promise<SourcePackage> {
+  return open(new Uint8Array(await readFile(path)), { maxEntries: 10_000 }).source
+}
+
 it('configures no document server endpoint', () => {
   expect(Object.keys(Config({})).sort()).toEqual([
     'commandTimeoutMs',
     'maxCells',
     'maxConversionMs',
     'maxFileBytes',
+    'maxSourceAnchorBytes',
+    'maxSourceAnchors',
   ])
 })
 
@@ -145,9 +165,14 @@ it('edits and saves a workbook with no external transport', async () => {
   const workspace = await mkdtemp(join(tmpdir(), 'dsh-office-offline-xlsx-'))
   try {
     await withoutExternalTransports(async (assertUntouched) => {
+      const source = await sourcePackageOf(XLSX_FIXTURE)
       const read = await exchange.read(XLSX_FIXTURE)
       expect(read.unsupported).toEqual([])
-      const baselineBytes = await exchange.write(read.snapshot, 'xlsx')
+      // The splice path carries every entry when the model matches the source.
+      const baseline = await exchange.write(read.snapshot, 'xlsx', source)
+      expect(baseline.bytes).toEqual(source.bytes)
+      expect(baseline.disposition.spliced.count).toBe(0)
+      const baselineBytes = baseline.bytes
 
       const editedSnapshot = structuredClone(read.snapshot)
       if (editedSnapshot.kind !== 'workbook') throw new Error('expected a workbook snapshot')
@@ -155,17 +180,19 @@ it('edits and saves a workbook with no external transport', async () => {
       if (editedCell === undefined) throw new Error('missing fixture cell B2')
       expect(editedCell.v).toBe('Widget')
       editedCell.v = 'Gadget'
-      const editedBytes = await exchange.write(editedSnapshot, 'xlsx')
-      expect(editedBytes).not.toEqual(baselineBytes)
+      const edited = await exchange.write(editedSnapshot, 'xlsx', source)
+      expect(edited.disposition.spliced.names).toEqual(['xl/worksheets/sheet1.xml'])
+      expect(edited.bytes).not.toEqual(baselineBytes)
+      const editedBytes = edited.bytes
 
-      const baseline = workbookOf(await saveAndReopen(exchange, workspace, 'baseline.xlsx', baselineBytes))
+      const baselineRead = workbookOf(await saveAndReopen(exchange, workspace, 'baseline.xlsx', baselineBytes))
       const saved = workbookOf(await saveAndReopen(exchange, workspace, 'edited.xlsx', editedBytes))
 
-      const expected = structuredClone(baseline)
+      const expected = structuredClone(baselineRead)
       const expectedCell = cellAt(sheetOf(expected, 'Sales'), 1, 0)
       if (expectedCell === undefined) throw new Error('missing saved fixture cell B2')
       expectedCell.v = 'Gadget'
-      expect(saved).toEqual(expected)
+      expect(withoutSidecar(saved)).toEqual(withoutSidecar(expected))
 
       const sales = sheetOf(saved, 'Sales')
       expect(saved.sheetOrder.map(id => saved.sheets[id]?.name)).toEqual(['Sales', 'Notes'])
@@ -193,9 +220,14 @@ it('edits and saves a document with no external transport', async () => {
   const workspace = await mkdtemp(join(tmpdir(), 'dsh-office-offline-docx-'))
   try {
     await withoutExternalTransports(async (assertUntouched) => {
+      const source = await sourcePackageOf(DOCX_FIXTURE)
       const read = await exchange.read(DOCX_FIXTURE)
       expect(read.unsupported).toEqual([])
-      const baselineBytes = await exchange.write(read.snapshot, 'docx')
+      // The splice path carries every entry when the model matches the source.
+      const baseline = await exchange.write(read.snapshot, 'docx', source)
+      expect(baseline.bytes).toEqual(source.bytes)
+      expect(baseline.disposition.spliced.count).toBe(0)
+      const baselineBytes = baseline.bytes
 
       const editedSnapshot = structuredClone(read.snapshot)
       if (editedSnapshot.kind !== 'document') throw new Error('expected a document snapshot')
@@ -203,23 +235,25 @@ it('edits and saves a document with no external transport', async () => {
       if (editedBody === undefined) throw new Error('missing document body')
       expect(editedBody.dataStream).toContain('bold text')
       editedBody.dataStream = editedBody.dataStream.replace('bold text', 'cold text')
-      const editedBytes = await exchange.write(editedSnapshot, 'docx')
-      expect(editedBytes).not.toEqual(baselineBytes)
+      const edited = await exchange.write(editedSnapshot, 'docx', source)
+      expect(edited.disposition.spliced.names).toEqual(['word/document.xml'])
+      expect(edited.bytes).not.toEqual(baselineBytes)
+      const editedBytes = edited.bytes
 
-      const baseline = documentOf(await saveAndReopen(exchange, workspace, 'baseline.docx', baselineBytes))
+      const baselineDocument = documentOf(await saveAndReopen(exchange, workspace, 'baseline.docx', baselineBytes))
       const saved = documentOf(await saveAndReopen(exchange, workspace, 'edited.docx', editedBytes))
 
-      const expected = structuredClone(baseline)
+      const expected = structuredClone(baselineDocument)
       const expectedBody = expected.body
       if (expectedBody === undefined) throw new Error('missing saved document body')
       expectedBody.dataStream = expectedBody.dataStream.replace('bold text', 'cold text')
-      expect(saved).toEqual(expected)
+      expect(withoutSidecar(saved)).toEqual(withoutSidecar(expected))
 
       const savedBody = saved.body
       if (savedBody === undefined) throw new Error('missing saved document body')
       expect(savedBody.dataStream).toContain('cold text')
       expect(savedBody.dataStream).not.toContain('bold text')
-      expect(savedBody.paragraphs).toEqual(baseline.body?.paragraphs)
+      expect(savedBody.paragraphs).toEqual(baselineDocument.body?.paragraphs)
       expect(savedBody.tables).toHaveLength(1)
       expect(saved.tableSource?.['table-1']?.tableRows).toHaveLength(2)
       const editedRun = (savedBody.textRuns ?? [])

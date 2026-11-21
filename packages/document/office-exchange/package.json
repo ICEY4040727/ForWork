@@ -52,6 +52,8 @@
     "@forwork/api-workspace-files": "workspace:*",
     "@forwork/fs": "workspace:*",
     "@forwork/fs-local": "workspace:*",
+    "@forwork/sandbox": "workspace:*",
+    "@forwork/sandbox-policy": "workspace:*",
     "@forwork/session": "workspace:*",
     "@forwork/session-document": "workspace:*",
     "@forwork/util-values": "workspace:*",

@@ -16,8 +16,10 @@ import type { IDocumentData, IWorkbookData } from '@univerjs/core'
 import type { WorkspaceFileScope } from '@forwork/api-workspace-files'
 import { brandString } from '@forwork/brand'
 import type { FileSystem, FsInfo, FsTarget, FsVersion } from '@forwork/fs'
+import type { SandboxExecutionPolicy } from '@forwork/sandbox'
+import type {} from '@forwork/sandbox-policy'
 import { DocumentId } from '@forwork/session'
-import type { DocumentFormat, Session } from '@forwork/session'
+import type { DocumentFormat, DocumentSaveDisposition, Session } from '@forwork/session'
 import {
   createDocumentIdentity,
   documentIdFor,
@@ -37,10 +39,14 @@ import { assertWithinRoots } from './authority.ts'
 import type { DocumentCommandRequest, OfficeCommandBroker } from './commands.ts'
 import { DEFAULT_OFFICE_EXCHANGE_CONFIG } from './config.ts'
 import { OfficeExchangeError } from './errors.ts'
+import { open } from './package/ooxml-package.ts'
+import type { SourcePackage } from './package/types.ts'
+import { ZipError } from './package/zip-format.ts'
 import type { OfficeExchange } from './service.ts'
 import type { ExchangeReadResult, UnitSnapshot } from './snapshots.ts'
 import type {
   DocumentSaveAttribution,
+  EditableOfficeFormat,
   OfficeCommandOutcome,
   OfficeCommandResult,
   OfficeDocumentDraft,
@@ -49,6 +55,7 @@ import type {
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,
   OfficeFormat,
+  SaveDisposition,
   UnsupportedFeature,
 } from './types.ts'
 
@@ -117,7 +124,8 @@ export class OfficeDocumentRemote extends TypertRemoteService {
    * The recorded document identity uses the same workspace-relative locator the editor tab uses,
    * so two spellings of one file never open two documents.
    * @param signal - caller cancellation.
-   * @returns the detected format, snapshot, unsupported features, and observed version.
+   * @returns the detected format, snapshot, preserved construct classes,
+   * unsupported features, and observed version.
    * @throws RemoteError when the path is out of scope, the format is not editable, or the read fails.
    */
   @Remote
@@ -127,7 +135,8 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     try {
       const { target, info } = await this.locate(workspaceFileScope, path, signal)
       const fs = this.files()
-      await fs.readBytes(target, signal, this.config.maxBytes)
+      const sourceBytes = await fs.readBytes(target, signal, this.config.maxBytes)
+      this.requireReadBound(sourceBytes.byteLength, path)
       const result = await this.exchange().read(fs.processPath(target), signal)
       const after = await fs.stat(target, signal)
       if (after === undefined || after.version !== info.version) {
@@ -138,6 +147,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
       return {
         format,
         snapshot: wireSnapshot(result),
+        ...result.preserved === undefined ? {} : { preserved: result.preserved },
         unsupported: result.unsupported,
         version: info.version,
       }
@@ -148,6 +158,14 @@ export class OfficeDocumentRemote extends TypertRemoteService {
 
   /**
    * Serialize a snapshot and replace the file only at the caller's version.
+   *
+   * The file is read and stat-verified at `expectedVersion` before the writer
+   * runs, so the bytes the writer receives are the bytes the caller read. A
+   * preserved construct never refuses the save by itself: the writer returns a
+   * typed refusal only when the edit intersects a construct whose meaning or
+   * anchors depend on the changed content. A refusal writes nothing and records
+   * no fact; the final `replaceIfVersion` write refuses a change that happened
+   * during serialization.
    * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
    * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
    * @param snapshot - snapshot returned by {@link read}, optionally modified.
@@ -155,9 +173,9 @@ export class OfficeDocumentRemote extends TypertRemoteService {
    * @param expectedVersion - version returned by {@link read}; a changed file is refused.
    * @param attribution - who caused the save and the agent turn, when one caused it.
    * @param signal - caller cancellation.
-   * @returns the version the guarded write published.
-   * @throws RemoteError with `office-document/unsupported-feature` when the source still at
-   * `expectedVersion` contains a feature an edit-and-save would drop.
+   * @returns the version the guarded write published and the writer's disposition.
+   * @throws RemoteError with `office-document/unsupported-feature` when the edit
+   * intersects a coupled construct, naming that construct in the message.
    * @throws RemoteError with `office-document/conflict` when the file changed after the read.
    */
   @Remote
@@ -172,21 +190,33 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   ): Promise<OfficeDocumentSaveResult> {
     try {
       const target = await this.confine(workspaceFileScope, path, signal)
-      await this.refuseUnsupportedSource(path, target, expectedVersion, signal)
-      const bytes = await this.exchange().write(nativeSnapshot(snapshot, format), format, signal)
-      const outcome = await this.files().writeBytes(
+      const native = nativeSnapshot(snapshot, format)
+      const fs = this.files()
+      this.requireVersion(path, await fs.stat(target, signal), expectedVersion)
+      const sourceBytes = await fs.readBytes(target, signal, this.config.maxBytes)
+      this.requireVersion(path, await fs.stat(target, signal), expectedVersion)
+      const written = await this.exchange().write(native, format, sourcePackageOf(sourceBytes), signal)
+      if (written.bytes.byteLength > this.config.maxBytes) {
+        throw new OfficeExchangeError(
+          'too-large',
+          `"${path}" would be written as ${written.bytes.byteLength} bytes, exceeding the ${this.config.maxBytes} byte limit.`,
+        )
+      }
+      const outcome = await fs.writeBytes(
         target,
-        bytes,
+        written.bytes,
         { kind: 'replaceIfVersion', version: brandString<FsVersion>(expectedVersion) },
         signal,
+        this.sandboxPolicyFor(workspaceFileScope),
       )
       this.recordSave(
         workspaceFileScope,
         this.identityPath(workspaceFileScope, target),
         editableDocumentFormat(format),
         attribution,
+        written.disposition,
       )
-      return { version: outcome.version }
+      return { version: outcome.version, disposition: written.disposition }
     } catch (cause) {
       throw this.failure(cause, path, signal)
     }
@@ -297,11 +327,11 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   }
 
   /**
-   * Report the features an edit-and-save would drop without returning content.
+   * Report the features a whole-file regeneration would drop without returning content.
    * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
    * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
    * @param signal - caller cancellation.
-   * @returns every detected unsupported feature, empty when the file round-trips cleanly.
+   * @returns every detected unsupported feature; empty when regeneration loses no mapped content.
    * @throws RemoteError when the path is out of scope or its format cannot be inspected.
    */
   @Remote
@@ -368,7 +398,13 @@ export class OfficeDocumentRemote extends TypertRemoteService {
       const target = await this.draftTarget(workspaceFileScope.workspaceRoot, draftPath, true, signal)
       const savedAt = new Date().toISOString()
       const draft: OfficeDocumentDraft = { documentId, path: documentPath, contentVersion, snapshot, savedAt }
-      await this.files().writeText(target, JSON.stringify(draft), undefined, signal)
+      await this.files().writeText(
+        target,
+        JSON.stringify(draft),
+        undefined,
+        signal,
+        this.sandboxPolicyFor(workspaceFileScope),
+      )
       return { savedAt }
     } catch (cause) {
       throw this.failure(cause, draftPath, signal)
@@ -390,13 +426,12 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     const draftPath = this.draftPath(workspaceFileScope.workspaceRoot, documentId)
     try {
       const fs = this.files()
-      const target = await this.draftTarget(workspaceFileScope.workspaceRoot, draftPath, false, signal)
-      const info = await fs.stat(target, signal)
-      if (info === undefined) return null
-      if (info.type !== 'file') {
+      const entry = await this.draftEntry(workspaceFileScope.workspaceRoot, draftPath, fs, signal)
+      if (entry === undefined) return null
+      if (entry.info.type !== 'file') {
         throw new OfficeExchangeError('conversion-failed', `The draft at "${draftPath}" is not a regular file.`)
       }
-      const bytes = await fs.readBytes(target, signal, this.config.maxBytes)
+      const bytes = await fs.readBytes(entry.target, signal, this.config.maxBytes)
       return parseDraft(new TextDecoder().decode(bytes), draftPath)
     } catch (cause) {
       throw this.failure(cause, draftPath, signal)
@@ -415,10 +450,9 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     const draftPath = this.draftPath(workspaceFileScope.workspaceRoot, documentId)
     try {
       const fs = this.files()
-      const target = await this.draftTarget(workspaceFileScope.workspaceRoot, draftPath, false, signal)
-      const info = await fs.stat(target, signal)
-      if (info === undefined) return
-      await fs.deleteFile(target, undefined, signal)
+      const entry = await this.draftEntry(workspaceFileScope.workspaceRoot, draftPath, fs, signal)
+      if (entry === undefined) return
+      await fs.deleteFile(entry.target, undefined, signal, this.sandboxPolicyFor(workspaceFileScope))
     } catch (cause) {
       throw this.failure(cause, draftPath, signal)
     }
@@ -470,17 +504,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     registrationId: string,
     signal: AbortSignal,
   ): Promise<void> {
-    try {
-      signal.throwIfAborted()
-      this.requireRegistrationId(registrationId)
-      const id = this.ownedDocumentId(workspaceFileScope, documentId)
-      this.sessionOf(workspaceFileScope)
-      this.commands().attachTarget(id, registrationId)
-      return Promise.resolve()
-    } catch (cause) {
-      const failure: Error = this.failure(cause, documentId, signal)
-      return Promise.reject(failure)
-    }
+    return this.changeCommandTarget(workspaceFileScope, documentId, registrationId, signal, 'attach')
   }
 
   /**
@@ -498,12 +522,34 @@ export class OfficeDocumentRemote extends TypertRemoteService {
     registrationId: string,
     signal: AbortSignal,
   ): Promise<void> {
+    return this.changeCommandTarget(workspaceFileScope, documentId, registrationId, signal, 'detach')
+  }
+
+  /**
+   * Apply one command-target registration change after validating its identity.
+   * @param workspaceFileScope - Session identity that owns the document.
+   * @param documentId - Session-scoped identity of the document.
+   * @param registrationId - caller-minted identity of this attachment.
+   * @param signal - caller cancellation; an aborted call changes nothing.
+   * @param change - register (`attach`) or release (`detach`) the target.
+   * @returns a resolved promise after the broker accepts the change.
+   * @throws RemoteError when the identity belongs to another Session or no live Session exists.
+   */
+  private changeCommandTarget(
+    workspaceFileScope: WorkspaceFileScope,
+    documentId: string,
+    registrationId: string,
+    signal: AbortSignal,
+    change: 'attach' | 'detach',
+  ): Promise<void> {
     try {
       signal.throwIfAborted()
       this.requireRegistrationId(registrationId)
       const id = this.ownedDocumentId(workspaceFileScope, documentId)
       this.sessionOf(workspaceFileScope)
-      this.commands().detachTarget(id, registrationId)
+      const commands = this.commands()
+      if (change === 'attach') commands.attachTarget(id, registrationId)
+      else commands.detachTarget(id, registrationId)
       return Promise.resolve()
     } catch (cause) {
       const failure: Error = this.failure(cause, documentId, signal)
@@ -538,6 +584,24 @@ export class OfficeDocumentRemote extends TypertRemoteService {
       )
     }
     return session
+  }
+
+  /**
+   * Resolve the per-call sandbox policy for one Session's filesystem mutations.
+   *
+   * A composition without a policy service leaves the backend its own default.
+   * A live Session contributes its mode and workspace root; a draft write for a
+   * Session this process no longer holds live still fences to the workspace
+   * root on the wire, under the deployment default mode.
+   * @param scope - Session identity and workspace root on the wire.
+   * @returns the policy for this call, or `undefined` when none is mounted.
+   */
+  private sandboxPolicyFor(scope: WorkspaceFileScope): SandboxExecutionPolicy | undefined {
+    const service = this.ctx.get('sandboxPolicy')
+    if (service === undefined) return undefined
+    const session = this.ctx.sessions.get(scope.sessionId)
+    if (session !== undefined) return service.resolve({ session })
+    return { mode: service.defaultMode, workspaceRoot: scope.workspaceRoot }
   }
 
   /** The open-document table for one Session, created on first use. */
@@ -595,16 +659,19 @@ export class OfficeDocumentRemote extends TypertRemoteService {
    * Append `document/save` after a guarded save published a new file.
    *
    * The caller's in-memory changes stay in the editor, so no operation steps
-   * are available and no inverse is fabricated. A document this process has not
-   * read is opened first so the save has an entry to advance. The identity is
-   * the workspace-relative locator, so an agent save of a file the editor
-   * opened advances that entry instead of opening a second one.
+   * are available and no inverse is fabricated. The writer's disposition is
+   * recorded unchanged except for the writer-only name cap, which the event
+   * payload does not carry. A document this process has not read is opened
+   * first so the save has an entry to advance. The identity is the
+   * workspace-relative locator, so an agent save of a file the editor opened
+   * advances that entry instead of opening a second one.
    */
   private recordSave(
     scope: WorkspaceFileScope,
     path: string,
     format: DocumentFormat,
     attribution: DocumentSaveAttribution,
+    disposition: SaveDisposition,
   ): void {
     const session = this.sessionOf(scope)
     const documents = this.openDocumentsFor(session)
@@ -622,6 +689,7 @@ export class OfficeDocumentRemote extends TypertRemoteService {
       actor: attribution.actor,
       contentVersion,
       ...attribution.turn === undefined ? {} : { turn: attribution.turn },
+      disposition: documentSaveDisposition(disposition),
     })
     documents.set(documentId, {
       binding: entry?.binding ?? createDocumentIdentity(documentId, path),
@@ -731,6 +799,23 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   }
 
   /**
+   * Observe one existing draft file at its confined target.
+   * @param workspaceRoot - Workspace root the draft store is confined to.
+   * @param draftPath - Digest-derived draft path.
+   * @param fs - Filesystem seam that already resolved the target.
+   * @param signal - Caller cancellation.
+   * @returns The confined target and latest observation, or `undefined` when absent.
+   */
+  private async draftEntry(
+    workspaceRoot: string, draftPath: string, fs: FileSystem, signal: AbortSignal,
+  ): Promise<{ target: FsTarget; info: FsInfo } | undefined> {
+    const target = await this.draftTarget(workspaceRoot, draftPath, false, signal)
+    const info = await fs.stat(target, signal)
+    if (info === undefined) return undefined
+    return { target, info }
+  }
+
+  /**
    * Create a fresh conversion directory inside the workspace root so the
    * converted file passes the same root check as every other Remote path. The
    * hash names the source and `mkdtemp` keeps concurrent conversions apart.
@@ -763,32 +848,36 @@ export class OfficeDocumentRemote extends TypertRemoteService {
   }
 
   /**
-   * Refuse a save whose source still holds content the editable model would drop.
-   *
-   * The client and the document tools refuse earlier, but the contract makes
-   * this boundary authoritative: a save that skips the check is non-conforming.
-   * Detection reads the current source file through the Exchange, never the
-   * caller's in-memory snapshot, and names the first detected feature. A source
-   * that changed or disappeared since the read is left to the version guard,
-   * which reports it as a conflict; its unsupported set no longer describes the
-   * file the caller read.
-   * @param path - caller-supplied path used in the refusal message.
-   * @param target - confined target of the file being replaced.
+   * Require the source to still be the regular file the caller read.
+   * @param path - caller-supplied path used in the conflict report.
+   * @param info - latest observation of the target, or `undefined` when it is absent.
    * @param expectedVersion - version the caller read the source at.
-   * @param signal - caller cancellation.
-   * @throws {OfficeExchangeError} `unsupported-feature` when the source reports one.
+   * @throws RemoteError with `office-document/conflict` when the file is absent, is not a
+   * regular file, or changed version.
    */
-  private async refuseUnsupportedSource(
-    path: string, target: FsTarget, expectedVersion: string, signal: AbortSignal,
-  ): Promise<void> {
-    const info = await this.files().stat(target, signal)
-    if (info === undefined || info.type !== 'file' || info.version !== expectedVersion) return
-    const unsupported = await this.exchange().detectUnsupported(this.files().processPath(target), signal)
-    const first = unsupported[0]
-    if (first === undefined) return
+  private requireVersion(path: string, info: FsInfo | undefined, expectedVersion: string): void {
+    if (info !== undefined && info.type === 'file' && info.version === expectedVersion) return
+    throw new RemoteError(
+      'office-document/conflict',
+      `"${path}" changed after it was read; reopen it before saving.`,
+      { path },
+    )
+  }
+
+  /**
+   * Require the bytes this read retained to stay inside the configured bound.
+   *
+   * The filesystem seam already refuses a larger target, so this guard also
+   * covers a seam that returns oversized bytes instead of refusing them.
+   * @param byteLength - Bytes the read retained.
+   * @param path - caller-supplied path used in the bound report.
+   * @throws {OfficeExchangeError} `too-large` when the retained bytes exceed `maxBytes`.
+   */
+  private requireReadBound(byteLength: number, path: string): void {
+    if (byteLength <= this.config.maxBytes) return
     throw new OfficeExchangeError(
-      'unsupported-feature',
-      `Cannot save "${path}": the source contains ${first.kind} (${first.detail}), which the editable model cannot preserve.`,
+      'too-large',
+      `"${path}" is ${byteLength} bytes, exceeding the ${this.config.maxBytes} byte limit.`,
     )
   }
 
@@ -852,6 +941,12 @@ export class OfficeDocumentRemote extends TypertRemoteService {
           return new RemoteError('office-document/conversion-failed', cause.message, { path }, { cause })
       }
     }
+    if (cause instanceof ZipError) {
+      const code = cause.failure.type === 'entry-limit' || cause.failure.type === 'too-large'
+        ? 'office-document/bound-exceeded'
+        : 'office-document/conversion-failed'
+      return new RemoteError(code, cause.message, { path }, { cause })
+    }
     if (isFsCode(cause, 'FS_TOO_LARGE')) {
       return new RemoteError(
         'office-document/bound-exceeded',
@@ -914,6 +1009,41 @@ function isFsCode(error: unknown, code: string): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && error.code === code
 }
 
+/**
+ * Central-directory entry bound applied when a save indexes its source. It
+ * matches the package scan bound detection uses, so detection and the writer
+ * accept the same archives.
+ */
+const MAX_SOURCE_ENTRIES = 10_000
+
+/**
+ * Index the source bytes a guarded save will splice.
+ * @param bytes - Source file bytes read at the caller's expected version.
+ * @returns The indexed source package with its content digest.
+ * @throws {ZipError} When the container is unsupported or malformed.
+ */
+function sourcePackageOf(bytes: Uint8Array): SourcePackage {
+  return open(bytes, { maxEntries: MAX_SOURCE_ENTRIES }).source
+}
+
+/**
+ * Project the writer's disposition onto the durable save-fact payload.
+ *
+ * The event payload carries the exact counts and each capped name list; the
+ * writer-only name-limit field is not part of the session vocabulary.
+ * @param disposition - disposition the writer computed from its splice plan.
+ * @returns the same counts and names without writer-only fields.
+ */
+function documentSaveDisposition(disposition: SaveDisposition): DocumentSaveDisposition {
+  return {
+    schemaVersion: disposition.schemaVersion,
+    verbatimCount: disposition.verbatimCount,
+    spliced: { count: disposition.spliced.count, names: [...disposition.spliced.names] },
+    added: { count: disposition.added.count, names: [...disposition.added.names] },
+    removed: { count: disposition.removed.count, names: [...disposition.removed.names] },
+  }
+}
+
 /** Project a native snapshot onto the JSON-safe wire value. */
 function wireSnapshot(result: ExchangeReadResult): OfficeDocumentSnapshot {
   return { kind: result.snapshot.kind, data: jsonValueOf(result.snapshot.data) }
@@ -951,13 +1081,15 @@ function jsonValueOf(value: unknown): JsonValue {
 /**
  * Narrow a detected format to one the document facts admit.
  * @param format - format reported by the Exchange read or save.
- * @returns the editable document format.
+ * @returns the editable document or workbook format.
  * @throws {OfficeExchangeError} `unsupported-format` for a legacy or presentation format.
  */
-function editableDocumentFormat(format: OfficeFormat): DocumentFormat {
+function editableDocumentFormat(format: OfficeFormat): EditableOfficeFormat {
   switch (format) {
     case 'docx':
+    case 'docm':
     case 'xlsx':
+    case 'xlsm':
       return format
     case 'pptx':
     case 'doc':
@@ -965,7 +1097,7 @@ function editableDocumentFormat(format: OfficeFormat): DocumentFormat {
     case 'ppt':
       throw new OfficeExchangeError(
         'unsupported-format',
-        `Cannot record a .${format} document; only .docx and .xlsx are editable.`,
+        `Cannot record a .${format} document; only .docx, .docm, .xlsx, and .xlsm are editable.`,
       )
   }
 }
@@ -974,13 +1106,15 @@ function editableDocumentFormat(format: OfficeFormat): DocumentFormat {
 function nativeSnapshot(snapshot: OfficeDocumentSnapshot, format: OfficeFormat): UnitSnapshot {
   switch (format) {
     case 'xlsx':
+    case 'xlsm':
       if (snapshot.kind !== 'workbook') {
-        throw new OfficeExchangeError('conversion-failed', 'A document snapshot cannot be saved as .xlsx.')
+        throw new OfficeExchangeError('conversion-failed', `A document snapshot cannot be saved as .${format}.`)
       }
       return { kind: 'workbook', data: workbookData(snapshot.data) }
     case 'docx':
+    case 'docm':
       if (snapshot.kind !== 'document') {
-        throw new OfficeExchangeError('conversion-failed', 'A workbook snapshot cannot be saved as .docx.')
+        throw new OfficeExchangeError('conversion-failed', `A workbook snapshot cannot be saved as .${format}.`)
       }
       return { kind: 'document', data: documentData(snapshot.data) }
     case 'pptx':
@@ -989,7 +1123,7 @@ function nativeSnapshot(snapshot: OfficeDocumentSnapshot, format: OfficeFormat):
     case 'ppt':
       throw new OfficeExchangeError(
         'unsupported-format',
-        `Cannot save .${format} files; only .docx and .xlsx are editable.`,
+        `Cannot save .${format} files; only .docx, .docm, .xlsx, and .xlsm are editable.`,
       )
   }
 }

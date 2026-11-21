@@ -20,6 +20,7 @@ import { LocalOfficeExchange, OfficeDocumentRemote, OfficeExchange, OfficeExchan
 import type {
   ExchangeReadResult,
   OfficeFormat,
+  OfficeWriteResult,
   UnitSnapshot,
   UnsupportedFeature,
 } from '../src/index.ts'
@@ -77,8 +78,18 @@ class StubExchange extends OfficeExchange {
     return this.config.produce()
   }
 
-  write(): Promise<Uint8Array> {
-    return Promise.resolve(new Uint8Array([0x50, 0x4b]))
+  write(): Promise<OfficeWriteResult> {
+    return Promise.resolve({
+      bytes: new Uint8Array([0x50, 0x4b]),
+      disposition: {
+        schemaVersion: 1,
+        verbatimCount: 0,
+        spliced: { count: 0, names: [] },
+        added: { count: 0, names: [] },
+        removed: { count: 0, names: [] },
+        nameLimit: 256,
+      },
+    })
   }
 
   detectUnsupported(): Promise<readonly UnsupportedFeature[]> {
@@ -431,12 +442,12 @@ describe('save validation', () => {
   it('saves without a command broker in the composition', async () => {
     const harness = await stubHarness({ produce: async () => readResult() })
     const path = 'budget.xlsx'
-    await writeFile(join(harness.root, path), 'bytes')
+    await copyFile(join(FIXTURES, 'roundtrip.xlsx'), join(harness.root, path))
     const read = await harness.ctx.officeDocument.read(harness.scope, path, signal)
     await harness.ctx.officeDocument.closeDocument(harness.scope, documentIdFor(harness.scope.sessionId, path), 'closed', signal)
 
     await expect(harness.ctx.officeDocument.save(harness.scope, path, read.snapshot, 'xlsx', read.version, { actor: 'user' }, signal))
-      .resolves.toMatchObject({ version: expect.any(String) })
+      .resolves.toMatchObject({ version: expect.any(String) as string })
   })
 })
 

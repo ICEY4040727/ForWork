@@ -24,6 +24,16 @@ const INVALID_BOUNDS: readonly Partial<OfficeExchangeConfig>[] = [
   { commandTimeoutMs: Number.NaN },
   { commandTimeoutMs: Number.POSITIVE_INFINITY },
   { commandTimeoutMs: 0.5 },
+  { maxSourceAnchors: 0 },
+  { maxSourceAnchors: -1 },
+  { maxSourceAnchors: Number.NaN },
+  { maxSourceAnchors: Number.POSITIVE_INFINITY },
+  { maxSourceAnchors: 1.5 },
+  { maxSourceAnchorBytes: 0 },
+  { maxSourceAnchorBytes: -1 },
+  { maxSourceAnchorBytes: Number.NaN },
+  { maxSourceAnchorBytes: Number.POSITIVE_INFINITY },
+  { maxSourceAnchorBytes: 0.5 },
 ]
 
 function messageOf(overrides: Partial<OfficeExchangeConfig>): string {
@@ -42,6 +52,8 @@ it('resolves the default bounds when nothing is overridden', () => {
     maxCells: 2_000_000,
     maxConversionMs: 60_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })
 })
 
@@ -51,21 +63,34 @@ it('merges each override over the defaults', () => {
     maxCells: 10,
     maxConversionMs: 60_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })
   expect(resolveConfig({ maxFileBytes: 1_024, maxConversionMs: 5 })).toEqual({
     maxFileBytes: 1_024,
     maxCells: 2_000_000,
     maxConversionMs: 5,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })
 })
 
 it('accepts positive integer bounds', () => {
-  expect(resolveConfig({ maxFileBytes: 1, maxCells: 1, maxConversionMs: 1, commandTimeoutMs: 1 })).toEqual({
+  expect(resolveConfig({
     maxFileBytes: 1,
     maxCells: 1,
     maxConversionMs: 1,
     commandTimeoutMs: 1,
+    maxSourceAnchors: 1,
+    maxSourceAnchorBytes: 1,
+  })).toEqual({
+    maxFileBytes: 1,
+    maxCells: 1,
+    maxConversionMs: 1,
+    commandTimeoutMs: 1,
+    maxSourceAnchors: 1,
+    maxSourceAnchorBytes: 1,
   })
 })
 
@@ -76,6 +101,8 @@ it('does not mutate the defaults', () => {
     maxCells: 2_000_000,
     maxConversionMs: 60_000,
     commandTimeoutMs: 5_000,
+    maxSourceAnchors: 100_000,
+    maxSourceAnchorBytes: 8 * 1024 * 1024,
   })
 })
 
