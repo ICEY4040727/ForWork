@@ -70,6 +70,7 @@ export type {
   SidebarRightTabInfo, SidebarRightTabInjected, UseSidebarRightTabInfo, SidebarRightTabActions,
   SidebarRightTabMenuOwnerProps, SidebarRightTabNavigation, SidebarRightTabPlacement, SidebarRightGuideEntryOwnerProps,
   SidebarRightGuideActionEntry, SidebarRightGuideActionsOwnerProps,
+  SidebarRightPaneHeaderOwnerProps, SidebarRightPaneHeaderTab,
 } from './contract/slots.ts'
 export type {
   SidebarRightNavigationParams, SidebarRightResourceParams, SidebarRightResourceParamsMap,
@@ -228,6 +229,25 @@ export function apply(ctx: ClientContext): void {
       openTab: (kind, options) => { controller.openTab(kind, options) },
     }
     const tabTypes = { subscribe: (listener: () => void) => tabs.subscribe(listener), getSnapshot: () => tabs.entries() }
+    // Header registrations arrive from other plugins after this one applies, so
+    // the snapshot is computed lazily and invalidated by the slot registry.
+    let paneHeaderKeys: readonly string[] = []
+    let paneHeaderKeysStale = true
+    const paneHeaders = {
+      subscribe: (listener: () => void) => ctx.slots.subscribe('sidebar.right.pane.header', () => {
+        paneHeaderKeysStale = true
+        listener()
+      }),
+      getSnapshot: (): readonly string[] => {
+        if (paneHeaderKeysStale) {
+          paneHeaderKeys = ctx.slots.entriesOfSlot('sidebar.right.pane.header')
+            .map(entry => entry.options.key)
+            .filter((key): key is string => key !== undefined)
+          paneHeaderKeysStale = false
+        }
+        return paneHeaderKeys
+      },
+    }
 
     const disposeTypes = [tabs.register(guideDefinition(t))]
     const disposeSeat = ctx.slots.inject('rightbar', function* () {
@@ -245,12 +265,14 @@ export function apply(ctx: ClientContext): void {
         children: {
           'sidebar.right.pane.tab': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: tabInfoFactory } } },
           'sidebar.right.pane.tab.title': { kind: 'keyed', scope: 'session', inject: { hooks: { tabInfo: tabInfoFactory } } },
+          'sidebar.right.pane.header': { kind: 'keyed', scope: 'session' },
         },
         store,
         inject: (sessionId): SidebarRightInjected => ({
           ...injected,
           hooks: {
-            contextMenuTarget: ctx.contextMenus.active, shortcuts: ctx.shortcuts.catalog, tabTypes, flash: controller.flashOf(sessionId),
+            contextMenuTarget: ctx.contextMenus.active, shortcuts: ctx.shortcuts.catalog, tabTypes, paneHeaderKeys: paneHeaders,
+            flash: controller.flashOf(sessionId),
           },
           measureRoom: (canSplitPane) => { measure(sessionId, canSplitPane) },
           closeTab: (tabId) => {

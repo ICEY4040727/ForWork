@@ -11,7 +11,7 @@
  * history still reverses the agent edit. A change no applied command accounts
  * for still reloads.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import type { ReactElement } from 'react'
@@ -41,7 +41,9 @@ import { attachSessionCommandBridge } from '../src/client/command-bridge.ts'
 import { en } from '../src/client/locales.ts'
 import { makeDraftRemote } from './draft-fixtures.client.ts'
 import type { DraftRemote } from './draft-fixtures.client.ts'
-import { SESSION_ID, panelFixture } from './panel.tsx'
+import { SESSION_ID, panelFixture, stubMeasuredSurface } from './panel.tsx'
+
+beforeEach(stubMeasuredSurface)
 
 afterEach(cleanup)
 
@@ -231,6 +233,88 @@ async function applyAgentEdit(
   view.rerender(<OfficePanel {...harness.props()} />)
   return result.contentVersion
 }
+
+describe('a local save', () => {
+  it.each(['the watched file', 'the document projection'] as const)(
+    'keeps one live unit when %s reports the save first',
+    async (first) => {
+      const h = harness()
+      // The panel reads the file before the resource's first frame, so the read
+      // has no observed baseline to compare a later version against.
+      h.live.meta = undefined
+      const view = render(<OfficePanel {...h.props()} />)
+      await waitFor(() => { expect(h.handles).toHaveLength(1) })
+      const mounted = h.handles[0]
+
+      h.live.meta = { absolutePath: `/${PATH}`, version: 'v1' }
+      view.rerender(<OfficePanel {...h.props()} />)
+      expect(h.remote.read).toHaveBeenCalledOnce()
+
+      fireEvent.click(view.getByText(en.save))
+      await waitFor(() => { expect(h.remote.save).toHaveBeenCalledOnce() })
+
+      const updateFile = (): void => { h.live.meta = { absolutePath: `/${PATH}`, version: 'v2' } }
+      const updateProjection = (): void => { h.live.projection = projectionAt(1) }
+      const updates = first === 'the watched file' ? [updateFile, updateProjection] : [updateProjection, updateFile]
+      for (const update of updates) {
+        update()
+        view.rerender(<OfficePanel {...h.props()} />)
+        expect(h.remote.read).toHaveBeenCalledOnce()
+        expect(h.handles).toHaveLength(1)
+        expect(h.handles[0]).toBe(mounted)
+      }
+    },
+  )
+  it('leaves the unit mounted when another save advanced the projection first', async () => {
+    const h = harness()
+    h.live.meta = undefined
+    const view = render(<OfficePanel {...h.props()} />)
+    await waitFor(() => { expect(h.handles).toHaveLength(1) })
+    const mounted = h.handles[0]
+
+    h.live.meta = { absolutePath: `/${PATH}`, version: 'v1' }
+    view.rerender(<OfficePanel {...h.props()} />)
+    fireEvent.click(view.getByText(en.save))
+    await waitFor(() => { expect(h.remote.clearDraft).toHaveBeenCalledOnce() })
+
+    // Another writer's save advanced the projection while the watched file
+    // still reports the version this tab replaced.
+    h.live.projection = projectionAt(2)
+    view.rerender(<OfficePanel {...h.props()} />)
+    expect(h.remote.read).toHaveBeenCalledOnce()
+    expect(h.handles).toHaveLength(1)
+    expect(h.handles[0]).toBe(mounted)
+  })
+
+  it('keeps the unit mounted when the file resource loses its value after a save', async () => {
+    const h = harness()
+    const view = render(<OfficePanel {...h.props()} />)
+    await waitFor(() => { expect(h.handles).toHaveLength(1) })
+
+    fireEvent.click(view.getByText(en.save))
+    await waitFor(() => { expect(h.remote.clearDraft).toHaveBeenCalledOnce() })
+
+    h.live.meta = undefined
+    view.rerender(<OfficePanel {...h.props()} />)
+    expect(h.remote.read).toHaveBeenCalledOnce()
+    expect(h.handles).toHaveLength(1)
+  })
+
+  it('reloads a clean unit when a different file version follows the save', async () => {
+    const h = harness()
+    const view = render(<OfficePanel {...h.props()} />)
+    await waitFor(() => { expect(h.handles).toHaveLength(1) })
+
+    fireEvent.click(view.getByText(en.save))
+    await waitFor(() => { expect(h.remote.clearDraft).toHaveBeenCalledOnce() })
+
+    h.live.readVersion = 'v3'
+    h.live.meta = { absolutePath: `/${PATH}`, version: 'v3' }
+    view.rerender(<OfficePanel {...h.props()} />)
+    await waitFor(() => { expect(h.remote.read).toHaveBeenCalledTimes(2) })
+    await waitFor(() => { expect(h.handles).toHaveLength(2) })
+  })
+})
 
 describe('an accepted agent edit', () => {
   it('keeps the mounted unit and its native history across the Host save that follows it', async () => {

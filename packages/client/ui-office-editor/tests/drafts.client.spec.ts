@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 /**
  * Recovery drafts: the idle-debounced scheduler and the hook's post-read
  * recovery offer. The Remote is a fake face, so no Host service and no Univer
@@ -316,12 +316,12 @@ describe('useOfficeDocument recovery', () => {
     await waitFor(() => { expect(result.current.draftError).toEqual({ code: 'unknown', message: 'offline' }) })
   })
 
-  it('does not offer a draft for a file that cannot be saved', async () => {
+  it('offers a draft for a file whose read reported preserved features', async () => {
     const remote = makeDraftRemote()
     remote.read.mockResolvedValueOnce(success({ ...readResult(), unsupported: [{ kind: 'macro' }] }))
     const { result } = renderDocument(remote.face)
-    await waitFor(() => { expect(result.current.status).toBe('unsupported') })
-    expect(remote.readDraft).not.toHaveBeenCalled()
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    await waitFor(() => { expect(remote.readDraft).toHaveBeenCalledOnce() })
   })
 
   it('checks the draft store once per opened document', async () => {
@@ -430,16 +430,16 @@ describe('useOfficeDocument draft capture', () => {
     expect(result.current.draftError?.code).toBe('bound-exceeded')
   })
 
-  it('does not capture an edit for a file that cannot be saved', async () => {
+  it('captures an edit for a file whose read reported preserved features', async () => {
     vi.useFakeTimers()
     const remote = makeDraftRemote()
     remote.read.mockResolvedValueOnce(success({ ...readResult(), unsupported: [{ kind: 'macro' }] }))
     const { result } = renderDocument(remote.face)
     await act(async () => { await vi.advanceTimersByTimeAsync(0) })
-    expect(result.current.status).toBe('unsupported')
+    expect(result.current.status).toBe('ready')
     act(() => { result.current.scheduleDraft(edited) })
     await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
-    expect(remote.writeDraft).not.toHaveBeenCalled()
+    expect(remote.writeDraft).toHaveBeenCalledOnce()
   })
 
   it('clears the stored draft after a successful save', async () => {

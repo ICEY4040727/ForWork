@@ -3,7 +3,7 @@
  * to the package — the outward contracts are in `adapter.ts`.
  */
 import type { PointerEvent as ReactPointerEvent, ReactNode, HTMLAttributes } from 'react'
-import type { DockLabels, TabMenuExtras, TabRenderer } from '../contract/adapter.ts'
+import type { DockLabels, PaneHeaderRenderer, TabMenuExtras, TabRenderer } from '../contract/adapter.ts'
 import type { PaneId, SplitId, TabId, TabRecord } from '../contract/types.ts'
 import type { DropTarget } from '../engine/geometry.ts'
 
@@ -39,6 +39,8 @@ export interface PaneCallbacks {
   readonly renderTab: TabRenderer
   /** A chip's or panel header's title content; absent means the record's `title` text. */
   readonly renderTabTitle: TabRenderer | undefined
+  /** Replaces a docked pane's strip for the selected tab; absent keeps the strip. */
+  readonly renderPaneHeader: PaneHeaderRenderer | undefined
   /** Whether the embedder popup is preparing or visible; suppresses tab tooltips. */
   readonly tabMenuOpen?: boolean | undefined
   /** Override the kit popup; the embedder owns rendering and dismissal. */

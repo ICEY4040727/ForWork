@@ -20,7 +20,7 @@ function mounted(controller = seededController(), options: Partial<ComponentProp
     splitBlock: () => undefined, canAddTab: () => true, canCloseTab: () => true,
     dropTarget: undefined, draggingTabId: undefined, labels: TEST_LABELS,
     renderTab: tab => <input data-body={tab.id} defaultValue={tab.title} />,
-    renderTabTitle: undefined, renderTabMenuItems: undefined,
+    renderTabTitle: undefined, renderPaneHeader: undefined, renderTabMenuItems: undefined,
     chromePaneId: getPane(controller.getSnapshot().state, controller.getSnapshot().state.rootId).id,
     chrome: undefined,
   }
@@ -125,6 +125,163 @@ it('retains visited bodies and hands keyboard focus to the newly selected strip'
   expect(body.closest('[data-dockkit-content]')).toHaveProperty('inert', false)
   act(() => { controller.setExpanded(false); h.redraw() })
   expect(h.body(second)).toBe(body)
+})
+
+it('records a hidden tab\'s focused editor and restores it when the tab returns', () => {
+  const controller = seededController()
+  controller.setExpanded(true)
+  const tab = getPane(controller.getSnapshot().state, controller.getSnapshot().state.rootId).tabs[0]!
+  const h = mounted(controller, { keepMounted: () => true })
+  h.redraw({ callbacks: { ...h.callbacks, renderTab: record => <div contentEditable tabIndex={0} data-body={record.id} /> } })
+  const editor = h.body(tab)
+  editor.focus()
+  expect(document.activeElement).toBe(editor)
+  h.redraw({ active: false })
+  expect(editor.isConnected).toBe(true)
+  expect(document.activeElement).not.toBe(editor)
+  h.redraw({ active: true })
+  expect(document.activeElement).toBe(editor)
+})
+
+it('restores a collapsed caret at the end of a retained editable whose selection was lost', () => {
+  const controller = seededController()
+  controller.setExpanded(true)
+  const tab = getPane(controller.getSnapshot().state, controller.getSnapshot().state.rootId).tabs[0]!
+  const h = mounted(controller, { keepMounted: () => true })
+  h.redraw({ callbacks: { ...h.callbacks, renderTab: record => <div contentEditable tabIndex={0} data-body={record.id} /> } })
+  const editor = h.body(tab)
+  // jsdom does not implement the editing-host property.
+  Object.defineProperty(editor, 'isContentEditable', { configurable: true, value: true })
+  editor.focus()
+  expect(document.activeElement).toBe(editor)
+  const focus = editor.focus.bind(editor)
+  let afterFocus: (() => void) | undefined
+  vi.spyOn(editor, 'focus').mockImplementation(() => {
+    focus()
+    afterFocus?.()
+  })
+  // A retained editor can regain focus while the document selection stays empty.
+  afterFocus = () => { window.getSelection()?.removeAllRanges() }
+  h.redraw({ active: false })
+  expect(document.activeElement).not.toBe(editor)
+  h.redraw({ active: true })
+  expect(document.activeElement).toBe(editor)
+  const restored = window.getSelection()
+  expect(restored?.rangeCount).toBe(1)
+  const range = restored!.getRangeAt(0)
+  expect(range.collapsed).toBe(true)
+  expect(range.startContainer).toBe(editor)
+  // A caret already inside the editor is left where it is.
+  afterFocus = undefined
+  const addRange = vi.spyOn(Selection.prototype, 'addRange')
+  h.redraw({ active: false })
+  h.redraw({ active: true })
+  expect(document.activeElement).toBe(editor)
+  expect(window.getSelection()?.rangeCount).toBe(1)
+  expect(addRange).not.toHaveBeenCalled()
+  // A selection outside the editor is replaced by a caret at its end.
+  const external = document.createElement('div')
+  external.textContent = 'external'
+  document.body.append(external)
+  try {
+    const outside = document.createRange()
+    outside.selectNodeContents(external)
+    afterFocus = () => {
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(outside)
+    }
+    h.redraw({ active: false })
+    h.redraw({ active: true })
+    const replaced = window.getSelection()!
+    expect(replaced.rangeCount).toBe(1)
+    expect(replaced.getRangeAt(0).startContainer).toBe(editor)
+    expect(replaced.getRangeAt(0).collapsed).toBe(true)
+  } finally {
+    external.remove()
+  }
+  // Without a Selection object there is no range container to hold a caret.
+  afterFocus = undefined
+  vi.spyOn(window, 'getSelection').mockReturnValue(null)
+  h.redraw({ active: false })
+  h.redraw({ active: true })
+  expect(document.activeElement).toBe(editor)
+})
+
+it('focuses a retained non-editable target without touching the selection', () => {
+  const controller = seededController()
+  controller.setExpanded(true)
+  const tab = getPane(controller.getSnapshot().state, controller.getSnapshot().state.rootId).tabs[0]!
+  const h = mounted(controller, { keepMounted: () => true })
+  h.redraw({ callbacks: { ...h.callbacks, renderTab: record => <div tabIndex={0} data-body={record.id} /> } })
+  const control = h.body(tab)
+  control.focus()
+  const getSelection = vi.spyOn(window, 'getSelection')
+  h.redraw({ active: false })
+  expect(document.activeElement).not.toBe(control)
+  h.redraw({ active: true })
+  expect(document.activeElement).toBe(control)
+  expect(getSelection).not.toHaveBeenCalled()
+})
+
+it('focuses the chip for a focus request while a strip is present', () => {
+  const controller = seededController()
+  controller.setExpanded(true)
+  const first = getPane(controller.getSnapshot().state, controller.getSnapshot().state.rootId).tabs[0]!
+  const second = controller.openContent({ kind: 'file', contentId: 'file:b', title: 'B' })
+  controller.focusTab(first)
+  const h = mounted(controller)
+  const focus = vi.spyOn(HTMLElement.prototype, 'focus')
+  fireEvent.click(h.node(`[data-dockkit-tab="${second}"]`))
+  expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+  expect(document.activeElement).toBe(h.node(`[data-dockkit-content="${second}"] [data-dockkit-tab="${second}"]`))
+})
+
+it('restores the editor for a focus request when a custom pane header replaces the strip', () => {
+  const controller = seededController()
+  controller.setExpanded(true)
+  const first = getPane(controller.getSnapshot().state, controller.getSnapshot().state.rootId).tabs[0]!
+  const second = controller.openContent({ kind: 'office', contentId: 'file:b', title: 'B' })
+  controller.focusTab(first)
+  const h = mounted(controller, { keepMounted: () => true })
+  const header = { tab: undefined as TabId | undefined }
+  h.redraw({ callbacks: {
+    ...h.callbacks,
+    renderTab: tab => <div contentEditable tabIndex={0} data-body={tab.id} />,
+    renderPaneHeader: tab => tab.id === header.tab ? <div data-pane-header /> : undefined,
+  } })
+  fireEvent.click(h.node(`[data-dockkit-tab="${second}"]`))
+  const editor = h.body(second)
+  editor.focus()
+  fireEvent.click(h.node(`[data-dockkit-tab="${first}"]`))
+  expect(document.activeElement).not.toBe(editor)
+  expect(h.view.container.querySelector(`[data-body="${second}"]`)).toBe(editor)
+  header.tab = second
+  h.redraw()
+  fireEvent.click(h.node(`[data-dockkit-tab="${second}"]`))
+  expect(h.view.container.querySelector('[data-pane-header]')).not.toBeNull()
+  expect(h.view.container.querySelector('[data-dockkit-strip]')).toBeNull()
+  expect(document.activeElement).toBe(editor)
+})
+
+it('does not steal external focus when a retained tab returns', () => {
+  const controller = seededController()
+  controller.setExpanded(true)
+  const tab = getPane(controller.getSnapshot().state, controller.getSnapshot().state.rootId).tabs[0]!
+  const h = mounted(controller, { keepMounted: () => true })
+  h.redraw({ callbacks: { ...h.callbacks, renderTab: record => <div contentEditable tabIndex={0} data-body={record.id} /> } })
+  const editor = h.body(tab)
+  editor.focus()
+  h.redraw({ active: false })
+  const external = document.createElement('button')
+  document.body.append(external)
+  try {
+    external.focus()
+    h.redraw({ active: true })
+    expect(document.activeElement).toBe(external)
+  } finally {
+    external.remove()
+  }
 })
 
 it('keeps body ancestors through pane moves, floating, raising and docking', () => {
@@ -282,6 +439,40 @@ it('renders an empty pane and rejects unsupported docked trees', () => {
   } finally {
     window.removeEventListener('error', suppress)
   }
+})
+
+it('draws a custom pane header instead of the docked strip, and restores the strip on undefined', () => {
+  const controller = seededController()
+  controller.setExpanded(true)
+  const activePane = getPane(controller.getSnapshot().state, controller.getSnapshot().state.activePaneId)
+  const h = mounted(controller)
+  const renderPaneHeader = vi.fn<NonNullable<PaneCallbacks['renderPaneHeader']>>(() => <div data-pane-header />)
+  h.redraw({ callbacks: { ...h.callbacks, renderPaneHeader } })
+  expect(h.node('[data-pane-header]')).toBeDefined()
+  expect(h.view.container.querySelector('[data-dockkit-strip]')).toBeNull()
+  expect(renderPaneHeader).toHaveBeenCalledOnce()
+  const [tabArg, paneArg, tabsArg] = renderPaneHeader.mock.calls[0]!
+  expect(tabArg.id).toBe(activePane.activeTabId)
+  expect(paneArg.id).toBe(activePane.id)
+  expect(tabsArg.map(tab => tab.id)).toEqual(activePane.tabs)
+  h.redraw({ callbacks: { ...h.callbacks, renderPaneHeader: () => undefined } })
+  expect(h.view.container.querySelector('[data-pane-header]')).toBeNull()
+  expect(h.node('[data-dockkit-strip]')).toBeDefined()
+})
+
+it('keeps a floating pane header when a custom docked header is supplied', () => {
+  const controller = seededController()
+  controller.setExpanded(true)
+  const tab = controller.openContent({ kind: 'file', contentId: 'file:a', title: 'A' })
+  controller.floatTab(tab)
+  const h = mounted(controller)
+  const renderPaneHeader = vi.fn<NonNullable<PaneCallbacks['renderPaneHeader']>>(() => <div data-pane-header />)
+  h.redraw({ callbacks: { ...h.callbacks, renderPaneHeader } })
+  const floating = h.node('[data-dockkit-float]')
+  expect(floating.querySelector('[data-pane-header]')).toBeNull()
+  expect(floating.querySelector('[data-dockkit-float-title]')).not.toBeNull()
+  // The docked pane keeps its own custom header: only the float is exempt.
+  expect(h.node("[data-dockkit-host='dock'] [data-pane-header]")).toBeDefined()
 })
 
 it('keeps a superseding gesture marker when an older follower detaches', () => {

@@ -29,6 +29,20 @@ import { en, type OfficeEditorKey } from '../src/client/locales.ts'
 import type { DocumentProjectionView } from '@forwork/session-document/client'
 import { bindObservable } from './observable.ts'
 
+/**
+ * Report a laid-out box from jsdom's zero-geometry elements.
+ *
+ * Component specs exercise mounted behavior; the shared ResizeObserver shim
+ * delivers the DOM's zero box synchronously, so the fixture unblocks the
+ * visible-surface mount gate. The visibility spec sets its own boxes instead.
+ */
+export function stubMeasuredSurface(): void {
+  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(640)
+  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(480)
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(640)
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(480)
+}
+
 /** The Session every fixture addresses. */
 export const SESSION_ID = brandString<SessionId>('s-1')
 

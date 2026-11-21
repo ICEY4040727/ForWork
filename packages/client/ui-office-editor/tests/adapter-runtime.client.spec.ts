@@ -75,7 +75,10 @@ describe('createAdapter', () => {
     expect(factory).toHaveBeenCalledOnce()
     expect(fake.mounts[0]?.kind).toBe('workbook')
     expect(fake.mounts[0]?.snapshot).toBe(snapshot)
-    expect(fake.mounts[0]?.container).toBe(container)
+    // The runtime gets its own host inside the caller's container, so its
+    // teardown never removes a node another renderer owns.
+    expect(fake.mounts[0]?.container.parentElement).toBe(container)
+    expect(fake.mounts[0]?.container).not.toBe(container)
     expect(handle.getSnapshot()).toBe(edited)
     expect(handle.isDirty()).toBe(false)
     fake.emit()
@@ -102,26 +105,38 @@ describe('createAdapter', () => {
     expect(onEdit).toHaveBeenCalledTimes(3)
   })
 
-  it('disposes the runtime, unsubscribes mutations, and clears the container', async () => {
+  it('disposes the runtime and its own host without touching the caller-owned container', async () => {
     const fake = fakeRuntime()
-    const adapter = createAdapter(async () => fake.runtime)
+    const adapter = createAdapter(async (mount) => {
+      fake.mounts.push(mount)
+      return fake.runtime
+    })
     const container = document.createElement('div')
-    container.appendChild(document.createElement('span'))
+    const owned = document.createElement('span')
+    container.appendChild(owned)
     const handle = await adapter.mount(container, { kind: 'document', snapshot, onChange: vi.fn() })
+    const host = fake.mounts[0]?.container
+    if (host === undefined) throw new Error('the runtime mount was not recorded')
+    host.appendChild(document.createElement('div'))
     handle.dispose()
     expect(fake.dispose).toHaveBeenCalledOnce()
-    expect(container.childElementCount).toBe(0)
+    expect(container.contains(host)).toBe(false)
+    // The caller's own child (a React-managed sibling, in the panel) survives:
+    // the runtime owns only the host it was given.
+    expect(container.firstElementChild).toBe(owned)
     fake.emit()
     expect(handle.isDirty()).toBe(false)
     handle.dispose()
     expect(fake.dispose).toHaveBeenCalledOnce()
   })
 
-  it('propagates a runtime that cannot start', async () => {
+  it('removes its host when the runtime cannot start', async () => {
     const adapter = createAdapter(async () => { throw new Error('no canvas') })
-    await expect(adapter.mount(document.createElement('div'), {
+    const container = document.createElement('div')
+    await expect(adapter.mount(container, {
       kind: 'document', snapshot, onChange: vi.fn(),
     })).rejects.toThrow('no canvas')
+    expect(container.childElementCount).toBe(0)
   })
 })
 

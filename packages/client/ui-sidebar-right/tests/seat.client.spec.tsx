@@ -17,7 +17,9 @@ import { apply, inject } from '../src/client/index.ts'
 import { intentsFor } from '../src/client/shell/SidebarRight.tsx'
 import { registerSidebarShortcuts } from '../src/client/shortcuts.ts'
 import { ShortcutRegistry } from '@forwork/client-shortcuts/src/client/registry.ts'
-import type { SidebarRightTabInfo, SidebarRightTabMenuOwnerProps } from '../src/client/contract/slots.ts'
+import type {
+  SidebarRightPaneHeaderOwnerProps, SidebarRightTabInfo, SidebarRightTabMenuOwnerProps,
+} from '../src/client/contract/slots.ts'
 import type { createSidebarRightStore } from '../src/client/stores.ts'
 
 declare module '../src/client/contract/params.ts' {
@@ -324,6 +326,36 @@ it('rebinds a restored Session Tab lifetime even when close and undo share one r
   expect(document.querySelector('[data-restored-tab]')).not.toBe(original)
   expect(original.isConnected).toBe(false)
   expect(document.querySelector('[data-restored-tab]')?.textContent).toBe('0')
+})
+
+it('dispatches the pane header slot for its type and keeps the strip for types without one', async () => {
+  const h = await mountSeat()
+  const headers: SidebarRightPaneHeaderOwnerProps[] = []
+  await act(async () => {
+    h.runtime.slots.register({ name: 'sidebar.right.pane.header', key: 'test/text' },
+      (props: PropsRuntime<'sidebar.right.pane.header'>) => {
+        headers.push(props)
+        return <div data-pane-header />
+      })
+  })
+  const first = h.open('a.txt')
+  expect(h.view.container.querySelector('[data-pane-header]')).not.toBeNull()
+  expect(h.view.container.querySelector('[data-dockkit-strip]')).toBeNull()
+  expect(headers.at(-1)?.activeTabId).toBe(first.id)
+  expect(headers.at(-1)?.tabs.map(tab => [tab.tabId, tab.title, tab.kind, tab.active]))
+    .toEqual([[first.id, 'a.txt', 'text', true]])
+  const second = h.open('b.txt')
+  expect(headers.at(-1)?.tabs.map(tab => [tab.tabId, tab.active]))
+    .toEqual([[first.id, false], [second.id, true]])
+  act(() => { headers.at(-1)!.activateTab(first.id) })
+  expect(h.controller.active()?.id).toBe(first.id)
+  act(() => { headers.at(-1)!.closeTab(second.id) })
+  expect(h.layout().tabs[second.id]).toBeUndefined()
+  // The type without a header registration leaves the kit's strip in place.
+  act(() => { h.registerPage('files') })
+  act(() => { h.controller.openTab('files') })
+  expect(h.view.container.querySelector('[data-pane-header]')).toBeNull()
+  expect(h.view.container.querySelector('[data-dockkit-strip]')).not.toBeNull()
 })
 
 function element(container: HTMLElement, selector: string): HTMLElement {

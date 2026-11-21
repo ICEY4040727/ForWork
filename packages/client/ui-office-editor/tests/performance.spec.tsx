@@ -10,7 +10,7 @@
  * SC-003: a snapshot that changes outside the editor reaches the mounted
  * surface inside the 2 s budget.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import type { JsonValue } from '@forwork/util-values'
@@ -24,7 +24,7 @@ import type { OfficeAdapter, OfficeSnapshot } from '../src/client/adapter.ts'
 import { OfficePanel } from '../src/client/OfficePanel.tsx'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
 import { en } from '../src/client/locales.ts'
-import { panelFixture } from './panel.tsx'
+import { panelFixture, stubMeasuredSurface } from './panel.tsx'
 
 const CELL_COUNT = 10_000
 const ABSOLUTE_PATH = '/work/budget.xlsx'
@@ -111,6 +111,8 @@ function recordingAdapter(mounted: OfficeSnapshot[]): OfficeAdapter {
     },
   }
 }
+
+beforeEach(stubMeasuredSurface)
 
 afterEach(() => {
   cleanup()

@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode, HTMLAttributes } from 'react'
-import type { DockIntents, DockLabels, TabMenuExtras, TabRenderer } from '../contract/adapter.ts'
+import type { DockIntents, DockLabels, PaneHeaderRenderer, TabMenuExtras, TabRenderer } from '../contract/adapter.ts'
 import type { LayoutState, PaneId, SplitId, TabId, TabRecord } from '../contract/types.ts'
 import { clampSizes, FLOAT_DEFAULT_SIZE, MIN_PANE_FRACTION } from '../engine/constraints.ts'
 import { getSplit, topRightPaneId } from '../engine/tree.ts'
@@ -63,6 +63,12 @@ export interface DockSurfaceProps {
    * slot, and nothing outside that embedder is expected to supply it.
    */
   readonly renderTabTitle?: TabRenderer
+  /**
+   * A docked pane's header, when the embedder wants more than the tab strip for
+   * the selected tab. Returning `undefined` keeps the strip; a floating pane
+   * always keeps its own header. See {@link PaneHeaderRenderer}.
+   */
+  readonly renderPaneHeader?: PaneHeaderRenderer
   /** Whether the embedder popup is preparing or visible; suppresses tab tooltips. */
   readonly tabMenuOpen?: boolean | undefined
   /** Override the kit popup; the embedder owns rendering and dismissal. */
@@ -173,7 +179,7 @@ function sameSizes(a: readonly number[], b: readonly number[]): boolean {
 
 /** The split tree and the gestures over it. */
 function Surface({
-  state, canSplit, canAddTab, canCloseTab, intents, labels, renderTab, renderTabTitle, renderTabMenuItems,
+  state, canSplit, canAddTab, canCloseTab, intents, labels, renderTab, renderTabTitle, renderPaneHeader, renderTabMenuItems,
   getTabTriggerProps, tabMenuOpen, chrome, onRoom,
   draw,
   dropZones = 'edges', minPaneFraction = MIN_PANE_FRACTION, hideSplitWhenBlocked = false,
@@ -295,6 +301,7 @@ function Surface({
     labels,
     renderTab,
     renderTabTitle,
+    renderPaneHeader,
     renderTabMenuItems,
     getTabTriggerProps, tabMenuOpen,
     chromePaneId: topRightPaneId(state),

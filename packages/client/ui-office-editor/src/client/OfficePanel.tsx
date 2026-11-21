@@ -1,4 +1,4 @@
-﻿/**
+/**
  * The office tab's body: the edited file, its save state, and the editor surface.
  *
  * The file's metadata arrives through the standard `useResource` hook; the
@@ -6,26 +6,23 @@
  * Remote. The editor runtime stays behind the adapter seam and mounts only
  * after a successful read, so loading, read failures, save refusals, external
  * changes, and the dirty close prompt are all visible without loading Univer.
- * The body also lists the Session's other open Office documents from the
- * Sidebar's public tab inventory, runs the Session's one durable-set restore
- * pass, and shows the converted-copy and missing-document notices.
+ * The body runs the Session's one durable-set restore pass from the Sidebar's
+ * public tab inventory and shows the converted-copy and missing-document
+ * notices; the pane's own header lists the open tabs.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@forwork/client-ui-slots'
-import type { UnsupportedFeatureKind } from '@forwork/office-exchange/types'
+import type { PreservedConstructKind } from '@forwork/office-exchange/types'
 import type {} from '@forwork/client-resources/client'
 import type {} from '@forwork/api-workspace-files/client'
-import { pathPartsOf, fileAddressFor } from '@forwork/util-workspace-path'
+import { fileAddressFor } from '@forwork/util-workspace-path'
 import type { OfficeEditorHandle } from './adapter.ts'
 import type { OfficeCommandTarget } from './command-bridge.ts'
 import type { OfficePanelInjected } from './face.ts'
-import { DocumentPanel } from './DocumentPanel.tsx'
-import type { OfficeDocumentEntry } from './DocumentPanel.tsx'
 import type { OfficeDocumentFailureCode } from './useOfficeDocument.ts'
 import { useOfficeDocument } from './useOfficeDocument.ts'
 import { useDocumentRestore } from './restore.ts'
-import { OFFICE_KIND, basenameOf } from './definition.ts'
 import { openTargetOf, officeDocumentIdentity, projectedDocumentIdAt, workspaceRootOf } from './target.ts'
 import type { OfficeEditorKey } from './locales.ts'
 import css from './OfficePanel.module.css'
@@ -51,17 +48,27 @@ const ERROR_KEYS: Record<OfficeDocumentFailureCode, OfficeEditorKey> = {
   unknown: 'error.unknown',
 }
 
-/** Locale key for each unsupported feature class. */
-const FEATURE_KEYS: Record<UnsupportedFeatureKind, OfficeEditorKey> = {
-  macro: 'feature.macro',
-  'tracked-changes': 'feature.trackedChanges',
-  comment: 'feature.comment',
-  chart: 'feature.chart',
-  drawing: 'feature.drawing',
-  shape: 'feature.shape',
-  'formula-recalc': 'feature.formulaRecalc',
-  'embedded-object': 'feature.embeddedObject',
-  other: 'feature.other',
+/** Locale key for each preserved construct class. */
+const PRESERVED_KEYS: Record<PreservedConstructKind, OfficeEditorKey> = {
+  macro: 'preserved.macro',
+  chart: 'preserved.chart',
+  'pivot-table': 'preserved.pivotTable',
+  'excel-table': 'preserved.excelTable',
+  'defined-names': 'preserved.definedNames',
+  'calc-chain': 'preserved.calcChain',
+  comment: 'preserved.comment',
+  'embedded-object': 'preserved.embeddedObject',
+  drawing: 'preserved.drawing',
+  shape: 'preserved.shape',
+  theme: 'preserved.theme',
+  'font-table': 'preserved.fontTable',
+  'web-settings': 'preserved.webSettings',
+  'custom-xml': 'preserved.customXml',
+  'external-link': 'preserved.externalLink',
+  field: 'preserved.field',
+  bookmark: 'preserved.bookmark',
+  'content-control': 'preserved.contentControl',
+  'document-properties': 'preserved.documentProperties',
 }
 
 /**
@@ -155,21 +162,9 @@ export function OfficePanel({
     if (meta.status !== 'failed' || meta.failure?.code !== 'workspace-file/not-found') return
     markMissing(target.sessionId, documentId)
   }, [markMissing, meta.failure, meta.status, target.sessionId, documentId])
-  const documents = useMemo<readonly OfficeDocumentEntry[]>(() => openTabs
-    .filter(entry => entry.sessionId === target.sessionId && entry.kind === OFFICE_KIND)
-    .map(entry => ({
-      tabId: entry.tabId,
-      contentId: entry.contentId,
-      title: basenameOf(entry.contentId),
-      active: entry.tabId === tab.id,
-    })), [openTabs, target.sessionId, tab.id])
-  const activateDocument = useCallback((entry: OfficeDocumentEntry): void => {
-    tab.actions.openResource(entry.contentId)
-  }, [tab.actions])
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const handleRef = useRef<OfficeEditorHandle | null>(null)
   const [mountFailed, setMountFailed] = useState(false)
-  const name = meta.value === undefined ? tab.title : pathPartsOf(meta.value.absolutePath).name
   const docRef = useRef(doc)
   docRef.current = doc
   const commandTarget = useMemo<OfficeCommandTarget>(() => ({
@@ -177,7 +172,6 @@ export function OfficePanel({
     version: () => docRef.current.currentContentVersion(),
     isOpen: () => handleRef.current !== null,
     isDirty: () => handleRef.current?.isDirty() ?? false,
-    unsupported: () => docRef.current.unsupported,
     apply: (operation) => {
       const handle = handleRef.current
       if (handle === null) {
@@ -209,20 +203,39 @@ export function OfficePanel({
     const snapshot = doc.snapshot
     if (container === null || snapshot === undefined) return
     let live = true
+    let started = false
     let handle: OfficeEditorHandle | undefined
-    setMountFailed(false)
-    void mountEditor(container, { kind: snapshot.kind, snapshot, onChange, onEdit }).then((mounted) => {
-      if (!live) {
-        mounted.dispose()
-        return
-      }
-      handle = mounted
-      handleRef.current = mounted
-      if (doc.recovered) markTabDirty(tab.id, true)
-    }, () => {
-      if (live) setMountFailed(true)
-    })
+    let observer: ResizeObserver | undefined
+    // A hidden tab lays out its surface at 0x0, so Univer mounts without a
+    // caret; wait for a real box and mount once as soon as the tab is visible.
+    const start = (): void => {
+      if (started || !live) return
+      started = true
+      observer?.disconnect()
+      setMountFailed(false)
+      void mountEditor(container, { kind: snapshot.kind, snapshot, onChange, onEdit }).then((mounted) => {
+        if (!live) {
+          mounted.dispose()
+          return
+        }
+        handle = mounted
+        handleRef.current = mounted
+        if (doc.recovered) markTabDirty(tab.id, true)
+      }, () => {
+        if (live) setMountFailed(true)
+      })
+    }
+    if (typeof ResizeObserver === 'undefined') {
+      start()
+    } else {
+      observer = new ResizeObserver(() => {
+        if (container.clientWidth > 0 && container.clientHeight > 0) start()
+      })
+      observer.observe(container)
+      if (container.clientWidth > 0 && container.clientHeight > 0) start()
+    }
     return () => {
+      observer?.disconnect()
       live = false
       if (handle !== undefined) handle.dispose()
       if (handleRef.current === handle) handleRef.current = null
@@ -258,7 +271,6 @@ export function OfficePanel({
   return (
     <section className={css.panel} data-office-editor-panel>
       <header className={css.header}>
-        <span className={css.fileName} data-office-file-name>{name}</span>
         <span className={css.actions}>
           {dirty && <span className={css.dirty} data-office-dirty>{t('unsaved')}</span>}
           <button
@@ -272,6 +284,16 @@ export function OfficePanel({
           </button>
         </span>
       </header>
+      {doc.preserved.length > 0 && (
+        <div className={css.preserved} data-office-preserved>
+          <p className={css.preservedLine}>{t('preserved')}</p>
+          <ul className={css.features}>
+            {doc.preserved.map(kind => (
+              <li key={kind} data-office-preserved-feature={kind}>{t(PRESERVED_KEYS[kind])}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       {notice !== undefined && !notice.dismissed && (
         <p className={css.banner} data-office-legacy-notice>
           <span>{t('legacyNotice', { source: notice.source })}</span>
@@ -298,7 +320,6 @@ export function OfficePanel({
           </button>
         </p>
       )}
-      <DocumentPanel documents={documents} onActivate={activateDocument} t={t} />
       {doc.recovery !== undefined && (
         <p className={css.banner} data-office-draft-recovery={doc.recovery.decision}>
           <span>{doc.recovery.decision === 'stale' ? t('draftStale') : t('draftFound')}</span>
@@ -332,19 +353,6 @@ export function OfficePanel({
             {t('dismiss')}
           </button>
         </p>
-      )}
-      {doc.unsupported.length > 0 && (
-        <div className={css.refusal} data-office-unsupported>
-          <p className={css.refusalLine}>{t('unsupported')}</p>
-          <ul className={css.features}>
-            {doc.unsupported.map(feature => (
-              <li key={`${feature.kind}:${feature.detail ?? ''}`} data-office-unsupported-feature={feature.kind}>
-                <span>{t(FEATURE_KEYS[feature.kind])}</span>
-                {feature.detail !== undefined && <span className={css.featureDetail}>{feature.detail}</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
       )}
       {doc.externalChange && (
         <p className={css.banner} data-office-external-change>

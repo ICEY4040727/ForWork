@@ -72,7 +72,6 @@ interface TargetOptions {
   readonly version?: number | undefined
   readonly open?: boolean
   readonly dirty?: boolean
-  readonly unsupported?: readonly UnsupportedFeature[]
   readonly outcome?: OfficeApplyOutcome
   readonly snapshot?: OfficeDocumentSnapshot | undefined
 }
@@ -98,7 +97,6 @@ function fakeTarget(options: TargetOptions = {}): {
       version: () => hasVersion ? version : undefined,
       isOpen: () => options.open ?? true,
       isDirty: () => options.dirty ?? false,
-      unsupported: () => options.unsupported ?? [],
       apply,
       snapshot,
     },
@@ -137,7 +135,7 @@ describe('createCommandBridge', () => {
   it('reads the live unit without applying or requiring a matching version', () => {
     const feed = new FakeFeed()
     const { attach, complete } = bridgeOver(feed)
-    const { target, apply } = fakeTarget({ version: 7, unsupported: [{ kind: 'macro' }] })
+    const { target, apply } = fakeTarget({ version: 7 })
     attach(target)
     feed.appendCommand(command({ operation: { kind: 'read' }, fromVersion: 3 }))
     expect(apply).not.toHaveBeenCalled()
@@ -211,18 +209,6 @@ describe('createCommandBridge', () => {
     attach(target)
     feed.appendCommand(command())
     expect(snapshot).not.toHaveBeenCalled()
-    expect(complete).toHaveBeenCalledOnce()
-    expect(complete).toHaveBeenCalledWith('request-1', { status: 'unsupported-feature', features })
-  })
-
-  it('refuses a document whose read already reported unsupported features', () => {
-    const feed = new FakeFeed()
-    const { attach, complete } = bridgeOver(feed)
-    const features: readonly UnsupportedFeature[] = [{ kind: 'macro' }]
-    const { target, apply } = fakeTarget({ unsupported: features })
-    attach(target)
-    feed.appendCommand(command())
-    expect(apply).not.toHaveBeenCalled()
     expect(complete).toHaveBeenCalledOnce()
     expect(complete).toHaveBeenCalledWith('request-1', { status: 'unsupported-feature', features })
   })

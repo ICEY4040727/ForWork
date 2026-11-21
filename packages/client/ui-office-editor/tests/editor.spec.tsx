@@ -7,7 +7,7 @@
  * was handed to them and that every registration is gone after dispose. The
  * body renders with a fake Remote and adapter so no Univer code loads.
  */
-import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { Context } from '@forwork/cordis'
@@ -24,13 +24,19 @@ import type { SessionListState, SessionSummary } from '@forwork/api-session-cont
 import type { DocumentProjectionView } from '@forwork/session-document/client'
 import type { RemoteResult } from '@forwork/typert-protocol'
 import { RemoteError } from '@forwork/typert-protocol'
-import type { OfficeDocumentReadResult, OfficeDocumentSaveResult, OfficeDocumentSnapshot } from '@forwork/office-exchange/types'
+import type {
+  OfficeDocumentReadResult,
+  OfficeDocumentSaveResult,
+  OfficeDocumentSnapshot,
+  PreservedConstructKind,
+} from '@forwork/office-exchange/types'
 import { SidebarRightTabRegistry } from '@forwork/client-ui-sidebar-right/src/client/tab-registry.ts'
 import { createMockAdapter } from '../src/client/adapter.ts'
 import type { OfficeMountInput } from '../src/client/adapter.ts'
 import type { OfficeTabChangeSnapshot } from '../src/client/changes.ts'
 import { OFFICE_ID, OFFICE_KIND } from '../src/client/definition.ts'
 import { apply, inject } from '../src/client/index.ts'
+import { OfficeHeader } from '../src/client/OfficeHeader.tsx'
 import { OfficePanel } from '../src/client/OfficePanel.tsx'
 import type { OfficePanelProps } from '../src/client/OfficePanel.tsx'
 import type { OfficeCommandTarget } from '../src/client/command-bridge.ts'
@@ -41,19 +47,34 @@ import { createOfficeRestore } from '../src/client/restore.ts'
 import type { OfficeRestoreState } from '../src/client/restore.ts'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
 import { de, en, es, fr, ja, pt, ru, zh, type OfficeEditorKey } from '../src/client/locales.ts'
+import { stubMeasuredSurface } from './panel.tsx'
 
 const ADDRESS = 'dsh-resource://file/session/s-1/work/budget.xlsx'
 const SESSION_ID = brandString<SessionId>('s-1')
 const TAB_ID = brandString<TabId>('tab-1')
 const SIGNAL = new AbortController().signal
 
+beforeEach(stubMeasuredSurface)
+
 afterEach(cleanup)
 
 const snapshot: OfficeDocumentSnapshot = { kind: 'workbook', data: { id: 'book' } }
 
-function readResult(version: string, overrides: Partial<OfficeDocumentReadResult> = {}): OfficeDocumentReadResult {
+/** The read result with the preserved-class report the Exchange read carries. */
+interface PreservedReadResult extends OfficeDocumentReadResult {
+  readonly preserved?: readonly PreservedConstructKind[]
+}
+
+function readResult(version: string, overrides: Partial<PreservedReadResult> = {}): PreservedReadResult {
   return { format: 'xlsx', snapshot, unsupported: [], version, ...overrides }
 }
+
+/** Every preserved construct class in the corpus, in report order. */
+const PRESERVED_KINDS: readonly PreservedConstructKind[] = [
+  'macro', 'chart', 'pivot-table', 'excel-table', 'defined-names', 'calc-chain', 'comment',
+  'embedded-object', 'drawing', 'shape', 'theme', 'font-table', 'web-settings', 'custom-xml',
+  'external-link', 'field', 'bookmark', 'content-control', 'document-properties',
+]
 
 function success<T>(value: T): RemoteResult<T> {
   return { ok: true, value }
@@ -265,17 +286,18 @@ function panelProps(options: PanelOptions = {}): OfficePanelProps {
 }
 
 describe('ui-office-editor apply', () => {
-  it('registers the office type, its dictionaries, and the body and title seats under its id', async () => {
+  it('registers the office type, its dictionaries, and the body, title, and header seats under its id', async () => {
     const { tabs, registered, dictionaries } = await boot()
     const definition = tabs.get(OFFICE_KIND)
     expect(definition?.id).toBe(OFFICE_ID)
-    expect(definition?.patterns).toEqual(['*.docx', '*.xlsx', '*.doc', '*.xls', '*.ppt'])
+    expect(definition?.patterns).toEqual(['*.docx', '*.docm', '*.xlsx', '*.xlsm', '*.doc', '*.xls', '*.ppt'])
     expect(definition?.priority).toBe('builtin')
     expect(definition?.keepMounted).toBe(true)
     expect(dictionaries.get('officeEditor')).toEqual({ zh, en, ja, es, fr, de, ru, pt })
     expect(registered.map(entry => [entry.name, entry.key, entry.locale, entry.component])).toEqual([
       ['sidebar.right.pane.tab', OFFICE_ID, 'officeEditor', OfficePanel],
       ['sidebar.right.pane.tab.title', OFFICE_ID, undefined, OfficeTitle],
+      ['sidebar.right.pane.header', OFFICE_ID, 'officeEditor', OfficeHeader],
     ])
   })
 
@@ -289,7 +311,6 @@ describe('ui-office-editor apply', () => {
       version: () => 2,
       isOpen: () => true,
       isDirty: () => false,
-      unsupported: () => [],
       apply,
       snapshot: () => snapshot,
     }
@@ -476,7 +497,7 @@ describe('OfficePanel', () => {
     await waitFor(() => { expect(markDirty).toHaveBeenCalledWith(TAB_ID, false) })
   })
 
-  it('shows the named unsupported features and refuses to call save', async () => {
+  it('keeps save enabled when a read reports whole-file regeneration losses', async () => {
     const remote = fakeRemote()
     remote.read.mockResolvedValueOnce(success(readResult('v1', {
       unsupported: [{ kind: 'macro' }, { kind: 'chart', detail: 'Sheet1' }],
@@ -485,14 +506,14 @@ describe('OfficePanel', () => {
       value: { absolutePath: '/work/budget.xlsx', version: 'v1' },
       remote: remote.face,
     })} />)
-    expect(await view.findByText(en['feature.macro'])).toBeDefined()
-    expect(view.getByText(en['feature.chart'])).toBeDefined()
-    expect(view.getByText('Sheet1')).toBeDefined()
+    await waitFor(() => { expect(remote.save).not.toHaveBeenCalled() })
+    const save = view.container.querySelector('[data-office-save]')
+    expect(save?.hasAttribute('disabled')).toBe(false)
     fireEvent.click(view.getByText(en.save))
-    expect(remote.save).not.toHaveBeenCalled()
+    await waitFor(() => { expect(remote.save).toHaveBeenCalledOnce() })
   })
 
-  it('names a newly detected document or workbook loss and refuses to save', async () => {
+  it('keeps the save control enabled for a document or workbook loss a read reported', async () => {
     const remote = fakeRemote()
     remote.read.mockResolvedValueOnce(success(readResult('v1', {
       unsupported: [{ kind: 'drawing', detail: 'table-1' }, { kind: 'comment' }],
@@ -501,12 +522,35 @@ describe('OfficePanel', () => {
       value: { absolutePath: '/work/budget.xlsx', version: 'v1' },
       remote: remote.face,
     })} />)
-    expect(await view.findByText(en['feature.drawing'])).toBeDefined()
-    expect(view.getByText(en['feature.comment'])).toBeDefined()
-    expect(view.getByText('table-1')).toBeDefined()
+    await waitFor(() => { expect(remote.save).not.toHaveBeenCalled() })
+    const save = view.container.querySelector('[data-office-save]')
+    expect(save?.hasAttribute('disabled')).toBe(false)
     fireEvent.click(view.getByText(en.save))
-    expect(remote.save).not.toHaveBeenCalled()
+    await waitFor(() => { expect(remote.save).toHaveBeenCalledOnce() })
   })
+
+  it.each(PRESERVED_KINDS)(
+    'marks preserved %s content with localized copy and keeps save enabled (SC-013)',
+    async (kind) => {
+      const remote = fakeRemote()
+      remote.read.mockResolvedValueOnce(success(readResult('v1', { preserved: [kind] })))
+      const view = render(<OfficePanel {...panelProps({
+        value: { absolutePath: '/work/budget.xlsx', version: 'v1' },
+        remote: remote.face,
+      })} />)
+      const marker = await waitFor(() => {
+        const found = view.container.querySelector(`[data-office-preserved-feature="${kind}"]`)
+        expect(found).not.toBeNull()
+        return found!
+      })
+      const label = marker.textContent ?? ''
+      expect(label).not.toBe('')
+      expect(label).not.toBe(kind)
+      expect(Object.values(en)).toContain(label)
+      const save = view.container.querySelector('[data-office-save]')
+      expect(save?.hasAttribute('disabled')).toBe(false)
+    },
+  )
 
   it('prompts instead of reloading when the file changes while dirty', async () => {
     const remote = fakeRemote()

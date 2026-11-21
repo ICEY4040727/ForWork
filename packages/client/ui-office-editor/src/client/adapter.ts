@@ -108,7 +108,23 @@ export interface OfficeAdapter {
 export function createAdapter(factory: OfficeRuntimeFactory = loadOfficeRuntime): OfficeAdapter {
   return {
     async mount(container, input) {
-      const runtime = await factory({ container, kind: input.kind, snapshot: input.snapshot })
+      // The runtime mounts a nested UI root onto the element it receives and
+      // removes that element's children when it tears down. The caller's
+      // container belongs to React, so the runtime gets a host of its own:
+      // React may then remove the container without racing the runtime's
+      // teardown, and the runtime never removes a React-managed node.
+      const host = container.ownerDocument.createElement('div')
+      host.dataset.officeRuntimeHost = ''
+      host.style.width = '100%'
+      host.style.height = '100%'
+      container.appendChild(host)
+      let runtime: OfficeRuntime
+      try {
+        runtime = await factory({ container: host, kind: input.kind, snapshot: input.snapshot })
+      } catch (error) {
+        host.remove()
+        throw error
+      }
       let dirty = false
       let applying = false
       let disposed = false
@@ -124,8 +140,11 @@ export function createAdapter(factory: OfficeRuntimeFactory = loadOfficeRuntime)
           if (disposed) return
           disposed = true
           release()
-          runtime.dispose()
-          container.replaceChildren()
+          try {
+            runtime.dispose()
+          } finally {
+            host.remove()
+          }
         },
         getSnapshot: () => runtime.getSnapshot(),
         apply(operation) {

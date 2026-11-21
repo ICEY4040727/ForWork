@@ -1,10 +1,10 @@
 /**
  * Which addresses the office type claims, and which stay preview-only.
  *
- * `.docx` and `.xlsx` are editable, and the legacy `.doc`, `.xls`, and `.ppt`
- * sources are claimed so opening one converts it; `.pptx` never reaches this
- * type and keeps the read-only document preview the Sidebar ships as the
- * fallback viewer.
+ * `.docx`, `.docm`, `.xlsx`, and `.xlsm` are editable, and the legacy `.doc`,
+ * `.xls`, and `.ppt` sources are claimed so opening one converts it; `.pptx`
+ * never reaches this type and keeps the read-only document preview the Sidebar
+ * ships as the fallback viewer.
  */
 import { describe, expect, it } from 'vitest'
 import { Context } from '@forwork/cordis'
@@ -31,7 +31,7 @@ describe('basenameOf', () => {
 describe('office tab patterns', () => {
   it('declares the editable suffixes and the legacy sources it converts', () => {
     const definition = officeDefinition()
-    expect(definition.patterns).toEqual(['*.docx', '*.xlsx', '*.doc', '*.xls', '*.ppt'])
+    expect(definition.patterns).toEqual(['*.docx', '*.docm', '*.xlsx', '*.xlsm', '*.doc', '*.xls', '*.ppt'])
     expect(definition.priority).toBe('builtin')
     expect(definition.id).toBe('@forwork/client-ui-office-editor')
     expect(definition.kind).toBe(OFFICE_KIND)
@@ -40,6 +40,8 @@ describe('office tab patterns', () => {
   it.each([
     sessionFileAddress('s-1', 'budget.xlsx'),
     sessionFileAddress('s-1', 'work/report.docx'),
+    sessionFileAddress('s-1', 'macro.docm'),
+    sessionFileAddress('s-1', 'macro.XLSM'),
     sessionFileAddress('s-1', '/home/me/REPORT.DOCX'),
     sessionFileAddress('s-1', 'legacy.doc'),
     sessionFileAddress('s-1', 'legacy.xls'),

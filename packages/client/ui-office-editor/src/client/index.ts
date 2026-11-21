@@ -3,8 +3,9 @@
  *
  * The type reaches the Sidebar through its public path only: the definition
  * into `ctx.sidebarRightTabs`, the body into the keyed `sidebar.right.pane.tab`
- * seat, and the chip title into `sidebar.right.pane.tab.title`, both under the
- * definition's `id`. The body reads the file through the `officeDocument`
+ * seat, the chip title into `sidebar.right.pane.tab.title`, and the selected
+ * pane's header into `sidebar.right.pane.header`, all under the definition's
+ * `id`. The body reads the file through the `officeDocument`
  * Remote, mounts the editor runtime behind the adapter seam, shares one
  * plugin-owned change surface with the tab close handler, and lists the
  * Session's open Office documents from the Sidebar's open-tab inventory. A
@@ -31,6 +32,7 @@ import { createOfficeTabChanges } from './changes.ts'
 import { attachSessionCommandBridge, type OfficeCommandRemote } from './command-bridge.ts'
 import { officePanelInjected } from './face.ts'
 import { createOfficeLegacyNotices } from './notices.ts'
+import { OfficeHeader } from './OfficeHeader.tsx'
 import { OfficePanel } from './OfficePanel.tsx'
 import { OfficeTitle } from './OfficeTitle.tsx'
 import { createOfficeRestore, restoreOnSessionActivation } from './restore.ts'
@@ -134,4 +136,8 @@ export function apply(ctx: ClientContext): void {
     { name: 'sidebar.right.pane.tab.title', key: OFFICE_ID },
     OfficeTitle,
   )), 'ui-office-editor: title')
+  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.header', () => ctx.slots.register(
+    { name: 'sidebar.right.pane.header', key: OFFICE_ID, locale: NS },
+    OfficeHeader,
+  )), 'ui-office-editor: pane header')
 }

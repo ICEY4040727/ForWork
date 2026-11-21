@@ -1,7 +1,7 @@
 /**
  * The right Sidebar's extension seats and its copy namespace.
  *
- * Four seats, each with a different reason to exist:
+ * Five seats, each with a different reason to exist:
  * - `sidebar.right.pane.tab` is how a tab type contributes a body. It is keyed by
  *   the type definition's `id`, so adding a type is a registration, never an
  *   edit here. The key domain stays the open string space because a tab type may
@@ -9,6 +9,9 @@
  * - `sidebar.right.pane.tab.title` is the same dispatch for what the chip shows
  *   as the tab's title. Registering is optional: without an entry the chip shows
  *   the title the registry captured when the tab opened.
+ * - `sidebar.right.pane.header` is the same dispatch for a docked pane's whole
+ *   top edge while that type's tab is selected. Registering is optional: without
+ *   an entry the pane keeps the tab strip.
  * - `sidebar.right.tab.guide` lets a product replace the guide tab's contents
  *   without replacing the tab. It is a chain because the replacement decides for
  *   itself whether it applies, and the shipped guide is the owner's fallback.
@@ -75,6 +78,17 @@ declare module '@forwork/client-ui-slots' {
       scope: 'session'
       hookContext: TabHookContext
       inject: SidebarRightTabInjected
+    }
+    /**
+     * A docked pane's whole top edge while a tab of this type is selected,
+     * dispatched with the same key as the body. The entry replaces the pane's
+     * tab strip, so it owns access to every tab in that pane; without an entry
+     * the strip renders as usual.
+     */
+    'sidebar.right.pane.header': {
+      kind: 'keyed'
+      scope: 'session'
+      owner: SidebarRightPaneHeaderOwnerProps
     }
     /**
      * The guide tab's body. Selectors run in chain order and the first
@@ -217,6 +231,30 @@ export type UseSidebarRightTabInfo = () => SidebarRightTabInfo
 /** The slot-owned hook shared by every tab body and title registration. */
 export interface SidebarRightTabInjected {
   hooks: { tabInfo: SlotHookFactory<'sidebar.right.pane.tab', UseSidebarRightTabInfo> }
+}
+
+/** One tab a pane header draws. */
+export interface SidebarRightPaneHeaderTab {
+  /** Identity of the tab. */
+  readonly tabId: TabId
+  /** The title the registry captured when the tab opened. */
+  readonly title: string
+  /** The tab type's kind. */
+  readonly kind: string
+  /** Whether this tab is the pane's selected one. */
+  readonly active: boolean
+}
+
+/** Owner share of one pane-header occurrence: the pane's tabs and the actions a header may take. */
+export interface SidebarRightPaneHeaderOwnerProps {
+  /** Every tab in the pane, in strip order. */
+  readonly tabs: readonly SidebarRightPaneHeaderTab[]
+  /** The pane's selected tab. */
+  readonly activeTabId: TabId
+  /** Focus one of the pane's tabs, exactly as the strip does. */
+  readonly activateTab: (tabId: TabId) => void
+  /** Close one of the pane's tabs. */
+  readonly closeTab: (tabId: TabId) => void
 }
 
 /** Owner share of one tab-menu item occurrence. */

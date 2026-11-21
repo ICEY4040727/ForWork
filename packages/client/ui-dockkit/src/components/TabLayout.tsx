@@ -4,7 +4,7 @@ import type { MutableRefObject, ReactNode } from 'react'
 import clsx from 'clsx'
 import type { DockIntents } from '../contract/adapter.ts'
 import type { LayoutState, PaneId, PaneNode, TabId, TabRecord } from '../contract/types.ts'
-import { findTabPane, floatRect, getNode, getPane } from '../engine/tree.ts'
+import { findTabPane, floatRect, getNode, getPane, getTab } from '../engine/tree.ts'
 import type { SizePreview } from './PaneTree.tsx'
 import type { PaneCallbacks } from './render.ts'
 import { FloatHeader, floatStyle, useFloatGestures } from './FloatLayer.tsx'
@@ -37,6 +37,26 @@ interface TabHostProps extends LayoutProps {
   readonly offsets: Map<PaneId, number>
 }
 
+/**
+ * Focus a tab's remembered element and give a retained editor a usable caret.
+ * A hidden contenteditable can keep focusability while losing its selection,
+ * so restoring focus alone leaves typed characters without an input event.
+ * @param element - focus target inside the tab's section.
+ */
+function focusRestored(element: HTMLElement): void {
+  element.focus({ preventScroll: true })
+  if (!element.isContentEditable) return
+  const selection = window.getSelection()
+  // Only a document with a browsing context exposes a selection.
+  if (selection === null) return
+  if (selection.rangeCount > 0 && element.contains(selection.anchorNode)) return
+  const range = document.createRange()
+  range.selectNodeContents(element)
+  range.collapse(false)
+  selection.removeAllRanges()
+  selection.addRange(range)
+}
+
 /** A tab's ancestors stay identical across selection, pane moves and floating. */
 function TabHost({ state, callbacks, intents, tab, pane, column, floats, focusRequest, offsets, keepMounted,
   active = true }: TabHostProps): ReactNode {
@@ -48,22 +68,56 @@ function TabHost({ state, callbacks, intents, tab, pane, column, floats, focusRe
   if (visible && !visited) setVisited(true)
   const host = useRef<HTMLElement | null>(null)
   const body = useRef<HTMLDivElement | null>(null)
+  const lastFocused = useRef<HTMLElement | null>(null)
   useLayoutEffect(() => {
     // Both refs target unconditional descendants attached before these effects.
     const section = host.current as HTMLElement
     section.inert = !visible
     const focused = document.activeElement
-    if (!visible && focused instanceof HTMLElement && section.contains(focused)) focused.blur()
+    if (!visible) {
+      // A retained body keeps its mounted editor; its hidden input must be
+      // blurred now and focused again when the tab returns.
+      if (focused instanceof HTMLElement && section.contains(focused)) {
+        lastFocused.current = focused
+        focused.blur()
+      }
+      return
+    }
+    const restore = (): void => {
+      const target = lastFocused.current
+      if (target?.isConnected === true && section.contains(target)) focusRestored(target)
+      lastFocused.current = null
+    }
     const request = focusRequest.current
-    if (!visible || request?.tabId !== tab.id) return
-    focusRequest.current = undefined
-    // Preserve deliberate focus taken by another control or the newly shown body.
-    if (focused !== null && focused !== document.body && focused !== document.documentElement && focused !== request.origin) return
-    const strip = section.querySelector('[data-dockkit-strip]')
-    const chip = [...strip?.querySelectorAll<HTMLElement>('[data-dockkit-tab]') ?? []]
-      .find(element => element.dataset.dockkitTab === tab.id)
-    chip?.focus({ preventScroll: true })
+    if (request?.tabId === tab.id) {
+      focusRequest.current = undefined
+      // Preserve deliberate focus taken by another control or the newly shown body.
+      if (focused !== null && focused !== document.body && focused !== document.documentElement && focused !== request.origin) return
+      const strip = section.querySelector('[data-dockkit-strip]')
+      const chip = [...strip?.querySelectorAll<HTMLElement>('[data-dockkit-tab]') ?? []]
+        .find(element => element.dataset.dockkitTab === tab.id)
+      if (chip !== undefined) {
+        focusRestored(chip)
+        lastFocused.current = null
+      } else {
+        // A custom pane header can replace the strip; activating its tab then
+        // returns to the editor the tab held before it was hidden.
+        restore()
+      }
+      return
+    }
+    if (focused === null || focused === document.body || focused === document.documentElement) restore()
   }, [visible, tab.id, focusRequest])
+  // A click on another tab's chip moves focus before this tab hides, so the
+  // body remembers its own focus target while it is still on screen.
+  useEffect(() => {
+    const element = body.current as HTMLDivElement
+    const remember = (event: FocusEvent): void => {
+      if (event.target instanceof HTMLElement) lastFocused.current = event.target
+    }
+    element.addEventListener('focusin', remember)
+    return () => { element.removeEventListener('focusin', remember) }
+  }, [])
   // Electron emits a non-bubbling focus event on the webview element.
   useEffect(() => {
     const element = body.current as HTMLDivElement
@@ -77,6 +131,9 @@ function TabHost({ state, callbacks, intents, tab, pane, column, floats, focusRe
   }, [visible, floating, floats, pane.id, state.activePaneId, callbacks])
   const lifted = floating && floats.preview?.paneId === pane.id ? floats.preview.rect : undefined
   const rect = floating ? floats.rectOf(pane.id, floatRect(pane)) : undefined
+  const paneHeader = selected && !floating
+    ? callbacks.renderPaneHeader?.(tab, pane, pane.tabs.map(id => getTab(state, id)))
+    : undefined
   const depth = lifted === undefined ? state.floats.indexOf(pane.id) + 1 : state.floats.length + 1
   return (
     <div className={clsx(css.tabCell, floating && css.floatingCell)} hidden={!selected}
@@ -97,7 +154,9 @@ function TabHost({ state, callbacks, intents, tab, pane, column, floats, focusRe
           {selected && (floating
             ? <FloatHeader paneId={pane.id} tab={tab} labels={callbacks.labels} intents={intents}
               renderTabTitle={callbacks.renderTabTitle} canCloseTab={callbacks.canCloseTab} drag={floats.drag} />
-            : <TabStrip state={state} pane={pane} callbacks={callbacks} offsets={offsets} />)}
+            : paneHeader === undefined
+              ? <TabStrip state={state} pane={pane} callbacks={callbacks} offsets={offsets} />
+              : paneHeader)}
         </div>
         <div ref={body} className={clsx(css.tabHostBody, floating ? css.floatBody : css.paneBody)}>
           {visited && (retained || (active && selected)) ? <TabBody tab={tab} renderTab={callbacks.renderTab} /> : null}

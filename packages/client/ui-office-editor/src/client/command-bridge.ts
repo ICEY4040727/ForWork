@@ -48,8 +48,6 @@ export interface OfficeCommandTarget {
   isOpen(): boolean
   /** Whether the live unit has unsaved user edits. */
   isDirty(): boolean
-  /** Features a save would drop, as the read reported them. */
-  unsupported(): readonly UnsupportedFeature[]
   /**
    * Apply one structured operation to the live unit.
    * @param operation - ordered steps the Host command carries.
@@ -362,11 +360,6 @@ export function createCommandBridge(options: CommandBridgeOptions): CommandBridg
         }
         if (version !== request.fromVersion) {
           options.complete(request.requestId, { status: 'conflict', currentVersion: version })
-          return
-        }
-        const unsupported = target.unsupported()
-        if (unsupported.length > 0) {
-          options.complete(request.requestId, { status: 'unsupported-feature', features: unsupported })
           return
         }
         const outcome = target.apply(request.operation.steps)

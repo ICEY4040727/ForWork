@@ -3,15 +3,18 @@
  *
  * Reads run through the injected `officeDocument` Remote — never the Host
  * service — and a save sends the live snapshot with the version the read
- * observed. A refused version is reported as a conflict; a file that reports
- * an unsupported feature cannot be saved at all. An external version change
- * reloads a clean unit and prompts instead of reloading a dirty one.
+ * observed. A refused version is reported as a conflict. Preserved content the
+ * editor cannot change never blocks a save; the writer refuses only an edit
+ * that intersects a coupled construct. An external version change reloads a
+ * clean unit and prompts instead of reloading a dirty one.
  *
  * The content version is one value shared by the Host, agent commands, and local
  * saves. When the Host's own save advances the `document` projection's version,
  * the hook adopts it and treats the matching file reload as the Host's write
  * rather than an external edit, so a later command still reports the version the
- * Host recorded.
+ * Host recorded. A local save publishes its new file version and numeric content
+ * version up front; the matching file-feed frame and projection rise are adopted
+ * in place, so the mounted unit survives its own save.
  *
  * An agent command this tab applied already put the saved content in the live
  * unit. The save that follows it publishes the version the command reported, so
@@ -31,7 +34,10 @@
  * A legacy `.doc`, `.xls`, or `.ppt` address is never read: it is converted
  * through the same Remote, and the converted copy opens in a new tab in this
  * one's place. The original is never modified, and this body reports
- * conversion state until the new tab takes over.
+ * conversion state until the new tab takes over. The read's detected format is
+ * carried with the content, so a macro-enabled `.docm` or `.xlsm` save keeps
+ * the container it was opened from instead of inferring one from the snapshot
+ * kind.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SessionId } from '@forwork/session/types'
@@ -44,7 +50,7 @@ import type {
   OfficeDocumentSaveResult,
   OfficeDocumentSnapshot,
   OfficeFormat,
-  UnsupportedFeature,
+  PreservedConstructKind,
 } from '@forwork/office-exchange/types'
 import { externalChangeVerdict } from './changes.ts'
 import { createDraftScheduler, draftRecoveryDecision } from './drafts.ts'
@@ -162,18 +168,20 @@ export interface OfficeDocumentFailure {
 }
 
 /** What the panel is showing. */
-export type OfficeDocumentStatus = 'loading' | 'converting' | 'ready' | 'unsupported' | 'conflict' | 'error'
+export type OfficeDocumentStatus = 'loading' | 'converting' | 'ready' | 'conflict' | 'error'
 
 /** One open document's observable state. */
 export interface OfficeDocumentState {
   /** Load, edit-ready, refusal, save-conflict, or failed state. */
   readonly status: OfficeDocumentStatus
+  /** Format the read detected; a save writes this exact container. */
+  readonly format: OfficeFormat | undefined
   /** The read snapshot; absent while loading or after a failed read. */
   readonly snapshot: OfficeDocumentSnapshot | undefined
   /** Version the snapshot was read from; absent until a read succeeds. */
   readonly version: string | undefined
-  /** Features a save would drop. */
-  readonly unsupported: readonly UnsupportedFeature[]
+  /** Construct classes the file carries verbatim; presence never blocks a save. */
+  readonly preserved: readonly PreservedConstructKind[]
   /** The last failure, if any. */
   readonly error: OfficeDocumentFailure | undefined
 }
@@ -229,8 +237,8 @@ export interface UseOfficeDocumentResult {
    * saves advance this one value, so every writer reports the same version.
    */
   readonly contentVersion: number
-  /** Features a save would drop. */
-  readonly unsupported: readonly UnsupportedFeature[]
+  /** Construct classes the file carries verbatim; shown without disabling save. */
+  readonly preserved: readonly PreservedConstructKind[]
   /** Last failure. */
   readonly error: OfficeDocumentFailure | undefined
   /** Whether the panel may offer save. */
@@ -289,20 +297,72 @@ export interface UseOfficeDocumentResult {
 /** State before the first read settles. */
 const INITIAL: OfficeDocumentState = {
   status: 'loading',
+  format: undefined,
   snapshot: undefined,
   version: undefined,
-  unsupported: [],
+  preserved: [],
   error: undefined,
 }
 
-/** Format a save writes for one snapshot kind. */
-function formatOf(snapshot: OfficeDocumentSnapshot): OfficeFormat {
-  return snapshot.kind === 'workbook' ? 'xlsx' : 'docx'
+/**
+ * Preserved classes the read reported.
+ *
+ * The Exchange read reports preserved classes alongside the snapshot. A Host
+ * that does not report them yields an empty list, which shows no marker rather
+ * than inventing preserved content.
+ * @param result - the Remote read result.
+ * @returns reported preserved classes, or an empty list.
+ */
+function preservedOf(result: OfficeDocumentReadResult): readonly PreservedConstructKind[] {
+  const reported = result as OfficeDocumentReadResult
+    & { readonly preserved?: readonly PreservedConstructKind[] }
+  return reported.preserved ?? []
 }
 
 /** Render a non-Error rejection as a diagnostic message. */
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+/**
+ * State reported when an effect's promise rejects without a Remote failure.
+ * @param error - the rejection value.
+ * @returns error state carrying the diagnostic message.
+ */
+function unknownFailureState(error: unknown): OfficeDocumentState {
+  return {
+    ...INITIAL,
+    status: 'error',
+    error: { code: 'unknown', message: messageOf(error) },
+  }
+}
+
+/** One effect-scoped lifetime shared by a Remote call and its teardown. */
+interface EffectLifetime {
+  /** Lifetime passed to the Remote call. */
+  readonly signal: AbortSignal
+  /** Whether the effect still owns its result. */
+  isLive(): boolean
+  /** Mark the effect unmounted and abort its lifetime. */
+  end(): void
+}
+
+/**
+ * Start one effect's cancellable lifetime.
+ * @param signal - tab lifetime the effect must also honor.
+ * @returns the combined lifetime and its teardown controls.
+ */
+function effectLifetime(signal: AbortSignal): EffectLifetime {
+  const controller = new AbortController()
+  let live = true
+  return {
+    signal: AbortSignal.any([signal, controller.signal]),
+    isLive: () => live,
+    end: () => {
+      live = false
+      controller.abort()
+    },
+  }
 }
 
 /**
@@ -361,6 +421,19 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
   const hostSaved = useRef(false)
   /** Version an accepted agent command reported, whose Host save this tab expects. */
   const selfSaveVersion = useRef<number | undefined>(undefined)
+  /**
+   * Identity of a local save whose own projection rise and file transition are
+   * not external changes. `from` is the file version the save replaced; `to` is
+   * the version it published; `contentVersion` is the numeric version this tab
+   * advanced. The flags record which of the two matching events arrived.
+   */
+  const localSave = useRef<{
+    readonly from: string
+    readonly to: string
+    readonly contentVersion: number
+    projectionSeen: boolean
+    fileSeen: boolean
+  } | undefined>(undefined)
   observedRef.current = observedVersion
   rootRef.current = workspaceRoot
   pathRef.current = path
@@ -421,9 +494,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
 
   useEffect(() => {
     if (legacy !== undefined || signal.aborted) return
-    const controller = new AbortController()
-    const lifetime = AbortSignal.any([signal, controller.signal])
-    let live = true
+    const lifetime = effectLifetime(signal)
     // A fresh read is the new base for the unit, so any save a command staged
     // before it no longer describes this content.
     selfSaveVersion.current = undefined
@@ -432,27 +503,27 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     // A rebind moves `path` without re-reading: the live unit keeps its edits,
     // and the read path is taken at read time so an explicit reload uses the
     // file's current location.
-    void remote.read(sessionId, pathRef.current, lifetime).then((result) => {
-      if (!live) return
+    void remote.read(sessionId, pathRef.current, lifetime.signal).then((result) => {
+      if (!lifetime.isLive()) return
       if (!result.ok) {
         setState({ ...INITIAL, status: 'error', error: mapOfficeFailure(result.error) })
         return
       }
       setState({
-        status: result.value.unsupported.length > 0 ? 'unsupported' : 'ready',
+        status: 'ready',
+        format: result.value.format,
         snapshot: result.value.snapshot,
         version: result.value.version,
-        unsupported: result.value.unsupported,
+        preserved: preservedOf(result.value),
         error: undefined,
       })
       setExternalChange(false)
       setRecovery(undefined)
       setRecovered(false)
-      if (result.value.unsupported.length > 0) return
       if (draftCheckedFor.current === documentId) return
       draftCheckedFor.current = documentId
-      void remote.readDraft(sessionId, documentId, lifetime).then((draft) => {
-        if (!live) return
+      void remote.readDraft(sessionId, documentId, lifetime.signal).then((draft) => {
+        if (!lifetime.isLive()) return
         if (!draft.ok) {
           setDraftError(mapOfficeFailure(draft.error))
           return
@@ -468,33 +539,24 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
           snapshot: stored.snapshot,
         })
       }, (error: unknown) => {
-        if (!live) return
+        if (!lifetime.isLive()) return
         setDraftError({ code: 'unknown', message: messageOf(error) })
       })
     }, (error: unknown) => {
-      if (!live) return
-      setState({
-        ...INITIAL,
-        status: 'error',
-        error: { code: 'unknown', message: messageOf(error) },
-      })
+      if (!lifetime.isLive()) return
+      setState(unknownFailureState(error))
     })
-    return () => {
-      live = false
-      controller.abort()
-    }
+    return () => { lifetime.end() }
   }, [remote, sessionId, signal, generation, legacy, documentId])
 
   useEffect(() => {
     // A rebind can change the suffix. Converting then would replace the tab and
     // drop live edits, so conversion waits until the unit is clean.
     if (legacy === undefined || signal.aborted || dirty) return
-    const controller = new AbortController()
-    const lifetime = AbortSignal.any([signal, controller.signal])
-    let live = true
+    const lifetime = effectLifetime(signal)
     setState({ ...INITIAL, status: 'converting' })
-    void remote.convertLegacy(sessionId, path, lifetime).then((result) => {
-      if (!live) return
+    void remote.convertLegacy(sessionId, path, lifetime.signal).then((result) => {
+      if (!lifetime.isLive()) return
       if (!result.ok) {
         setState({ ...INITIAL, status: 'error', error: mapOfficeFailure(result.error) })
         return
@@ -513,33 +575,65 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
       }
       openConverted(address, path)
     }, (error: unknown) => {
-      if (!live) return
-      setState({
-        ...INITIAL,
-        status: 'error',
-        error: { code: 'unknown', message: messageOf(error) },
-      })
+      if (!lifetime.isLive()) return
+      setState(unknownFailureState(error))
     })
-    return () => {
-      live = false
-      controller.abort()
-    }
+    return () => { lifetime.end() }
   }, [remote, sessionId, path, signal, legacy, openConverted, dirty])
 
   useEffect(() => {
     const reported = input.contentVersion
-    if (reported !== undefined && (lastHostVersion.current === undefined || reported > lastHostVersion.current)) {
-      hostSaved.current = true
-    }
+    const local = localSave.current
+    const rose = reported !== undefined
+      && (lastHostVersion.current === undefined || reported > lastHostVersion.current)
+    // A projection rise this tab's own save advanced is its own fact. Any other
+    // rise is a Host save this tab did not make.
+    if (rose && reported !== local?.contentVersion) hostSaved.current = true
     lastHostVersion.current = reported
     if (state.status === 'loading') return
+    // A save in flight may be the write the resource is reporting; its result
+    // decides whether the new version is this tab's own.
+    if (saving) return
+    if (local !== undefined) {
+      if (reported !== undefined && reported === local.contentVersion) {
+        local.projectionSeen = true
+        hostSaved.current = false
+      }
+      if (observedVersion === local.to) {
+        // The watched file moved to the version this tab just published: the
+        // live unit already holds that content, so adopt it in place.
+        local.fileSeen = true
+        observedAtRead.current = observedVersion
+        setExternalChange(false)
+      } else if (observedVersion === local.from) {
+        if (reported !== undefined && reported > local.contentVersion) {
+          // Another save advanced the projection past this tab's, so this
+          // transition is not the one the local save published.
+          localSave.current = undefined
+        } else {
+          // A frame from before this tab's save; it reports no external change.
+          return
+        }
+      } else if (observedVersion !== undefined) {
+        // A version the save neither replaced nor published is a new change.
+        localSave.current = undefined
+      }
+      if (local.projectionSeen && local.fileSeen) localSave.current = undefined
+    }
     const verdict = externalChangeVerdict({
       observedVersion,
       version: state.version,
       observedAtRead: observedAtRead.current,
       dirty,
     })
-    if (verdict === 'none') return
+    if (verdict === 'none') {
+      if (observedVersion !== undefined && observedVersion === state.version) {
+        // The resource now reports the displayed content, so a later frame can
+        // be classified against this version instead of the read's first one.
+        observedAtRead.current = observedVersion
+      }
+      return
+    }
     const expected = selfSaveVersion.current
     if (expected !== undefined) {
       // The expected version comes from the same `document` projection the Host
@@ -576,18 +670,19 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     hostSaved.current = false
     if (verdict === 'prompt') setExternalChange(true)
     else setGeneration(value => value + 1)
-  }, [observedVersion, state.status, state.version, dirty, input.contentVersion])
+  }, [observedVersion, state.status, state.version, dirty, input.contentVersion, saving])
 
   const save = useCallback(async (edited?: OfficeDocumentSnapshot): Promise<OfficeSaveOutcome> => {
     const snapshot = state.snapshot
     const version = state.version
-    if (snapshot === undefined || version === undefined) return 'refused'
-    if (state.unsupported.length > 0 || externalChange || savingRef.current) return 'refused'
+    const format = state.format
+    if (snapshot === undefined || version === undefined || format === undefined) return 'refused'
+    if (externalChange || savingRef.current) return 'refused'
     savingRef.current = true
     setSaving(true)
     try {
       const result = await remote.save(
-        sessionId, path, edited ?? snapshot, formatOf(snapshot), version, { actor: 'user' }, signal,
+        sessionId, path, edited ?? snapshot, format, version, { actor: 'user' }, signal,
       )
       if (signal.aborted) return 'refused'
       if (!result.ok) {
@@ -606,9 +701,17 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
         status: 'ready',
       }))
       // This write published the live unit itself; any staged command save it
-      // supersedes no longer describes the file.
+      // supersedes no longer describes the file. The published version and the
+      // numeric version this tab advances arrive back through the file feed and
+      // the `document` projection, so record them as this tab's own change.
       selfSaveVersion.current = undefined
-      advanceContentVersion()
+      localSave.current = {
+        from: version,
+        to: result.value.version,
+        contentVersion: advanceContentVersion(),
+        projectionSeen: false,
+        fileSeen: false,
+      }
       setRecovery(undefined)
       setRecovered(false)
       setDraftError(undefined)
@@ -619,7 +722,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
       setSaving(false)
     }
   }, [
-    remote, sessionId, path, signal, state.snapshot, state.version, state.unsupported, externalChange,
+    remote, sessionId, path, signal, state.snapshot, state.version, state.format, externalChange,
     clearDraftRecord, advanceContentVersion,
   ])
 
@@ -656,7 +759,6 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
   const dismissExternalChange = useCallback((): void => { setExternalChange(false) }, [])
 
   const canSave = state.snapshot !== undefined
-    && state.unsupported.length === 0
     && !saving
     && !externalChange
     && state.status !== 'conflict'
@@ -668,7 +770,7 @@ export function useOfficeDocument(input: UseOfficeDocumentInput): UseOfficeDocum
     snapshot: state.snapshot,
     version: state.version,
     contentVersion,
-    unsupported: state.unsupported,
+    preserved: state.preserved,
     error: state.error,
     canSave,
     saving,

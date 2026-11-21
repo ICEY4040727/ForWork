@@ -38,7 +38,9 @@ import type {
   HostObservable, InjectFace, PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
 } from '@forwork/client-ui-slots'
 import type {} from '../contract/slots.ts'
-import type { DockIntents, DockMode, DockSurfaceProps, FloatRect, TabId, TabRecord, TabRenderer } from '@forwork/client-ui-dockkit'
+import type {
+  DockIntents, DockMode, DockSurfaceProps, FloatRect, PaneHeaderRenderer, TabId, TabRecord, TabRenderer,
+} from '@forwork/client-ui-dockkit'
 import { canSplit, dockPaneIds, DockLayout, findPaneContentTab } from '@forwork/client-ui-dockkit'
 import type { HalvesFit, LayoutState, PaneId } from '@forwork/client-ui-dockkit'
 import type { SessionId } from '@forwork/session/types'
@@ -58,7 +60,7 @@ import css from './SidebarRight.module.css'
 type Store = PropsStore<ReturnType<typeof createSidebarRightStore>>
 
 /** The child seats this component renders. */
-type Children = PropsRenderSlots<'sidebar.right.pane.tab' | 'sidebar.right.pane.tab.title'>
+type Children = PropsRenderSlots<'sidebar.right.pane.tab' | 'sidebar.right.pane.tab.title' | 'sidebar.right.pane.header'>
 
 /** What the panel reports to the frame: drawn or not, and whether it wants a track. */
 export interface SidebarRightPresentation {
@@ -111,6 +113,8 @@ export interface SidebarRightInjected {
     readonly contextMenuTarget: HostObservable<ContextMenuTarget | null>
     readonly shortcuts: HostObservable<readonly ShortcutCatalogEntry[]>
     readonly tabTypes: HostObservable<readonly SidebarRightTabDefinition[]>
+    /** Type keys currently registered to replace a docked pane's strip with their own header. */
+    readonly paneHeaderKeys: HostObservable<readonly string[]>
     /** This Session's latest request to make the pane holding a revealed tab glow. */
     readonly flash: HostObservable<SidebarRightFlash | undefined>
   }
@@ -144,6 +148,7 @@ interface PanelProps {
   readonly toggleFullscreen: SidebarRightInjected['toggleFullscreen']
   readonly shortcuts: readonly ShortcutCatalogEntry[]
   readonly useTabTypes: RightbarSeatProps['useTabTypes']
+  readonly usePaneHeaderKeys: RightbarSeatProps['usePaneHeaderKeys']
   readonly useTabNavigation: RightbarSeatProps['useTabNavigation']
   readonly useStore: Store['useStore']
   readonly useFlash: RightbarSeatProps['useFlash']
@@ -313,6 +318,7 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
   const { sessionId, surface, actions, t, openTab, width, reportRoom, fullscreen, panelRef } = panel
   const { expanded } = surface.layout
   const types = panel.useTabTypes(value => value)
+  const paneHeaderKeys = panel.usePaneHeaderKeys(value => value)
   const flash = panel.useFlash(value => value)
   // Each request plays at most once, and only on screen: the request current
   // when the panel mounts, or one arriving while its Session is hidden, is
@@ -324,6 +330,28 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
     played.current = flash.serial
     return panel.active ? flashPane(panelRef.current, flash) : undefined
   }, [flash, panel.active, panelRef])
+  const intents = intentsFor(sessionId, actions, openTab, panel.closeTab, panel.splitPane)
+  // A type may replace its selected pane's strip with its own header; the
+  // entry is keyed by the same type id as its body, and without one the strip
+  // stays. The header gets the pane's tabs so it can still reach every tab.
+  const renderPaneHeader: PaneHeaderRenderer = (activeTab, _pane, tabs) => {
+    const definition = types.find(type => type.kind === activeTab.kind)
+    // The outlet always draws its anchor, fallback or not, so presence comes
+    // from the registration keys: a type without an entry keeps the strip.
+    if (definition === undefined || !paneHeaderKeys.includes(definition.id)) return undefined
+    const content = panel.renderSlot('sidebar.right.pane.header', {
+      tabs: tabs.map(tab => ({
+        tabId: tab.id,
+        title: tab.title,
+        kind: tab.kind,
+        active: tab.id === activeTab.id,
+      })),
+      activeTabId: activeTab.id,
+      activateTab: (tabId) => { intents.focusTab(tabId) },
+      closeTab: (tabId) => { panel.closeTab(tabId) },
+    }, { entryKey: definition.id, fallback: null })
+    return content
+  }
   // True from the render that opens the on-screen panel until a transition in
   // it ends, the panel closes, or it leaves the screen, which cancels the
   // slide; the stylesheet starts items mounted meanwhile at the closed position.
@@ -357,10 +385,11 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
           minPaneFraction={0.2}
           canAddTab={paneId => guideIn(surface.layout, paneId) === undefined}
           canCloseTab={tabId => canCloseTab(surface, tabId)}
-          intents={intentsFor(sessionId, actions, openTab, panel.closeTab, panel.splitPane)}
+          intents={intents}
           labels={dockLabels(t, panel.shortcuts.find(entry => entry.id === 'pane.split'), panel.shortcuts.find(entry => entry.id === 'page.close'))}
           renderTab={bodiesFor(panel)}
           renderTabTitle={titlesFor(panel)}
+          renderPaneHeader={renderPaneHeader}
           active={panel.active}
           keepMounted={tab => types.find(type => type.kind === tab.kind)?.keepMounted === true}
           getTabTriggerProps={panel.getTabTriggerProps} tabMenuOpen={panel.tabMenuOpen}
@@ -384,7 +413,7 @@ function SidebarPanel(panel: PanelProps & { width: number; panelRef: RefObject<H
  */
 export function RightbarSeat({
   sessionId, width, viewportWidth, canShow, useStore, actions, t, renderSlot, syncPresentation, measureRoom, reportAutoFullscreen,
-  openTab, closeTab, useContextMenu, useContextMenuTarget, useTabTypes, useTabNavigation, occurrence, retainTab,
+  openTab, closeTab, useContextMenu, useContextMenuTarget, useTabTypes, usePaneHeaderKeys, useTabNavigation, occurrence, retainTab,
   active, useShortcuts, splitPane, toggleFullscreen, useFlash,
 }: RightbarSeatProps): ReactNode {
   const { getTriggerProps } = useContextMenu()
@@ -454,8 +483,8 @@ export function RightbarSeat({
 
   if (surface === undefined) return null
   const panel: PanelProps = {
-    sessionId, actions, t, renderSlot, surface, openTab, closeTab, getTabTriggerProps, tabMenuOpen, useTabTypes, useTabNavigation,
-    useStore, useFlash, occurrence,
+    sessionId, actions, t, renderSlot, surface, openTab, closeTab, getTabTriggerProps, tabMenuOpen,
+    useTabTypes, usePaneHeaderKeys, useTabNavigation, useStore, useFlash, occurrence,
     fullscreen, autoFullscreen, reportRoom, active, retainTab, shortcuts, splitPane, toggleFullscreen,
   }
   return <SidebarPanel {...panel} width={width} panelRef={panelRef} />

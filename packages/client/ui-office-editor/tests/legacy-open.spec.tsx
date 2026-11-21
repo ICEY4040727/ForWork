@@ -1,4 +1,4 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 /**
  * Opening a legacy `.doc`, `.xls`, or `.ppt` source converts it and opens the
  * copy in a new tab.
@@ -70,6 +70,8 @@ describe('legacy path helpers', () => {
     expect(legacyFormatOf('budget.XLS')).toBe('xls')
     expect(legacyFormatOf('deck.Ppt')).toBe('ppt')
     expect(legacyFormatOf('report.docx')).toBeUndefined()
+    expect(legacyFormatOf('report.docm')).toBeUndefined()
+    expect(legacyFormatOf('budget.xlsm')).toBeUndefined()
     expect(legacyFormatOf('report')).toBeUndefined()
   })
 

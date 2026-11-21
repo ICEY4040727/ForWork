@@ -218,21 +218,35 @@ describe('useOfficeDocument save', () => {
     expect(remote.save.mock.calls[0]?.[3]).toBe('docx')
   })
 
-  it('refuses save when the read reported an unsupported feature', async () => {
+  it.each([
+    ['docm', { kind: 'document', data: { id: 'doc' } }],
+    ['xlsm', { kind: 'workbook', data: { id: 'book' } }],
+  ] as const)('saves the opened %s format rather than one derived from the snapshot kind', async (format, opened) => {
+    const remote = makeRemote()
+    remote.read.mockResolvedValueOnce(success(readResult('v1', { format, snapshot: opened })))
+    const { result } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
+      initialProps: input(remote.face),
+    })
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    await act(async () => { await result.current.save() })
+    expect(remote.save.mock.calls[0]?.[3]).toBe(format)
+  })
+
+  it('saves when the read reported content it preserves', async () => {
     const remote = makeRemote()
     remote.read.mockResolvedValueOnce(success(readResult('v1', { unsupported: [{ kind: 'macro' }] })))
     const { result } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
       initialProps: input(remote.face),
     })
-    await waitFor(() => { expect(result.current.status).toBe('unsupported') })
-    expect(result.current.canSave).toBe(false)
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    expect(result.current.canSave).toBe(true)
     let outcome: string | undefined
     await act(async () => { outcome = await result.current.save(edited) })
-    expect(outcome).toBe('refused')
-    expect(remote.save).not.toHaveBeenCalled()
+    expect(outcome).toBe('saved')
+    expect(remote.save).toHaveBeenCalledOnce()
   })
 
-  it('disables save for a document that declares an unsupported feature', async () => {
+  it('keeps save enabled for a document that declares a preserved feature', async () => {
     const remote = makeRemote()
     const documentSnapshot: OfficeDocumentSnapshot = { kind: 'document', data: { id: 'doc' } }
     remote.read.mockResolvedValueOnce(success(readResult('v1', {
@@ -243,9 +257,9 @@ describe('useOfficeDocument save', () => {
     const { result } = renderHook((props: UseOfficeDocumentInput) => useOfficeDocument(props), {
       initialProps: input(remote.face),
     })
-    await waitFor(() => { expect(result.current.status).toBe('unsupported') })
-    expect(result.current.unsupported).toEqual([{ kind: 'tracked-changes' }])
-    expect(result.current.canSave).toBe(false)
+    await waitFor(() => { expect(result.current.status).toBe('ready') })
+    expect(result.current.preserved).toEqual([])
+    expect(result.current.canSave).toBe(true)
   })
 
   it('refuses save before a snapshot has been read', async () => {

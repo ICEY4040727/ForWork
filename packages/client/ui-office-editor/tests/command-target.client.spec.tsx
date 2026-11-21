@@ -3,14 +3,14 @@
  * The panel supplies the command bridge with the live tab target: identity,
  * numeric version, dirty state, adapter apply, and post-command snapshot.
  */
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, waitFor } from '@testing-library/react'
 import type { OfficeDocumentReadResult, OfficeDocumentSnapshot } from '@forwork/office-exchange/types'
 import type { RemoteResult } from '@forwork/typert-protocol'
 import type { SessionId } from '@forwork/session/types'
 import type { OfficeCommandTarget } from '../src/client/command-bridge.ts'
 import type { OfficeDocumentRemote } from '../src/client/useOfficeDocument.ts'
-import { renderPanel, SESSION_ID } from './panel.tsx'
+import { renderPanel, SESSION_ID, stubMeasuredSurface } from './panel.tsx'
 
 const PATH = 'work/budget.xlsx'
 const snapshot: OfficeDocumentSnapshot = { kind: 'workbook', data: { id: 'book' } }
@@ -31,6 +31,8 @@ function remote(): OfficeDocumentRemote {
     clearDraft: vi.fn(async () => success(undefined)),
   }
 }
+
+beforeEach(stubMeasuredSurface)
 
 afterEach(cleanup)
 
@@ -55,7 +57,6 @@ describe('OfficePanel command target', () => {
     expect(target.version()).toBe(0)
     expect(target.isOpen()).toBe(true)
     expect(target.isDirty()).toBe(false)
-    expect(target.unsupported()).toEqual([])
     expect(target.snapshot()).toBe(snapshot)
     const operation = [{ kind: 'paragraph' as const, index: 0, text: 'Hello' }]
     expect(target.apply(operation)).toEqual({ status: 'applied' })

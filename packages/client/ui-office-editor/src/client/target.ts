@@ -61,6 +61,10 @@ export function projectedDocumentIdAt(
 
 /**
  * The legacy format a path needs converted before it can be edited.
+ *
+ * Only the binary formats convert. Macro-enabled `.docm` and `.xlsm` are
+ * editable in place and keep their container, so they return `undefined` like
+ * `.docx` and `.xlsx`.
  * @param path - a workspace path, addressed or absolute.
  * @returns `doc`, `xls`, or `ppt` for a legacy binary source, `undefined` for an editable or unrelated file.
  */

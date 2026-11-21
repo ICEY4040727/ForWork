@@ -5,7 +5,7 @@
  * projection's identity instead of deriving a second one from the path.
  */
 import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { brandString } from '@forwork/brand'
 import type { DocumentId } from '@forwork/session/src/document-events.ts'
 import type { DocumentProjectionView } from '@forwork/session-document/client'
@@ -13,8 +13,10 @@ import { createOfficeTabChanges } from '../src/client/changes.ts'
 import { createOfficeRestore, restoreDocuments } from '../src/client/restore.ts'
 import { OfficePanel } from '../src/client/OfficePanel.tsx'
 import { en } from '../src/client/locales.ts'
-import { SESSION_ID, panelFixture } from './panel.tsx'
+import { SESSION_ID, panelFixture, stubMeasuredSurface } from './panel.tsx'
 import { makeDraftRemote } from './draft-fixtures.client.ts'
+
+beforeEach(stubMeasuredSurface)
 
 afterEach(() => {
   cleanup()

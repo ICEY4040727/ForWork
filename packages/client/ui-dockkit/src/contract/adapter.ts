@@ -6,7 +6,7 @@
  * set, and no knowledge of what a tab's `kind` means.
  */
 import type { ReactNode } from 'react'
-import type { DockZone, FloatRect, PaneId, SplitId, TabId, TabRecord } from './types.ts'
+import type { DockZone, FloatRect, PaneId, PaneNode, SplitId, TabId, TabRecord } from './types.ts'
 
 /**
  * Every string the kit renders, already localized by the embedder.
@@ -52,6 +52,21 @@ export interface DockLabels {
  * input reaches it through a new renderer or the body's own hooks and context.
  */
 export type TabRenderer = (tab: TabRecord) => ReactNode
+
+/**
+ * Replaces a docked pane's whole tab strip while one tab is selected. The
+ * embedder resolves the selected tab's content family and returns its header,
+ * or `undefined` to keep the kit's strip. Floating panes keep their own header.
+ * @param activeTab - the pane's selected tab.
+ * @param pane - the pane whose header is drawn.
+ * @param tabs - every tab in that pane, in strip order.
+ * @returns the replacement header, or `undefined` to draw the strip.
+ */
+export type PaneHeaderRenderer = (
+  activeTab: TabRecord,
+  pane: PaneNode,
+  tabs: readonly TabRecord[],
+) => ReactNode | undefined
 
 /**
  * Renders extra items at the end of one tab's context menu (opened by a

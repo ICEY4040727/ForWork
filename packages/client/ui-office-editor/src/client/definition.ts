@@ -2,11 +2,13 @@
  * Stage one of this package's registration: what the `office` tab type IS.
  *
  * The type claims Session-scoped `dsh-resource://file/session/<sessionId>/<path>`
- * addresses whose basename ends in `.docx` or `.xlsx`, and the legacy `.doc`,
- * `.xls`, and `.ppt` sources it converts on open. `.pptx` is deliberately
- * absent: presentations stay read-only in the document preview, so a converted
- * `.ppt` copy lands there too. A page-level glob narrows the candidates and
- * `canOpen` vetoes an address whose URI merely ends in one of those suffixes.
+ * addresses whose basename ends in an editable format (`.docx`, `.docm`,
+ * `.xlsx`, or `.xlsm`), and the legacy `.doc`, `.xls`, and `.ppt` sources it
+ * converts on open. Macro-enabled files are not renamed or converted: the
+ * writer preserves the package they arrived in. `.pptx` is deliberately absent:
+ * presentations stay read-only in the document preview, so a converted `.ppt`
+ * copy lands there too. A page-level glob narrows the candidates and `canOpen`
+ * vetoes an address whose URI merely ends in one of those suffixes.
  */
 import type { SidebarRightTabDefinition } from '@forwork/client-ui-sidebar-right/client'
 import { parseFileAddress } from '@forwork/util-workspace-path'
@@ -44,7 +46,7 @@ export function officeDefinition(): SidebarRightTabDefinition {
   return {
     id: OFFICE_ID,
     kind: OFFICE_KIND,
-    patterns: ['*.docx', '*.xlsx', '*.doc', '*.xls', '*.ppt'],
+    patterns: ['*.docx', '*.docm', '*.xlsx', '*.xlsm', '*.doc', '*.xls', '*.ppt'],
     priority: 'builtin',
     keepMounted: true,
     canOpen: address => parseFileAddress(address)?.scope === 'session',

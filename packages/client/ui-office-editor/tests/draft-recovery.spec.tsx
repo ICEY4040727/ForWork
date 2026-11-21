@@ -1,14 +1,16 @@
-﻿// @vitest-environment jsdom
+// @vitest-environment jsdom
 /**
  * The panel's recovery-draft surfaces: the localized offer, the stale label,
  * discard, draft-store failures, and the discard-and-close path.
  */
 import { act, cleanup, fireEvent, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RemoteError } from '@forwork/typert-protocol'
 import { en } from '../src/client/locales.ts'
-import { TAB_ID, SESSION_ID, renderPanel } from './panel.tsx'
+import { TAB_ID, SESSION_ID, renderPanel, stubMeasuredSurface } from './panel.tsx'
 import { PATH, draftAt, edited, makeDraftRemote, snapshot, success } from './draft-fixtures.client.ts'
+
+beforeEach(stubMeasuredSurface)
 
 afterEach(() => {
   cleanup()
