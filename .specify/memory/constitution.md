@@ -1,28 +1,29 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 3.0.0 -> 3.1.0 (MINOR)
-Rationale: Principle I gains an explicit, recorded exception for the external LibreOffice conversion
-engine, reconciling the principle with FR-009's declared third-party-dependency carve-out and the
-already-shipped `@deepseek-ai/libreoffice-kit` dependency in five manifests (T097). The Technology
-Constraints conversion stack is corrected to the shipped implementation: `.docx` is hand-written OOXML
-over `fast-xml-parser`/`fflate` with no docx library, and SheetJS CE is used only for legacy `.xls`
-preview (T113).
+Version change: 3.1.0 -> 3.2.0 (MINOR)
+Rationale: The in-place OOXML save feature (specs/002-in-place-ooxml-save) requires two recorded expansions of the
+Technology Constraints. Macro-enabled `.docm`/`.xlsm` join the editable v1 format set (FR-022, SC-011), and the save
+path gains a Host-only package writer over `node:zlib` that copies untouched ZIP records and splices only edited parts,
+while ExcelJS stays the `.xlsx` read mapper and the legacy regeneration writer stays for source-less snapshots
+(FR-001..FR-006, FR-013). Both were outside the previous wording; this amendment records the chosen design rather than
+diluting the constraint.
 
-Affected requirements: FR-009.
+Affected requirements: FR-022 and SC-011 of `specs/002-in-place-ooxml-save/spec.md`; it also supersedes the format set
+of FR-001 and the file-level refusal behaviour of FR-008 in `specs/001-office-agent-framework/spec.md` where the
+construct lies outside the edited range.
+
 Affected principles:
-- I. Independent Identity (ForWork fork) — external-dependency exception recorded.
-- Technology Constraints — conversion stack text corrected.
+- Technology Constraints (format set and conversion stack) only; Core Principles I-VIII are unchanged.
 
-Migration note: no data, configuration, schema, package, or session-format migration is required. The
-change only records an already-enforced exception: `scripts/verify-forwork-identity.ts`
-`ALLOWED_DEEPSEEK_PACKAGES` allowlists exactly `@deepseek-ai/libreoffice-kit`, and
-`THIRD_PARTY_NOTICES.md` records the corresponding sources. See
-`.agents/notes/implemented/process/2026-11-17-forwork-identity-exceptions.md`.
+Migration note: no data, configuration, schema, package, or session-format migration is required. `.docx`/`.xlsx`
+files remain readable and editable; `.docm`/`.xlsm` become editable under the same preservation rules and keep their
+macro-enabled content type. Widening the persisted `DocumentFormat` union is acknowledged separately as a
+persistence-type change.
 
 Added sections: none
 Removed sections: none
-Follow-up TODOs: none in this document; T097 and T113 are closed by this amendment.
+Follow-up TODOs: none
 -->
 
 # ForWork Constitution
@@ -75,8 +76,8 @@ Product changes still extend shared seams or add packages rather than rewriting 
 - Node >= 24.9, TypeScript strict, ESM everywhere, pnpm workspaces.
 - Package scope, artifact prefix, and CLI follow Principle I; vendored Cordis packages re-scope with the repository.
 - Editor core: Univer open-source (Apache-2.0) Sheets/Docs presets, embedded in React; no iframe and no server.
-- Conversion: a self-owned Exchange layer mapping OOXML to and from Univer unit snapshots — ExcelJS for `.xlsx`, hand-written OOXML over `fast-xml-parser` and `fflate` for `.docx`, and `@deepseek-ai/libreoffice-kit` for legacy conversion; SheetJS CE is used only for legacy `.xls` preview.
-- v1 edits `.docx` and `.xlsx`; `.pptx` is read-only. Legacy `.doc/.xls/.ppt` are converted on open.
+- Conversion: a self-owned Exchange layer mapping OOXML to and from Univer unit snapshots — ExcelJS for `.xlsx` reads, hand-written OOXML over `fast-xml-parser` for `.docx` reads, a Host-only package writer over `node:zlib` that copies untouched ZIP records and splices edited parts for both formats, and `@deepseek-ai/libreoffice-kit` for legacy conversion; `fflate` remains for preview and test ZIP handling, and SheetJS CE is used only for legacy `.xls` preview.
+- v1 edits `.docx`, `.docm`, `.xlsx`, and `.xlsm`; `.pptx` is read-only. Legacy `.doc/.xls/.ppt` are converted on open.
 - Persistence writes through the filesystem seam with version guards so observers converge.
 
 ## Development Workflow
@@ -91,4 +92,4 @@ Product changes still extend shared seams or add packages rather than rewriting 
 
 This constitution supersedes ad-hoc preference. Amendments require a recorded rationale, the affected requirement, and a migration note. Every change review verifies the principles above; a violation MUST be justified in the review or removed. Versioning follows semantic versioning: MAJOR for principle removal or incompatible redefinition, MINOR for a new principle or material expansion, PATCH for clarification. Ratified and amended dates use ISO `YYYY-MM-DD`.
 
-**Version**: 3.1.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-17
+**Version**: 3.2.0 | **Ratified**: 2026-11-13 | **Last Amended**: 2026-11-18

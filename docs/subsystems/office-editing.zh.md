@@ -17,9 +17,9 @@ Office 编辑把 Session 中打开的 Word 或 Excel 文件变成实时编辑单
 
 ## 格式与可编辑集合
 
-`.docx` 与 `.xlsx` 可编辑：编辑器把它们挂载为 Univer workbook 或 document 单元，保存时通过 Exchange 提供方序列化回文件。旧格式 `.doc`、`.xls` 或 `.ppt` 源文件先转换，再打开副本；原文件绝不会被写入。`.pptx` 永远不会成为可编辑单元：`detectUnsupported` 可以检查演示文稿，`read` 与 `write` 以 `unsupported-format` 拒绝，只读文档预览则把它渲染为 Host PDF。
+`.docx`、`.docm`、`.xlsx` 与 `.xlsm` 可编辑：编辑器把它们挂载为 Univer workbook 或 document 单元，保存时只把被编辑的单元拼接回源包。原地保存会保留宏启用文件的 VBA 项目与宏启用的内容类型。旧格式 `.doc`、`.xls` 或 `.ppt` 源文件先转换，再打开副本；原文件绝不会被写入。`.pptx` 永远不会成为可编辑单元：`detectUnsupported` 可以检查演示文稿，`read` 与 `write` 以 `unsupported-format` 拒绝，只读文档预览则把它渲染为 Host PDF。
 
-一次读取会报告在编辑并保存后会丢失的全部 `UnsupportedFeature`。该列表非空期间，编辑器与工具都会拒绝保存，而不是写入有损文件。[Office Exchange](office-exchange.zh.md) 定义格式联合、单元快照与特性类别。
+一次读取会分别报告原地保存原样携带的构造（`preserved`）与整包重新生成会丢失的特性（`unsupported`）。两份列表本身都不会阻止保存：写入器会拒绝与编辑相交的耦合构造，或它无法保留的区间，并指出原因。[Office Exchange](office-exchange.zh.md) 定义格式联合、单元快照、保留与拒绝分类，以及保存处置。
 
 ## 身份、版本与守卫保存
 
@@ -27,29 +27,29 @@ Office 编辑把 Session 中打开的 Word 或 Excel 文件变成实时编辑单
 
 两个版本值回答不同的问题。`officeDocument` 读取返回不透明的文件系统版本，`save` 把它作为 `expectedVersion` 传回：文件系统的 `replaceIfVersion` 守卫仅在文件仍持有该版本时发布写入，否则 Remote 抛出 `office-document/conflict`。数字 `contentVersion` 在文档打开时为 `0`，每次接受的保存加一；智能体命令用 `fromVersion` 与它比较，`document` 投影报告它。
 
-文件在外部变化时，编辑器会重新加载干净的 tab；脏 tab 则在丢弃编辑前提示。该 tab 已应用的 agent command 之后的保存不是外部变化：实时单元已持有被保存的快照，因此 tab 原地采用已发布的文件版本，编辑器的原生撤销历史保留这次智能体编辑。保存没有无条件回退，带有不支持特性的文档既不能从编辑器保存，也不能从工具保存。
+文件在外部变化时，编辑器会重新加载干净的 tab；脏 tab 则在丢弃编辑前提示。该 tab 已应用的 agent command 之后的保存不是外部变化：实时单元已持有被保存的快照，因此 tab 原地采用已发布的文件版本，编辑器的原生撤销历史保留这次智能体编辑。保存没有无条件回退；与耦合构造相交的写入会被拒绝并指出该构造，而源文件只是携带的内容会被保留。
 
 ## 数据路径
 
 | 流程 | 顺序 |
 |---|---|
-| 打开 | `officeDocument.read` 把格式、快照、不支持特性与文件版本返回给编辑器 adapter；本进程中文档的第一次读取只追加一次 `document/open` |
-| 用户保存 | 脏单元携带其读取版本与 `user` actor 调用 `officeDocument.save`；守卫写入追加 `document/save` |
+| 打开 | `officeDocument.read` 把格式、快照、原样保留的构造类别、不支持特性与文件版本返回给编辑器 adapter；本进程中文档的第一次读取只追加一次 `document/open` |
+| 用户保存 | 脏单元携带其读取版本与 `user` actor 调用 `officeDocument.save`；写入器把被编辑单元拼接进源文件，守卫写入追加带其处置的 `document/save` |
 | 智能体读取 | `document_read` 通过 `officeCommandBroker` 派发一条 `read` 命令；实时 tab 以快照与数字版本应答，工具返回有界摘要 |
-| 智能体编辑 | 工具按身份中的工作区相对路径读取文件以计算逆操作，把步骤作为一条命令派发，在收到 `applied` 应答后以 `agent` actor 与打开 turn 执行一次守卫保存（追加 `document/save`），并追加携带步骤与逆操作的 `document/edit`，随后报告新的数字版本 |
+| 智能体编辑 | 工具按身份中的工作区相对路径读取文件以计算逆操作，把步骤作为一条命令派发，在收到 `applied` 应答后以 `agent` actor 与打开 turn 执行一次守卫保存（追加带处置的 `document/save`），并追加携带步骤与逆操作的 `document/edit`，随后报告新的数字版本 |
 | 旧格式打开 | `convertLegacy` 在 `.dsh/office-tmp/` 下写入可编辑副本；tab 打开该副本并显示提示，原文件保持不变 |
 | 草稿恢复 | 空闲的脏单元调用 `writeDraft`；下次打开调用 `readDraft` 并应用恢复决策 |
 | 恢复 | 缓存的 `document` 投影提供 `restoreSet`，tab 按投影顺序重新打开；缺失文档通过提示报告 |
 
 ## Session 事实与 document 投影
 
-七个 `document/*` 事件承载持久记录：`open`、`save`、`edit`、`rebind`、`missing`、`close` 与 `command`。它们是仅追加的。`document/command` 记录请求而非变更；每次接受的写入追加带 actor 与致因 turn（若有）的 `document/save`，接受的智能体变更还会追加携带精确逆操作的 `document/edit`。打开身份是工作区相对定位符，因此同一文件的绝对与相对拼写是同一个文档。`session-document` 定义 payload 与事实写入器。
+七个 `document/*` 事件承载持久记录：`open`、`save`、`edit`、`rebind`、`missing`、`close` 与 `command`。它们是仅追加的。`document/command` 记录请求而非变更；每次接受的写入追加带 actor、致因 turn（若有）与写入器保存处置的 `document/save`，接受的智能体变更还会追加携带精确逆操作的 `document/edit`。该处置是可选的：没有携带 span 计划的保存，或在处置存在之前记录的保存，会省略它。打开身份是工作区相对定位符，因此同一文件的绝对与相对拼写是同一个文档。`session-document` 定义 payload 与事实写入器。
 
 `document` 投影把这些事实折叠为 `{ order, documents }`：显示顺序，以及每个打开文档的一条条目，包含其身份、当前路径、格式、数字内容版本、`open` 或 `missing` 状态与不支持特性。`document/open` 插入或更新条目，`document/save` 与 `document/edit` 推进其版本，`document/rebind` 替换路径，`document/missing` 标记为不可用，`document/close` 删除它；无关事件返回同一个 state 引用。该插件还把打开集合渲染为 prompt 区段，并向 Client 暴露 `restoreSet` 与 `recoveryDecision`。[Session Projection](session-projection.zh.md) 拥有投影 seam，[persistence catalog](../persistence-catalog.zh.md) 承载生成的事件类型。
 
 ## Sidebar 编辑器
 
-`office` tab 类型认领 basename 以 `.docx`、`.xlsx`、`.doc`、`.xls` 或 `.ppt` 结尾的 Session 级 `dsh-resource://file/session/<sessionId>/<path>` 地址；`.pptx` 被有意排除。tab 在切换时保持正文挂载，因此实时编辑在导航后仍然存活。正文通过 `officeDocument.read` 读取，并在 adapter 后挂载 Univer Sheets 或 Docs preset。
+`office` tab 类型认领 basename 以 `.docx`、`.docm`、`.xlsx`、`.xlsm`、`.doc`、`.xls` 或 `.ppt` 结尾的 Session 级 `dsh-resource://file/session/<sessionId>/<path>` 地址；`.pptx` 被有意排除。tab 在切换时保持正文挂载，因此实时编辑在导航后仍然存活。正文通过 `officeDocument.read` 读取，并在 adapter 后挂载 Univer Sheets 或 Docs preset。
 
 脏状态驱动三种行为：一次编辑在 2 s 内没有后续编辑后调度一份恢复草稿；Sidebar 关闭被否决，随后面板提供保存并关闭、丢弃并关闭或取消；外部变化在丢弃前提示。`DocumentPanel` 列出 Session 打开的 Office tab，并在点击时聚焦其中一个。旧格式打开会转换源文件，并在原 tab 位置重新打开副本，同时显示标出原文件的可关闭提示。
 
@@ -57,9 +57,9 @@ Office 编辑把 Session 中打开的 Word 或 Excel 文件变成实时编辑单
 
 ## 智能体命令桥
 
-读取与编辑工具从不直接修改实时单元。读取派发一条 `read` 命令；编辑先通过 `officeDocument.read` 读取文件以计算逆操作，再派发步骤。提供方的 `officeCommandBroker` 追加一条 `document/command` 并等待实时 tab；tab 恰好应答一次，状态为 `read`、`applied`、`pending-edits`、`conflict`、`unsupported-feature` 或 `document-not-open`。超时的请求不写入任何内容。broker 只接受记录了该请求的 Session 的应答，并忽略且记录未知、迟到或来自其他 Session 的应答。
+读取与编辑工具从不直接修改实时单元。读取派发一条 `read` 命令；编辑先通过 `officeDocument.read` 读取文件以计算逆操作，再派发步骤。提供方的 `officeCommandBroker` 追加一条 `document/command` 并等待实时 tab；tab 恰好应答一次，状态为 `read`、`applied`、`pending-edits`、`conflict`、`unsupported-feature` 或 `document-not-open`。`unsupported-feature` 应答报告的是保存时的耦合构造拒绝，而不是源文件只是携带的内容。超时的请求不写入任何内容。broker 只接受记录了该请求的 Session 的应答，并忽略且记录未知、迟到或来自其他 Session 的应答。
 
-接受的智能体编辑只保存一次。工具校验编辑器的数字版本为 `fromVersion + 1`，用命令前观察到的文件版本保存返回的快照，把保存记录为带打开 turn 的 `actor: 'agent'`，并追加携带步骤与逆操作的 `document/edit`。拒绝不会改变文件与日志。[tool-office](../../packages/document/tool-office/README.zh.md) 列出面向模型的结果代码。
+接受的智能体编辑只保存一次。工具校验编辑器的数字版本为 `fromVersion + 1`，用命令前观察到的文件版本保存返回的快照，把保存记录为带打开 turn 与写入器处置的 `actor: 'agent'`，并追加携带步骤与逆操作的 `document/edit`。拒绝不会改变文件与日志。[tool-office](../../packages/document/tool-office/README.zh.md) 列出面向模型的结果代码。
 
 ## 草稿与恢复
 

@@ -6,7 +6,7 @@
 
 ## Summary
 
-Fork the MIT-licensed harness into **ForWork**, a Windows/macOS desktop product published under the `@forwork/*` npm scope with the `forwork-` artifact prefix and `forwork` CLI, and add a first-class document capability: an embedded Univer (Apache-2.0 core) editor for `.docx`/`.xlsx`, a self-owned Exchange layer between OOXML files and Univer unit snapshots, agent tools that operate the same snapshot, durable attributable `document/*` session facts, and local-first safety (no upload, opt-in telemetry, write authority, credential storage, stable identity). Delivery is additive first; the identity-landing phase (scope, CLI, artifacts, brand, vendored re-scope, telemetry/default adapter, scan, signing) is scripted and gated per Constitution V.
+Fork the MIT-licensed harness into **ForWork**, a Windows/macOS desktop product published under the `@forwork/*` npm scope with the `forwork-` artifact prefix and `forwork` CLI, and add a first-class document capability: an embedded Univer (Apache-2.0 core) editor for `.docx`/`.docm`/`.xlsx`/`.xlsm` (the macro-enabled pair widened by [002](../002-in-place-ooxml-save/plan.md)), a self-owned Exchange layer between OOXML files and Univer unit snapshots, agent tools that operate the same snapshot, durable attributable `document/*` session facts, and local-first safety (no upload, opt-in telemetry, write authority, credential storage, stable identity). Delivery is additive first; the identity-landing phase (scope, CLI, artifacts, brand, vendored re-scope, telemetry/default adapter, scan, signing) is scripted and gated per Constitution V.
 
 ## Technical Context
 
@@ -26,7 +26,7 @@ Fork the MIT-licensed harness into **ForWork**, a Windows/macOS desktop product 
 
 **Constraints**: Offline editing and saving; no Linux document server or cloud account; bounded conversion memory and time (see `office-exchange` `Config`: `maxFileBytes`, `maxCells`, `maxConversionMs`); lossless-by-default saves; writes confined to permitted roots; agent tools dispatch correlated commands over local IPC (no document bytes off-device); runtime undo is the editor's native stack; user saves are explicit with periodic local drafts, while an accepted agent tool call persists with one immediate save
 
-**Scale/Scope**: v1 edits `.docx` and `.xlsx`; `.pptx` read-only; legacy conversion; one local user plus the agent; documents persist and restore per session
+**Scale/Scope**: v1 edits `.docx`, `.docm`, `.xlsx`, and `.xlsm` (widened by [002](../002-in-place-ooxml-save/plan.md)); `.pptx` read-only; legacy conversion; one local user plus the agent; documents persist and restore per session
 
 ### Decision: Univer Sheet Feature Plugins (FR-022)
 

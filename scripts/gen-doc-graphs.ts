@@ -280,7 +280,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     mode: 'seam',
     implementations: ['office-exchange'],
     consumers: ['office-exchange'],
-    note: 'Providers map `.docx` and `.xlsx` files to and from unit snapshots, report features the editable model cannot preserve, and convert legacy binaries through the declared conversion engine; the document Remote and agent tools depend on the seam rather than a conversion library.',
+    note: 'Providers map `.docx`/`.docm`/`.xlsx`/`.xlsm` files to unit snapshots and write an edit back into the source package, carrying every construct the edit does not change and refusing only an edit that intersects a coupled construct; legacy binaries convert through the declared engine. The document Remote and agent tools depend on the seam rather than a conversion library.',
   },
   {
     key: 'officeDocument',
@@ -288,7 +288,7 @@ const SERVICE_ROLES: ServiceRole[] = [
     title: 'Session-scoped document Remote',
     mode: 'service',
     consumers: ['tool-office', 'client-ui-office-editor'],
-    note: 'Serves the `remote.officeDocument` namespace: workspace-confined reads, version-guarded saves that report a concurrent external edit as a conflict, recovery drafts, and the `document/open` and `document/save` facts the `session-document` open-document projection reads.',
+    note: 'Serves the `remote.officeDocument` namespace: workspace-confined reads, version-guarded saves that report a concurrent external edit as a conflict, recovery drafts, and the `document/open` and `document/save` facts the `session-document` open-document projection reads; each save fact carries the writer\'s per-save disposition.',
   },
   {
     key: 'officeCommandBroker',

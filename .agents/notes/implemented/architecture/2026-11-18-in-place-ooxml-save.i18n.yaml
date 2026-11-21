@@ -1,0 +1,34 @@
+# Bilingual-pair consistency record for 2026-11-18-in-place-ooxml-save.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-11-18-in-place-ooxml-save.md
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes:
+  en: 1832ff76ceeb898b
+  zh: b671671f37816ca1
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/problem:
+  en: 492e10a2baaaa69d
+  zh: b8edcaeae924c0dd
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/decision:
+  en: 0c16367c504ea226
+  zh: 90dab6369d99fdc1
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/decision/why-raw-zip-local-record-copy:
+  en: d825d482aacc815b
+  zh: 0f566f54e4efca59
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/decision/why-a-custom-byte-scanner:
+  en: ea8a93b397a3d29b
+  zh: 598f47971b3cc188
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/decision/why-anchors-live-at-data-officeexchange-source:
+  en: 9408f2425f2cca6f
+  zh: 4742d1df4052727f
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/decision/coupled-versus-independent-constructs:
+  en: 83b8c365988b203f
+  zh: 7778b920bb973241
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/decision/re-anchoring-on-save:
+  en: ffe91f0ce4a603a9
+  zh: d6dd73c8ce11fed8
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/alternatives-considered:
+  en: 43389949b95b9c00
+  zh: dc07465e6548822c
+/agent-note-in-place-ooxml-save-preserves-source-package-bytes/consequences:
+  en: d1dfd4e5a4b212a7
+  zh: 334062e63b251b88

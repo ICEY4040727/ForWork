@@ -14,23 +14,43 @@ The [document package family](../../packages/document/README.md) moves Office fi
 
 ## Formats and unit snapshots
 
-`OfficeFormat` is `docx`, `xlsx`, `pptx`, `doc`, `xls`, or `ppt`. The editable set is `EditableOfficeFormat` (`docx`, `xlsx`); the legacy set is `LegacyOfficeFormat` (`doc`, `xls`, `ppt`).
+`OfficeFormat` is `docx`, `docm`, `xlsx`, `xlsm`, `pptx`, `doc`, `xls`, or `ppt`. The editable set is `EditableOfficeFormat` (`docx`, `docm`, `xlsx`, `xlsm`); the legacy set is `LegacyOfficeFormat` (`doc`, `xls`, `ppt`).
 
 | Format | Operations |
 |---|---|
-| `.docx`, `.xlsx` | Editable: `read` maps file bytes to a `UnitSnapshot`; `write` serializes a snapshot back to bytes |
+| `.docx`, `.docm`, `.xlsx`, `.xlsm` | Editable: `read` maps file bytes to a `UnitSnapshot`; `write` splices the edited units back into the source package. An in-place save keeps a macro-enabled file's VBA project and macro-enabled main content type. |
 | `.doc`, `.xls`, `.ppt` | Legacy: `convertLegacy` produces an editable file; `read` on the original rejects with `unsupported-format` |
 | `.pptx` | Preview-only: `detectUnsupported` inspects it; `read` and `write` reject with `unsupported-format` |
 
-`UnitSnapshot` is the editors' native serializable snapshot, a discriminated union of `{ kind: 'workbook', data: IWorkbookData }` and `{ kind: 'document', data: IDocumentData }`. `read` returns `ExchangeReadResult` with the detected `format`, the parsed `snapshot`, and every `UnsupportedFeature` an edit-and-save would drop. Each `UnsupportedFeature` carries a `kind` — `macro`, `tracked-changes`, `comment`, `chart`, `drawing`, `shape`, `formula-recalc`, `embedded-object`, or `other` — and an optional human-readable `detail`. A non-empty list means the write path must refuse rather than save a lossy file.
+`UnitSnapshot` is the editors' native serializable snapshot, a discriminated union of `{ kind: 'workbook', data: IWorkbookData }` and `{ kind: 'document', data: IDocumentData }`. `read` returns `ExchangeReadResult` with the detected `format`, the parsed `snapshot`, and every `UnsupportedFeature` a whole-file regeneration would drop. Each `UnsupportedFeature` carries a `kind` — `macro`, `tracked-changes`, `comment`, `chart`, `drawing`, `shape`, `formula-recalc`, `embedded-object`, or `other` — and an optional human-readable `detail`. A non-empty list describes what the source carries; it never refuses a save by itself.
 
-`formatOf(path)` classifies a path by extension, `isEditableFormat` narrows to `docx`/`xlsx`, and `isLegacyFormat` narrows to `doc`/`xls`/`ppt`.
+`formatOf(path)` classifies a path by extension, `isEditableFormat` narrows to `docx`/`docm`/`xlsx`/`xlsm`, and `isLegacyFormat` narrows to `doc`/`xls`/`ppt`.
+
+## In-place save
+
+`ctx.officeExchange.write(snapshot, format, source?, signal?)` returns `OfficeWriteResult` (`bytes`, `disposition`) without writing a file. With a snapshot sidecar and a source package, the writer assembles the output from the source bytes: every entry the edit does not change is copied from its source ZIP local record, so compressed data, CRC, timestamps, extra fields, compression method, entry order, and data descriptors stay identical. A save that changes no unit returns the source bytes unchanged.
+
+Inside a part the edit changes, only the edited unit's XML span is replaced: a paragraph, a table cell, or a worksheet `<c>` element. A body-level content control is anchored to its whole `w:sdt` element, so editing that unit refuses while a sibling edit leaves it untouched. Every byte outside the edited spans is copied from the source, and a worksheet row or column insert or delete is expressed as span operations rather than a whole-sheet rewrite; a shift on a sheet that carries a merged range, conditional-formatting range, data-validation range, autoFilter range, or Excel-table address range is refused with that construct named, because the range coordinates would not move with the shifted rows or columns. A required style, numbering definition, relationship, or content-type declaration is appended before its part's closing tag instead of regenerating the part; an edited cell style reuses a matching `<xf>` or appends the needed style components to `xl/styles.xml` and updates their counts. `word/settings.xml` is never written, and a changed worksheet string is written as an inline string so `xl/sharedStrings.xml` stays untouched.
+
+`read` attaches the source sidecar at `data.officeExchange.source` inside the editable data object. It records `schemaVersion: 1`, the `format`, the source `packageDigest` and `byteLength`, the `anchorMode` (`per-unit` or `sheet-summary`), the `sourceParts`, and either `anchors` or `sheets`. Each anchor names the unit `kind`, its `part`, a model `key`, the `start` and `end` byte offsets in the uncompressed part, and a digest of the canonical unit projection. The sidecar survives `unit.save()`, the JSON wire, and a recovery draft, so a save that follows an editor round trip still finds its anchors.
+
+`maxSourceAnchors` (100,000 by default) and `maxSourceAnchorBytes` (8 MiB by default) bound the sidecar. A workbook above the per-cell anchor count records `sheet-summary` entries and rebuilds per-cell anchors from the source at save. A source whose units cannot be anchored, or whose anchor payload stays above the budget, is read without a sidecar and therefore saves through the regeneration writer. When a save's source no longer matches the sidecar's `packageDigest` or `byteLength`, the writer re-anchors that source before planning, which makes a second save of a just-written file work without a re-read. A source that cannot be re-anchored is refused as `conversion-failed`; the filesystem version guard remains authoritative for conflicts.
+
+A snapshot without `data.officeExchange.source`, or a caller that supplies no source package, uses the legacy regeneration writer. That writer rebuilds the package from the editable model and returns a disposition that claims no verbatim entries. A `.docm` or `.xlsm` target refuses that path because regeneration would write a macro-free package without the VBA project.
+
+## Preservation and refusal
+
+`detectPreserved(bytes, config?)` classifies a source package without deciding whether a save may proceed. `PreservedConstructKind` names what an in-place save carries verbatim outside an edited unit: `macro`, `chart`, `pivot-table`, `excel-table`, `defined-names`, `calc-chain`, `comment`, `embedded-object`, `drawing`, `shape`, `theme`, `font-table`, `web-settings`, `custom-xml`, `external-link`, `field`, `bookmark`, `content-control`, and `document-properties`. Presence alone never refuses a save.
+
+`CoupledConstructKind` names the constructs whose meaning or anchors depend on the content an edit changes: `tracked-change`, `comment-range`, `content-control-wrap`, `field-owned-text`, `rich-text-shared-string`, `shared-formula`, `array-formula`, and `ambiguous-alternate-content`. The writer plans against the edited unit spans and returns a refusal naming the construct and its part or byte offset when one intersects them. A changed worksheet hyperlink also refuses because the worksheet relationship part is not regenerated. A worksheet row or column shift on a sheet carrying a merged range, conditional-formatting `sqref`, data-validation `sqref`, an autoFilter range, or an Excel-table address range refuses with the construct named, because those ranges are not shifted. A `.docm` or `.xlsm` save without an anchored source refuses as `unsupported-feature` instead of regenerating a macro-free package. A refusal writes nothing, records no save fact, and leaves the source bytes unchanged. This differs from a preserved class: the file contains it, but the user may still edit elsewhere.
+
+Unmapped properties inside an edited span that do not depend on the changed content are merged into the spliced unit instead of refusing: a cell's `s` style index, `w:tcPr`/`w:trPr` children, unmapped `w:pPr`/`w:rPr` children, cell width, and fit-to-text. A construct is coupled only when the edit would change its meaning or invalidate its anchor.
 
 ## Seam operations and failures
 
-`ctx.officeExchange.read(path, signal?)` returns an `ExchangeReadResult`. `ctx.officeExchange.write(snapshot, format, signal?)` returns the encoded bytes without writing a file. `detectUnsupported(path, signal?)` reports loss-prone features without returning content. `convertLegacy(path, signal?, outputDir?)` returns the path of the editable file; an omitted `outputDir` writes into a fresh temporary directory outside any workspace.
+`ctx.officeExchange.read(path, signal?)` returns an `ExchangeReadResult`. `ctx.officeExchange.write(snapshot, format, source?, signal?)` returns `OfficeWriteResult` without writing a file. `detectUnsupported(path, signal?)` reports loss-prone features without returning content. `detectPreserved(bytes, config?)` reports the preserved classes and coupled markers for bytes the caller already holds. `convertLegacy(path, signal?, outputDir?)` returns the path of the editable file; an omitted `outputDir` writes into a fresh temporary directory outside any workspace.
 
-`OfficeExchangeConfig` bounds every provider operation: `maxFileBytes` (25 MiB by default), `maxCells` (2,000,000), and `maxConversionMs` (60,000 ms). The provider resolves the bounds once at mount and rejects a non-positive or non-integer value with `RangeError` instead of truncating work. A legacy conversion that exceeds `maxConversionMs` is aborted and reported as `too-large`, leaving the source untouched. Every operation failure is an `OfficeExchangeError` whose stable `code` is `unsupported-format`, `unsupported-feature`, `too-large`, `conversion-failed`, `not-implemented`, or `out-of-scope`.
+`OfficeExchangeConfig` bounds every provider operation: `maxFileBytes` (25 MiB by default), `maxCells` (2,000,000), `maxConversionMs` (60,000 ms), `commandTimeoutMs` (5,000 ms), `maxSourceAnchors` (100,000), and `maxSourceAnchorBytes` (8 MiB). The provider resolves the bounds once at mount and rejects a non-positive or non-integer value with `RangeError` instead of truncating work. A legacy conversion that exceeds `maxConversionMs` is aborted and reported as `too-large`, leaving the source untouched. Every operation failure is an `OfficeExchangeError` whose stable `code` is `unsupported-format`, `unsupported-feature`, `too-large`, `conversion-failed`, `not-implemented`, or `out-of-scope`.
 
 ## The officeDocument Remote
 
@@ -38,12 +58,14 @@ The Remote carries `OfficeDocumentSnapshot`, a JSON projection of a unit snapsho
 
 | Method | Behavior |
 |---|---|
-| `read(workspaceFileScope, path)` | Resolves `path` from the Session workspace root, confines it to that root, reads it through the filesystem seam under `maxBytes`, and returns `OfficeDocumentReadResult` (`format`, `snapshot`, `unsupported`, `version`); the open fact records the workspace-relative locator |
-| `save(workspaceFileScope, path, snapshot, format, expectedVersion, attribution)` | Serializes the snapshot and publishes it with a filesystem `replaceIfVersion` guard; returns `OfficeDocumentSaveResult` (`version`), and records `DocumentSaveAttribution` (`actor`, optional `turn`) on `document/save` |
+| `read(workspaceFileScope, path)` | Resolves `path` from the Session workspace root, confines it to that root, reads it through the filesystem seam under `maxBytes`, and returns `OfficeDocumentReadResult` (`format`, `snapshot`, `preserved?`, `unsupported`, `version`); the open fact records the workspace-relative locator |
+| `save(workspaceFileScope, path, snapshot, format, expectedVersion, attribution)` | Reads the source at `expectedVersion`, writes from those bytes, and publishes the result with a filesystem `replaceIfVersion` guard; returns `OfficeDocumentSaveResult` (`version`, optional `disposition`) and records `DocumentSaveAttribution` (`actor`, optional `turn`) plus the disposition on `document/save` |
 | `detectUnsupported(workspaceFileScope, path)` | Reports loss-prone features without returning content |
 | `convertLegacy(workspaceFileScope, path)` | Returns the path of the converted editable file in a fresh workspace-scoped directory |
 
-`read` records the file's opaque content version and re-stats after parsing; a file that changed while it was read rejects instead of returning a snapshot bound to a stale version. `save` never falls back to an unconditional write: when the file changed after the read, the filesystem reports `FS_STALE_VERSION` and the Remote raises `office-document/conflict`. A `format` that does not match the snapshot kind, or a non-editable format, also rejects rather than writing a partial file.
+`read` records the file's opaque content version and re-stats after parsing; a file that changed while it was read rejects instead of returning a snapshot bound to a stale version. `save` never falls back to an unconditional write: when the file changed after the read, the filesystem reports `FS_STALE_VERSION` and the Remote raises `office-document/conflict`. A `format` that does not match the snapshot kind, or a non-editable format, also rejects rather than writing a partial file. A write that intersects a coupled construct rejects as `office-document/unsupported-feature` with the construct named, and appends no save fact.
+
+`SaveDisposition` travels on the save result and the `document/save` fact. It carries `schemaVersion: 1`, an exact `verbatimCount`, and one `{ count, names }` group for `spliced`, `added`, and `removed` entries. Counts are exact; names are a sorted ASCII prefix capped at 256 per group. The property is optional, so a save fact recorded before dispositions existed, or a legacy regeneration, reads as absent rather than invalid.
 
 The Remote maps seam and filesystem failures onto stable Remote codes: `unsupported-format`, `unsupported-feature`, `out-of-scope`, `bound-exceeded`, `conversion-failed`, and `conflict`, each carrying the offending `path`. An aborted caller signal rejects as `gateway/cancelled`. `convertLegacy` creates `<workspaceRoot>/.dsh/office-tmp/convert-<hash>-<random>/` and converts into it, so the same Remote can read the result under the unchanged root check. Each call gets its own directory; a failed conversion removes that directory, and a successful one persists until the user or Session deletes it.
 
@@ -150,13 +172,22 @@ The service is the producer of `document/*` facts for the editor: a first read a
  * The recorded document identity uses the same workspace-relative locator the editor tab uses,
  * so two spellings of one file never open two documents.
  * @param signal - caller cancellation.
- * @returns the detected format, snapshot, unsupported features, and observed version.
+ * @returns the detected format, snapshot, preserved construct classes,
+ * unsupported features, and observed version.
  * @throws RemoteError when the path is out of scope, the format is not editable, or the read fails.
  */
 @Remote async read( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<OfficeDocumentReadResult>
 
 /**
  * Serialize a snapshot and replace the file only at the caller's version.
+ *
+ * The file is read and stat-verified at `expectedVersion` before the writer
+ * runs, so the bytes the writer receives are the bytes the caller read. A
+ * preserved construct never refuses the save by itself: the writer returns a
+ * typed refusal only when the edit intersects a construct whose meaning or
+ * anchors depend on the changed content. A refusal writes nothing and records
+ * no fact; the final `replaceIfVersion` write refuses a change that happened
+ * during serialization.
  * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
  * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
  * @param snapshot - snapshot returned by {@link read}, optionally modified.
@@ -164,9 +195,9 @@ The service is the producer of `document/*` facts for the editor: a first read a
  * @param expectedVersion - version returned by {@link read}; a changed file is refused.
  * @param attribution - who caused the save and the agent turn, when one caused it.
  * @param signal - caller cancellation.
- * @returns the version the guarded write published.
- * @throws RemoteError with `office-document/unsupported-feature` when the source still at
- * `expectedVersion` contains a feature an edit-and-save would drop.
+ * @returns the version the guarded write published and the writer's disposition.
+ * @throws RemoteError with `office-document/unsupported-feature` when the edit
+ * intersects a coupled construct, naming that construct in the message.
  * @throws RemoteError with `office-document/conflict` when the file changed after the read.
  */
 @Remote async save( workspaceFileScope: WorkspaceFileScope, path: string, snapshot: OfficeDocumentSnapshot, format: OfficeFormat, expectedVersion: string, attribution: DocumentSaveAttribution, signal: AbortSignal, ): Promise<OfficeDocumentSaveResult>
@@ -211,11 +242,11 @@ The service is the producer of `document/*` facts for the editor: a first read a
 @Remote markDocumentMissing( workspaceFileScope: WorkspaceFileScope, documentId: string, signal: AbortSignal, ): Promise<void>
 
 /**
- * Report the features an edit-and-save would drop without returning content.
+ * Report the features a whole-file regeneration would drop without returning content.
  * @param workspaceFileScope - header-derived workspace root for the Session identity on the wire.
  * @param path - absolute or workspace-relative path; it must resolve inside the workspace root.
  * @param signal - caller cancellation.
- * @returns every detected unsupported feature, empty when the file round-trips cleanly.
+ * @returns every detected unsupported feature; empty when regeneration loses no mapped content.
  * @throws RemoteError when the path is out of scope or its format cannot be inspected.
  */
 @Remote async detectUnsupported( workspaceFileScope: WorkspaceFileScope, path: string, signal: AbortSignal, ): Promise<readonly UnsupportedFeature[]>
@@ -335,18 +366,24 @@ abstract read(path: string, signal?: AbortSignal): Promise<ExchangeReadResult>
 
 /**
  * Serialize a unit snapshot back to Office file bytes.
+ *
+ * `source` carries the bytes the caller read at its expected version so an
+ * in-place writer can splice them. A snapshot without the source sidecar, or
+ * a caller that supplies no source, uses the regeneration writer.
  * @param snapshot - Editable content to serialize.
  * @param format - Target Office format.
+ * @param source - Source package bytes read at the caller's expected version;
+ * omitted for a snapshot that has no source file.
  * @param signal - Optional cancellation.
- * @returns The encoded file bytes.
+ * @returns The encoded file bytes and what the save carried or changed.
  */
-abstract write(snapshot: UnitSnapshot, format: OfficeFormat, signal?: AbortSignal): Promise<Uint8Array>
+abstract write( snapshot: UnitSnapshot, format: OfficeFormat, source?: SourcePackage, signal?: AbortSignal, ): Promise<OfficeWriteResult>
 
 /**
- * Report features that would be lost by an edit-and-save.
+ * Report features a whole-file regeneration would drop.
  * @param path - File path to inspect.
  * @param signal - Optional cancellation.
- * @returns Detected unsupported features; empty when the file round-trips cleanly.
+ * @returns Detected unsupported features; empty when regeneration loses no mapped content.
  */
 abstract detectUnsupported(path: string, signal?: AbortSignal): Promise<readonly UnsupportedFeature[]>
 

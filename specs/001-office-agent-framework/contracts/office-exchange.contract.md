@@ -1,5 +1,7 @@
 # Contract: `ctx.officeExchange`
 
+> **Superseded in part by [002](../../002-in-place-ooxml-save/contracts/office-exchange-write.contract.md).** The `write` signature, its result, and the file-level refusal condition below describe the original 001 surface. The in-place write contract owns them now; the other operations on this page remain current.
+
 **Service key**: `officeExchange`
 **Owner**: `packages/document/office-exchange` (Service Definition; providers implement)
 
@@ -7,12 +9,12 @@
 
 ```ts
 read(path: string, signal?: AbortSignal): Promise<ExchangeReadResult>
-write(snapshot: UnitSnapshot, format: OfficeFormat, signal?: AbortSignal): Promise<Uint8Array>
+write(snapshot: UnitSnapshot, format: OfficeFormat, source?: SourcePackage, signal?: AbortSignal): Promise<OfficeWriteResult>
 detectUnsupported(path: string, signal?: AbortSignal): Promise<readonly UnsupportedFeature[]>
 convertLegacy(path: string, signal?: AbortSignal): Promise<string>
 ```
 
-`UnitSnapshot.data` is the editor core's native snapshot: `IWorkbookData` for workbooks and `IDocumentData` for documents (Option B). The provider owns the OOXML mapping to and from those native types; no project-owned neutral model is introduced.
+`UnitSnapshot.data` is the editor core's native snapshot: `IWorkbookData` for workbooks and `IDocumentData` for documents (Option B). The provider owns the OOXML mapping to and from those native types; no project-owned neutral model is introduced. `write` returns `{ bytes, disposition }`; `source` carries the bytes read at the caller's expected version and selects the in-place writer when the snapshot also carries `data.officeExchange.source`.
 
 ## Preconditions
 
@@ -23,7 +25,7 @@ convertLegacy(path: string, signal?: AbortSignal): Promise<string>
 ## Postconditions
 
 - `read` returns the detected `format`, a `UnitSnapshot`, and every detected `unsupported` feature. It never mutates the source file.
-- `write` never drops content it does not explicitly change. If `unsupported` is non-empty for the source, the provider refuses and raises `unsupported-feature` instead of writing. A save path that skips this check is non-conforming.
+- `write` never drops content it does not explicitly change. **Superseded by [002](../../002-in-place-ooxml-save/contracts/office-exchange-write.contract.md):** a non-empty `unsupported` list no longer refuses a write by itself; refusal is limited to a coupled construct intersecting the edit or an entry the writer cannot preserve.
 - A successful write is the only point that advances the document's persisted version; in-memory commands do not.
 - `write` output is a complete, valid file of the requested format.
 - `convertLegacy` leaves the source untouched and returns the path of a converted editable file.

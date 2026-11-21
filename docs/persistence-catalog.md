@@ -41,9 +41,9 @@ The [format references](persistence-changes/historical-formats/README.md) cover 
 | `event:document/command` | event | `2f9b9def9e02ddec07c7faea633a7ea8f8b572da2f6be849eeb26c47dd7b6995` | [`{ type: "document/command" }`](#persistence-type-sha256-2f9b9def9e02ddec07c7faea633a7ea8f8b572da2f6be849eeb26c47dd7b6995) |
 | `event:document/edit` | event | `c1a6d74613aeff3b01501987b97ffb725ab1acf0453aef289c6280b4228563f2` | [`{ type: "document/edit" }`](#persistence-type-sha256-c1a6d74613aeff3b01501987b97ffb725ab1acf0453aef289c6280b4228563f2) |
 | `event:document/missing` | event | `db4455e69146554b94bb759e4eb958972b8e4127775513d1a013c1921dedcb34` | [`{ type: "document/missing" }`](#persistence-type-sha256-db4455e69146554b94bb759e4eb958972b8e4127775513d1a013c1921dedcb34) |
-| `event:document/open` | event | `31b3e8f76f9c0408809813625d789bc832568ff3fb7bf65dc2f9f4d543828108` | [`{ type: "document/open" }`](#persistence-type-sha256-31b3e8f76f9c0408809813625d789bc832568ff3fb7bf65dc2f9f4d543828108) |
+| `event:document/open` | event | `350212adc337e105fc7557dcf5b9115a5adb88c8e3609785d2712f77ab92a343` | [`{ type: "document/open" }`](#persistence-type-sha256-350212adc337e105fc7557dcf5b9115a5adb88c8e3609785d2712f77ab92a343) |
 | `event:document/rebind` | event | `99d72b97ac6e7e2fdef89bdfa688f4c00b7650762e3d9dff42c7274d0d1566c3` | [`{ type: "document/rebind" }`](#persistence-type-sha256-99d72b97ac6e7e2fdef89bdfa688f4c00b7650762e3d9dff42c7274d0d1566c3) |
-| `event:document/save` | event | `123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d` | [`{ type: "document/save" }`](#persistence-type-sha256-123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d) |
+| `event:document/save` | event | `9f2ac939d062f9304b0ebfba479f90a3eaa933821f0e2b615078928562122284` | [`{ type: "document/save" }`](#persistence-type-sha256-9f2ac939d062f9304b0ebfba479f90a3eaa933821f0e2b615078928562122284) |
 | `event:feedback/message-delete` | event | `3ee93b06f3a125850337602bcdf155d2538c43a5c944ec55b1b3c365152d6796` | [`{ type: "feedback/message-delete" }`](#persistence-type-sha256-3ee93b06f3a125850337602bcdf155d2538c43a5c944ec55b1b3c365152d6796) |
 | `event:feedback/message-put` | event | `b5086d249e8502e9ead1d39156bb8d559bde7951cac0f14ce150345b4e42a2bf` | [`{ type: "feedback/message-put" }`](#persistence-type-sha256-b5086d249e8502e9ead1d39156bb8d559bde7951cac0f14ce150345b4e42a2bf) |
 | `event:feedback/record` | event | `b54940ff095c17e874c5be03815f4c2145a256cf3a1d34dae4ab2f7769dfffe8` | [`{ type: "feedback/record" }`](#persistence-type-sha256-b54940ff095c17e874c5be03815f4c2145a256cf3a1d34dae4ab2f7769dfffe8) |
@@ -530,7 +530,7 @@ Source: [`packages/core/session/src/types.ts:322`](../packages/core/session/src/
 'document/close': DocumentCloseEventData
 ```
 
-Source: [`packages/core/session/src/document-events.ts:318`](../packages/core/session/src/document-events.ts)
+Source: [`packages/core/session/src/document-events.ts:362`](../packages/core/session/src/document-events.ts)
 
 <a id="documentcommand--log-only"></a>
 
@@ -545,7 +545,7 @@ Source: [`packages/core/session/src/document-events.ts:318`](../packages/core/se
 'document/command': DocumentCommandEventData
 ```
 
-Source: [`packages/core/session/src/document-events.ts:324`](../packages/core/session/src/document-events.ts)
+Source: [`packages/core/session/src/document-events.ts:368`](../packages/core/session/src/document-events.ts)
 
 <a id="documentedit--log-only"></a>
 
@@ -559,7 +559,7 @@ Source: [`packages/core/session/src/document-events.ts:324`](../packages/core/se
 'document/edit': DocumentEditEventData
 ```
 
-Source: [`packages/core/session/src/document-events.ts:299`](../packages/core/session/src/document-events.ts)
+Source: [`packages/core/session/src/document-events.ts:343`](../packages/core/session/src/document-events.ts)
 
 <a id="documentmissing--log-only"></a>
 
@@ -573,7 +573,7 @@ Source: [`packages/core/session/src/document-events.ts:299`](../packages/core/se
 'document/missing': DocumentMissingEventData
 ```
 
-Source: [`packages/core/session/src/document-events.ts:314`](../packages/core/session/src/document-events.ts)
+Source: [`packages/core/session/src/document-events.ts:358`](../packages/core/session/src/document-events.ts)
 
 <a id="documentopen--log-only"></a>
 
@@ -588,7 +588,7 @@ Source: [`packages/core/session/src/document-events.ts:314`](../packages/core/se
 'document/open': DocumentOpenEventData
 ```
 
-Source: [`packages/core/session/src/document-events.ts:294`](../packages/core/session/src/document-events.ts)
+Source: [`packages/core/session/src/document-events.ts:338`](../packages/core/session/src/document-events.ts)
 
 <a id="documentrebind--log-only"></a>
 
@@ -602,7 +602,7 @@ Source: [`packages/core/session/src/document-events.ts:294`](../packages/core/se
 'document/rebind': DocumentRebindEventData
 ```
 
-Source: [`packages/core/session/src/document-events.ts:309`](../packages/core/session/src/document-events.ts)
+Source: [`packages/core/session/src/document-events.ts:353`](../packages/core/session/src/document-events.ts)
 
 <a id="documentsave--log-only"></a>
 
@@ -616,7 +616,7 @@ Source: [`packages/core/session/src/document-events.ts:309`](../packages/core/se
 'document/save': DocumentSaveEventData
 ```
 
-Source: [`packages/core/session/src/document-events.ts:304`](../packages/core/session/src/document-events.ts)
+Source: [`packages/core/session/src/document-events.ts:348`](../packages/core/session/src/document-events.ts)
 
 ### `feedback/*`
 
@@ -1915,6 +1915,14 @@ SHA-256: `26c879bdd130e8b8683a6ce588414fad2244783d6573ca399fa0de184a2b0bb1`
 SHA-256: `b38f206d59bad891fa58c89f97a0036987b3defe7685acbd318fa55eb85f9751`
 
 `"disposed"`
+
+<a id="persistence-type-sha256-c4f20015771b2f6abb87e767f1d0d4cf0d3b61c466eee2ef54fc0fb394bdbe92"></a>
+
+### `"docm"`
+
+SHA-256: `c4f20015771b2f6abb87e767f1d0d4cf0d3b61c466eee2ef54fc0fb394bdbe92`
+
+`"docm"`
 
 <a id="persistence-type-sha256-55dac0c496302e7ddf30003078da5bee79444d6ba93c56abceacc5b23ffec08b"></a>
 
@@ -3338,6 +3346,14 @@ SHA-256: `8e8155594e07812356b67d732196dda894b0f9c91a5969d51612cf490b0a016d`
 
 `"workspace/changes"`
 
+<a id="persistence-type-sha256-b24241da6d76a79c0974916f0bfe1e0d5e8a5e3a8b0b27b27c03231ffd0de518"></a>
+
+### `"xlsm"`
+
+SHA-256: `b24241da6d76a79c0974916f0bfe1e0d5e8a5e3a8b0b27b27c03231ffd0de518`
+
+`"xlsm"`
+
 <a id="persistence-type-sha256-70c093b968330034340456c8ca45478fa8d1c8008ff9ec72d1f0c5a1a1dbdade"></a>
 
 ### `"xlsx"`
@@ -3719,7 +3735,7 @@ Attribution-only additions: `action-cards`, `tmux-context`, `user-question-reply
 
 SHA-256: `38afed636d31ae1aa623506137763c6303a399ffa21662542712b00192de74bb`
 
-Sources: [`packages/core/session/src/document-events.ts:278`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:322`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3737,7 +3753,7 @@ Sources: [`packages/core/session/src/document-events.ts:278`](../packages/core/s
 
 SHA-256: `41fa789ce7694143d3c4de2d070d1d0b8bbb051daec6cc8ab9bf0eaa480b3d12`
 
-Sources: [`packages/core/session/src/document-events.ts:187`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:191`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3756,7 +3772,7 @@ Sources: [`packages/core/session/src/document-events.ts:187`](../packages/core/s
 
 SHA-256: `9cceb1232edc9fb4a3842aefa475f802f9727cea770c07e38f52da00de6fc968`
 
-Sources: [`packages/core/session/src/document-events.ts:167`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:171`](../packages/core/session/src/document-events.ts)
 
 | kind | Form property | Other required fields | Full definition |
 |---|---|---|---|
@@ -3773,7 +3789,7 @@ Sources: [`packages/core/session/src/document-events.ts:167`](../packages/core/s
 
 SHA-256: `b700141f88b51ec194b79a1a42833c46f0517c100fbe101b776416e896e3194f`
 
-Sources: [`packages/core/session/src/document-events.ts:238`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:282`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3795,7 +3811,7 @@ Sources: [`packages/core/session/src/document-events.ts:238`](../packages/core/s
 
 SHA-256: `795eb6d599e0126c7397a27f969a2bc54fc83ed94070a75fb707128944def5c4`
 
-Sources: [`packages/core/session/src/document-events.ts:158`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:162`](../packages/core/session/src/document-events.ts)
 
 Array of [`DocumentEditStep`](#persistence-type-sha256-f2ac64c330c39613917b893a9a6459d1a06f8dc366d4f31cdf364ce4ec8d23c7).
 
@@ -3809,7 +3825,7 @@ Array of [`DocumentEditStep`](#persistence-type-sha256-f2ac64c330c39613917b893a9
 
 SHA-256: `f2ac64c330c39613917b893a9a6459d1a06f8dc366d4f31cdf364ce4ec8d23c7`
 
-Sources: [`packages/core/session/src/document-events.ts:124`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:128`](../packages/core/session/src/document-events.ts)
 
 | kind | Form property | Other required fields | Full definition |
 |---|---|---|---|
@@ -3838,7 +3854,7 @@ One of:
 - `"system"`
 - `"user"`
 
-<a id="persistence-type-sha256-b1d6717b3eb1111e71af0c8ddd59397e948e400d6ce00304a620c2ce7bd01338"></a>
+<a id="persistence-type-sha256-12dd3143bea360ed896f61d2488feb1ba1e4468374d18a8b5baa8c821b1e76c7"></a>
 
 <a id="persistence-type-documentformat"></a>
 
@@ -3846,14 +3862,16 @@ One of:
 
 ### `DocumentFormat`
 
-SHA-256: `b1d6717b3eb1111e71af0c8ddd59397e948e400d6ce00304a620c2ce7bd01338`
+SHA-256: `12dd3143bea360ed896f61d2488feb1ba1e4468374d18a8b5baa8c821b1e76c7`
 
-Sources: [`packages/core/session/src/document-events.ts:42`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:46`](../packages/core/session/src/document-events.ts)
 
 One of:
 
+- `"docm"`
 - `"docx"`
 - `"pptx"`
+- `"xlsm"`
 - `"xlsx"`
 
 <a id="persistence-type-sha256-14022e8f0a6f6abdeddeb9e5f9a635dd969768e07f99a3512a776f185330040c"></a>
@@ -3866,7 +3884,7 @@ One of:
 
 SHA-256: `14022e8f0a6f6abdeddeb9e5f9a635dd969768e07f99a3512a776f185330040c`
 
-Sources: [`packages/core/session/src/document-events.ts:268`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:312`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3874,7 +3892,7 @@ Sources: [`packages/core/session/src/document-events.ts:268`](../packages/core/s
 | `path` | required | `string` |
 | `turn` | optional | `number` |
 
-<a id="persistence-type-sha256-a452b446b82d363986daba022645e42f66736662cd5689c5799c1f75076338fc"></a>
+<a id="persistence-type-sha256-e7bac02f3737ea305ba414be8537ddece15505ef8e15a7e08c3a9218bd9d6a5c"></a>
 
 <a id="persistence-type-documentopeneventdata"></a>
 
@@ -3882,15 +3900,15 @@ Sources: [`packages/core/session/src/document-events.ts:268`](../packages/core/s
 
 ### `DocumentOpenEventData`
 
-SHA-256: `a452b446b82d363986daba022645e42f66736662cd5689c5799c1f75076338fc`
+SHA-256: `e7bac02f3737ea305ba414be8537ddece15505ef8e15a7e08c3a9218bd9d6a5c`
 
-Sources: [`packages/core/session/src/document-events.ts:199`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:203`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
 | `contentVersion` | required | `number` |
 | `documentId` | required | `string` |
-| `format` | required | [`DocumentFormat`](#persistence-type-sha256-b1d6717b3eb1111e71af0c8ddd59397e948e400d6ce00304a620c2ce7bd01338) |
+| `format` | required | [`DocumentFormat`](#persistence-type-sha256-12dd3143bea360ed896f61d2488feb1ba1e4468374d18a8b5baa8c821b1e76c7) |
 | `path` | required | `string` |
 | `turn` | optional | `number` |
 
@@ -3904,7 +3922,7 @@ Sources: [`packages/core/session/src/document-events.ts:199`](../packages/core/s
 
 SHA-256: `c747a434a8ce645f0f1d77cab60165041a525369c1c15fd270e64449fb7d6358`
 
-Sources: [`packages/core/session/src/document-events.ts:256`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:300`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -3930,7 +3948,27 @@ One of:
 - `"agent"`
 - `"user"`
 
-<a id="persistence-type-sha256-7d96f5fa6bd17f0d17fc9b49bc1acb53b48c2a8f634d7b547e3a4f7bdd74d0b1"></a>
+<a id="persistence-type-sha256-c62d6f056ba022374b3f5fd095634be5e85b627936d6e1d60f57be0536671793"></a>
+
+<a id="persistence-type-documentsavedisposition"></a>
+
+<a id="persistence-type-packagescoresessionsrcdocument-eventstsdocumentsavedisposition"></a>
+
+### `DocumentSaveDisposition`
+
+SHA-256: `c62d6f056ba022374b3f5fd095634be5e85b627936d6e1d60f57be0536671793`
+
+Sources: [`packages/core/session/src/document-events.ts:225`](../packages/core/session/src/document-events.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `added` | required | [`{ count, names }`](#persistence-type-sha256-f0e7b8519dc00f6ee07d476156369f30e2e5fc83c4e00e65a3acf921e9f41c7a) |
+| `removed` | required | [`{ count, names }`](#persistence-type-sha256-f0e7b8519dc00f6ee07d476156369f30e2e5fc83c4e00e65a3acf921e9f41c7a) |
+| `schemaVersion` | required | `1` |
+| `spliced` | required | [`{ count, names }`](#persistence-type-sha256-f0e7b8519dc00f6ee07d476156369f30e2e5fc83c4e00e65a3acf921e9f41c7a) |
+| `verbatimCount` | required | `number` |
+
+<a id="persistence-type-sha256-16b388fb70fa3016818d860f890fed98855cab3c8cb37bfaeb6c590bb367b164"></a>
 
 <a id="persistence-type-documentsaveeventdata"></a>
 
@@ -3938,14 +3976,15 @@ One of:
 
 ### `DocumentSaveEventData`
 
-SHA-256: `7d96f5fa6bd17f0d17fc9b49bc1acb53b48c2a8f634d7b547e3a4f7bdd74d0b1`
+SHA-256: `16b388fb70fa3016818d860f890fed98855cab3c8cb37bfaeb6c590bb367b164`
 
-Sources: [`packages/core/session/src/document-events.ts:222`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:264`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
 | `actor` | required | [`DocumentSaveActor`](#persistence-type-sha256-3854343c105c10f9e6574a5d638f31fa83c50bc107cd66f02d691dfe4f8f9392) |
 | `contentVersion` | required | `number` |
+| `disposition` | optional | [`DocumentSaveDisposition`](#persistence-type-sha256-c62d6f056ba022374b3f5fd095634be5e85b627936d6e1d60f57be0536671793) |
 | `documentId` | required | `string` |
 | `turn` | optional | `number` |
 
@@ -6729,6 +6768,19 @@ Sources: [`packages/compaction/compaction/src/types.ts:24`](../packages/compacti
 | `sourceCommandId` | optional | `string` |
 | `turn` | required | [`OptionalSessionSeq`](#persistence-type-sha256-3bd652ebfa8726b3ce3937a4f1bd2759e02f86b3a08a20f9e41a8513656fbc5f) |
 
+<a id="persistence-type-sha256-f0e7b8519dc00f6ee07d476156369f30e2e5fc83c4e00e65a3acf921e9f41c7a"></a>
+
+### `{ count, names }`
+
+SHA-256: `f0e7b8519dc00f6ee07d476156369f30e2e5fc83c4e00e65a3acf921e9f41c7a`
+
+Sources: [`packages/core/session/src/document-events.ts:231`](../packages/core/session/src/document-events.ts) · [`packages/core/session/src/document-events.ts:238`](../packages/core/session/src/document-events.ts) · [`packages/core/session/src/document-events.ts:245`](../packages/core/session/src/document-events.ts)
+
+| Property | Presence | Type |
+|---|---|---|
+| `count` | required | `number` |
+| `names` | required | [`string[]`](#persistence-type-sha256-93c33d9687613293f8c95d46c4d922fe9ceae83b84c384beff5c3315abe005f2) |
+
 <a id="persistence-type-sha256-da60ed58a8fa23d7aa4920ab5c1f4e3d28109cb0797ef9e5c8b125721b847582"></a>
 
 ### `{ cwd }`
@@ -7346,7 +7398,7 @@ SHA-256: `ba4c40b4381e0dcdfab8fc9fc75b5c9b3e8f09ef56deeb1bec8e703b0ef8cd6d`
 
 SHA-256: `b008bb8de4204bafb2cc81a4e2f1f8c3528ae925827f92d8ae2197ccfffd76b9`
 
-Sources: [`packages/core/session/src/document-events.ts:172`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:176`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -7820,7 +7872,7 @@ Sources: [`packages/core/tool-executor-ptc/src/types.ts:68`](../packages/core/to
 
 SHA-256: `dcd2e1f5900afeb1e7baf6fc5416c049f77e1c8ea0882dad371d3a6c5e944252`
 
-Sources: [`packages/core/session/src/document-events.ts:168`](../packages/core/session/src/document-events.ts)
+Sources: [`packages/core/session/src/document-events.ts:172`](../packages/core/session/src/document-events.ts)
 
 | Property | Presence | Type |
 |---|---|---|
@@ -9193,17 +9245,17 @@ SHA-256: `db4455e69146554b94bb759e4eb958972b8e4127775513d1a013c1921dedcb34`
 | `time` | required | `number` |
 | `type` | required | `"document/missing"` |
 
-<a id="persistence-type-sha256-31b3e8f76f9c0408809813625d789bc832568ff3fb7bf65dc2f9f4d543828108"></a>
+<a id="persistence-type-sha256-350212adc337e105fc7557dcf5b9115a5adb88c8e3609785d2712f77ab92a343"></a>
 
 <a id="persistence-type-eventdocumentopen"></a>
 
 ### `{ type: "document/open" }`
 
-SHA-256: `31b3e8f76f9c0408809813625d789bc832568ff3fb7bf65dc2f9f4d543828108`
+SHA-256: `350212adc337e105fc7557dcf5b9115a5adb88c8e3609785d2712f77ab92a343`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`DocumentOpenEventData`](#persistence-type-sha256-a452b446b82d363986daba022645e42f66736662cd5689c5799c1f75076338fc) |
+| `data` | required | [`DocumentOpenEventData`](#persistence-type-sha256-e7bac02f3737ea305ba414be8537ddece15505ef8e15a7e08c3a9218bd9d6a5c) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
@@ -9225,17 +9277,17 @@ SHA-256: `99d72b97ac6e7e2fdef89bdfa688f4c00b7650762e3d9dff42c7274d0d1566c3`
 | `time` | required | `number` |
 | `type` | required | `"document/rebind"` |
 
-<a id="persistence-type-sha256-123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d"></a>
+<a id="persistence-type-sha256-9f2ac939d062f9304b0ebfba479f90a3eaa933821f0e2b615078928562122284"></a>
 
 <a id="persistence-type-eventdocumentsave"></a>
 
 ### `{ type: "document/save" }`
 
-SHA-256: `123e77bb36ab73e728f2d4c52e5cdb86343d11b563294d892f7bc0a19e47fc7d`
+SHA-256: `9f2ac939d062f9304b0ebfba479f90a3eaa933821f0e2b615078928562122284`
 
 | Property | Presence | Type |
 |---|---|---|
-| `data` | required | [`DocumentSaveEventData`](#persistence-type-sha256-7d96f5fa6bd17f0d17fc9b49bc1acb53b48c2a8f634d7b547e3a4f7bdd74d0b1) |
+| `data` | required | [`DocumentSaveEventData`](#persistence-type-sha256-16b388fb70fa3016818d860f890fed98855cab3c8cb37bfaeb6c590bb367b164) |
 | `ignorable` | optional | `true` |
 | `seq` | required | `number` |
 | `time` | required | `number` |
