@@ -165,11 +165,11 @@
 
 ## R15. Validation ladder and evidence limits
 
-**Decision**: Build a corpus of at least 30 fixtures; add a test-local OPC validator (relationship closure, content-type coverage, dangling references, duplicate ids, well-formed XML) and a byte-diff report helper. Use the LibreOffice kit only as a `libreoffice-load-smoke` (import/render), never as proof of "no repair"; the release subset is opened manually in Word and Excel. Extend the Web `document-preview` snapshot to click Save and read back the preserved entry.
+**Decision**: Build a corpus of at least 30 fixtures; add a test-local OPC validator (relationship closure, content-type coverage, dangling references, duplicate ids, well-formed XML) and a byte-diff report helper. Use the LibreOffice kit only as a `libreoffice-load-smoke` (import/render), never as proof of "no repair"; the Windows system-LibreOffice matrix opens, renders, and reads back the fixed release subset, and desktop Word/Excel no-repair validation is a disclosed residual risk because it is unavailable on the release host. Extend the Web `document-preview` snapshot to click Save and read back the preserved entry.
 
 **Rationale**: LibreOffice can silently repair a package and returns no repair diagnostics; no OOXML schema validator exists in the repo. Naming the check accurately keeps the evidence claim honest (Principle VI).
 
-**Alternatives considered**: Microsoft Office automation — not portable or available to CI; claiming LibreOffice proves no repair — unsupported by its API.
+**Alternatives considered**: Microsoft Office automation — not portable, unavailable to CI, and not installed on the release host; claiming LibreOffice proves no repair — unsupported by its API.
 
 **Evidence**: `@deepseek-ai/libreoffice-kit` `lib/types/index.d.ts`; `office-to-pdf/src/index.ts:147`; `provider-service.spec.ts` engine probe; `snapshots/web/document-preview/document.expected.md`.
 

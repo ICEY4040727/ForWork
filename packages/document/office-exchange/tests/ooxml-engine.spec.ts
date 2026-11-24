@@ -4,7 +4,8 @@
  * This is an import/render smoke, not a no-repair proof: LibreOffice can repair
  * a malformed package silently and the kit reports no repair diagnostics, so a
  * successful PDF render does not show that the saved package opens without
- * repair. The manual Word and Excel matrix carries that evidence.
+ * repair. Desktop Word and Excel are unavailable on the release host, so no
+ * matrix establishes that claim; it is a disclosed residual risk.
  */
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'

@@ -18,9 +18,9 @@ The fallback writer stays for snapshots and drafts that carry no source identity
 
 **Storage**: Local filesystem through the `Fs` seam; the visible file is published by `writeBytes(..., { kind: 'replaceIfVersion' })`.
 
-**Testing**: Vitest unit/behavior specs; a new OPC/byte-diff harness under `packages/document/office-exchange/tests/`; LibreOffice kit load smoke; Web keyless snapshot; per-file 100% coverage on `packages/*/*/src`.
+**Testing**: Vitest unit/behavior specs; a new OPC/byte-diff harness under `packages/document/office-exchange/tests/`; LibreOffice kit load smoke; Windows system-LibreOffice release matrix; Web keyless snapshot; per-file 100% coverage on `packages/*/*/src`.
 
-**Target Platform**: Electron desktop for Windows and macOS; the writer is Host-side and must not enter a Client bundle.
+**Target Platform**: Electron desktop on Windows; release validation for this feature is Windows-only and macOS is out of scope. The writer is Host-side and must not enter a Client bundle.
 
 **Project Type**: pnpm monorepo, desktop application and capability-seam packages.
 
@@ -41,7 +41,7 @@ The fallback writer stays for snapshots and drafts that carry no source identity
 | III. Documents Are First-Class Session Entities | The save disposition is a durable `document/save` fact; nothing model-visible is added without a log entry | PASS |
 | IV. Lossless, Non-Destructive Editing | This feature is the enforcement: untouched local records are copied raw; splices are unit-scoped; coupled constructs refuse loudly | PASS |
 | V. Incremental, Reversible Delivery | New `src/package/*` layer and a feature-gated splice path; the existing regeneration writer remains as the fallback for snapshots without source identity | PASS |
-| VI. Evidence Over Claims | Corpus with byte diffs, OPC validator, LibreOffice load smoke, manual Word/Excel matrix, per-file coverage | PASS (planned evidence, not yet executed) |
+| VI. Evidence Over Claims | Corpus with byte diffs, OPC validator, LibreOffice load smoke, Windows system-LibreOffice release matrix, per-file coverage | PASS (planned evidence, not yet executed) |
 | VII. License and Dependency Hygiene | No new dependency; `node:zlib` is built in; ExcelJS and Univer licenses unchanged | PASS |
 | VIII. Selective Upstream Follow | Additive fork-local modules in `office-exchange`; no diverged upstream file rewritten | PASS |
 
@@ -121,7 +121,7 @@ Key conclusions:
 - [data-model.md](./data-model.md): `SourcePackage`, `OfficeSourceState`, `UnitAnchor`, `SplicePlan`, `PartDisposition`, `SaveDisposition`, `ConstructIntersection`, `PreservationFailure`; validation rules, bounds, and state transitions.
 - [contracts/office-exchange-write.contract.md](./contracts/office-exchange-write.contract.md): the new write operation, its preconditions, postconditions, errors, and invariants.
 - [contracts/document-save-disposition.contract.md](./contracts/document-save-disposition.contract.md): the optional save-fact property and its compatibility rule.
-- [quickstart.md](./quickstart.md): fixture regeneration, preservation matrix, refusal postcondition, LibreOffice smoke, focused coverage, Web save snapshot, manual Office matrix.
+- [quickstart.md](./quickstart.md): fixture regeneration, preservation matrix, refusal postcondition, LibreOffice smoke, focused coverage, Web save snapshot, Windows system-LibreOffice release matrix.
 
 ## Constitution Check (post-design)
 
@@ -170,7 +170,7 @@ The first two rows are recorded in the 3.2.0 amendment landed with this change, 
 4. Focused coverage: `pnpm exec vitest run <specs> --coverage --coverage.include='packages/document/office-exchange/src/**/*.ts'`.
 5. `pnpm run typecheck`, `pnpm run lint`, `pnpm run build:artifacts`, `pnpm run build:check`.
 6. `pnpm run test:coverage` (CI gate), `pnpm run doc-sync`, `pnpm run hygiene` when manifests/exports/docs change.
-7. Manual Word/Excel open matrix on the fixed release subset; Web save snapshot refresh.
+7. Windows system-LibreOffice import/render/read-back matrix on the fixed release subset, recorded per fixture with the saved-output digest, engine build, and host; Web save snapshot refresh.
 
 ## Out of Scope
 

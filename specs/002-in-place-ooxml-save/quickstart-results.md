@@ -821,3 +821,52 @@ No runner error was printed; the first 30 lines of a runner error do not exist. 
 ```
 
 No source file was edited. The only writes were the gitignored `coverage/` tree created by the runner, logs under `D:\kilo\temp\t064\`, and this appended section.
+
+## Final task status and validation decision (2026-11-24)
+
+Release validation for this feature is Windows-only. The system LibreOffice installation (build 26.8.3.1, `D:\Program Files\LibreOffice\program\soffice.com`) is the independent engine for the 12-fixture import/render/read-back matrix, on Windows build 26100.3194; macOS is out of scope. Desktop Word and Excel are not installed on the host, so no no-repair result exists; that is a disclosed residual risk in the PR and release notes, never claimed as passed. LibreOffice can repair a package silently and reports no repair diagnostics, so no matrix result is a no-repair proof.
+
+| fixture | edit | saved-output SHA-256 | PDF | read-back | macro | notes |
+| --- | --- | --- | --- | --- | --- | --- |
+| roundtrip.docx | Quarterly→Financial | `6e5057c1b62579241e312234480f5f0cc454426a24e941d4014706e1ba658e58` | ok | ok (ODT-mediated) | n/a | direct txt filter hung |
+| macro.docm | Quarterly→Financial | `d112abb6e9f12f037fd916159345e87e5bfe583d687c45cffb07e4466e80cd64` | ok | ok (ODT-mediated) | ok (`word/vbaProject.bin`, macro-enabled type) | direct txt filter hung |
+| preserve-chart.docx | Chart →Graph | `a05fe06d399a14b706c578c9a2ea55048b6bbb48c9b2f59d170b3e4448c0e3ca` | ok | ok | n/a | none |
+| preserve-comment.docx | insert paragraph "Inserted paragraph" | `1725a50bd7ff10917e8a23f209bf9d76d39e15c29d52ac3712e33bad0f1c9949` | ok | ok | n/a | none |
+| preserve-unmodeled-parts.docx | Unmodeled parts fixture→Carried parts fixture | `00a8282811fb4358278f22de0e9cfa95730a7e336b9936a90e98e8b5d1c8bdf5` | ok | ok | n/a | none |
+| unsupported-tracked.docx | Quarterly→Financial | `5cd07397d2adfbcea39c345fba622755c34c93cd4963841583747f7cf5f921cf` | ok | ok | n/a | none |
+| container-descriptor.docx | Quarterly→Financial | `483961e8a4c6d32b6767f94babacc9094adb79f611bca02129125257adf689b7` | ok | ok (ODT-mediated) | n/a | direct txt filter hung |
+| roundtrip.xlsx | first sheet A2=Sprocket | `36383684b60eaa780b1053ec210ff5ddb6b973819290b50724fef48818d210c8` | ok | ok (CSV) | n/a | none |
+| macro.xlsm | first sheet A2=Sprocket | `f1fc862eee036c8bcb07baa421507ec99082d5c7c1372686f49eb09c9ebfd4f0` | ok | ok (CSV) | ok (`xl/vbaProject.bin`, macro-enabled type) | none |
+| preserve-pivot-table.xlsx | first sheet A2=Gamma | `c38ce0b2c2701d0d1136aebd017df33413786731eb4ed834d51ec7ed76266870` | ok | ok (CSV) | n/a | none |
+| preserve-calc-chain.xlsx | first sheet A1=5 | `6ce8a3d005f11bdea1e28a8e386010ab620f291f87cc67870d16c0f1a3ce3c81` | ok | ok (CSV) | n/a | none |
+| preserve-excel-table.xlsx | first sheet A2=Gamma | `0903acb3e87fb1c6642381adb748043d8cb8a0ec85f9c6d53309a7a74106aa1f` | ok | ok (CSV) | n/a | none |
+
+Every PDF conversion exited 0 and started with `%PDF-`; every read-back exited 0 and contained the edited token. The direct DOCX→txt hang on the three table-bearing documents is an engine filter defect: the untouched control hangs identically, so the ODT-mediated text export was used for those three rows.
+
+Fresh `corepack pnpm run duplication` in this task: `Found 0 clones.` 3,050 files analyzed, 623,611 total lines, 3,574,296 total tokens; `tsx` 429 files, 71,395 lines, 500,239 tokens; `typescript` 2,621 files, 552,216 lines, 3,074,057 tokens; time 831.087 ms.
+
+| Tasks | Status |
+| --- | --- |
+| T001–T060 | done |
+| T061 | done (this section) |
+| T062 | done (this section) |
+| T063 | done (duplicate of T061) |
+| T064 | open — the partitioned coverage run exceeded 30 minutes with no merged report; CI owns the repository-wide gate |
+| T065 | done partial |
+| T066 | open — no pull request exists yet |
+| T067 | done (kept and disclosed) |
+| T068 | done |
+
+Every unchecked task has a reason: T064 is deferred to CI after its 30-minute partition run produced no merged report, and T066 waits for the pull request itself.
+
+| Evidence | Result | Source |
+| --- | --- | --- |
+| `pnpm run typecheck` | 5/5 gates passed | Historical recording (2026-11-19 post-review closure); not re-run in this task |
+| Combined four-package suite | 1,591 tests passed | Historical recording (2026-11-19); not re-run in this task |
+| `office-exchange` suite | 1,152 tests passed | Historical recording (2026-11-19); not re-run in this task |
+| `pnpm run duplication` | 0 clones | This task's run (and the 2026-11-19 recording) |
+| Focused coverage for changed files | 100% per file | Historical recording (2026-11-19); only unmodified `src/commands.ts:168` below 100% |
+| LibreOffice release matrix | 12/12 passed | Engine run recorded in `D:\kilo\temp\ooxml-lo-matrix\report.md` and recorded by this task |
+| `pnpm run lint` and `pnpm run doc-sync` | Pre-existing failures unchanged | Historical recordings; not re-run in this task |
+
+This task changed Markdown and one test comment only; typecheck, build, and coverage were intentionally not re-run.

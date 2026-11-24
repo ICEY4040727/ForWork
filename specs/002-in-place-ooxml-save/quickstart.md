@@ -8,7 +8,7 @@ Validation guide only. Implementation lives in `tasks.md`; contracts and entity 
 
 - Node >= 24.9 and `pnpm@11.28.5` (`corepack enable` once).
 - `pnpm install` at the repository root.
-- Windows or macOS for the manual Office evidence. The LibreOffice smoke runs on all three hosts when the engine package is available; on Linux it uses the WASM backend.
+- Windows for the system-LibreOffice release matrix (S9). The automated LibreOffice smoke (S7) runs on every host where the engine package is available; on Linux it uses the WASM backend. macOS is out of scope for this feature's validation, and desktop Word/Excel is not installed on this host.
 - A working `D:\kilo\temp` scratch directory is not required; the test harness owns its temp directories.
 
 ## S1. Corpus generation
@@ -81,11 +81,38 @@ Then inspect `snapshots/web/document-preview/document.expected.md`.
 
 Expected: the Office section records a completed save and an unchanged preserved part, and no `data-office-save-error` banner is rendered. Re-running without `DSH_SNAPSHOT=refresh` passes.
 
-## S9. Manual Word and Excel matrix
+## S9. Windows system-LibreOffice matrix
 
-On Windows and macOS, open each fixture in the fixed release subset in desktop Word and Excel.
+This replaces the former macOS and desktop-Word/Excel matrix. Produce the saved outputs either through the desktop editor or through the exchange writer with the recorded edit, and record which producer was used for each fixture; never validate an unsaved fixture. Use `soffice.com` with a private profile so the run does not share a profile with an interactive session.
 
-Expected: no repair prompt, no "unreadable content" dialog, the edit is present, and the preserved construct (for example the macro, chart, or tracked change) still exists. Record the build, host, and result in the PR.
+| fixture | edit |
+| --- | --- |
+| roundtrip.docx | Quarterly→Financial |
+| macro.docm | Quarterly→Financial |
+| preserve-chart.docx | Chart →Graph |
+| preserve-comment.docx | insert paragraph "Inserted paragraph" |
+| preserve-unmodeled-parts.docx | Unmodeled parts fixture→Carried parts fixture |
+| unsupported-tracked.docx | Quarterly→Financial |
+| container-descriptor.docx | Quarterly→Financial |
+| roundtrip.xlsx | first sheet A2=Sprocket |
+| macro.xlsm | first sheet A2=Sprocket |
+| preserve-pivot-table.xlsx | first sheet A2=Gamma |
+| preserve-calc-chain.xlsx | first sheet A1=5 |
+| preserve-excel-table.xlsx | first sheet A2=Gamma |
+
+PDF render and read-back:
+
+```sh
+& "D:\Program Files\LibreOffice\program\soffice.com" --headless --norestore -env:UserInstallation=file:///D:/kilo/temp/lo-s9-profile --convert-to pdf --outdir D:\kilo\temp\s9\pdf <saved>
+& "D:\Program Files\LibreOffice\program\soffice.com" --headless --norestore -env:UserInstallation=file:///D:/kilo/temp/lo-s9-profile --convert-to "txt:Text (encoded):UTF8" --outdir D:\kilo\temp\s9\txt <saved>
+& "D:\Program Files\LibreOffice\program\soffice.com" --headless --norestore -env:UserInstallation=file:///D:/kilo/temp/lo-s9-profile --convert-to csv --outdir D:\kilo\temp\s9\csv <saved>
+```
+
+Use the text command for `.docx`/`.docm` and the CSV command for `.xlsx`/`.xlsm`. Expected: exit 0, the PDF starts with `%PDF-`, the edited text or value is present in the read-back, and for `.docm`/`.xlsm` the VBA project entry and the macro-enabled content type are still present. Record per fixture: fixture, producer, saved-output SHA-256, LibreOffice build, Windows build, PDF result, read-back result, and preserved-construct result.
+
+A result is import/render/read-back evidence, not a no-repair proof. Desktop Word and Excel are not installed on this host, so their no-repair behavior is a disclosed residual risk, never a matrix claim.
+
+Observed limitation: LibreOffice 26.8.3.1 hangs on the direct DOCX→txt filter for table-bearing documents (`roundtrip.docx`, `macro.docm`, `container-descriptor.docx`). Use the DOCX→ODT→txt fallback for those fixtures; the untouched control also hangs, so this is an engine filter defect, not a writer failure.
 
 ## S10. Focused coverage and build checks
 

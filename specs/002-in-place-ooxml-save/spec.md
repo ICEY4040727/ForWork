@@ -14,9 +14,13 @@
 
 - Q: When an edit forces a part to change (for example `word/document.xml` after a paragraph edit), must every byte outside the edited XML span also stay identical, or is byte identity only required for parts the edit does not touch at all? → A: Span-level splice — only the edited unit's XML span is rewritten; every byte outside it is identical.
 - Q: Should macro-enabled `.docm` and `.xlsm` files become editable under the same preservation rules, or stay outside the accepted editable formats? → A: Include `.docm` and `.xlsm` as editable; macro parts are carried untouched and the macro-enabled content type is preserved.
-- Q: Which independent application should prove that a saved file opens without a repair prompt? → A: Headless LibreOffice plus structural validation on every change, and a fixed fixture subset opened in desktop Word and Excel before release.
+- Q: Which independent application should prove that a saved file opens without a repair prompt? → A: Headless LibreOffice plus structural validation on every change, and a fixed fixture subset opened in desktop Word and Excel before release. Superseded by Session 2026-11-24: the release host has no desktop Word or Excel, so the subset is validated in the system LibreOffice on Windows, and no no-repair claim is made.
 - Q: Where should the per-save record of which package entries changed live? → A: A durable session save fact carrying exact counts plus changed, added, and removed entry names, capped for large saves.
 - Q: When the edited unit's own XML carries a property or construct the editable model does not represent, should the save refuse or carry it through the splice? → A: Carry it verbatim when it is independent of the edited content; refuse only when its semantics or anchors depend on the edited content.
+
+### Session 2026-11-24
+
+- Q: Which hosts and which independent application supply the release validation evidence for this feature? → A: Windows only. The system LibreOffice installation on the host (build 26.8.3.1) is the independent engine for the import/render/read-back matrix, and macOS is out of scope. Desktop Word and Excel are not installed on this host, so their no-repair check cannot be run; it is recorded as a residual risk disclosed in the PR and release notes, never claimed as passed. LibreOffice can silently repair a package and reports no repair diagnostics, so no matrix result is described as a no-repair proof.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -114,7 +118,7 @@ A reviewer or support engineer can see exactly which package entries a save chan
 **Validity**
 
 - **FR-011**: The saved package MUST remain structurally valid OOXML: every part referenced by a relationship exists, every part has a content-type declaration, and no declaration points at a missing part.
-- **FR-012**: Every saved corpus fixture MUST import and render successfully in a headless independent OOXML engine and pass structural package validation on every change; a fixed fixture subset MUST additionally open without a repair prompt in desktop Word and Excel before release. The headless check is an import/render smoke and MUST NOT be described as a no-repair proof.
+- **FR-012**: Every saved corpus fixture MUST pass structural package validation on every change. The fixed release subset MUST import, render, and read back the saved edit in the system LibreOffice installation on Windows, with the engine build and host recorded for each fixture. LibreOffice can silently repair a package and reports no repair diagnostics, so these results MUST NOT be described as a no-repair proof; desktop Word/Excel no-repair validation is not a release gate and MUST be disclosed as an unverified residual risk.
 
 **Contract and persistence**
 
@@ -151,7 +155,7 @@ A reviewer or support engineer can see exactly which package entries a save chan
 
 - **SC-001**: In a corpus of at least 30 fixtures covering the construct classes in FR-004, 100% of no-edit saves produce a byte-identical file.
 - **SC-002**: Across the same corpus, 100% of saves leave every untouched entry byte-identical and every byte outside the edited unit spans exact, including unmapped properties and constructs in untouched content of an edited part.
-- **SC-003**: Across the same corpus, 100% of saves import and render successfully in a headless independent engine and pass structural validation; the fixed release subset opens in desktop Word and Excel without a repair prompt, and the editable content reads back as the edit intended.
+- **SC-003**: Across the same corpus, 100% of saves pass structural package validation. In the Windows system-LibreOffice matrix, 100% of the fixed release subset imports, renders, and reads back the edit as intended with no engine error, and each result records the engine build and host. Because LibreOffice can repair silently, no result is reported as a no-repair proof; desktop Word/Excel no-repair behavior is a disclosed residual risk, not a success criterion.
 - **SC-004**: Across the same corpus, 100% of non-intersecting edits save successfully; saves refused for a construct located outside the edited range number zero.
 - **SC-005**: Zero silent losses: for every save in the corpus, the byte-level difference contains no entry the disposition report does not account for.
 - **SC-006**: 100% of saves intersecting a coupled construct are refused with that construct named, and the source digest is unchanged.
@@ -176,7 +180,7 @@ A reviewer or support engineer can see exactly which package entries a save chan
 - The existing editable mapping (text, formatting, tables, cells, styles, formulas, conditional formatting, data validation, hyperlinks, images) is retained; this feature changes how bytes are assembled, not what the editor can edit.
 - The existing file-size, cell-count, conversion-time, and package-entry bounds remain; preservation must stay bounded and fail loudly rather than degrade silently.
 - A document remains a first-class session entity with version guards; conflict, draft, and attribution behavior is unchanged. The durable save fact gains the disposition summary, so the session-event schema changes and both SDK projections must acknowledge it.
-- Correctness is judged by byte-level comparison, a headless independent engine, and desktop Word/Excel on the release subset, not by the product's own reader.
+- Correctness is judged by byte-level comparison, structural package validation, and the system LibreOffice on Windows for the fixed release subset, not by the product's own reader. Desktop Word/Excel no-repair behavior is unverified on this host and disclosed as a residual risk.
 - A property is "independent" of the edited content when its meaning does not reference the changed text or the identity of the changed node (for example a cell's fit-to-text or a table cell's width rule). A construct is "coupled" when the edit would change its meaning or invalidate its anchor (a tracked change wrapping the edited text, a comment anchor inside the edited range, a content control whose text is being changed).
 - A save request with no pending edit still completes as a save: it records the save fact and advances the version, and its output is byte-identical to the source.
 - The documented corpus is the evidence base: a construct absent from the corpus may still be preserved, but the claim cannot be made without a fixture.
