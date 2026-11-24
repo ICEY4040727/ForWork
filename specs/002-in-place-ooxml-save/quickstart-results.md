@@ -490,7 +490,7 @@ The first desktop appointment surfaced five integration defects that the automat
 - `git status --short | Measure-Object -Line` → **2,373** lines: **2,204** deleted (` D`), **100** modified (` M`), **69** untracked (`??`).
 - `git status --porcelain | Select-String '^ ?D|^D'` (PowerShell equivalent: `git ls-files -d`) → **2,204 deleted tracked files**, all unstaged: `packages/` 2,107, `vendor/` 64, `native/` 33. There are no deletions under `apps/`, `docs/`, `scripts/`, `snapshots/`, `specs/`, `python/`, or `website/`.
 - **102 of the 114 affected package/vendor locations lost every tracked file**; the 12 partial locations are tabulated below.
-- All 2,204 paths exist in HEAD `f8662e7720` and in the clean main worktree `H:/ForWork` (`git status --porcelain` → 0 lines). Every one of the 100 modified paths still exists on disk, and **none** of them lies inside a wiped location, so the deletion set is disjoint from the feature diff.
+- All 2,204 paths exist in the pre-feature HEAD and in the clean main worktree `H:/ForWork` (`git status --porcelain` → 0 lines). Every one of the 100 modified paths still exists on disk, and **none** of them lies inside a wiped location, so the deletion set is disjoint from the feature diff.
 - The emptied directories carry last-write times of 2026-11-19 15:55:42–15:55:46 (+08:00), immediately before this run. The worktree reflog has no operation at that time (last entry 2026-11-18 15:08:56), and the deleted count stayed at 2,204 across repeated checks; the damage is external to this run and not a git operation.
 - Full path list: `git ls-files -d` (2,204 lines; copy at `D:\kilo\temp\t065\deleted-files.txt`).
 
@@ -632,7 +632,7 @@ Partial locations:
 
 ### Gate results
 
-Environment: Windows 11, Node v24.15.0, pnpm 9.15.9, worktree HEAD `f8662e7720`.
+Environment: Windows 11, Node v24.15.0, pnpm 9.15.9, worktree at the pre-feature HEAD.
 
 | # | Command | Exit | Summary | Classification |
 | ---: | --- | ---: | --- | --- |
@@ -678,7 +678,7 @@ The 2,204 deleted tracked paths were restored and the five gates were rerun. The
 
 **Gate results**
 
-Environment: Windows, Node v24.15.0, pinned pnpm 11.28.5 via `corepack pnpm`, worktree HEAD `f8662e7720`.
+Environment: Windows, Node v24.15.0, pinned pnpm 11.28.5 via `corepack pnpm`, worktree at the pre-feature HEAD.
 
 | # | Command | Exit | Summary | Classification |
 | ---: | --- | ---: | --- | --- |
@@ -705,7 +705,7 @@ Classification summary:
 
 **Restored session event types verified.** `packages/core/session/src/document-events.ts` (line 42) defines `DocumentFormat = 'docx' | 'docm' | 'xlsx' | 'xlsm' | 'pptx'`, exports `DocumentSaveDisposition` (line 218), and adds the optional `disposition?: DocumentSaveDisposition` field to `DocumentSaveEventData` (line 252). The barrel at `packages/core/session/src/index.ts:29` re-exports `./document-events.ts`. `git status --porcelain packages/core/session/src/document-events.ts` → ` M`; this is the intended restored feature edit, and every consumer compiles against it.
 
-Environment: Windows, Node v24.15.0, pnpm 9.15.9 (commands run exactly as listed), worktree HEAD `f8662e7720`. Before the run, `git status --short` → 170 lines (101 ` M`, 69 `??`) and no tracked deletions; the 101st modified file is the restored `document-events.ts` relative to the previous 100-file state.
+Environment: Windows, Node v24.15.0, pnpm 9.15.9 (commands run exactly as listed), worktree at the pre-feature HEAD. Before the run, `git status --short` → 170 lines (101 ` M`, 69 `??`) and no tracked deletions; the 101st modified file is the restored `document-events.ts` relative to the previous 100-file state.
 
 | # | Command | Exit | Summary | Classification |
 | ---: | --- | ---: | --- | --- |
@@ -747,7 +747,7 @@ All 34 failed test paths return an empty `git status --porcelain <path>`. The fe
 | Failed test path (grouped) | Files/cases | Classification and evidence |
 | --- | --- | --- |
 | `packages/core/tools/tests/gen-tool-catalog.spec.ts` | 1/1 | **Pre-existing (diagnosed).** Received 75 tools vs 71 expected; the four extras are `document_convert`, `document_edit_cells`, `document_edit_paragraph`, `document_read`, registered in HEAD's `packages/document/tool-office/src/index.ts` (`git grep HEAD`), while the HEAD spec omits them (`git show HEAD:...` has no `document_`). Spec and `src/index.ts` are clean (`git status --porcelain` empty). |
-| `scripts/run-gates.spec.ts` | 1/2 | **Pre-existing (diagnosed) + environmental (diagnosed).** `brand-assets` is present in HEAD `package.json` and `scripts/brand-assets.manifest.json` (commit 78e6a26f15) but absent from the clean spec's expected list. The second case, "kills the child when the abort signal fires", timed out at the 5s test limit after 71.6s. Spec and gate sources clean. |
+| `scripts/run-gates.spec.ts` | 1/2 | **Pre-existing (diagnosed) + environmental (diagnosed).** `brand-assets` is present in HEAD `package.json` and `scripts/brand-assets.manifest.json` (the brand-assets manifest commit) but absent from the clean spec's expected list. The second case, "kills the child when the abort signal fires", timed out at the 5s test limit after 71.6s. Spec and gate sources clean. |
 | `scripts/verify-default-product-isolation.spec.ts` | 1/6 | **Pre-existing (diagnosed).** Six assertions expect `unknown workspace package` failures that the verifier does not report; spec and `scripts/verify-default-product-isolation.ts` are both clean (`git status --porcelain` empty). |
 | `scripts/verify-package-dependencies.spec.ts` | 1/2 | **Pre-existing (diagnosed).** Export classification omits `@forwork/lazy-require` (`*`, `createLazyRequire`) and diffs the rest; spec and `scripts/verify-package-dependencies.ts` clean. |
 | `scripts/verify-package-meta.spec.ts` | 1/1 | **Pre-existing (diagnosed).** SVG convention check reports two problems for the fixture; spec and `scripts/verify-package-meta.ts` clean. |
@@ -826,20 +826,22 @@ No source file was edited. The only writes were the gitignored `coverage/` tree 
 
 Release validation for this feature is Windows-only. The system LibreOffice installation (build 26.8.3.1, `D:\Program Files\LibreOffice\program\soffice.com`) is the independent engine for the 12-fixture import/render/read-back matrix, on Windows build 26100.3194; macOS is out of scope. Desktop Word and Excel are not installed on the host, so no no-repair result exists; that is a disclosed residual risk in the PR and release notes, never claimed as passed. LibreOffice can repair a package silently and reports no repair diagnostics, so no matrix result is a no-repair proof.
 
-| fixture | edit | saved-output SHA-256 | PDF | read-back | macro | notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| roundtrip.docx | Quarterly→Financial | `6e5057c1b62579241e312234480f5f0cc454426a24e941d4014706e1ba658e58` | ok | ok (ODT-mediated) | n/a | direct txt filter hung |
-| macro.docm | Quarterly→Financial | `d112abb6e9f12f037fd916159345e87e5bfe583d687c45cffb07e4466e80cd64` | ok | ok (ODT-mediated) | ok (`word/vbaProject.bin`, macro-enabled type) | direct txt filter hung |
-| preserve-chart.docx | Chart →Graph | `a05fe06d399a14b706c578c9a2ea55048b6bbb48c9b2f59d170b3e4448c0e3ca` | ok | ok | n/a | none |
-| preserve-comment.docx | insert paragraph "Inserted paragraph" | `1725a50bd7ff10917e8a23f209bf9d76d39e15c29d52ac3712e33bad0f1c9949` | ok | ok | n/a | none |
-| preserve-unmodeled-parts.docx | Unmodeled parts fixture→Carried parts fixture | `00a8282811fb4358278f22de0e9cfa95730a7e336b9936a90e98e8b5d1c8bdf5` | ok | ok | n/a | none |
-| unsupported-tracked.docx | Quarterly→Financial | `5cd07397d2adfbcea39c345fba622755c34c93cd4963841583747f7cf5f921cf` | ok | ok | n/a | none |
-| container-descriptor.docx | Quarterly→Financial | `483961e8a4c6d32b6767f94babacc9094adb79f611bca02129125257adf689b7` | ok | ok (ODT-mediated) | n/a | direct txt filter hung |
-| roundtrip.xlsx | first sheet A2=Sprocket | `36383684b60eaa780b1053ec210ff5ddb6b973819290b50724fef48818d210c8` | ok | ok (CSV) | n/a | none |
-| macro.xlsm | first sheet A2=Sprocket | `f1fc862eee036c8bcb07baa421507ec99082d5c7c1372686f49eb09c9ebfd4f0` | ok | ok (CSV) | ok (`xl/vbaProject.bin`, macro-enabled type) | none |
-| preserve-pivot-table.xlsx | first sheet A2=Gamma | `c38ce0b2c2701d0d1136aebd017df33413786731eb4ed834d51ec7ed76266870` | ok | ok (CSV) | n/a | none |
-| preserve-calc-chain.xlsx | first sheet A1=5 | `6ce8a3d005f11bdea1e28a8e386010ab620f291f87cc67870d16c0f1a3ce3c81` | ok | ok (CSV) | n/a | none |
-| preserve-excel-table.xlsx | first sheet A2=Gamma | `0903acb3e87fb1c6642381adb748043d8cb8a0ec85f9c6d53309a7a74106aa1f` | ok | ok (CSV) | n/a | none |
+| fixture | edit | saved-output SHA-256 | PDF | read-back | macro | notes | producer |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| roundtrip.docx | Quarterly→Financial | `6e5057c1b62579241e312234480f5f0cc454426a24e941d4014706e1ba658e58` | ok | ok (ODT-mediated) | n/a | direct txt filter hung | exchange writer |
+| macro.docm | Quarterly→Financial | `d112abb6e9f12f037fd916159345e87e5bfe583d687c45cffb07e4466e80cd64` | ok | ok (ODT-mediated) | ok (`word/vbaProject.bin`, macro-enabled type) | direct txt filter hung | exchange writer |
+| preserve-chart.docx | Chart →Graph | `a05fe06d399a14b706c578c9a2ea55048b6bbb48c9b2f59d170b3e4448c0e3ca` | ok | ok | n/a | none | exchange writer |
+| preserve-comment.docx | insert paragraph "Inserted paragraph" | `1725a50bd7ff10917e8a23f209bf9d76d39e15c29d52ac3712e33bad0f1c9949` | ok | ok | n/a | none | exchange writer |
+| preserve-unmodeled-parts.docx | Unmodeled parts fixture→Carried parts fixture | `00a8282811fb4358278f22de0e9cfa95730a7e336b9936a90e98e8b5d1c8bdf5` | ok | ok | n/a | none | exchange writer |
+| unsupported-tracked.docx | Quarterly→Financial | `5cd07397d2adfbcea39c345fba622755c34c93cd4963841583747f7cf5f921cf` | ok | ok | n/a | none | exchange writer |
+| container-descriptor.docx | Quarterly→Financial | `483961e8a4c6d32b6767f94babacc9094adb79f611bca02129125257adf689b7` | ok | ok (ODT-mediated) | n/a | direct txt filter hung | exchange writer |
+| roundtrip.xlsx | first sheet A2=Sprocket | `36383684b60eaa780b1053ec210ff5ddb6b973819290b50724fef48818d210c8` | ok | ok (CSV) | n/a | none | exchange writer |
+| macro.xlsm | first sheet A2=Sprocket | `f1fc862eee036c8bcb07baa421507ec99082d5c7c1372686f49eb09c9ebfd4f0` | ok | ok (CSV) | ok (`xl/vbaProject.bin`, macro-enabled type) | none | exchange writer |
+| preserve-pivot-table.xlsx | first sheet A2=Gamma | `c38ce0b2c2701d0d1136aebd017df33413786731eb4ed834d51ec7ed76266870` | ok | ok (CSV) | n/a | none | exchange writer |
+| preserve-calc-chain.xlsx | first sheet A1=5 | `6ce8a3d005f11bdea1e28a8e386010ab620f291f87cc67870d16c0f1a3ce3c81` | ok | ok (CSV) | n/a | none | exchange writer |
+| preserve-excel-table.xlsx | first sheet A2=Gamma | `0903acb3e87fb1c6642381adb748043d8cb8a0ec85f9c6d53309a7a74106aa1f` | ok | ok (CSV) | n/a | none | exchange writer |
+
+All 12 saved outputs were produced through the exchange writer (`readDocumentWithSource`/`readWorkbookWithSource` -> recorded edit -> `writeDocumentFromSource`/`writeWorkbookFromSource`), the same Host write path the desktop save calls; the desktop read-edit-save round trip is covered separately by T032 (`office-roundtrip.spec.tsx`) and T034 (the Web save snapshot).
 
 Every PDF conversion exited 0 and started with `%PDF-`; every read-back exited 0 and contained the edited token. The direct DOCX→txt hang on the three table-bearing documents is an engine filter defect: the untouched control hangs identically, so the ODT-mediated text export was used for those three rows.
 
