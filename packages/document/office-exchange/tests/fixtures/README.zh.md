@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-供 `@forwork/office-exchange` 的往返、映射、保留与不支持特性检测测试使用的确定性二进制夹具。语料库包含 34 个夹具，覆盖 `specs/002-in-place-ooxml-save` 中 FR-004 的每个构造类别。
+供 `@forwork/office-exchange` 的往返、映射、保留与不支持特性检测测试使用的确定性二进制夹具。语料库包含 35 个夹具，覆盖 `specs/002-in-place-ooxml-save` 中 FR-004 的每个构造类别。
 
 | 文件 | 用途 |
 | --- | --- |
@@ -26,6 +26,7 @@
 | `preserve-field.docx` | 正文含 `w:fldSimple` 域以及由 `w:fldChar` 与 `w:instrText` 组成的复杂域。域 run 必须经受保存。 |
 | `preserve-bookmark.docx` | 正文含 `w:bookmarkStart`、`w:bookmarkEnd` 与使用 `w:anchor` 的 `w:hyperlink`。书签标记必须经受保存。 |
 | `preserve-content-control.docx` | 正文含包裹段落的 `w:sdt` 内容控件。内容控件必须经受保存。 |
+| `preserve-formula.docx` | 一个普通段落，加上一个携带内联 OMML（`m:oMath`，含 run 与 `E=mc^2`）的段落，文档根声明数学命名空间。检测结果必须保持干净，编辑兄弟段落时公式字节必须保留，而编辑公式所在段落必须以指出 `m:oMath` 的 `unsupported-feature` 拒绝。 |
 | `preserve-unmodeled-parts.docx` | 文档加 `word/theme/theme1.xml`、`word/fontTable.xml`、`word/webSettings.xml`、`docProps/core.xml`、`docProps/app.xml`、`customXml/item1.xml` 与 `customXml/itemProps1.xml`，含其关系与内容类型。每个未建模部件必须经受保存。 |
 | `preserve-pivot-table.xlsx` | 含数据透视表、透视缓存定义与记录、其关系与内容类型的工作簿。所有透视条目必须经受保存。 |
 | `preserve-excel-table.xlsx` | 含 Excel 表格部件、其关系与内容类型的工作表。表格部件必须经受保存。 |
@@ -56,7 +57,7 @@ node packages/document/office-exchange/tests/fixtures/generate.mjs
 node packages/document/office-exchange/tests/fixtures/generate.mjs --check
 ```
 
-`--check` 在内存中重建每个夹具并与已检入的二进制比较，不写入文件。任何不一致的夹具会输出 `missing:` 或 `drift:` 并以非零状态退出；干净的工作树会输出 `fixtures are deterministic (34 checked)`。编辑 `generate.mjs` 或任意夹具断言后请运行它。
+`--check` 在内存中重建每个夹具并与已检入的二进制比较，不写入文件。任何不一致的夹具会输出 `missing:` 或 `drift:` 并以非零状态退出；干净的工作树会输出 `fixtures are deterministic (35 checked)`。编辑 `generate.mjs` 或任意夹具断言后请运行它。
 
 输出可逐字节复现：归档条目经过排序，并使用固定的 `FIXED_DATE` 时间戳写入，工作簿属性固定为同一日期，且不使用随机 id 或当前时间值。在干净的工作树上重新运行脚本会得到相同的哈希。
 
