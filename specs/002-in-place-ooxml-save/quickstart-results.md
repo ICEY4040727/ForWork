@@ -855,11 +855,11 @@ Fresh `corepack pnpm run duplication` in this task: `Found 0 clones.` 3,050 file
 | T063 | done (duplicate of T061) |
 | T064 | open — the partitioned coverage run exceeded 30 minutes with no merged report; CI owns the repository-wide gate |
 | T065 | done partial |
-| T066 | open — no pull request exists yet |
+| T066 | done — PR #1 |
 | T067 | done (kept and disclosed) |
 | T068 | done |
 
-Every unchecked task has a reason: T064 is deferred to CI after its 30-minute partition run produced no merged report, and T066 waits for the pull request itself.
+Every unchecked task has a reason: T064 is deferred to CI after its 30-minute partition run produced no merged report.
 
 | Evidence | Result | Source |
 | --- | --- | --- |
