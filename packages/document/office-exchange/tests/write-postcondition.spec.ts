@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { strToU8, unzipSync, zipSync } from 'fflate'
+import type { IDocumentData } from '@univerjs/core'
 import { Context } from '@forwork/cordis'
 import { LocalFileSystem } from '@forwork/fs-local'
 import SessionStore, { SessionId } from '@forwork/session'
@@ -20,6 +21,7 @@ import type { DocumentProjectionState } from '@forwork/session-document'
 import type { JsonValue } from '@forwork/util-values'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import LocalOfficeExchange, { type OfficeDocumentSnapshot } from '../src/index.ts'
+import { readDocumentWithSource, writeDocumentFromSource } from '../src/provider/docx.ts'
 
 const FIXTURES = fileURLToPath(new URL('./fixtures/', import.meta.url))
 const scope = { sessionId: SessionId('office-write-postcondition'), workspaceRoot: '' }
@@ -166,6 +168,18 @@ function insertAtParagraph(snapshot: OfficeDocumentSnapshot, paragraphIndex: num
   return snapshot
 }
 
+/** Replace same-length text so every recorded model offset stays valid. */
+function replaceSameLengthText(data: IDocumentData, from: string, to: string): void {
+  if (from.length !== to.length) throw new Error('replacement must keep the stream length')
+  const body = data.body
+  if (body === undefined) throw new Error('expected a document body')
+  const stream = body.dataStream
+  if (stream === undefined) throw new Error('expected a document data stream')
+  const start = stream.indexOf(from)
+  if (start < 0) throw new Error(`fixture text "${from}" is absent`)
+  body.dataStream = stream.slice(0, start) + to + stream.slice(start + from.length)
+}
+
 /** Write a minimal document whose paragraph carries a simple field. */
 async function writeFieldFixture(name: string): Promise<string> {
   const word = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
@@ -308,6 +322,32 @@ it('refuses a field whose preserved anchor would not survive the edit', async ()
     })
 
   expect(hashOf(await readFile(join(root, path)))).toBe(hashOf(before))
+  expect(saveFacts()).toHaveLength(0)
+  expect(openedDocuments().documents[documentIdFor(scope.sessionId, path)]?.contentVersion).toBe(0)
+})
+
+it('refuses an edit to the paragraph that carries inline math', async () => {
+  const path = await copyFixture('preserve-formula.docx')
+  const source = new Uint8Array(await readFile(join(root, path)))
+  const data = await readDocumentWithSource(source, 'docx')
+  replaceSameLengthText(data, 'Equation', 'Function')
+
+  await expect(writeDocumentFromSource(data, source)).rejects.toMatchObject({
+    code: 'unsupported-feature',
+    message: expect.stringContaining('m:oMath') as string,
+  })
+
+  expect(hashOf(await readFile(join(root, path)))).toBe(hashOf(source))
+
+  const read = await ctx.officeDocument.read(scope, path, signal)
+  replaceText(read.snapshot, 'Equation: ', 'Formula: ')
+  await expect(ctx.officeDocument.save(scope, path, read.snapshot, 'docx', read.version, { actor: 'user' }, signal))
+    .rejects.toMatchObject({
+      code: 'office-document/unsupported-feature',
+      message: expect.stringContaining('m:oMath') as string,
+    })
+
+  expect(hashOf(await readFile(join(root, path)))).toBe(hashOf(source))
   expect(saveFacts()).toHaveLength(0)
   expect(openedDocuments().documents[documentIdFor(scope.sessionId, path)]?.contentVersion).toBe(0)
 })

@@ -3,11 +3,11 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/document/office-exchange/tests/fixtures/README.md
 /office-exchange-fixtures:
-  en: 293814299b0716f5
-  zh: db31773bb5f290f3
+  en: fbf8a8be7ceb753c
+  zh: 5fc376baf882c0fb
 /office-exchange-fixtures/regenerate:
   en: 69cb2a180a0b8e97
   zh: 0c4ae2d6b0b3b49a
 /office-exchange-fixtures/determinism:
-  en: cffedfa808ab4214
-  zh: 5491da006be1bfb5
+  en: e52a4a57ce47e849
+  zh: 14c174c9706f4100

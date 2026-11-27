@@ -3,7 +3,7 @@
 English | [中文](README.zh.md)
 
 Deterministic binary fixtures for `@forwork/office-exchange` round-trip, mapping, preservation,
-and unsupported-feature detection tests. The corpus contains 34 fixtures and covers every
+and unsupported-feature detection tests. The corpus contains 35 fixtures and covers every
 construct class in FR-004 of `specs/002-in-place-ooxml-save`.
 
 | File | Purpose |
@@ -28,6 +28,7 @@ construct class in FR-004 of `specs/002-in-place-ooxml-save`.
 | `preserve-field.docx` | Body with a `w:fldSimple` field and a complex field built from `w:fldChar` and `w:instrText`. The field runs must survive a save. |
 | `preserve-bookmark.docx` | Body with `w:bookmarkStart`, `w:bookmarkEnd`, and a `w:hyperlink` using `w:anchor`. The bookmark markers must survive a save. |
 | `preserve-content-control.docx` | Body with a `w:sdt` content control containing a paragraph. The content control must survive a save. |
+| `preserve-formula.docx` | Plain paragraph plus a second paragraph carrying inline OMML (`m:oMath` with a run and `E=mc^2`) under a document root that declares the math namespace. Detection must stay clean, the math bytes must survive an edit of the sibling paragraph, and editing the math paragraph must refuse as `unsupported-feature` naming `m:oMath`. |
 | `preserve-unmodeled-parts.docx` | Document plus `word/theme/theme1.xml`, `word/fontTable.xml`, `word/webSettings.xml`, `docProps/core.xml`, `docProps/app.xml`, `customXml/item1.xml`, and `customXml/itemProps1.xml` with their relationships and content types. Every unmodeled part must survive a save. |
 | `preserve-pivot-table.xlsx` | Workbook with a pivot table, pivot cache definition and records, their relationships and content types. All pivot entries must survive a save. |
 | `preserve-excel-table.xlsx` | Worksheet with an Excel table part, its relationship, and content type. The table part must survive a save. |
@@ -62,7 +63,7 @@ node packages/document/office-exchange/tests/fixtures/generate.mjs --check
 
 `--check` rebuilds every fixture in memory and compares it with the checked-in binary without
 writing. It exits non-zero and prints `missing:` or `drift:` for any fixture that differs; a clean
-tree prints `fixtures are deterministic (34 checked)`. Run it after editing `generate.mjs` or any
+tree prints `fixtures are deterministic (35 checked)`. Run it after editing `generate.mjs` or any
 fixture assertion.
 
 Output is byte-for-byte reproducible: archive entries are sorted and written with the fixed

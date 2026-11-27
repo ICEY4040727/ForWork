@@ -904,6 +904,24 @@ function buildContentControlDocx() {
   })
 }
 
+/**
+ * Build a document with a plain paragraph and a second paragraph carrying
+ * inline Office Math, so an edit of either paragraph exercises the formula
+ * path: a sibling edit must preserve the math XML and an edit of the math
+ * paragraph must refuse.
+ * @returns {Uint8Array} Deterministic archive bytes.
+ */
+function buildFormulaDocx() {
+  const mathNamespace = 'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"'
+  return docxPackage({
+    namespaces: ` ${mathNamespace}`,
+    body: '<w:p><w:r><w:t>Quarterly report</w:t></w:r></w:p>'
+      + '<w:p><w:r><w:t xml:space="preserve">Equation: </w:t></w:r>'
+      + '<m:oMath><m:r><m:t xml:space="preserve">E=mc^2</m:t></m:r></m:oMath></w:p>',
+    documentRelationships: [relationship('rId1', 'styles', 'styles.xml')],
+  })
+}
+
 function buildUnmodeledPartsDocx() {
   const theme = `${XML_HEADER}\n<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Fixture Theme">`
     + '<a:themeElements>'
@@ -1355,6 +1373,7 @@ async function main() {
     ['preserve-field.docx', buildFieldDocx()],
     ['preserve-bookmark.docx', buildBookmarkDocx()],
     ['preserve-content-control.docx', buildContentControlDocx()],
+    ['preserve-formula.docx', buildFormulaDocx()],
     ['preserve-unmodeled-parts.docx', buildUnmodeledPartsDocx()],
     ['preserve-pivot-table.xlsx', buildPivotTableXlsx()],
     ['preserve-excel-table.xlsx', buildExcelTableXlsx()],

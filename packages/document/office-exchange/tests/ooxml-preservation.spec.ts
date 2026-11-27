@@ -147,6 +147,7 @@ const EDITS: Readonly<Record<string, EditPlan>> = {
   'preserve-shape.docx': { kind: 'docx-text-at-unit', anchorKey: 'para_1', text: 'Shape caption' },
   'preserve-table-cell-image.docx': { kind: 'docx-text-at-unit', anchorKey: 'table-1/0/0', text: 'Cell caption' },
   'preserve-content-control.docx': { kind: 'docx-insert-paragraph', text: 'Inserted paragraph' },
+  'preserve-formula.docx': { kind: 'docx-text', from: 'Quarterly', to: 'Formula' },
   'preserve-comment.docx': { kind: 'docx-insert-paragraph', text: 'Inserted paragraph' },
   'roundtrip.xlsx': { kind: 'xlsx-cell', sheetId: 'sheet-1', row: 1, column: 0, value: 'Sprocket' },
   'macro.xlsm': { kind: 'xlsx-cell', sheetId: 'sheet-1', row: 1, column: 0, value: 'Sprocket' },
@@ -293,6 +294,12 @@ const CONSTRUCT_CASES: readonly ConstructCase[] = [
     fixture: 'preserve-content-control.docx',
     identicalEntries: ['word/styles.xml'],
     fragments: [{ part: DOCUMENT_PART, element: 'w:sdt' }],
+  },
+  {
+    label: 'inline math',
+    fixture: 'preserve-formula.docx',
+    identicalEntries: ['word/styles.xml'],
+    fragments: [{ part: DOCUMENT_PART, element: 'm:oMath' }],
   },
   {
     label: 'inline drawing',
